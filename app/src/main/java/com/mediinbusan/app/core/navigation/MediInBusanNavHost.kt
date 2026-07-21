@@ -1,6 +1,14 @@
 package com.mediinbusan.app.core.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,8 +27,19 @@ import com.mediinbusan.app.feature.splash.SplashScreen
 
 /** 10개 화면(S-01~S-10)을 잇는 단일 NavHost. feature 패키지는 서로를 직접 참조하지 않고 이 파일을 통해서만 연결된다. */
 @Composable
-fun MediInBusanNavHost(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = Route.Splash) {
+fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+    // Navigation Compose 2.8+는 지정 안 해도 자체 기본 fade 전환이 들어가는데, Splash(엣지투엣지
+    // 풀스크린 이미지)와 Home(TopAppBar 인셋 적용)처럼 레이아웃 구조가 크게 다른 화면 사이에
+    // 그 전환이 걸리면 겹치는 동안 이미지가 위로 튀는 것처럼 보인다. 명시적으로 애니메이션을 끈다.
+    NavHost(
+        navController = navController,
+        startDestination = Route.Splash,
+        modifier = modifier,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
+    ) {
         composable<Route.Splash> {
             SplashScreen(
                 onNavigateToOnboarding = {
@@ -47,9 +66,16 @@ fun MediInBusanNavHost(navController: NavHostController) {
         composable<Route.Home> {
             HomeScreen(
                 onNavigateToHospitalList = { purpose -> navController.navigate(Route.HospitalList(purpose)) },
+                onNavigateToHospitalDetail = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onNavigateToGuide = { navController.navigate(Route.Guide) },
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
-                onNavigateToSettings = { navController.navigate(Route.Settings) }
+                onNavigateToSettings = { navController.navigate(Route.Settings) },
+                // TODO: '추천 웰니스' 전용 진입 route가 없음. Route.Nearby(hospitalId)는 병원 맥락이
+                // 필수라 Home에서 못 쓰기 때문에, 임시로 '웰니스' 카테고리의 HospitalList로 연결한다.
+                // 전용 route가 생기면 교체할 것.
+                onNavigateToWellness = { navController.navigate(Route.HospitalList(medicalPurpose = "웰니스")) },
+                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) },
+                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) }
             )
         }
         composable<Route.HospitalList> { backStackEntry ->
@@ -106,5 +132,17 @@ fun MediInBusanNavHost(navController: NavHostController) {
         composable<Route.Settings> {
             SettingsScreen(onBack = navController::popBackStack)
         }
+        composable<Route.SelfDiagnosis> {
+            SelfDiagnosisPlaceholderScreen()
+        }
+    }
+}
+
+// TODO: 자가진단 플로우(회원 정보 로컬 저장 포함) 실제 구현은 별도 이슈. 지금은 크래시 없이
+// 진입만 가능하도록 하는 최소 스텁 화면이다.
+@Composable
+private fun SelfDiagnosisPlaceholderScreen() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text = "진단하기 기능은 준비 중입니다.", style = MaterialTheme.typography.titleMedium)
     }
 }

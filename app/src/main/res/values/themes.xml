@@ -13,4 +13,15 @@
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <!-- 안드로이드 12+가 콜드 스타트 시 강제로 띄우는 시스템 스플래시를 직접 제어한다.
+         아이콘/배경을 지정 안 하면 기본 로봇 아이콘이 뜨고, 우리 Compose Splash로 넘어갈 때
+         시스템이 자체 크로스페이드 애니메이션을 넣어서 "이미지가 밀리는" 것처럼 보인다.
+         MainActivity에서 installSplashScreen() + setOnExitAnimationListener로
+         핸드오프 애니메이션 자체를 없앤다. -->
+    <style name="Theme.MediInBusan.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/favicon</item>
+        <item name="postSplashScreenTheme">@style/Theme.MediInBusan</item>
+    </style>
 </resources>

@@ -8,6 +8,8 @@ espressoCore = "3.7.0"
 appcompat = "1.7.1"
 material = "1.13.0"
 
+coreSplashscreen = "1.0.1"
+
 # Compose / Navigation / Lifecycle
 composeBom = "2025.02.00"
 activityCompose = "1.10.1"
@@ -38,6 +40,7 @@ kakaoMapSdk = "2.13.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -55,6 +58,7 @@ compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-animation = { group = "androidx.compose.animation", name = "animation" }
 compose-animation-core = { group = "androidx.compose.animation", name = "animation-core" }
+compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
