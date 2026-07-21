@@ -2,13 +2,13 @@ package com.mediinbusan.app.feature.home
 
 import androidx.annotation.DrawableRes
 import com.mediinbusan.app.R
-import com.mediinbusan.app.core.datastore.SupportedLanguages
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.data.hospital.Hospital
 
 data class HomeUiState(
     val medicalPurposes: List<MedicalPurposeItem> = MedicalPurposeItem.DEFAULTS,
     val selectedPurpose: String? = null,
-    val languageCode: String = SupportedLanguages.DEFAULT,
+    val languageCode: String = SupportedLanguage.DEFAULT.code,
     val quickLinks: List<QuickLinkItem> = QuickLinkItem.DEFAULTS,
     val recommendedHospitals: List<Hospital> = emptyList(),
     val favoriteHospitalIds: Set<String> = emptySet(),

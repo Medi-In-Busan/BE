@@ -5,15 +5,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// res/font에 Pretendard 파일(.ttf/.otf)이 아직 없어 시스템 기본 폰트를 사용한다.
-// TODO: Pretendard-Regular/Medium/SemiBold/Bold가 res/font에 추가되면
-// val PretendardFontFamily = FontFamily(
-//     Font(R.font.pretendard_regular, FontWeight.Normal),
-//     Font(R.font.pretendard_medium, FontWeight.Medium),
-//     Font(R.font.pretendard_semibold, FontWeight.SemiBold),
-//     Font(R.font.pretendard_bold, FontWeight.Bold)
-// ) 형태로 정의하고, MediInBusanTypography 및 아래 커스텀 TextStyle들의
-// fontFamily 파라미터에 배선한다.
+// res/font에 Pretendard 파일이 아직 없어 시스템 기본 폰트를 사용한다.
+// TODO: Pretendard 파일이 추가되면 FontFamily로 정의해 아래 스타일들에 배선한다.
 val MediInBusanTypography = Typography()
 
 // Home(S-03) 등에서 쓰는 커스텀 스타일. 기존 Typography() 슬롯(headlineSmall, titleMedium 등)은

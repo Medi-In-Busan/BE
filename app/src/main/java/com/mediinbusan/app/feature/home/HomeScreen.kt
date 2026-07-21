@@ -71,7 +71,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
-import com.mediinbusan.app.core.datastore.SupportedLanguages
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
@@ -292,7 +292,7 @@ private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (S
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            SupportedLanguages.CODES.forEach { code ->
+            SupportedLanguage.CODES.forEach { code ->
                 DropdownMenuItem(
                     text = { Text(text = code.toLanguageBadgeLabel()) },
                     onClick = {

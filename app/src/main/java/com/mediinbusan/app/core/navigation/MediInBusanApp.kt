@@ -18,7 +18,6 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -79,6 +78,7 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
     }
 }
 
+// TODO: 4개 탭 아이콘 전부 디자인팀 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
 @Composable
 private fun bottomNavTabs(
     navController: NavHostController,
@@ -86,28 +86,24 @@ private fun bottomNavTabs(
 ): List<BottomNavTabUiModel> = listOf(
     BottomNavTabUiModel(
         label = "홈",
-        // TODO: 디자인팀 탭 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
         icon = Icons.Default.Home,
         selected = currentDestination.isRouteSelected<Route.Home>(),
         onClick = { navController.navigateToTab(Route.Home) }
     ),
     BottomNavTabUiModel(
         label = "의료기관",
-        // TODO: 디자인팀 탭 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
         icon = Icons.Default.LocalHospital,
         selected = currentDestination.isRouteSelected<Route.HospitalList>(),
         onClick = { navController.navigateToTab(Route.HospitalList()) }
     ),
     BottomNavTabUiModel(
         label = "가이드",
-        // TODO: 디자인팀 탭 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
         icon = Icons.AutoMirrored.Filled.MenuBook,
         selected = currentDestination.isRouteSelected<Route.Guide>(),
         onClick = { navController.navigateToTab(Route.Guide) }
     ),
     BottomNavTabUiModel(
         label = "지도",
-        // TODO: 디자인팀 탭 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
         icon = Icons.Default.Map,
         selected = currentDestination.isRouteSelected<Route.MapView>(),
         onClick = { navController.navigateToTab(Route.MapView()) }
@@ -117,10 +113,15 @@ private fun bottomNavTabs(
 private inline fun <reified T : Route> NavDestination?.isRouteSelected(): Boolean =
     this?.hierarchy?.any { it.hasRoute(T::class) } == true
 
-/** 탭 전환 표준 패턴: 시작 destination까지 스택을 정리하되 각 탭의 상태는 보존한다. */
+/**
+ * 탭 전환 표준 패턴: Route.Home까지 스택을 정리하되 각 탭의 상태는 보존한다.
+ * graph.findStartDestination()은 Splash를 가리키는데, Splash는 앱 시작 시
+ * popUpTo(Route.Splash){inclusive=true}로 이미 백스택에서 빠져 있어 popUpTo 대상이 될 수
+ * 없다. 탭 내비게이션의 실질적인 루트인 Route.Home을 직접 지정한다.
+ */
 private fun NavHostController.navigateToTab(route: Route) {
     navigate(route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
+        popUpTo(Route.Home) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }

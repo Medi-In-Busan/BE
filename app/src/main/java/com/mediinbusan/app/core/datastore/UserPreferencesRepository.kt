@@ -9,7 +9,7 @@ import javax.inject.Inject
 
 /** F-002 언어 선택, F-003 의료 목적 선택, F-001 최초 실행 여부를 담는 스칼라 값 3개. */
 data class UserPreferences(
-    val languageCode: String = SupportedLanguages.DEFAULT,
+    val languageCode: String = SupportedLanguage.DEFAULT.code,
     val onboardingComplete: Boolean = false,
     val medicalPurpose: String? = null
 )
@@ -27,7 +27,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override val userPreferences: Flow<UserPreferences> = dataStore.data.map { prefs ->
         UserPreferences(
-            languageCode = prefs[UserPreferencesKeys.LANGUAGE_CODE] ?: SupportedLanguages.DEFAULT,
+            languageCode = prefs[UserPreferencesKeys.LANGUAGE_CODE] ?: SupportedLanguage.DEFAULT.code,
             onboardingComplete = prefs[UserPreferencesKeys.ONBOARDING_COMPLETE] ?: false,
             medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE]
         )

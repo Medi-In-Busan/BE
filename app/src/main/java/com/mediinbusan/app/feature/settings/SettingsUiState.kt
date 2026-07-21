@@ -1,8 +1,8 @@
 package com.mediinbusan.app.feature.settings
 
-import com.mediinbusan.app.core.datastore.SupportedLanguages
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 
 data class SettingsUiState(
-    val availableLanguages: List<String> = SupportedLanguages.CODES,
-    val selectedLanguage: String = SupportedLanguages.DEFAULT
+    val availableLanguages: List<String> = SupportedLanguage.CODES,
+    val selectedLanguage: String = SupportedLanguage.DEFAULT.code
 )
