@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -21,12 +23,17 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val preferences = userPreferencesRepository.userPreferences.first()
-            _uiState.value = if (preferences.onboardingComplete) {
+            val preferences = async { userPreferencesRepository.userPreferences.first() }
+            delay(MINIMUM_SPLASH_DURATION_MS)
+            _uiState.value = if (preferences.await().onboardingComplete) {
                 SplashUiState.NavigateToHome
             } else {
                 SplashUiState.NavigateToOnboarding
             }
         }
+    }
+
+    private companion object {
+        const val MINIMUM_SPLASH_DURATION_MS = 3500L
     }
 }
