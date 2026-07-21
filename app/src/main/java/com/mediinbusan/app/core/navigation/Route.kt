@@ -32,11 +32,14 @@ sealed interface Route {
     data class PlaceDetail(val placeId: String) : Route // S-07 상세
 
     @Serializable
-    data class MapView(val hospitalId: String) : Route // S-08
+    data class MapView(val hospitalId: String? = null) : Route // S-08, hospitalId=null이면 전체 병원 지도 모드
 
     @Serializable
     data object Favorite : Route // S-09
 
     @Serializable
     data object Settings : Route // S-10
+
+    @Serializable
+    data object SelfDiagnosis : Route // TODO: 화면 미구현, 진입점만 예약 (자가진단 플로우는 별도 이슈)
 }

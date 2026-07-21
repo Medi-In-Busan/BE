@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.data.hospital.Hospital
@@ -27,10 +28,25 @@ import com.mediinbusan.app.data.place.Place
  */
 @Composable
 fun MapScreen(
-    hospitalId: String,
+    hospitalId: String?,
     onBack: () -> Unit,
     viewModel: MapViewModel = hiltViewModel()
 ) {
+    if (hospitalId == null) {
+        // TODO: 전체 병원 지도 모드(다중 병원 마커 렌더링) 실제 구현은 별도 이슈로 분리
+        // 이 모드는 하단 탭바가 보이므로 BottomNavBarHeight만큼 직접 여백을 둔다
+        // (MediInBusanApp.kt 주석 참고). hospitalId가 있는 상세 지도 모드는 탭바가 없어 불필요.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .padding(bottom = BottomNavBarHeight)
+        ) {
+            Text(text = "전체 병원 지도는 준비 중입니다.", style = MaterialTheme.typography.titleMedium)
+        }
+        return
+    }
+
     val uiState by viewModel.uiState.collectAsState()
     val errorMessage = uiState.errorMessage
 
