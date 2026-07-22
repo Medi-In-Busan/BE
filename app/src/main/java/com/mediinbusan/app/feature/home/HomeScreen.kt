@@ -31,8 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -88,7 +86,10 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.ErrorState
+import com.mediinbusan.app.core.ui.FavoriteHeartButton
+import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
 import kotlinx.coroutines.delay
 
@@ -642,22 +643,11 @@ private fun RecommendedHospitalCard(
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable(onClick = onFavoriteClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "즐겨찾기",
-                    tint = CoralPrimary
-                )
-            }
+            FavoriteHeartButton(
+                isFavorite = isFavorite,
+                onClick = onFavoriteClick,
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+            )
         }
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
@@ -683,29 +673,6 @@ private fun RecommendedHospitalCard(
             }
         }
     }
-}
-
-@Composable
-private fun LanguageBadge(text: String) {
-    Box(
-        modifier = Modifier
-            .border(width = 1.dp, color = BadgeOutline, shape = MaterialTheme.shapes.medium)
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-    ) {
-        Text(text = text, style = MaterialTheme.typography.labelSmall, color = BadgeText)
-    }
-}
-
-/**
- * Hospital.supportedLanguages의 ISO 계열 코드(en/ja/zh)를 배지 표시용 라벨로 매핑한다.
- * 매핑에 없는 코드는 대문자로 그대로 표시한다.
- */
-private fun String.toLanguageBadgeLabel(): String = when (this.lowercase()) {
-    "ko" -> "KO"
-    "en" -> "EN"
-    "zh" -> "CN"
-    "ja" -> "JP"
-    else -> this.uppercase()
 }
 
 private val PreviewHospitals = listOf(
