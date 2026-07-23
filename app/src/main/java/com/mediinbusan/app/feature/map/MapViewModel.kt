@@ -92,7 +92,12 @@ class MapViewModel @Inject constructor(
             val places = (placesResult as? Result.Success)?.data.orEmpty()
 
             _uiState.update {
-                it.copy(isLoading = false, allHospitals = hospitals, allPlaces = places, errorMessage = null)
+                it.copy(
+                    isLoading = false,
+                    allHospitals = hospitals,
+                    allPlaces = places,
+                    errorMessage = if (hospitalsResult is Result.Error) "병원 목록을 불러올 수 없습니다." else null
+                )
             }
         }
     }

@@ -67,10 +67,14 @@ app/src/main/java/com/mediinbusan/app/
 이 프로젝트는 **AGP 9.0.1 / Gradle 9.2.1**이라는 매우 최신 조합을 사용한다 (2026년 1월 AGP 9.0.1 릴리스 기준). 스캐폴드 단계에서 실제로 겪은 호환성 이슈와 해결책:
 
 1. **`org.jetbrains.kotlin.android` 플러그인을 적용하면 안 된다.** AGP 9.0부터 Kotlin 지원이 내장되어 있고, 별도 플러그인을 적용하면 `Cannot add extension with name 'kotlin'` 에러가 난다. `org.jetbrains.kotlin.plugin.compose`, `org.jetbrains.kotlin.plugin.serialization`은 여전히 별도로 적용해야 한다.
+   - 참고: [Migrate to built-in Kotlin (공식)](https://developer.android.com/build/migrate-to-built-in-kotlin), [AGP 9.0.1 release notes](https://developer.android.com/build/releases/agp-9-0-0-release-notes)
 2. **Hilt는 2.59 이상**을 써야 한다. 2.58 이하는 AGP 9.x의 새 DSL(`BaseExtension` 제거)과 호환되지 않아 `Android BaseExtension not found` 에러가 난다.
+   - 참고: [Hilt Gradle Plugin 2.58 is incompatible with AGP 9 (google/dagger#5083)](https://github.com/google/dagger/issues/5083), [Hilt Gradle Plugin does not work with AGP 9.0.0-alpha04 (google/dagger#4944)](https://github.com/google/dagger/issues/4944)
 3. **KSP 2.1.20-1.0.31**이 생성 소스를 등록할 때 구식 `kotlin.sourceSets` DSL을 사용해서 AGP의 built-in Kotlin이 이를 거부한다. 현재 `gradle.properties`에 `android.disallowKotlinSourceSets=false`로 임시 우회 중 — 이 프로젝트의 Kotlin 버전에 맞으면서 `android.sourceSets` DSL을 네이티브로 쓰는 KSP 릴리스가 나오면 이 플래그를 제거하고 마이그레이션할 것.
-4. **`androidx.core:core-ktx`는 1.18.0에 고정.** 1.19.0은 compileSdk 37 + AGP 9.1.0을 요구해 현재 compileSdk 36 / AGP 9.0.1 조합과 맞지 않는다 (`CheckAarMetadataWorkAction` 에러).
-5. **Kakao Map SDK는 devrepo.kakao.com 기준 2.13.5가 최신** (2.14.7 같은 더 높은 버전은 존재하지 않음 — 항상 `maven-metadata.xml`로 실제 최신 버전 확인할 것).
+   - 참고: [KSP uses kotlin.sourceSets DSL when using AGP Built-In Kotlin (google/ksp#2729)](https://github.com/google/ksp/issues/2729)
+4. **`androidx.core:core-ktx`는 1.18.0에 고정.** 1.19.0은 compileSdk 37 + AGP 9.1.0을 요구해 현재 compileSdk 36 / AGP 9.0.1 조합과 맞지 않는다 (`CheckAarMetadataWorkAction` 에러). 버전 확인은 `https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/maven-metadata.xml`.
+5. **Kakao Map SDK는 devrepo.kakao.com 기준 2.13.5가 최신** (2.14.7 같은 더 높은 버전은 존재하지 않음 — 항상 `https://devrepo.kakao.com/nexus/content/groups/public/com/kakao/maps/open/android/maven-metadata.xml`로 실제 최신 버전 확인할 것).
+   - 참고: [Kakao Android SDK - Getting started](https://developers.kakao.com/docs/latest/en/android/getting-started), [Kakao Map SDK - Getting started](https://developers.kakao.com/docs/latest/en/kakaomap/common)
 6. 의존성 버전을 올릴 때는 항상 `./gradlew.bat :app:assembleDebug --stacktrace`로 한 단계씩 검증할 것. 이 조합 자체가 불안정하므로 여러 라이브러리를 동시에 올리면 원인 파악이 어렵다.
 
 ## 6. 외부 API (한국관광공사 OpenAPI)
@@ -79,6 +83,13 @@ app/src/main/java/com/mediinbusan/app/
 - **관광정보서비스** — 주변 관광지/음식점/쇼핑/웰니스 장소, 사진 (`data/place/TourismApi.kt`)
 
 ⚠️ **두 API 모두 정확한 오퍼레이션명·파라미터·응답 구조가 미확정이다.** 현재 `HospitalApi.kt`, `TourismApi.kt`, `HospitalDto.kt`, `PlaceDto.kt`의 경로/필드명은 전부 **플레이스홀더**다. 실제 연동 작업 시 반드시 공식 API 문서를 먼저 확인하고 교체할 것 — 기존 필드명을 그대로 믿지 말 것.
+
+**공식 진입점 (여기서 실제 오퍼레이션명·인증키 신청·요청/응답 스펙을 확인할 것):**
+- [공공데이터포털 (data.go.kr)](https://www.data.go.kr) — 인증키(서비스키) 신청은 여기서 한다. 검색창에 "한국관광공사"로 검색.
+- [한국관광공사_국문 관광정보 서비스_GW](https://www.data.go.kr/data/15101578/openapi.do) · [영문](https://www.data.go.kr/data/15101753/openapi.do) · [일문](https://www.data.go.kr/data/15101760/openapi.do) — `TourismApi.kt`가 참조해야 할 실제 관광정보서비스(TourAPI) 데이터셋.
+- [한국관광공사 TourAPI 포털](https://www.2025tourapi.com/sub/sub01.html) · [관광콘텐츠랩](https://api.visitkorea.or.kr/) — API 명세서·오퍼레이션 목록.
+
+⚠️ **"의료관광정보 서비스"라는 이름의 독립된 OpenAPI 데이터셋은 이번 조사에서 data.go.kr에 별도로 확인되지 않았다.** 기능명세서의 "의료관광정보 서비스"가 실제로는 위 TourAPI(관광정보서비스)의 하위 분류(진료소/병원 카테고리 코드)를 의미하는 것인지, 아니면 별도 신청이 필요한 다른 서비스인지 실제 연동 착수 전에 반드시 확인할 것 — `data.go.kr`에서 "한국관광공사"로 검색해 데이터셋 목록을 직접 대조하거나, 필요 시 한국관광공사에 직접 문의.
 
 ## 7. 시크릿 관리
 

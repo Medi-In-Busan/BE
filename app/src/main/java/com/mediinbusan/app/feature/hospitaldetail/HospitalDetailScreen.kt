@@ -68,6 +68,7 @@ import com.mediinbusan.app.core.designsystem.StatusOpenGreen
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FavoriteHeartButton
 import com.mediinbusan.app.core.ui.LanguageBadge
@@ -75,6 +76,7 @@ import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.KakaoMapView
+import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
@@ -110,6 +112,7 @@ fun HospitalDetailScreen(
             onNavigateToMap = onNavigateToMap,
             onBack = onBack
         )
+        else -> EmptyState(message = "병원 정보를 찾을 수 없습니다.")
     }
 }
 
@@ -241,6 +244,7 @@ private fun HospitalDetailContent(
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
             onCallClick = { context.dialPhone(hospital.phoneNumber) },
+            callEnabled = !hospital.phoneNumber.isNullOrBlank(),
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -289,13 +293,14 @@ private fun ImageCarouselSection(
             icon = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "뒤로가기",
             onClick = onBack,
-            modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+            size = 36.dp
         )
         Row(
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            RoundIconButton(icon = Icons.Default.Share, contentDescription = "공유", onClick = onShare)
+            RoundIconButton(icon = Icons.Default.Share, contentDescription = "공유", onClick = onShare, size = 36.dp)
             FavoriteHeartButton(isFavorite = isFavorite, onClick = onToggleFavorite)
         }
 
@@ -313,25 +318,6 @@ private fun ImageCarouselSection(
                 color = Color.White
             )
         }
-    }
-}
-
-@Composable
-private fun RoundIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(Color.White)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(imageVector = icon, contentDescription = contentDescription, tint = TextPrimary)
     }
 }
 
@@ -368,6 +354,7 @@ private fun CategoryAndStatusRow(hospital: Hospital) {
 @Composable
 private fun ActionButtonsRow(hospital: Hospital) {
     val context = LocalContext.current
+    val hasPhoneNumber = !hospital.phoneNumber.isNullOrBlank()
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ActionButton(
             modifier = Modifier.weight(1f),
@@ -375,6 +362,7 @@ private fun ActionButtonsRow(hospital: Hospital) {
             label = "전화",
             backgroundColor = CoralPrimaryContainer,
             iconTint = CoralPrimary,
+            enabled = hasPhoneNumber,
             onClick = { context.dialPhone(hospital.phoneNumber) }
         )
         ActionButton(
@@ -391,6 +379,7 @@ private fun ActionButtonsRow(hospital: Hospital) {
             label = "문의",
             backgroundColor = Color(0xFFF2F2F2),
             iconTint = TextSecondary,
+            enabled = hasPhoneNumber,
             onClick = { context.smsInquiry(hospital) }
         )
         ActionButton(
@@ -411,24 +400,26 @@ private fun ActionButton(
     backgroundColor: Color,
     iconTint: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
+    val contentAlpha = if (enabled) 1f else 0.4f
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.medium)
-                .background(backgroundColor)
+                .background(backgroundColor.copy(alpha = contentAlpha))
                 .padding(vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = label, tint = iconTint.copy(alpha = contentAlpha), modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextPrimary.copy(alpha = contentAlpha))
     }
 }
 
@@ -521,6 +512,7 @@ private fun BottomActionBar(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onCallClick: () -> Unit,
+    callEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -544,11 +536,16 @@ private fun BottomActionBar(
             }
             Button(
                 onClick = onCallClick,
+                enabled = callEnabled,
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = MaterialTheme.shapes.extraLarge,
                 colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
             ) {
-                Text(text = "전화 문의하기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (callEnabled) "전화 문의하기" else "전화번호 정보 없음",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

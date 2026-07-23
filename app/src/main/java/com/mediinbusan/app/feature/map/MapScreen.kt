@@ -39,7 +39,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +68,7 @@ import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
@@ -181,12 +184,15 @@ private fun BrowseMap(
         uiState.visiblePlaces.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
     }
     val pins = if (uiState.selectedCategory == MapCategory.HOSPITAL) hospitalPins else placePins
+    // 0은 "아직 요청 없음"을 의미하는 초기값이라 KakaoMapView가 무시한다 — 버튼 클릭마다 증가시켜 트리거한다.
+    var recenterRequestId by remember { mutableIntStateOf(0) }
 
     Box(modifier = Modifier.fillMaxSize().padding(bottom = BottomNavBarHeight)) {
         KakaoMapView(
             pins = pins,
             modifier = Modifier.fillMaxSize(),
-            onPinClick = onMarkerSelected
+            onPinClick = onMarkerSelected,
+            recenterRequestId = recenterRequestId
         )
 
         Column(
@@ -214,7 +220,10 @@ private fun BrowseMap(
             RoundIconButton(
                 icon = Icons.Default.MyLocation,
                 contentDescription = "기본 위치로 이동",
-                onClick = { onMarkerSelected(null) },
+                onClick = {
+                    onMarkerSelected(null)
+                    recenterRequestId++
+                },
                 background = CoralPrimary,
                 tint = Color.White,
                 shape = MaterialTheme.shapes.medium
@@ -321,28 +330,6 @@ private fun CategoryTab(label: String, icon: ImageVector, selected: Boolean, onC
         Icon(imageVector = icon, contentDescription = label, tint = if (selected) Color.White else TextSecondary, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(4.dp))
         Text(text = label, style = MaterialTheme.typography.labelMedium, color = if (selected) Color.White else TextPrimary)
-    }
-}
-
-@Composable
-private fun RoundIconButton(
-    icon: ImageVector,
-    contentDescription: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    background: Color = Color.White,
-    tint: Color = TextPrimary,
-    shape: androidx.compose.ui.graphics.Shape = CircleShape
-) {
-    Box(
-        modifier = modifier
-            .size(44.dp)
-            .clip(shape)
-            .background(background)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(imageVector = icon, contentDescription = contentDescription, tint = tint)
     }
 }
 

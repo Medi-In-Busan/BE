@@ -26,7 +26,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
-import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.MapView
@@ -53,21 +52,33 @@ data class MapPin(
 val BusanDefaultCenter: LatLng = LatLng.from(35.1796, 129.0756)
 
 /**
+ * KakaoMapSdk.init() 성공 여부를 기록하는 플래그. Android Vector Map SDK v2의 공개 API에는
+ * 초기화 여부를 조회하는 메서드가 없어 MediInBusanApp.onCreate()에서 init() 성공 시 직접 세팅한다.
+ */
+object KakaoMapAvailability {
+    @Volatile
+    var isAvailable: Boolean = false
+}
+
+/**
  * 실제 com.kakao.vectormap SDK를 감싼 공용 지도 컴포저블.
  * KAKAO_NATIVE_APP_KEY가 실제 키로 채워지기 전에는 [MapLifeCycleCallback.onMapError]가 호출되어
  * 타일이 비어 보이는 게 정상이다 — 코드/마커/카메라 로직 자체는 실제 키가 들어오면 그대로 동작한다.
+ *
+ * [recenterRequestId]가 바뀔 때마다(0은 최초 무시) pins 유무와 무관하게 카메라를 [BusanDefaultCenter]로
+ * 이동한다 — "기본 위치로 이동" 버튼처럼 사용자가 명시적으로 재중심을 요청했을 때만 쓰는 트리거다.
  */
 @Composable
 fun KakaoMapView(
     pins: List<MapPin>,
     modifier: Modifier = Modifier,
-    onPinClick: (String) -> Unit = {}
+    onPinClick: (String) -> Unit = {},
+    recenterRequestId: Int = 0
 ) {
     // libK3fAndroid.so는 arm64-v8a/armeabi-v7a로만 배포되어 x86_64 에뮬레이터에서는
     // KakaoMapSdk.init()이 실패한다(MediInBusanApp.onCreate() 참고). 그 경우 MapView를 만들지
     // 않고 폴백을 보여준다 — 실기기/ARM 에뮬레이터에서는 이 분기를 타지 않는다.
-    val kakaoMapUsable = remember { runCatching { KakaoMapSdk.isInitialized() }.getOrDefault(false) }
-    if (!kakaoMapUsable) {
+    if (!KakaoMapAvailability.isAvailable) {
         MapUnavailableFallback(modifier)
         return
     }
@@ -114,6 +125,12 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap, pins) {
         val map = kakaoMap ?: return@LaunchedEffect
         renderPins(context, map, pins, onPinClick)
+    }
+
+    LaunchedEffect(kakaoMap, recenterRequestId) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        if (recenterRequestId == 0) return@LaunchedEffect
+        map.moveCamera(CameraUpdateFactory.newCenterPosition(BusanDefaultCenter, DEFAULT_ZOOM_LEVEL))
     }
 }
 
