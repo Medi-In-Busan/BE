@@ -41,5 +41,8 @@ sealed interface Route {
     data object Settings : Route // S-10
 
     @Serializable
+    data class SettingsInfoDetail(val infoId: String) : Route // S-10 하위 정적 정보 페이지 (이용안내/개인정보처리방침/이용약관)
+
+    @Serializable
     data object SelfDiagnosis : Route // TODO: 화면 미구현, 진입점만 예약 (자가진단 플로우는 별도 이슈)
 }

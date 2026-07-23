@@ -32,6 +32,17 @@ val InactiveIcon = Color(0xFFD9D9D9)
 // 만들어져 텍스트/아이콘 대비가 부족해 별도 토큰으로 분리한다.
 val InactiveTabColor = Color(0xFF9B9B9B)
 
+// 언어선택(S-02) 안내 Card 배경. 옅은 스카이블루 틴트라 기존 CoralPrimaryContainer 계열과는
+// 다른 별도 톤이 필요하다.
+val InfoBackgroundBlue = Color(0xFFF3F8FF)
+
+// 설정(S-10) 리디자인 스펙 전용 팔레트. 기존 TextPrimary/TextSecondary/DividerColor와
+// 근소하게 값이 달라(디자인 스펙 원본 그대로) 다른 화면에 영향 주지 않도록 분리한다.
+val SettingsPrimaryText = Color(0xFF1F2937)
+val SettingsSecondaryText = Color(0xFF9CA3AF)
+val SettingsDivider = Color(0xFFF3F4F6)
+val SettingsBorder = Color(0xFFECECEC)
+
 // 병원 상세페이지 영업 상태 배지("영업 중"/"영업 종료") 전용.
 val StatusOpenGreen = Color(0xFF2E9E44)
 val StatusClosedGray = Color(0xFF9B9B9B)
