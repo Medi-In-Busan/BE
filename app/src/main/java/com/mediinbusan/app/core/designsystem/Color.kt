@@ -42,3 +42,7 @@ val SettingsPrimaryText = Color(0xFF1F2937)
 val SettingsSecondaryText = Color(0xFF9CA3AF)
 val SettingsDivider = Color(0xFFF3F4F6)
 val SettingsBorder = Color(0xFFECECEC)
+
+// 병원 상세페이지 영업 상태 배지("영업 중"/"영업 종료") 전용.
+val StatusOpenGreen = Color(0xFF2E9E44)
+val StatusClosedGray = Color(0xFF9B9B9B)
