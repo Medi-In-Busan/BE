@@ -31,3 +31,7 @@ val InactiveIcon = Color(0xFFD9D9D9)
 // 하단 내비게이션 바 비활성 아이콘/라벨 전용. InactiveIcon(#D9D9D9)은 캐러셀 점 용도로
 // 만들어져 텍스트/아이콘 대비가 부족해 별도 토큰으로 분리한다.
 val InactiveTabColor = Color(0xFF9B9B9B)
+
+// 병원 상세페이지 영업 상태 배지("영업 중"/"영업 종료") 전용.
+val StatusOpenGreen = Color(0xFF2E9E44)
+val StatusClosedGray = Color(0xFF9B9B9B)

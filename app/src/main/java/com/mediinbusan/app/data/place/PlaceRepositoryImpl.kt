@@ -35,13 +35,49 @@ class PlaceRepositoryImpl @Inject constructor(
                 id = "place-1",
                 name = "해운대 해수욕장",
                 type = PlaceType.TOURIST_ATTRACTION,
-                address = "부산광역시 해운대구",
+                address = "부산 해운대구 해운대해변로 264",
                 latitude = 35.1587,
                 longitude = 129.1604,
                 imageUrl = null,
                 description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
                 phoneNumber = null,
                 distanceFromHospitalMeters = 500.0
+            ),
+            Place(
+                id = "place-2",
+                name = "센텀시티 맛집거리",
+                type = PlaceType.RESTAURANT,
+                address = "부산 해운대구 센텀중앙로 79",
+                latitude = 35.1701,
+                longitude = 129.1298,
+                imageUrl = null,
+                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
+                phoneNumber = null,
+                distanceFromHospitalMeters = 350.0
+            ),
+            Place(
+                id = "place-3",
+                name = "동백섬",
+                type = PlaceType.TOURIST_ATTRACTION,
+                address = "부산 해운대구 동백로 116",
+                latitude = 35.1553,
+                longitude = 129.1494,
+                imageUrl = null,
+                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
+                phoneNumber = null,
+                distanceFromHospitalMeters = 1200.0
+            ),
+            Place(
+                id = "place-4",
+                name = "국제시장 먹자골목",
+                type = PlaceType.RESTAURANT,
+                address = "부산 중구 신창동4가",
+                latitude = 35.1005,
+                longitude = 129.0294,
+                imageUrl = null,
+                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
+                phoneNumber = null,
+                distanceFromHospitalMeters = 800.0
             )
         )
     }

@@ -119,6 +119,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.MapView>()
             MapScreen(
                 hospitalId = route.hospitalId,
+                onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onBack = navController::popBackStack
             )
         }
