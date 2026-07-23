@@ -21,7 +21,8 @@ import com.mediinbusan.app.feature.hospitallist.HospitalListScreen
 import com.mediinbusan.app.feature.map.MapScreen
 import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
-import com.mediinbusan.app.feature.onboarding.OnboardingScreen
+import com.mediinbusan.app.feature.onboarding.LanguageSelectScreen
+import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
 
@@ -55,8 +56,11 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Onboarding> {
-            OnboardingScreen(
-                onComplete = {
+            // 팀원이 스켈레톤 단계에서 만든 OnboardingScreen(언어+의료목적 통합 샘플)은 라우팅에서
+            // 제거하고 파일만 보존한다. 언어선택 UI 개선 작업으로 독립 화면을 새로 배선한다.
+            // 의료 목적 선택(F-003)은 별도 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
+            LanguageSelectScreen(
+                onNext = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Onboarding) { inclusive = true }
                     }
@@ -130,7 +134,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Settings> {
-            SettingsScreen(onBack = navController::popBackStack)
+            SettingsScreen(
+                onBack = navController::popBackStack,
+                onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) }
+            )
+        }
+        composable<Route.SettingsInfoDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.SettingsInfoDetail>()
+            SettingsInfoDetailScreen(infoId = route.infoId, onBack = navController::popBackStack)
         }
         composable<Route.SelfDiagnosis> {
             SelfDiagnosisPlaceholderScreen()
