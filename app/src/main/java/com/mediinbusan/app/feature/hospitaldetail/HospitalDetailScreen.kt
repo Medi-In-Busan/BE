@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,12 +50,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.designsystem.BadgeOutline
@@ -127,13 +134,17 @@ private fun HospitalDetailContent(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+    // 하드코딩한 값 대신 실측한 풋터 높이를 그대로 스크롤 콘텐츠 하단 여백으로 써서, 콘텐츠와
+    // 풋터 사이에 뜬 여백(또는 반대로 풋터에 가려지는 현상) 없이 정확히 맞닿게 한다.
+    var bottomBarHeight by remember { mutableStateOf(0.dp) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 84.dp)
+                .padding(bottom = bottomBarHeight)
         ) {
             ImageCarouselSection(
                 imageUrls = hospital.imageUrls,
@@ -245,7 +256,11 @@ private fun HospitalDetailContent(
             onToggleFavorite = onToggleFavorite,
             onCallClick = { context.dialPhone(hospital.phoneNumber) },
             callEnabled = !hospital.phoneNumber.isNullOrBlank(),
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .onGloballyPositioned { coordinates ->
+                    bottomBarHeight = with(density) { coordinates.size.height.toDp() }
+                }
         )
     }
 }
@@ -521,7 +536,10 @@ private fun BottomActionBar(
         shadowElevation = 12.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
