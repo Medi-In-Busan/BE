@@ -66,6 +66,7 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
     val destination = backStackEntry?.destination ?: return false
     return when {
         destination.hasRoute(Route.Home::class) -> true
+        destination.hasRoute(Route.Search::class) -> true
         destination.hasRoute(Route.HospitalList::class) -> true
         destination.hasRoute(Route.Guide::class) -> true
         destination.hasRoute(Route.MapView::class) -> {

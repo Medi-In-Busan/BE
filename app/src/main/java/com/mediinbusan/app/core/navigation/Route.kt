@@ -23,6 +23,9 @@ sealed interface Route {
     data class HospitalDetail(val hospitalId: String) : Route // S-05
 
     @Serializable
+    data object Search : Route // 검색 (UI 스켈레톤 — 병원+장소 통합 검색은 다음 이슈)
+
+    @Serializable
     data object Guide : Route // S-06
 
     @Serializable
