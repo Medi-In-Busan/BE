@@ -44,5 +44,11 @@ sealed interface Route {
     data class SettingsInfoDetail(val infoId: String) : Route // S-10 하위 정적 정보 페이지 (이용안내/개인정보처리방침/이용약관)
 
     @Serializable
+    data object NotificationSettings : Route // S-10 하위 알림 설정 (로컬 토글, 실제 푸시 인프라 없음)
+
+    @Serializable
+    data object RecentlyViewed : Route // S-10 하위 최근 본 항목 (F-016)
+
+    @Serializable
     data object SelfDiagnosis : Route // TODO: 화면 미구현, 진입점만 예약 (자가진단 플로우는 별도 이슈)
 }

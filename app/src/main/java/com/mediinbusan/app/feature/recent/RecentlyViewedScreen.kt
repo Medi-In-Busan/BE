@@ -1,4 +1,4 @@
-package com.mediinbusan.app.feature.favorite
+package com.mediinbusan.app.feature.recent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,49 +30,49 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
+import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
+import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BrandBackTopAppBar
 import com.mediinbusan.app.core.ui.EmptyState
-import com.mediinbusan.app.core.ui.FavoriteHeartButton
 import com.mediinbusan.app.core.ui.ItemTypeBadge
-import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
+import com.mediinbusan.app.data.recent.RecentlyViewed
+import java.util.concurrent.TimeUnit
 
 @Composable
-fun FavoriteScreen(
+fun RecentlyViewedScreen(
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: FavoriteViewModel = hiltViewModel()
+    viewModel: RecentlyViewedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    FavoriteContent(
-        favorites = uiState.favorites,
+    RecentlyViewedContent(
+        items = uiState.items,
         selectedLanguage = uiState.selectedLanguage,
         onBack = onBack,
         onLanguageSelected = viewModel::onLanguageSelected,
-        onSelectFavorite = { favorite ->
-            when (favorite.itemType) {
-                FavoriteItemType.HOSPITAL -> onSelectHospital(favorite.itemId)
-                FavoriteItemType.PLACE -> onSelectPlace(favorite.itemId)
+        onSelectItem = { item ->
+            when (item.itemType) {
+                FavoriteItemType.HOSPITAL -> onSelectHospital(item.itemId)
+                FavoriteItemType.PLACE -> onSelectPlace(item.itemId)
             }
-        },
-        onRemove = viewModel::onRemove
+        }
     )
 }
 
 @Composable
-private fun FavoriteContent(
-    favorites: List<Favorite>,
+private fun RecentlyViewedContent(
+    items: List<RecentlyViewed>,
     selectedLanguage: String,
     onBack: () -> Unit,
     onLanguageSelected: (String) -> Unit,
-    onSelectFavorite: (Favorite) -> Unit,
-    onRemove: (Favorite) -> Unit
+    onSelectItem: (RecentlyViewed) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -85,24 +86,20 @@ private fun FavoriteContent(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(20.dp))
-                Text(text = "즐겨찾기 관리", style = SettingsTitleStyle, color = SettingsPrimaryText)
+                Text(text = "최근 본 항목", style = SettingsTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             Box(modifier = Modifier.weight(1f)) {
-                if (favorites.isEmpty()) {
-                    EmptyState(message = "저장한 병원·장소가 없습니다.")
+                if (items.isEmpty()) {
+                    EmptyState(message = "최근 확인한 병원·장소가 없습니다.")
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp)
                     ) {
-                        items(favorites, key = { it.itemId }) { favorite ->
-                            FavoriteRow(
-                                favorite = favorite,
-                                onClick = { onSelectFavorite(favorite) },
-                                onRemove = { onRemove(favorite) }
-                            )
+                        items(items, key = { it.itemId }) { item ->
+                            RecentlyViewedRow(item = item, onClick = { onSelectItem(item) })
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
@@ -113,7 +110,7 @@ private fun FavoriteContent(
 }
 
 @Composable
-private fun FavoriteRow(favorite: Favorite, onClick: () -> Unit, onRemove: () -> Unit) {
+private fun RecentlyViewedRow(item: RecentlyViewed, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -129,39 +126,59 @@ private fun FavoriteRow(favorite: Favorite, onClick: () -> Unit, onRemove: () ->
             .padding(14.dp)
     ) {
         AsyncImageBox(
-            model = favorite.imageUrl,
-            contentDescription = favorite.name,
+            model = item.imageUrl,
+            contentDescription = item.itemName,
             modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp))
         )
         Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = favorite.name, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
+        Column {
+            Text(text = item.itemName, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(6.dp))
-            ItemTypeBadge(itemType = favorite.itemType)
+            Row {
+                ItemTypeBadge(itemType = item.itemType)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = item.viewedAt.toRelativeTimeLabel(),
+                    style = SettingsDescriptionStyle.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize),
+                    color = SettingsSecondaryText,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
+            }
         }
-        FavoriteHeartButton(isFavorite = true, onClick = onRemove)
+    }
+}
+
+private fun Long.toRelativeTimeLabel(): String {
+    val elapsedMillis = System.currentTimeMillis() - this
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedMillis)
+    val hours = TimeUnit.MILLISECONDS.toHours(elapsedMillis)
+    val days = TimeUnit.MILLISECONDS.toDays(elapsedMillis)
+    return when {
+        minutes < 1 -> "방금 전"
+        minutes < 60 -> "${minutes}분 전"
+        hours < 24 -> "${hours}시간 전"
+        else -> "${days}일 전"
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun FavoriteContentPreview() {
+private fun RecentlyViewedContentPreview() {
     MediInBusanTheme {
-        FavoriteContent(
-            favorites = listOf(
-                Favorite(
+        RecentlyViewedContent(
+            items = listOf(
+                RecentlyViewed(
                     itemId = "1",
+                    itemName = "부산대학교병원",
                     itemType = FavoriteItemType.HOSPITAL,
-                    name = "부산대학교병원",
                     imageUrl = null,
-                    savedAt = System.currentTimeMillis()
+                    viewedAt = System.currentTimeMillis()
                 )
             ),
             selectedLanguage = "ko",
             onBack = {},
             onLanguageSelected = {},
-            onSelectFavorite = {},
-            onRemove = {}
+            onSelectItem = {}
         )
     }
 }

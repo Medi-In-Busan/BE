@@ -1,6 +1,5 @@
 package com.mediinbusan.app.feature.settings
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
@@ -36,17 +34,15 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -62,14 +58,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.BuildConfig
 import com.mediinbusan.app.R
@@ -85,11 +78,16 @@ import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsSectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
+import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BrandSnackbarHost
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToInfoDetail: (String) -> Unit,
+    onNavigateToNotificationSettings: () -> Unit,
+    onNavigateToFavoriteManage: () -> Unit,
+    onNavigateToRecentlyViewed: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -99,6 +97,9 @@ fun SettingsScreen(
         onBack = onBack,
         onLanguageSelected = viewModel::onLanguageSelected,
         onNavigateToInfoDetail = onNavigateToInfoDetail,
+        onNavigateToNotificationSettings = onNavigateToNotificationSettings,
+        onNavigateToFavoriteManage = onNavigateToFavoriteManage,
+        onNavigateToRecentlyViewed = onNavigateToRecentlyViewed,
         onClearCacheConfirmed = viewModel::onClearCacheConfirmed
     )
 }
@@ -110,19 +111,31 @@ private fun SettingsContent(
     onBack: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onNavigateToInfoDetail: (String) -> Unit,
+    onNavigateToNotificationSettings: () -> Unit,
+    onNavigateToFavoriteManage: () -> Unit,
+    onNavigateToRecentlyViewed: () -> Unit,
     onClearCacheConfirmed: () -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.cacheClearedEventId) {
+        if (uiState.cacheClearedEventId > 0) {
+            snackbarHostState.showSnackbar("캐시를 삭제했어요")
+        }
+    }
+
     Scaffold(
         // Home과 동일한 탑바(워드마크+언어 드롭다운)를 그대로 재사용하고, 좌측 아이콘만
         // Home의 "설정으로 이동" 햄버거 대신 뒤로가기 화살표로 바뀐다. 하단 탭바는
         // MediInBusanApp.kt의 shouldShowBottomBar에서 Settings는 제외되어 있어 노출되지 않는다.
         topBar = {
-            SettingsTopAppBar(
+            BrandBackTopAppBar(
                 onBack = onBack,
                 currentLanguageCode = uiState.selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
-        }
+        },
+        snackbarHost = { BrandSnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -152,9 +165,24 @@ private fun SettingsContent(
             SettingsCard {
                 SettingsRows(
                     listOf(
-                        SettingsRowItem(Icons.Outlined.Notifications, "알림 설정", "새로운 소식과 이벤트 알림을 받아보세요"),
-                        SettingsRowItem(Icons.Outlined.Favorite, "즐겨찾기 관리", "저장한 병원과 장소를 확인하고 정리하세요"),
-                        SettingsRowItem(Icons.Outlined.History, "최근 본 항목", "최근에 확인한 병원과 정보를 다시 볼 수 있어요")
+                        SettingsRowItem(
+                            Icons.Outlined.Notifications,
+                            "알림 설정",
+                            "새로운 소식과 이벤트 알림을 받아보세요",
+                            onClick = onNavigateToNotificationSettings
+                        ),
+                        SettingsRowItem(
+                            Icons.Outlined.Favorite,
+                            "즐겨찾기 관리",
+                            "저장한 병원과 장소를 확인하고 정리하세요",
+                            onClick = onNavigateToFavoriteManage
+                        ),
+                        SettingsRowItem(
+                            Icons.Outlined.History,
+                            "최근 본 항목",
+                            "최근에 확인한 병원과 정보를 다시 볼 수 있어요",
+                            onClick = onNavigateToRecentlyViewed
+                        )
                     )
                 )
             }
@@ -197,86 +225,9 @@ private fun SettingsContent(
             Spacer(modifier = Modifier.height(24.dp))
             Text(text = "앱 정보", style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(12.dp))
-            AppInfoCard(
-                cacheClearedEventId = uiState.cacheClearedEventId,
-                onClearCacheConfirmed = onClearCacheConfirmed
-            )
+            AppInfoCard(onClearCacheConfirmed = onClearCacheConfirmed)
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SettingsTopAppBar(
-    onBack: () -> Unit,
-    currentLanguageCode: String,
-    onLanguageSelected: (String) -> Unit
-) {
-    CenterAlignedTopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-            }
-        },
-        title = { SettingsWordmark() },
-        actions = {
-            SettingsLanguageDropdown(
-                currentLanguageCode = currentLanguageCode,
-                onLanguageSelected = onLanguageSelected
-            )
-        }
-    )
-}
-
-@Composable
-private fun SettingsWordmark() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Image(
-            painter = painterResource(id = R.drawable.favicon),
-            contentDescription = "메디인부산 로고",
-            modifier = Modifier.size(28.dp)
-        )
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) { append("MEDIN") }
-                append(" ")
-                withStyle(SpanStyle(color = SkyBlue, fontWeight = FontWeight.Bold)) { append("BUSAN") }
-            },
-            style = MaterialTheme.typography.titleLarge
-        )
-    }
-}
-
-@Composable
-private fun SettingsLanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.padding(end = 12.dp)) {
-        Box(
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.medium)
-                .border(width = 1.dp, color = SettingsBorder, shape = MaterialTheme.shapes.medium)
-                .clickable { expanded = true }
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = "${currentLanguageCode.toDropdownLabel()} ▾",
-                style = MaterialTheme.typography.labelSmall,
-                color = SettingsSecondaryText
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            listOf("ko", "en", "ja", "zh").forEach { code ->
-                DropdownMenuItem(
-                    text = { Text(text = code.toDropdownLabel()) },
-                    onClick = {
-                        onLanguageSelected(code)
-                        expanded = false
-                    }
-                )
-            }
         }
     }
 }
@@ -401,32 +352,65 @@ private fun SettingsRow(
 }
 
 @Composable
-private fun AppInfoCard(cacheClearedEventId: Int, onClearCacheConfirmed: () -> Unit) {
+private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
     var showClearCacheDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    LaunchedEffect(cacheClearedEventId) {
-        if (cacheClearedEventId > 0) {
-            Toast.makeText(context, "캐시를 삭제했어요", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text(text = "캐시를 삭제할까요?") },
-            text = { Text(text = "저장된 이미지 캐시가 삭제됩니다. 즐겨찾기와 설정은 그대로 유지돼요.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showClearCacheDialog = false
-                    onClearCacheConfirmed()
-                }) {
-                    Text(text = "삭제", color = CoralPrimary)
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White,
+            icon = {
+                Box(
+                    modifier = Modifier.size(48.dp).clip(CircleShape).background(CoralPrimaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = Icons.Outlined.Delete, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(24.dp))
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text(text = "취소")
+            title = {
+                Text(
+                    text = "캐시를 삭제할까요?",
+                    style = SettingsItemTitleStyle.copy(fontSize = 17.sp),
+                    color = SettingsPrimaryText,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "저장된 이미지 캐시가 삭제됩니다. 즐겨찾기와 설정은 그대로 유지돼요.",
+                    style = SettingsDescriptionStyle,
+                    color = SettingsSecondaryText,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            showClearCacheDialog = false
+                            onClearCacheConfirmed()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(text = "삭제하기")
+                    }
+                    OutlinedButton(
+                        onClick = { showClearCacheDialog = false },
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, SettingsBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SettingsSecondaryText),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(text = "취소")
+                    }
                 }
             }
         )
@@ -536,17 +520,6 @@ private fun String.toShortLabel(): String = when (this) {
     else -> this.uppercase()
 }
 
-// 탑바 언어 드롭다운 전용. HomeScreen.kt의 toLanguageBadgeLabel()과 표기를 맞춘다
-// (ko/en/zh/ja → KO/EN/CN/JP). Home은 팀원의 미머지 PR이 같이 건드리고 있어 이 화면에
-// 로컬로 별도 함수를 둔다.
-private fun String.toDropdownLabel(): String = when (this) {
-    "ko" -> "KO"
-    "en" -> "EN"
-    "zh" -> "CN"
-    "ja" -> "JP"
-    else -> this.uppercase()
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun SettingsContentPreview() {
@@ -556,6 +529,9 @@ private fun SettingsContentPreview() {
             onBack = {},
             onLanguageSelected = {},
             onNavigateToInfoDetail = {},
+            onNavigateToNotificationSettings = {},
+            onNavigateToFavoriteManage = {},
+            onNavigateToRecentlyViewed = {},
             onClearCacheConfirmed = {}
         )
     }

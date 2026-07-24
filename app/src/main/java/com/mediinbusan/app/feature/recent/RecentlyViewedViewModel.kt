@@ -1,10 +1,9 @@
-package com.mediinbusan.app.feature.favorite
+package com.mediinbusan.app.feature.recent
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.data.favorite.Favorite
-import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.recent.RecentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,33 +11,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** F-015 즐겨찾기 목록. */
+/** F-016 최근 본 항목 목록. */
 @HiltViewModel
-class FavoriteViewModel @Inject constructor(
-    private val favoriteRepository: FavoriteRepository,
+class RecentlyViewedViewModel @Inject constructor(
+    recentRepository: RecentRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(FavoriteUiState())
-    val uiState: StateFlow<FavoriteUiState> = _uiState
+    private val _uiState = MutableStateFlow(RecentlyViewedUiState())
+    val uiState: StateFlow<RecentlyViewedUiState> = _uiState
 
     init {
         viewModelScope.launch {
-            favoriteRepository.observeFavorites().collect { favorites ->
-                _uiState.update { it.copy(favorites = favorites) }
+            recentRepository.observeRecentlyViewed().collect { items ->
+                _uiState.update { it.copy(items = items) }
             }
         }
         viewModelScope.launch {
             userPreferencesRepository.userPreferences.collect { preferences ->
                 _uiState.update { it.copy(selectedLanguage = preferences.languageCode) }
             }
-        }
-    }
-
-    // 목록에 있는 항목은 이미 즐겨찾기 상태이므로 toggleFavorite 호출은 항상 해제로 동작한다.
-    fun onRemove(favorite: Favorite) {
-        viewModelScope.launch {
-            favoriteRepository.toggleFavorite(favorite)
         }
     }
 
