@@ -2,12 +2,7 @@ package com.mediinbusan.app.core.navigation
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -24,6 +19,7 @@ import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
 import com.mediinbusan.app.feature.onboarding.LanguageSelectScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
 import com.mediinbusan.app.feature.search.SearchScreen
+import com.mediinbusan.app.feature.selfdiagnosis.SelfDiagnosisScreen
 import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
@@ -168,16 +164,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.SelfDiagnosis> {
-            SelfDiagnosisPlaceholderScreen()
+            SelfDiagnosisScreen(onBack = navController::popBackStack)
         }
-    }
-}
-
-// TODO: 자가진단 플로우(회원 정보 로컬 저장 포함) 실제 구현은 별도 이슈. 지금은 크래시 없이
-// 진입만 가능하도록 하는 최소 스텁 화면이다.
-@Composable
-private fun SelfDiagnosisPlaceholderScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "진단하기 기능은 준비 중입니다.", style = MaterialTheme.typography.titleMedium)
     }
 }
