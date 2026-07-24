@@ -23,6 +23,7 @@ import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
 import com.mediinbusan.app.feature.onboarding.LanguageSelectScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
+import com.mediinbusan.app.feature.search.SearchScreen
 import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
@@ -81,7 +82,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 // 전용 route가 생기면 교체할 것.
                 onNavigateToWellness = { navController.navigate(Route.HospitalList(medicalPurpose = "웰니스")) },
                 onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) },
-                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) }
+                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
+                onNavigateToSearch = { navController.navigate(Route.Search) }
+            )
+        }
+        composable<Route.Search> {
+            SearchScreen(
+                onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
+                onBack = navController::popBackStack
             )
         }
         composable<Route.HospitalList> { backStackEntry ->

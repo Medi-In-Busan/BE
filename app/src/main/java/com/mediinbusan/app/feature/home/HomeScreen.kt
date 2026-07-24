@@ -105,6 +105,7 @@ fun HomeScreen(
     onNavigateToWellness: () -> Unit = {},
     onNavigateToMap: () -> Unit = {},
     onNavigateToSelfDiagnosis: () -> Unit = {},
+    onNavigateToSearch: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -117,6 +118,7 @@ fun HomeScreen(
         onNavigateToWellness = onNavigateToWellness,
         onNavigateToMap = onNavigateToMap,
         onNavigateToSelfDiagnosis = onNavigateToSelfDiagnosis,
+        onNavigateToSearch = onNavigateToSearch,
         onNavigateToFavorite = onNavigateToFavorite,
         onNavigateToSettings = onNavigateToSettings,
         onPurposeSelected = viewModel::onMedicalPurposeSelected,
@@ -136,6 +138,7 @@ private fun HomeContent(
     onNavigateToWellness: () -> Unit,
     onNavigateToMap: () -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onPurposeSelected: (String) -> Unit,
@@ -185,7 +188,7 @@ private fun HomeContent(
                         .padding(contentPadding)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    HeroBannerSection(onSearchClick = { onNavigateToHospitalList(null) })
+                    HeroBannerSection(onSearchClick = onNavigateToSearch)
 
                     Spacer(modifier = Modifier.height(24.dp))
                     MedicalPurposeSection(
@@ -717,6 +720,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToWellness = {},
             onNavigateToMap = {},
             onNavigateToSelfDiagnosis = {},
+            onNavigateToSearch = {},
             onNavigateToFavorite = {},
             onNavigateToSettings = {},
             onPurposeSelected = {},
