@@ -46,3 +46,9 @@ val SettingsBorder = Color(0xFFECECEC)
 // 병원 상세페이지 영업 상태 배지("영업 중"/"영업 종료") 전용.
 val StatusOpenGreen = Color(0xFF2E9E44)
 val StatusClosedGray = Color(0xFF9B9B9B)
+
+// 자가진단(SelfDiagnosis) 화면 색상 토큰.
+val BorderColor = Color(0xFFE5E7EB)
+val PageBackground = Color(0xFFF8FAFC)
+val InfoBackground = Color(0xFFEAF5FF)
+val WarningBackground = Color(0xFFFFF4E5)
