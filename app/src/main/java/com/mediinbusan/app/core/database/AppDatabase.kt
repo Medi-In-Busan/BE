@@ -14,7 +14,7 @@ import com.mediinbusan.app.data.recent.RecentlyViewedEntity
  */
 @Database(
     entities = [FavoriteEntity::class, RecentlyViewedEntity::class],
-    version = 1,
+    version = 2, // v2: RecentlyViewedEntity에 itemType/imageUrl 추가 (출시 전이라 destructive migration으로 처리)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

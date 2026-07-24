@@ -7,5 +7,7 @@ import androidx.room.PrimaryKey
 data class RecentlyViewedEntity(
     @PrimaryKey val itemId: String,
     val itemName: String,
+    val itemType: String, // FavoriteItemType.name ("HOSPITAL" | "PLACE")
+    val imageUrl: String?,
     val viewedAt: Long
 )

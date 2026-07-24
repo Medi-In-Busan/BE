@@ -37,7 +37,7 @@ class HospitalDetailViewModel @Inject constructor(
                     when (result) {
                         is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
                         is Result.Success -> {
-                            recordView(result.data.id, result.data.name)
+                            recordView(result.data.id, result.data.name, result.data.imageUrl)
                             state.copy(isLoading = false, hospital = result.data, errorMessage = null)
                         }
                         is Result.Error -> state.copy(isLoading = false, errorMessage = result.message ?: "오류가 발생했습니다.")
@@ -52,8 +52,8 @@ class HospitalDetailViewModel @Inject constructor(
         }
     }
 
-    private fun recordView(id: String, name: String) {
-        viewModelScope.launch { recentRepository.recordView(id, name) }
+    private fun recordView(id: String, name: String, imageUrl: String?) {
+        viewModelScope.launch { recentRepository.recordView(id, name, FavoriteItemType.HOSPITAL, imageUrl) }
     }
 
     fun onToggleFavorite() {

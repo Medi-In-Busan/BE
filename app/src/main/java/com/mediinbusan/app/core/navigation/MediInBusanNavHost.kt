@@ -22,6 +22,8 @@ import com.mediinbusan.app.feature.map.MapScreen
 import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
 import com.mediinbusan.app.feature.onboarding.LanguageSelectScreen
+import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
+import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
@@ -137,12 +139,25 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable<Route.Settings> {
             SettingsScreen(
                 onBack = navController::popBackStack,
-                onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) }
+                onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) },
+                onNavigateToNotificationSettings = { navController.navigate(Route.NotificationSettings) },
+                onNavigateToFavoriteManage = { navController.navigate(Route.Favorite) },
+                onNavigateToRecentlyViewed = { navController.navigate(Route.RecentlyViewed) }
             )
         }
         composable<Route.SettingsInfoDetail> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.SettingsInfoDetail>()
             SettingsInfoDetailScreen(infoId = route.infoId, onBack = navController::popBackStack)
+        }
+        composable<Route.NotificationSettings> {
+            NotificationSettingsScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.RecentlyViewed> {
+            RecentlyViewedScreen(
+                onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
+                onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
+                onBack = navController::popBackStack
+            )
         }
         composable<Route.SelfDiagnosis> {
             SelfDiagnosisPlaceholderScreen()
