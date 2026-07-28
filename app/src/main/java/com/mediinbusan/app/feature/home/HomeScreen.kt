@@ -37,7 +37,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,6 +73,7 @@ import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
 import com.mediinbusan.app.core.designsystem.HeroTitleStyle
@@ -95,27 +95,24 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen(
-    onNavigateToHospitalList: (String?) -> Unit,
     onNavigateToHospitalDetail: (String) -> Unit,
     onNavigateToGuide: () -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    // NavHost에서 실제 배선됨. WELLNESS는 전용 route가 없어 HospitalList(medicalPurpose="웰니스")로
-    // 임시 연결되어 있고, SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
-    onNavigateToWellness: () -> Unit = {},
     onNavigateToMap: () -> Unit = {},
+    // SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
     onNavigateToSelfDiagnosis: () -> Unit = {},
-    onNavigateToSearch: () -> Unit = {},
+    // 의료목적 선택 칩/의료기관 찾기/웰니스 퀵링크/검색바가 전부 여기로 모인다.
+    // purpose가 있으면 진입한 통합 검색 화면(HospitalSearchList)이 해당 필터로 자동 검색한다.
+    onNavigateToSearch: (String?) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     HomeContent(
         uiState = uiState,
-        onNavigateToHospitalList = onNavigateToHospitalList,
         onNavigateToHospitalDetail = onNavigateToHospitalDetail,
         onNavigateToGuide = onNavigateToGuide,
-        onNavigateToWellness = onNavigateToWellness,
         onNavigateToMap = onNavigateToMap,
         onNavigateToSelfDiagnosis = onNavigateToSelfDiagnosis,
         onNavigateToSearch = onNavigateToSearch,
@@ -132,13 +129,11 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     uiState: HomeUiState,
-    onNavigateToHospitalList: (String?) -> Unit,
     onNavigateToHospitalDetail: (String) -> Unit,
     onNavigateToGuide: () -> Unit,
-    onNavigateToWellness: () -> Unit,
     onNavigateToMap: () -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
-    onNavigateToSearch: () -> Unit,
+    onNavigateToSearch: (String?) -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onPurposeSelected: (String) -> Unit,
@@ -188,17 +183,17 @@ private fun HomeContent(
                         .padding(contentPadding)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    HeroBannerSection(onSearchClick = onNavigateToSearch)
+                    HeroBannerSection(onSearchClick = { onNavigateToSearch(null) })
 
                     Spacer(modifier = Modifier.height(24.dp))
                     MedicalPurposeSection(
                         modifier = Modifier.padding(horizontal = 20.dp),
                         purposes = uiState.medicalPurposes,
                         selectedPurpose = uiState.selectedPurpose,
-                        // 카테고리는 "탐색 진입점"이라 로컬 상태 갱신과 HospitalList 이동이 함께 일어난다.
+                        // 카테고리는 "탐색 진입점"이라 로컬 상태 갱신과 통합 검색 화면 이동이 함께 일어난다.
                         onPurposeClick = { purpose ->
                             onPurposeSelected(purpose)
-                            onNavigateToHospitalList(purpose)
+                            onNavigateToSearch(purpose)
                         }
                     )
 
@@ -208,9 +203,9 @@ private fun HomeContent(
                         quickLinks = uiState.quickLinks,
                         onQuickLinkClick = { type ->
                             when (type) {
-                                QuickLinkType.HOSPITAL_LIST -> onNavigateToHospitalList(null)
+                                QuickLinkType.HOSPITAL_LIST -> onNavigateToSearch(null)
                                 QuickLinkType.GUIDE -> onNavigateToGuide()
-                                QuickLinkType.WELLNESS -> onNavigateToWellness()
+                                QuickLinkType.WELLNESS -> onNavigateToSearch("웰니스")
                                 QuickLinkType.MAP -> onNavigateToMap()
                                 QuickLinkType.SELF_DIAGNOSIS -> onNavigateToSelfDiagnosis()
                                 QuickLinkType.FAVORITE -> onNavigateToFavorite()
@@ -223,7 +218,7 @@ private fun HomeContent(
                         modifier = Modifier.padding(horizontal = 20.dp),
                         hospitals = uiState.recommendedHospitals,
                         favoriteHospitalIds = uiState.favoriteHospitalIds,
-                        onSeeAllClick = { onNavigateToHospitalList(null) },
+                        onSeeAllClick = { onNavigateToSearch(null) },
                         onHospitalClick = onNavigateToHospitalDetail,
                         onFavoriteClick = onFavoriteClick
                     )
@@ -277,6 +272,11 @@ private fun HomeWordmark() {
     }
 }
 
+// core/ui/BrandTopAppBar.kt의 BrandLanguageDropdown과 같은 톤. 닫혀있을 때 트리거는 수정 전
+// 원래 디자인 그대로(회색 아웃라인)이고, 드롭다운은 DropdownMenuItem 대신 직접 Row를 그린다 —
+// DropdownMenuItem은 내부적으로 최소 112dp 폭을 강제해서 모디파이어로는 줄일 수 없었다.
+// 직접 그리면 텍스트 크기만큼만 차지한다. Home은 팀원의 미머지 PR과 충돌을 피하려고 로컬
+// 사본을 따로 두지만(파일 상단 주석 참고), 시각적으로는 항상 같은 디자인을 유지한다.
 @Composable
 private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -295,14 +295,24 @@ private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (S
                 color = BadgeText
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = Color.White
+        ) {
             SupportedLanguage.CODES.forEach { code ->
-                DropdownMenuItem(
-                    text = { Text(text = code.toLanguageBadgeLabel()) },
-                    onClick = {
-                        onLanguageSelected(code)
-                        expanded = false
-                    }
+                val selected = code == currentLanguageCode
+                Text(
+                    text = code.toLanguageBadgeLabel(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) CoralPrimary else BadgeText,
+                    modifier = Modifier
+                        .clickable {
+                            onLanguageSelected(code)
+                            expanded = false
+                        }
+                        .background(if (selected) CoralPrimaryContainer else Color.Transparent)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 )
             }
         }
@@ -714,10 +724,8 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
     MediInBusanTheme {
         HomeContent(
             uiState = uiState,
-            onNavigateToHospitalList = {},
             onNavigateToHospitalDetail = {},
             onNavigateToGuide = {},
-            onNavigateToWellness = {},
             onNavigateToMap = {},
             onNavigateToSelfDiagnosis = {},
             onNavigateToSearch = {},

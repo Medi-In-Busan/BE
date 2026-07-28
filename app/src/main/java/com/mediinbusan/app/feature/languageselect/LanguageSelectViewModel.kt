@@ -1,4 +1,4 @@
-package com.mediinbusan.app.feature.onboarding
+package com.mediinbusan.app.feature.languageselect
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

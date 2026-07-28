@@ -1,4 +1,4 @@
-package com.mediinbusan.app.feature.onboarding
+package com.mediinbusan.app.feature.languageselect
 
 import androidx.annotation.DrawableRes
 import com.mediinbusan.app.R

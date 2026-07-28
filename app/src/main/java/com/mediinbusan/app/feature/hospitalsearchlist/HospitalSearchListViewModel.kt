@@ -1,4 +1,4 @@
-package com.mediinbusan.app.feature.search
+package com.mediinbusan.app.feature.hospitalsearchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,18 +17,23 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * 검색 화면 UI 스켈레톤. 병원+장소 통합 검색, 필터 칩 실제 적용, 정렬 적용, 서버 페이지네이션은
- * 전부 다음 이슈로 넘긴 상태다. 지금은 병원 샘플 데이터에 대해 이름만 클라이언트 필터링한다.
+ * S-04 통합 화면(구 HospitalList F-004/F-005 + Search UI 스켈레톤) ViewModel.
+ * 병원+장소 통합 검색, 필터 칩 토글 실제 적용, 정렬 적용, 서버 페이지네이션은 전부 다음 이슈로
+ * 넘긴 상태다. 진입 시 전달되는 medicalPurpose만 서버 필터링(HospitalRepository)에 반영하고,
+ * 그 외에는 병원 샘플 데이터에 대해 이름만 클라이언트 필터링한다.
  */
 @HiltViewModel
-class SearchViewModel @Inject constructor(
+class HospitalSearchListViewModel @Inject constructor(
     private val hospitalRepository: HospitalRepository,
     private val favoriteRepository: FavoriteRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SearchUiState())
-    val uiState: StateFlow<SearchUiState> = _uiState
+    private val _uiState = MutableStateFlow(HospitalSearchListUiState())
+    val uiState: StateFlow<HospitalSearchListUiState> = _uiState
+
+    private var currentPurpose: String? = null
+    private var initialized = false
 
     init {
         viewModelScope.launch {
@@ -45,6 +50,19 @@ class SearchViewModel @Inject constructor(
                 _uiState.update { it.copy(favoriteHospitalIds = hospitalIds) }
             }
         }
+    }
+
+    // Home에서 의료목적 칩/웰니스 퀵링크로 진입할 때 해당 필터 칩을 선택 상태로 반영하고,
+    // 그 목적에 맞는 결과만 서버에서 걸러 불러온다. 화면 재구성 시 중복 초기화되지 않도록 1회만 실행.
+    fun initialize(medicalPurpose: String?) {
+        if (initialized) return
+        initialized = true
+        currentPurpose = medicalPurpose
+        if (medicalPurpose != null) {
+            _uiState.update { state ->
+                state.copy(filters = state.filters.map { it.copy(selected = it.label == medicalPurpose) })
+            }
+        }
         loadResults()
     }
 
@@ -52,7 +70,7 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
-            when (val result = hospitalRepository.getHospitals(null, languageCode).first { it !is Result.Loading }) {
+            when (val result = hospitalRepository.getHospitals(currentPurpose, languageCode).first { it !is Result.Loading }) {
                 is Result.Success -> _uiState.update {
                     it.copy(isLoading = false, results = result.data, errorMessage = null)
                 }
@@ -85,9 +103,11 @@ class SearchViewModel @Inject constructor(
     }
 
     fun onResetSearchConditions() {
+        currentPurpose = null
         _uiState.update {
             it.copy(query = "", filters = SearchFilterChip.DEFAULTS)
         }
+        loadResults()
     }
 
     // TODO: 페이지네이션 백엔드 연동 전까지는 항상 마지막 페이지로 취급하는 스텁이다.
