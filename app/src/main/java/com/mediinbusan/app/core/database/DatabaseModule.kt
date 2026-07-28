@@ -20,7 +20,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME).build()
+        // 출시 전이라 정식 Migration 대신 destructive fallback을 쓴다. 스키마가 바뀔 때마다
+        // 즐겨찾기/최근 본 항목이 초기화되지만, 실사용자 데이터가 없는 단계라 문제 없다.
+        Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
 
     @Provides
     fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()

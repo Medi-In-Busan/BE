@@ -2,12 +2,7 @@ package com.mediinbusan.app.core.navigation
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -17,11 +12,15 @@ import com.mediinbusan.app.feature.favorite.FavoriteScreen
 import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
-import com.mediinbusan.app.feature.hospitallist.HospitalListScreen
+import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
 import com.mediinbusan.app.feature.map.MapScreen
 import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
-import com.mediinbusan.app.feature.onboarding.OnboardingScreen
+import com.mediinbusan.app.feature.languageselect.LanguageSelectScreen
+import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
+import com.mediinbusan.app.feature.selfdiagnosis.SelfDiagnosisScreen
+import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
+import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
 
@@ -55,8 +54,11 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Onboarding> {
-            OnboardingScreen(
-                onComplete = {
+            // 스켈레톤 단계의 통합 샘플(구 OnboardingScreen, 언어+의료목적 통합)은 삭제됐고
+            // feature/languageselect의 언어선택 화면만 배선한다. 의료 목적 선택(F-003)은 별도
+            // 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
+            LanguageSelectScreen(
+                onNext = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Onboarding) { inclusive = true }
                     }
@@ -65,22 +67,23 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.Home> {
             HomeScreen(
-                onNavigateToHospitalList = { purpose -> navController.navigate(Route.HospitalList(purpose)) },
                 onNavigateToHospitalDetail = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
-                onNavigateToGuide = { navController.navigate(Route.Guide) },
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
-                // TODO: '추천 웰니스' 전용 진입 route가 없음. Route.Nearby(hospitalId)는 병원 맥락이
-                // 필수라 Home에서 못 쓰기 때문에, 임시로 '웰니스' 카테고리의 HospitalList로 연결한다.
-                // 전용 route가 생기면 교체할 것.
-                onNavigateToWellness = { navController.navigate(Route.HospitalList(medicalPurpose = "웰니스")) },
-                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) },
-                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) }
+                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
+                // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
+                // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
+                // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
+                onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
+                onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
+                // 의료목적 선택/의료기관 찾기/웰니스/검색바 4개 진입점이 전부 여기 하나로 모인다.
+                // purpose가 있으면 HospitalSearchListScreen 진입 시 해당 필터로 자동 검색된다.
+                onNavigateToSearch = { purpose -> navController.navigateToTab(Route.HospitalSearchList(purpose)) }
             )
         }
-        composable<Route.HospitalList> { backStackEntry ->
-            val route = backStackEntry.toRoute<Route.HospitalList>()
-            HospitalListScreen(
+        composable<Route.HospitalSearchList> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.HospitalSearchList>()
+            HospitalSearchListScreen(
                 medicalPurpose = route.medicalPurpose,
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onBack = navController::popBackStack
@@ -119,6 +122,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.MapView>()
             MapScreen(
                 hospitalId = route.hospitalId,
+                onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onBack = navController::popBackStack
             )
         }
@@ -130,19 +134,30 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Settings> {
-            SettingsScreen(onBack = navController::popBackStack)
+            SettingsScreen(
+                onBack = navController::popBackStack,
+                onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) },
+                onNavigateToNotificationSettings = { navController.navigate(Route.NotificationSettings) },
+                onNavigateToFavoriteManage = { navController.navigate(Route.Favorite) },
+                onNavigateToRecentlyViewed = { navController.navigate(Route.RecentlyViewed) }
+            )
+        }
+        composable<Route.SettingsInfoDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.SettingsInfoDetail>()
+            SettingsInfoDetailScreen(infoId = route.infoId, onBack = navController::popBackStack)
+        }
+        composable<Route.NotificationSettings> {
+            NotificationSettingsScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.RecentlyViewed> {
+            RecentlyViewedScreen(
+                onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
+                onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
+                onBack = navController::popBackStack
+            )
         }
         composable<Route.SelfDiagnosis> {
-            SelfDiagnosisPlaceholderScreen()
+            SelfDiagnosisScreen(onBack = navController::popBackStack)
         }
-    }
-}
-
-// TODO: 자가진단 플로우(회원 정보 로컬 저장 포함) 실제 구현은 별도 이슈. 지금은 크래시 없이
-// 진입만 가능하도록 하는 최소 스텁 화면이다.
-@Composable
-private fun SelfDiagnosisPlaceholderScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "진단하기 기능은 준비 중입니다.", style = MaterialTheme.typography.titleMedium)
     }
 }

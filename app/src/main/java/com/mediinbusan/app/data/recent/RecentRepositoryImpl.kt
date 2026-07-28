@@ -1,5 +1,6 @@
 package com.mediinbusan.app.data.recent
 
+import com.mediinbusan.app.data.favorite.FavoriteItemType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -12,9 +13,15 @@ class RecentRepositoryImpl @Inject constructor(
     override fun observeRecentlyViewed(): Flow<List<RecentlyViewed>> =
         recentlyViewedDao.observeRecentlyViewed().map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun recordView(itemId: String, itemName: String) {
+    override suspend fun recordView(itemId: String, itemName: String, itemType: FavoriteItemType, imageUrl: String?) {
         recentlyViewedDao.upsert(
-            RecentlyViewedEntity(itemId = itemId, itemName = itemName, viewedAt = System.currentTimeMillis())
+            RecentlyViewedEntity(
+                itemId = itemId,
+                itemName = itemName,
+                itemType = itemType.name,
+                imageUrl = imageUrl,
+                viewedAt = System.currentTimeMillis()
+            )
         )
     }
 }

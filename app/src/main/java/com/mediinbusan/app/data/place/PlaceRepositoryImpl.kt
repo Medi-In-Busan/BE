@@ -35,7 +35,7 @@ class PlaceRepositoryImpl @Inject constructor(
                 id = "place-1",
                 name = "해운대 해수욕장",
                 type = PlaceType.TOURIST_ATTRACTION,
-                address = "부산광역시 해운대구",
+                address = "부산 해운대구 해운대해변로 264",
                 latitude = 35.1587,
                 longitude = 129.1604,
                 imageUrl = null,

@@ -56,7 +56,7 @@ fun MediInBusanApp() {
         // 동시에 즉시 갱신되는 반면 실제로 화면에 그려지는 컴포저블은 한두 프레임 늦게 바뀔 수
         // 있는데, innerPadding을 여기서 걸면 그 타이밍차 동안 아직 화면에 남아있는 이전 화면
         // (예: Splash)까지 하단 바 공간만큼 눌려서 "위로 밀리는" 것처럼 보인다. 대신 하단 바가
-        // 보이는 화면(Home/HospitalList/Guide/MapView) 각자가 core/ui의 BottomNavBarHeight만큼
+        // 보이는 화면(Home/HospitalSearchList/Guide/MapView) 각자가 core/ui의 BottomNavBarHeight만큼
         // 직접 여백을 둔다.
         MediInBusanNavHost(navController = navController)
     }
@@ -66,7 +66,7 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
     val destination = backStackEntry?.destination ?: return false
     return when {
         destination.hasRoute(Route.Home::class) -> true
-        destination.hasRoute(Route.HospitalList::class) -> true
+        destination.hasRoute(Route.HospitalSearchList::class) -> true
         destination.hasRoute(Route.Guide::class) -> true
         destination.hasRoute(Route.MapView::class) -> {
             // TODO: MapView 하나가 "전역 지도"/"병원 상세 지도" 두 의미를 겸하고 있어
@@ -93,8 +93,8 @@ private fun bottomNavTabs(
     BottomNavTabUiModel(
         label = "의료기관",
         icon = Icons.Default.LocalHospital,
-        selected = currentDestination.isRouteSelected<Route.HospitalList>(),
-        onClick = { navController.navigateToTab(Route.HospitalList()) }
+        selected = currentDestination.isRouteSelected<Route.HospitalSearchList>(),
+        onClick = { navController.navigateToTab(Route.HospitalSearchList()) }
     ),
     BottomNavTabUiModel(
         label = "가이드",
@@ -112,17 +112,3 @@ private fun bottomNavTabs(
 
 private inline fun <reified T : Route> NavDestination?.isRouteSelected(): Boolean =
     this?.hierarchy?.any { it.hasRoute(T::class) } == true
-
-/**
- * 탭 전환 표준 패턴: Route.Home까지 스택을 정리하되 각 탭의 상태는 보존한다.
- * graph.findStartDestination()은 Splash를 가리키는데, Splash는 앱 시작 시
- * popUpTo(Route.Splash){inclusive=true}로 이미 백스택에서 빠져 있어 popUpTo 대상이 될 수
- * 없다. 탭 내비게이션의 실질적인 루트인 Route.Home을 직접 지정한다.
- */
-private fun NavHostController.navigateToTab(route: Route) {
-    navigate(route) {
-        popUpTo(Route.Home) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
-    }
-}

@@ -18,3 +18,14 @@ val HeroTitleStyle = TextStyle(fontSize = 21.sp, fontWeight = FontWeight.Bold)
 val HeroSubtitleStyle = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Normal)
 val SectionTitleStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
 val CardTitleStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+
+// 언어선택(S-02) 타이틀/설명 전용. 타이틀은 스펙상 36 Bold였으나 실기기 프리뷰 피드백으로 30% 축소했다.
+val DisplayTitleStyle = TextStyle(fontSize = 25.sp, fontWeight = FontWeight.Bold)
+val BodyRegularStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal)
+
+// 설정(S-10) 리디자인 스펙 전용. Item Title은 스펙상 CardTitleStyle(15 SemiBold)과 같은 값이었으나
+// 카드가 빽빽해 보인다는 피드백으로 한 단계 낮춰 별도 스타일로 뺐다.
+val SettingsTitleStyle = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold)
+val SettingsSectionTitleStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+val SettingsItemTitleStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+val SettingsDescriptionStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal)

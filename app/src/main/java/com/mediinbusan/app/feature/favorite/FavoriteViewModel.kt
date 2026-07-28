@@ -2,6 +2,8 @@ package com.mediinbusan.app.feature.favorite
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +15,8 @@ import javax.inject.Inject
 /** F-015 즐겨찾기 목록. */
 @HiltViewModel
 class FavoriteViewModel @Inject constructor(
-    favoriteRepository: FavoriteRepository
+    private val favoriteRepository: FavoriteRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FavoriteUiState())
@@ -24,6 +27,32 @@ class FavoriteViewModel @Inject constructor(
             favoriteRepository.observeFavorites().collect { favorites ->
                 _uiState.update { it.copy(favorites = favorites) }
             }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.userPreferences.collect { preferences ->
+                _uiState.update { it.copy(selectedLanguage = preferences.languageCode) }
+            }
+        }
+    }
+
+    // 목록에 있는 항목은 이미 즐겨찾기 상태이므로 toggleFavorite 호출은 항상 해제로 동작한다.
+    fun onRemove(favorite: Favorite) {
+        viewModelScope.launch {
+            favoriteRepository.toggleFavorite(favorite)
+        }
+    }
+
+    fun onFilterSelected(filter: FavoriteTypeFilter) {
+        _uiState.update { it.copy(selectedFilter = filter) }
+    }
+
+    fun onSortSelected(sort: FavoriteSortOption) {
+        _uiState.update { it.copy(selectedSort = sort) }
+    }
+
+    fun onLanguageSelected(languageCode: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLanguageCode(languageCode)
         }
     }
 }

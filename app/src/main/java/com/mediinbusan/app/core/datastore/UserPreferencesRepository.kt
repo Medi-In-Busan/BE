@@ -11,7 +11,8 @@ import javax.inject.Inject
 data class UserPreferences(
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val onboardingComplete: Boolean = false,
-    val medicalPurpose: String? = null
+    val medicalPurpose: String? = null,
+    val notificationsEnabled: Boolean = true
 )
 
 interface UserPreferencesRepository {
@@ -19,6 +20,7 @@ interface UserPreferencesRepository {
     suspend fun setLanguageCode(languageCode: String)
     suspend fun setOnboardingComplete(complete: Boolean)
     suspend fun setMedicalPurpose(purpose: String?)
+    suspend fun setNotificationsEnabled(enabled: Boolean)
 }
 
 class UserPreferencesRepositoryImpl @Inject constructor(
@@ -29,7 +31,8 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         UserPreferences(
             languageCode = prefs[UserPreferencesKeys.LANGUAGE_CODE] ?: SupportedLanguage.DEFAULT.code,
             onboardingComplete = prefs[UserPreferencesKeys.ONBOARDING_COMPLETE] ?: false,
-            medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE]
+            medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE],
+            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
         )
     }
 
@@ -49,5 +52,9 @@ class UserPreferencesRepositoryImpl @Inject constructor(
                 prefs[UserPreferencesKeys.MEDICAL_PURPOSE] = purpose
             }
         }
+    }
+
+    override suspend fun setNotificationsEnabled(enabled: Boolean) {
+        dataStore.edit { it[UserPreferencesKeys.NOTIFICATIONS_ENABLED] = enabled }
     }
 }
