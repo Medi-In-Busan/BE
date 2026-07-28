@@ -1,4 +1,4 @@
-package com.mediinbusan.app.feature.search
+package com.mediinbusan.app.feature.hospitalsearchlist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,14 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -71,22 +67,30 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BrandDropdownMenu
+import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FavoriteHeartButton
+import com.mediinbusan.app.core.ui.FilterChipPill
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.data.hospital.Hospital
 
 @Composable
-fun SearchScreen(
+fun HospitalSearchListScreen(
+    medicalPurpose: String?,
     onSelectHospital: (String) -> Unit,
     onBack: () -> Unit,
-    viewModel: SearchViewModel = hiltViewModel()
+    viewModel: HospitalSearchListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    SearchContent(
+    LaunchedEffect(Unit) {
+        viewModel.initialize(medicalPurpose)
+    }
+
+    HospitalSearchListContent(
         uiState = uiState,
         onBack = onBack,
         onLanguageSelected = viewModel::onLanguageSelected,
@@ -102,8 +106,8 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SearchContent(
-    uiState: SearchUiState,
+private fun HospitalSearchListContent(
+    uiState: HospitalSearchListUiState,
     onBack: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
@@ -243,31 +247,9 @@ private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (St
         verticalAlignment = Alignment.CenterVertically
     ) {
         filters.take(PinnedFilterChipCount).forEach { chip ->
-            FilterChipPill(chip = chip, onClick = { onFilterToggled(chip.label) })
+            FilterChipPill(label = chip.label, selected = chip.selected, onClick = { onFilterToggled(chip.label) })
         }
         FilterDetailButton(filters = filters, onFilterToggled = onFilterToggled)
-    }
-}
-
-@Composable
-private fun FilterChipPill(chip: SearchFilterChip, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(percent = 50))
-            .background(if (chip.selected) CoralPrimaryContainer else Color.White)
-            .border(
-                width = 1.dp,
-                color = if (chip.selected) CoralPrimaryContainer else SettingsBorder,
-                shape = RoundedCornerShape(percent = 50)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = chip.label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (chip.selected) CoralPrimary else SettingsSecondaryText
-        )
     }
 }
 
@@ -331,44 +313,6 @@ private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (Sear
             }
         }
     }
-}
-
-// 정렬/필터 드롭다운 공용 스타일: Material3 기본 대신 우리 카드 톤(라운드 16dp+흰 배경)으로,
-// 선택된 항목은 코랄 배경 틴트+굵은 코랄 텍스트+체크 아이콘으로 강조한다.
-@Composable
-private fun BrandDropdownMenu(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-        shape = RoundedCornerShape(16.dp),
-        containerColor = Color.White,
-        shadowElevation = 6.dp,
-        content = content
-    )
-}
-
-@Composable
-private fun BrandDropdownMenuItem(label: String, selected: Boolean, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = {
-            Text(
-                text = label,
-                style = SettingsItemTitleStyle.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal),
-                color = if (selected) CoralPrimary else SettingsPrimaryText
-            )
-        },
-        trailingIcon = {
-            if (selected) {
-                Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
-            }
-        },
-        onClick = onClick,
-        modifier = Modifier.background(if (selected) CoralPrimaryContainer else Color.Transparent)
-    )
 }
 
 @Composable
@@ -508,10 +452,10 @@ private fun EmptySearchBanner(onReset: () -> Unit, modifier: Modifier = Modifier
 
 @Preview(showBackground = true)
 @Composable
-private fun SearchContentPreview() {
+private fun HospitalSearchListContentPreview() {
     MediInBusanTheme {
-        SearchContent(
-            uiState = SearchUiState(isLoading = false),
+        HospitalSearchListContent(
+            uiState = HospitalSearchListUiState(isLoading = false),
             onBack = {},
             onLanguageSelected = {},
             onQueryChanged = {},
