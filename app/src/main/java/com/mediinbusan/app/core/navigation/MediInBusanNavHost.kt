@@ -107,7 +107,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Guide> {
-            GuideScreen(onBack = navController::popBackStack)
+            GuideScreen(onMenuClick = { navController.navigate(Route.Settings) })
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()

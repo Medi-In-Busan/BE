@@ -25,6 +25,15 @@ class GuideViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            userPreferencesRepository.userPreferences.collect { preferences ->
+                _uiState.update { it.copy(languageCode = preferences.languageCode) }
+            }
+        }
+        loadGuideSteps()
+    }
+
+    private fun loadGuideSteps() {
+        viewModelScope.launch {
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
             guideRepository.getGuideSteps(languageCode).collect { result ->
                 _uiState.update { state ->
@@ -35,6 +44,12 @@ class GuideViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    fun onLanguageSelected(languageCode: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLanguageCode(languageCode)
         }
     }
 }
