@@ -1,5 +1,7 @@
 package com.mediinbusan.app.feature.guide
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,9 +22,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.PageBackground
+import com.mediinbusan.app.core.designsystem.SkyBlue
+import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
 
 // S-06 하위 STEP 상세
@@ -63,7 +69,7 @@ fun GuideStepDetailScreen(
             if (content.bannerResId != null) {
                 GuideDetailBanner(
                     bannerResId = content.bannerResId,
-                    aspectRatio = 1480f / 1063f,
+                    aspectRatio = 1536f / 1024f,
                     modifier = Modifier.padding(top = 20.dp)
                 )
             }
@@ -72,7 +78,6 @@ fun GuideStepDetailScreen(
                 GuideDetailItemSection(
                     title = content.checklistTitle,
                     items = content.checklistItems,
-                    showArrow = true,
                     onItemClick = onItemClick
                 )
             }
@@ -80,7 +85,6 @@ fun GuideStepDetailScreen(
                 GuideDetailItemSection(
                     title = content.situationalTitle,
                     items = content.situationalItems,
-                    showArrow = false,
                     onItemClick = onItemClick
                 )
             }
@@ -100,9 +104,10 @@ fun GuideStepDetailScreen(
 private fun GuideDetailItemSection(
     title: String,
     items: List<GuideDetailItem>,
-    showArrow: Boolean,
     onItemClick: (GuideDetailItem) -> Unit
 ) {
+    val context = LocalContext.current
+
     Column(modifier = Modifier.padding(top = 28.dp)) {
         GuideDetailSectionTitle(title = title)
         Column(
@@ -110,13 +115,29 @@ private fun GuideDetailItemSection(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items.forEach { item ->
-                GuideDetailItemCard(
-                    iconResId = item.iconResId,
-                    title = item.title,
-                    description = item.description,
-                    trailingIcon = if (showArrow) Icons.AutoMirrored.Filled.KeyboardArrowRight else null,
-                    onClick = if (showArrow) ({ onItemClick(item) }) else null
-                )
+                val url = item.url
+                when {
+                    url != null -> GuideDetailItemCard(
+                        iconResId = item.iconResId,
+                        title = item.title,
+                        description = item.description,
+                        trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                        trailingIconTint = SkyBlue,
+                        onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                    )
+                    item.navigable -> GuideDetailItemCard(
+                        iconResId = item.iconResId,
+                        title = item.title,
+                        description = item.description,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        onClick = { onItemClick(item) }
+                    )
+                    else -> GuideDetailItemCard(
+                        iconResId = item.iconResId,
+                        title = item.title,
+                        description = item.description
+                    )
+                }
             }
         }
     }

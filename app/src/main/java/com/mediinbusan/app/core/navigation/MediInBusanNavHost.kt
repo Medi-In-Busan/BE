@@ -15,6 +15,7 @@ import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
 import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
 import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
+import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
 import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
@@ -131,6 +132,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                         GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
                         GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
                         GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
+                        GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
                     }
                 }
             )
@@ -143,6 +145,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.HospitalInquiryDetail> {
             HospitalInquiryDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PreInquiryInformationDetail> {
+            PreInquiryInformationDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()

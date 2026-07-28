@@ -41,6 +41,9 @@ sealed interface Route {
     data object HospitalInquiryDetail : Route // S-06 STEP 01 하위 "병원 문의 전 정보 정리" 상세
 
     @Serializable
+    data object PreInquiryInformationDetail : Route // S-06 STEP 02 하위 "문의 전 전달할 정보 정리" 상세
+
+    @Serializable
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable
