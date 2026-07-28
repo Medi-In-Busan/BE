@@ -29,6 +29,18 @@ sealed interface Route {
     data object Guide : Route // S-06
 
     @Serializable
+    data class GuideStepDetail(val phase: String, val title: String) : Route // S-06 하위 STEP 상세 (phase = GuidePhase.name)
+
+    @Serializable
+    data object VisaEntryCheckDetail : Route // S-06 STEP 01 하위 "비자·입국 조건 확인" 상세
+
+    @Serializable
+    data object InsuranceDocumentsDetail : Route // S-06 STEP 01 하위 "보험·서류 준비" 상세
+
+    @Serializable
+    data object HospitalInquiryDetail : Route // S-06 STEP 01 하위 "병원 문의 전 정보 정리" 상세
+
+    @Serializable
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable

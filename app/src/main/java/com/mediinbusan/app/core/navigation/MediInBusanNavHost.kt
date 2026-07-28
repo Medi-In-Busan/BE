@@ -8,8 +8,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
+import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
+import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
+import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
+import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
+import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
 import com.mediinbusan.app.feature.hospitallist.HospitalListScreen
@@ -107,7 +113,36 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Guide> {
-            GuideScreen(onMenuClick = { navController.navigate(Route.Settings) })
+            GuideScreen(
+                onMenuClick = { navController.navigate(Route.Settings) },
+                onStepClick = { step ->
+                    navController.navigate(Route.GuideStepDetail(phase = step.phase.name, title = step.title))
+                }
+            )
+        }
+        composable<Route.GuideStepDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.GuideStepDetail>()
+            GuideStepDetailScreen(
+                phase = GuidePhase.valueOf(route.phase),
+                title = route.title,
+                onBack = navController::popBackStack,
+                onItemClick = { item ->
+                    when (item.id) {
+                        GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
+                        GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
+                        GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
+                    }
+                }
+            )
+        }
+        composable<Route.VisaEntryCheckDetail> {
+            VisaEntryCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.InsuranceDocumentsDetail> {
+            InsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.HospitalInquiryDetail> {
+            HospitalInquiryDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()
