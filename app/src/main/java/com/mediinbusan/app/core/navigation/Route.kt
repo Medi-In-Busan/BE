@@ -44,6 +44,15 @@ sealed interface Route {
     data object PreInquiryInformationDetail : Route // S-06 STEP 02 하위 "문의 전 전달할 정보 정리" 상세
 
     @Serializable
+    data object PassportReservationInfoDetail : Route // S-06 STEP 03 하위 "여권·예약정보 준비" 상세
+
+    @Serializable
+    data object MedicalRecordsTestResultsDetail : Route // S-06 STEP 03 하위 "기존 진단서·검사결과 준비" 상세
+
+    @Serializable
+    data object HospitalLocationCheckinDetail : Route // S-06 STEP 03 하위 "병원 위치와 접수 절차 확인" 상세
+
+    @Serializable
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable

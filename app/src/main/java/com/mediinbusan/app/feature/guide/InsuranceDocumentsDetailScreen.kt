@@ -81,8 +81,11 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
                 .padding(horizontal = 20.dp)
         ) {
             GuideDetailBanner(
-                bannerResId = R.drawable.img_insurance_documents_banner,
+                backgroundResId = R.drawable.img_insurance_documents_banner,
                 aspectRatio = 1536f / 1024f,
+                title = "보험과 서류를 미리 준비하면 진료와 보상이 더 쉬워져요.",
+                subtitle = "치료비 보장 범위, 필요 서류, 청구 절차를 미리 확인하고 준비해 주세요.",
+                stepLabel = "STEP 01",
                 modifier = Modifier.padding(top = 20.dp)
             )
 

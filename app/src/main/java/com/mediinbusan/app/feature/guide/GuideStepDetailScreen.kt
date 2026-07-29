@@ -68,8 +68,11 @@ fun GuideStepDetailScreen(
         ) {
             if (content.bannerResId != null) {
                 GuideDetailBanner(
-                    bannerResId = content.bannerResId,
+                    backgroundResId = content.bannerResId,
                     aspectRatio = 1536f / 1024f,
+                    title = content.bannerTitle,
+                    subtitle = content.bannerSubtitle,
+                    stepLabel = content.bannerStepLabel,
                     modifier = Modifier.padding(top = 20.dp)
                 )
             }
@@ -123,19 +126,31 @@ private fun GuideDetailItemSection(
                         description = item.description,
                         trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
                         trailingIconTint = SkyBlue,
-                        onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                        onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
+                        containerColor = item.cardBackgroundColor,
+                        badgeLabel = item.badgeLabel,
+                        badgeBackgroundColor = item.badgeBackgroundColor,
+                        badgeTextColor = item.badgeTextColor
                     )
                     item.navigable -> GuideDetailItemCard(
                         iconResId = item.iconResId,
                         title = item.title,
                         description = item.description,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        onClick = { onItemClick(item) }
+                        onClick = { onItemClick(item) },
+                        containerColor = item.cardBackgroundColor,
+                        badgeLabel = item.badgeLabel,
+                        badgeBackgroundColor = item.badgeBackgroundColor,
+                        badgeTextColor = item.badgeTextColor
                     )
                     else -> GuideDetailItemCard(
                         iconResId = item.iconResId,
                         title = item.title,
-                        description = item.description
+                        description = item.description,
+                        containerColor = item.cardBackgroundColor,
+                        badgeLabel = item.badgeLabel,
+                        badgeBackgroundColor = item.badgeBackgroundColor,
+                        badgeTextColor = item.badgeTextColor
                     )
                 }
             }

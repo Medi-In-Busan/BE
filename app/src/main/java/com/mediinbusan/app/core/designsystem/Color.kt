@@ -60,3 +60,9 @@ val GuideStepPurple = Color(0xFF8B7FE8)
 val GuideStepTeal = Color(0xFF2FB6B6)
 val GuideStepOrange = Color(0xFFF0A93A)
 val GuideStepGreen = Color(0xFF4CAF50)
+
+// 이용 가이드(S-06) STEP03 카드 배지·상황별 카드 배경 톤.
+val GuideBadgeGreenBackground = Color(0xFFE3F6EA)
+val GuideBadgePurpleBackground = Color(0xFFEFEBFB)
+val GuideCardPeachBackground = Color(0xFFFDF0E1)
+val GuideCardLavenderBackground = Color(0xFFEDEAFB)

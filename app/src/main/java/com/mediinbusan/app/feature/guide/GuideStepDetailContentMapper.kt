@@ -1,17 +1,27 @@
 package com.mediinbusan.app.feature.guide
 
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.designsystem.GuideBadgeGreenBackground
+import com.mediinbusan.app.core.designsystem.GuideBadgePurpleBackground
+import com.mediinbusan.app.core.designsystem.GuideCardLavenderBackground
+import com.mediinbusan.app.core.designsystem.GuideCardPeachBackground
+import com.mediinbusan.app.core.designsystem.GuideStepGreen
+import com.mediinbusan.app.core.designsystem.GuideStepPurple
 import com.mediinbusan.app.data.guide.GuidePhase
 
-// GuidePhase-상세 콘텐츠 매퍼, ENTRY_PREPARATION·RESERVATION_INQUIRY 구현, 나머지는 준비 중 플레이스홀더
+// GuidePhase-상세 콘텐츠 매퍼, ENTRY_PREPARATION·RESERVATION_INQUIRY·HOSPITAL_CHECKIN 구현, 나머지는 준비 중 플레이스홀더
 fun GuidePhase.toDetailContent(): GuideStepDetailContent = when (this) {
     GuidePhase.ENTRY_PREPARATION -> entryPreparationContent
     GuidePhase.RESERVATION_INQUIRY -> reservationInquiryContent
+    GuidePhase.HOSPITAL_CHECKIN -> hospitalCheckinContent
     else -> comingSoonContent
 }
 
 private val entryPreparationContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_guide_entry_preparation_banner,
+    bannerStepLabel = "STEP 01",
+    bannerTitle = "입국 전 준비",
+    bannerSubtitle = "입국 전에는 비자, 보험, 병원 문의 준비만 먼저 확인해도 충분해요.",
     checklistTitle = "준비사항 확인",
     checklistItems = listOf(
         GuideDetailItem(
@@ -51,6 +61,9 @@ private val entryPreparationContent = GuideStepDetailContent(
 
 private val reservationInquiryContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_reservation_inquiry_banner,
+    bannerStepLabel = "STEP 02",
+    bannerTitle = "예약 및 문의",
+    bannerSubtitle = "병원에 문의하기 전 필요한 정보를 정리하고 언어 지원과 문의 채널을 확인해요.",
     checklistTitle = "준비사항 확인",
     checklistItems = listOf(
         GuideDetailItem(
@@ -94,7 +107,64 @@ private val reservationInquiryContent = GuideStepDetailContent(
     noticeText = "본 안내는 특정 병원·기관 이용을 권장하지 않습니다. 실제 진행 여부는 병원에 직접 확인해 주세요."
 )
 
-// TODO: STEP 03~06 상세 콘텐츠 작성 필요
+private val hospitalCheckinContent = GuideStepDetailContent(
+    bannerResId = R.drawable.img_hospital_visit_checkin_banner,
+    bannerStepLabel = "STEP 03",
+    bannerTitle = "병원 방문 및 접수",
+    bannerSubtitle = "병원 방문 전에는 여권, 예약 정보, 접수 준비만 먼저 확인해도 충분해요.",
+    checklistTitle = "이번 단계에서 꼭 확인할 3가지",
+    checklistItems = listOf(
+        GuideDetailItem(
+            id = GuideDetailItemId.PASSPORT_RESERVATION_INFO,
+            iconResId = R.drawable.ic_passport_reservation_info,
+            title = "여권·예약정보 준비",
+            description = "여권 또는 신분 확인 자료와 예약 시간, 진료과를 미리 확인하세요.",
+            navigable = true,
+            badgeLabel = "신분 확인"
+        ),
+        GuideDetailItem(
+            id = GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS,
+            iconResId = R.drawable.ic_medical_records_test_results,
+            title = "기존 진단서·검사결과 준비",
+            description = "기존 진단서, 검사결과, 복용약 정보를 준비하면 접수가 쉬워져요.",
+            navigable = true,
+            badgeLabel = "기존 자료",
+            badgeBackgroundColor = GuideBadgeGreenBackground,
+            badgeTextColor = GuideStepGreen
+        ),
+        GuideDetailItem(
+            id = GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE,
+            iconResId = R.drawable.ic_hospital_location_checkin_guide,
+            title = "병원 위치와 접수 절차 확인",
+            description = "병원 위치, 도착 시간, 어디서 접수하는지 먼저 확인하세요.",
+            navigable = true,
+            badgeLabel = "접수 안내",
+            badgeBackgroundColor = GuideBadgePurpleBackground,
+            badgeTextColor = GuideStepPurple
+        )
+    ),
+    situationalTitle = "상황별 확인",
+    situationalItems = listOf(
+        GuideDetailItem(
+            id = "interpretation_language_support",
+            iconResId = R.drawable.ic_interpretation_language_support,
+            title = "통역·지원 언어 확인",
+            description = "진료 당일 통역이나 지원 언어가 필요한 경우만 확인하세요.",
+            cardBackgroundColor = GuideCardPeachBackground
+        ),
+        GuideDetailItem(
+            id = "payment_method_check",
+            iconResId = R.drawable.ic_payment_method_check,
+            title = "결제 수단 확인",
+            description = "해외 카드, 현금, 송금 가능 여부가 필요한 경우만 확인하세요.",
+            cardBackgroundColor = GuideCardLavenderBackground
+        )
+    ),
+    noticeIconResId = R.drawable.ic_guide_information,
+    noticeText = "병원마다 접수 절차와 준비 서류가 다를 수 있으니 예약 안내를 다시 확인해 주세요."
+)
+
+// TODO: STEP 04~06 상세 콘텐츠 작성 필요
 private val comingSoonContent = GuideStepDetailContent(
     bannerResId = null,
     checklistTitle = "",
