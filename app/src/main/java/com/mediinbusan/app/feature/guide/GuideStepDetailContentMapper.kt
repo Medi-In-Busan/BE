@@ -3,8 +3,6 @@ package com.mediinbusan.app.feature.guide
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.GuideBadgeGreenBackground
 import com.mediinbusan.app.core.designsystem.GuideBadgePurpleBackground
-import com.mediinbusan.app.core.designsystem.GuideCardLavenderBackground
-import com.mediinbusan.app.core.designsystem.GuideCardPeachBackground
 import com.mediinbusan.app.core.designsystem.GuideStepGreen
 import com.mediinbusan.app.core.designsystem.GuideStepPurple
 import com.mediinbusan.app.data.guide.GuidePhase
@@ -149,15 +147,13 @@ private val hospitalCheckinContent = GuideStepDetailContent(
             id = "interpretation_language_support",
             iconResId = R.drawable.ic_interpretation_language_support,
             title = "통역·지원 언어 확인",
-            description = "진료 당일 통역이나 지원 언어가 필요한 경우만 확인하세요.",
-            cardBackgroundColor = GuideCardPeachBackground
+            description = "진료 당일 통역이나 지원 언어가 필요한 경우만 확인하세요."
         ),
         GuideDetailItem(
             id = "payment_method_check",
             iconResId = R.drawable.ic_payment_method_check,
             title = "결제 수단 확인",
-            description = "해외 카드, 현금, 송금 가능 여부가 필요한 경우만 확인하세요.",
-            cardBackgroundColor = GuideCardLavenderBackground
+            description = "해외 카드, 현금, 송금 가능 여부가 필요한 경우만 확인하세요."
         )
     ),
     noticeIconResId = R.drawable.ic_guide_information,

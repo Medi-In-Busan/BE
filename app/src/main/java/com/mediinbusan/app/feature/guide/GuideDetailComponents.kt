@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -114,8 +115,14 @@ fun GuideDetailBanner(
 }
 
 @Composable
-fun GuideDetailSectionTitle(title: String, modifier: Modifier = Modifier) {
-    Text(text = title, style = SectionTitleStyle, color = TextPrimary, modifier = modifier)
+fun GuideDetailSectionTitle(title: String, modifier: Modifier = Modifier, @DrawableRes iconResId: Int? = null) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (iconResId != null) {
+            Image(painter = painterResource(id = iconResId), contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        Text(text = title, style = SectionTitleStyle, color = TextPrimary)
+    }
 }
 
 @Composable

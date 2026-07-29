@@ -19,6 +19,7 @@ import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
 import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
 import com.mediinbusan.app.feature.guide.PassportReservationInfoDetailScreen
 import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
+import com.mediinbusan.app.feature.guide.TreatmentExaminationDetailScreen
 import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
@@ -126,22 +127,28 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.GuideStepDetail> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.GuideStepDetail>()
-            GuideStepDetailScreen(
-                phase = GuidePhase.valueOf(route.phase),
-                title = route.title,
-                onBack = navController::popBackStack,
-                onItemClick = { item ->
-                    when (item.id) {
-                        GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
-                        GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
-                        GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
-                        GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
-                        GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
-                        GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
-                        GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.HospitalLocationCheckinDetail)
+            val phase = GuidePhase.valueOf(route.phase)
+            if (phase == GuidePhase.TREATMENT_EXAMINATION) {
+                // STEP04는 브리핑 카드 섹션이 있어 공용 GuideStepDetailScreen 대신 전용 화면을 쓴다.
+                TreatmentExaminationDetailScreen(onBack = navController::popBackStack)
+            } else {
+                GuideStepDetailScreen(
+                    phase = phase,
+                    title = route.title,
+                    onBack = navController::popBackStack,
+                    onItemClick = { item ->
+                        when (item.id) {
+                            GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
+                            GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
+                            GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
+                            GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
+                            GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
+                            GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
+                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.HospitalLocationCheckinDetail)
+                        }
                     }
-                }
-            )
+                )
+            }
         }
         composable<Route.VisaEntryCheckDetail> {
             VisaEntryCheckDetailScreen(onBack = navController::popBackStack)
