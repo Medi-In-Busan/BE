@@ -2,16 +2,19 @@ package com.mediinbusan.app.feature.guide
 
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.GuideBadgeGreenBackground
+import com.mediinbusan.app.core.designsystem.GuideBadgeOrangeBackground
 import com.mediinbusan.app.core.designsystem.GuideBadgePurpleBackground
 import com.mediinbusan.app.core.designsystem.GuideStepGreen
+import com.mediinbusan.app.core.designsystem.GuideStepOrange
 import com.mediinbusan.app.core.designsystem.GuideStepPurple
 import com.mediinbusan.app.data.guide.GuidePhase
 
-// GuidePhase-상세 콘텐츠 매퍼, ENTRY_PREPARATION·RESERVATION_INQUIRY·HOSPITAL_CHECKIN 구현, 나머지는 준비 중 플레이스홀더
+// GuidePhase-상세 콘텐츠 매퍼, ENTRY_PREPARATION·RESERVATION_INQUIRY·HOSPITAL_CHECKIN·PAYMENT_RECEIPT 구현, 나머지는 준비 중 플레이스홀더
 fun GuidePhase.toDetailContent(): GuideStepDetailContent = when (this) {
     GuidePhase.ENTRY_PREPARATION -> entryPreparationContent
     GuidePhase.RESERVATION_INQUIRY -> reservationInquiryContent
     GuidePhase.HOSPITAL_CHECKIN -> hospitalCheckinContent
+    GuidePhase.PAYMENT_RECEIPT -> paymentReceiptContent
     else -> comingSoonContent
 }
 
@@ -160,7 +163,62 @@ private val hospitalCheckinContent = GuideStepDetailContent(
     noticeText = "병원마다 접수 절차와 준비 서류가 다를 수 있으니 예약 안내를 다시 확인해 주세요."
 )
 
-// TODO: STEP 04~06 상세 콘텐츠 작성 필요
+private val paymentReceiptContent = GuideStepDetailContent(
+    bannerResId = R.drawable.img_payment_billing_banner,
+    bannerStepLabel = "STEP 05",
+    bannerTitle = "결제 전, 비용·수단·서류를 꼼꼼히 확인하세요",
+    bannerSubtitle = "총 비용과 포함 항목, 결제 수단, 발급 서류를 미리 확인하면 안전하고 편리하게 결제할 수 있어요.",
+    checklistTitle = "이번 단계에서 꼭 확인할 3가지",
+    checklistItems = listOf(
+        GuideDetailItem(
+            id = GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK,
+            iconResId = R.drawable.ic_estimated_cost_inquiry,
+            title = "총 비용과 포함 항목 확인",
+            description = "진료비, 검사비, 시술비, 약제비와 포함·불포함 항목을 먼저 확인하세요.",
+            navigable = true,
+            badgeLabel = "비용 확인"
+        ),
+        GuideDetailItem(
+            id = GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK,
+            iconResId = R.drawable.ic_payment_method_check,
+            title = "결제 가능 수단 확인",
+            description = "해외 카드, 현금, 송금 등 실제 결제 가능한 수단을 확인하세요.",
+            navigable = true,
+            badgeLabel = "결제 수단",
+            badgeBackgroundColor = GuideBadgeGreenBackground,
+            badgeTextColor = GuideStepGreen
+        ),
+        GuideDetailItem(
+            id = GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK,
+            iconResId = R.drawable.ic_medical_receipt,
+            title = "영수증·보험 청구 서류 확인",
+            description = "영수증, 진료비 세부내역서, 보험 청구용 서류 발급 여부를 확인하세요.",
+            navigable = true,
+            badgeLabel = "서류 확인",
+            badgeBackgroundColor = GuideBadgeOrangeBackground,
+            badgeTextColor = GuideStepOrange
+        )
+    ),
+    situationalTitle = "상황별 확인",
+    situationalItems = listOf(
+        GuideDetailItem(
+            id = "deposit_prepayment_check",
+            iconResId = R.drawable.ic_medical_documents_folder,
+            title = "보증금·선납금 필요 여부",
+            description = "입원, 시술, 예약 조건에 따라 선납금이 필요한 경우만 확인하세요."
+        ),
+        GuideDetailItem(
+            id = "cosmetic_tax_refund_check",
+            iconResId = R.drawable.ic_beauty_treatment_tax_refund_eligibility,
+            title = "미용시술 세금 환급 가능 여부",
+            description = "피부·미용 시술을 받는 경우에만 세금 환급 가능 여부를 확인하세요."
+        )
+    ),
+    noticeIconResId = R.drawable.ic_guide_information,
+    noticeText = "실제 비용과 발급 서류는 병원 및 보험사 기준이 다를 수 있으니 반드시 직접 확인해 주세요."
+)
+
+// TODO: STEP 06 상세 콘텐츠 작성 필요
 private val comingSoonContent = GuideStepDetailContent(
     bannerResId = null,
     checklistTitle = "",

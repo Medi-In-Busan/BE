@@ -53,6 +53,15 @@ sealed interface Route {
     data object HospitalLocationCheckinDetail : Route // S-06 STEP 03 하위 "병원 위치와 접수 절차 확인" 상세
 
     @Serializable
+    data object TotalCostCoverageCheckDetail : Route // S-06 STEP 05 하위 "총 비용과 포함 항목 확인" 상세
+
+    @Serializable
+    data object PaymentMethodCheckDetail : Route // S-06 STEP 05 하위 "결제 가능 수단 확인" 상세
+
+    @Serializable
+    data object ReceiptInsuranceDocumentsDetail : Route // S-06 STEP 05 하위 "영수증·보험 청구 서류 확인" 상세
+
+    @Serializable
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable

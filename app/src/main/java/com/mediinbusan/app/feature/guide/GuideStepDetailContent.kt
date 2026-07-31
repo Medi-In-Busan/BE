@@ -29,6 +29,9 @@ object GuideDetailItemId {
     const val PASSPORT_RESERVATION_INFO = "passport_reservation_info"
     const val MEDICAL_RECORDS_TEST_RESULTS = "medical_records_test_results"
     const val HOSPITAL_LOCATION_CHECKIN_GUIDE = "hospital_location_checkin_guide"
+    const val TOTAL_COST_COVERAGE_CHECK = "total_cost_coverage_check"
+    const val PAYMENT_METHOD_AVAILABLE_CHECK = "payment_method_available_check"
+    const val RECEIPT_INSURANCE_DOCUMENT_CHECK = "receipt_insurance_document_check"
 }
 
 // 배너는 텍스트 없는 배경 이미지 + Compose Text 오버레이 조합 (언어 전환 대응)
