@@ -32,11 +32,18 @@ object GuideDetailItemId {
     const val TOTAL_COST_COVERAGE_CHECK = "total_cost_coverage_check"
     const val PAYMENT_METHOD_AVAILABLE_CHECK = "payment_method_available_check"
     const val RECEIPT_INSURANCE_DOCUMENT_CHECK = "receipt_insurance_document_check"
+    const val MEDICATION_SCHEDULE_CHECK = "medication_schedule_check"
+    const val POST_TREATMENT_PRECAUTIONS_CHECK = "post_treatment_precautions_check"
+    const val ENGLISH_DOCUMENTS_RESULTS_CHECK = "english_documents_results_check"
+    const val AIRPORT_DEPARTURE_PREPARATION_CHECK = "airport_departure_preparation_check"
 }
 
 // 배너는 텍스트 없는 배경 이미지 + Compose Text 오버레이 조합 (언어 전환 대응)
+// bannerAspectRatio는 실제 배너 파일 원본 비율과 반드시 일치해야 한다 — 다르면 ContentScale.Crop이
+// 좌우를 잘라내며 삽화가 예상보다 안쪽(텍스트 영역)으로 밀려 들어와 텍스트와 겹칠 수 있다.
 data class GuideStepDetailContent(
     @param:DrawableRes val bannerResId: Int?,
+    val bannerAspectRatio: Float = 1536f / 1024f,
     val bannerStepLabel: String = "",
     val bannerTitle: String = "",
     val bannerSubtitle: String = "",

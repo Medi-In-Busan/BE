@@ -92,7 +92,7 @@ fun PassportReservationInfoDetailScreen(onBack: () -> Unit) {
         ) {
             GuideDetailBanner(
                 backgroundResId = R.drawable.img_passport_reservation_preparation_banner,
-                aspectRatio = 1536f / 1024f,
+                aspectRatio = 1672f / 941f,
                 title = "여권·예약정보 준비",
                 subtitle = "여권과 예약 정보를 미리 준비하면 접수가 더 빨라져요.",
                 stepLabel = "STEP 03",

@@ -90,7 +90,7 @@ fun VisaEntryCheckDetailScreen(onBack: () -> Unit) {
         ) {
             GuideDetailBanner(
                 backgroundResId = R.drawable.img_visa_entry_check_banner,
-                aspectRatio = 1536f / 1024f,
+                aspectRatio = 1672f / 941f,
                 title = "비자와 입국 조건을 먼저 확인하세요.",
                 subtitle = "국적과 체류기간, 방문 목적에 따라 비자 또는 K-ETA가 필요할 수 있어요.",
                 stepLabel = "STEP 01",

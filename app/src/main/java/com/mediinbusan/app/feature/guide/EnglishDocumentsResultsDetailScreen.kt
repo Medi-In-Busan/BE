@@ -22,39 +22,49 @@ import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.PageBackground
 
-private data class DocumentChecklistItem(
+private data class DocumentResultChecklistItem(
     @param:DrawableRes val iconResId: Int,
     val title: String,
     val description: String
 )
 
-private val DOCUMENT_CHECKLIST = listOf(
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_passport_copy,
-        title = "여권 사본",
-        description = "출입국 심사와 병원 접수 시 필요할 수 있어요."
+private val DOCUMENT_RESULT_CHECKLIST = listOf(
+    DocumentResultChecklistItem(
+        iconResId = R.drawable.ic_english_medical_certificate,
+        title = "영문 진단서·소견서 수령",
+        description = "영문으로 발급되는 진단서나 소견서를 받았는지 확인하세요."
     ),
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_appointment_confirmation,
-        title = "진료 예약 확인서",
-        description = "예약한 병원의 예약 확인서나 문자를 준비해 두세요."
+    DocumentResultChecklistItem(
+        iconResId = R.drawable.ic_test_results_imaging_files,
+        title = "검사결과·영상자료 수령",
+        description = "검사결과와 영상자료를 파일이나 CD로 받을 수 있는지 확인하세요."
     ),
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_medical_report_document,
-        title = "진단서 또는 소견서",
-        description = "기존에 받은 진단서나 소견서가 있다면 함께 준비하세요."
+    DocumentResultChecklistItem(
+        iconResId = R.drawable.ic_issuance_time_fee,
+        title = "발급 소요시간·비용 확인",
+        description = "서류 발급에 걸리는 시간과 추가 비용이 있는지 확인하세요."
     ),
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_medical_receipt,
-        title = "진료비 영수증",
-        description = "보험 청구나 세금 환급에 필요할 수 있어 보관해 두세요."
+    DocumentResultChecklistItem(
+        iconResId = R.drawable.ic_original_copy_document_check,
+        title = "원본·사본 서류 확인",
+        description = "원본과 사본 중 어떤 서류가 필요한지 확인하세요."
+    ),
+    DocumentResultChecklistItem(
+        iconResId = R.drawable.ic_airport_departure_pickup_complete,
+        title = "공항 출국 전 수령 완료 확인",
+        description = "출국 전에 모든 서류를 수령했는지 다시 한번 확인하세요."
+    ),
+    DocumentResultChecklistItem(
+        iconResId = R.drawable.ic_email_file_receipt_available,
+        title = "이메일·파일 수령 가능 여부",
+        description = "귀국 후에도 이메일이나 파일로 받을 수 있는지 확인하세요."
     )
 )
 
-// S-06 하위 STEP 상세의 "보험·서류 준비" 카드 상세
+// S-06 하위 STEP06 상세의 "영문 서류·검사결과 수령 확인" 카드 상세
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
+fun EnglishDocumentsResultsDetailScreen(onBack: () -> Unit) {
     Scaffold(
         containerColor = PageBackground,
         topBar = {
@@ -66,7 +76,7 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
                 },
                 title = {
                     Text(
-                        text = "01-02 보험·서류 준비",
+                        text = "06-03 영문 서류·검사결과 수령 확인",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -81,21 +91,21 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
                 .padding(horizontal = 20.dp)
         ) {
             GuideDetailBanner(
-                backgroundResId = R.drawable.img_insurance_documents_banner,
-                aspectRatio = 1672f / 941f,
-                title = "보험과 서류를 미리 준비하면 진료와 보상이 더 쉬워져요.",
-                subtitle = "치료비 보장 범위, 필요 서류, 청구 절차를 미리 확인하고 준비해 주세요.",
-                stepLabel = "STEP 01",
+                backgroundResId = R.drawable.img_english_documents_test_results_banner,
+                aspectRatio = 1491f / 1055f,
+                title = "영문 서류·검사결과 수령 확인",
+                subtitle = "귀국 후 제출이 필요한 서류와 검사결과 수령 여부를 미리 확인하세요.",
+                stepLabel = "STEP 06",
                 modifier = Modifier.padding(top = 20.dp)
             )
 
             Column(modifier = Modifier.padding(top = 28.dp)) {
-                GuideDetailSectionTitle(title = "준비 서류 체크리스트")
+                GuideDetailSectionTitle(title = "수령 전 체크리스트")
                 Column(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    DOCUMENT_CHECKLIST.forEach { item ->
+                    DOCUMENT_RESULT_CHECKLIST.forEach { item ->
                         GuideDetailItemCard(iconResId = item.iconResId, title = item.title, description = item.description)
                     }
                 }
@@ -103,7 +113,7 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
 
             GuideDetailNoticeBanner(
                 iconResId = R.drawable.ic_guide_information,
-                text = "본 안내는 보험 보장 범위를 보장하지 않습니다. 정확한 보장 내용은 가입한 보험사에 확인해 주세요.",
+                text = "필요한 서류 종류는 본국 제출 기관 기준에 따라 다를 수 있어요.",
                 modifier = Modifier.padding(top = 28.dp, bottom = 24.dp)
             )
         }

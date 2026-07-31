@@ -10,6 +10,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
+import com.mediinbusan.app.feature.guide.AirportDeparturePreparationDetailScreen
+import com.mediinbusan.app.feature.guide.EnglishDocumentsResultsDetailScreen
 import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
@@ -17,8 +19,10 @@ import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
 import com.mediinbusan.app.feature.guide.HospitalLocationCheckinDetailScreen
 import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
 import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
+import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
 import com.mediinbusan.app.feature.guide.PassportReservationInfoDetailScreen
 import com.mediinbusan.app.feature.guide.PaymentMethodCheckDetailScreen
+import com.mediinbusan.app.feature.guide.PostTreatmentPrecautionsDetailScreen
 import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
 import com.mediinbusan.app.feature.guide.ReceiptInsuranceDocumentsDetailScreen
 import com.mediinbusan.app.feature.guide.TotalCostCoverageCheckDetailScreen
@@ -151,6 +155,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
                             GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
                             GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
+                            GuideDetailItemId.MEDICATION_SCHEDULE_CHECK -> navController.navigate(Route.MedicationScheduleDetail)
+                            GuideDetailItemId.POST_TREATMENT_PRECAUTIONS_CHECK -> navController.navigate(Route.PostTreatmentPrecautionsDetail)
+                            GuideDetailItemId.ENGLISH_DOCUMENTS_RESULTS_CHECK -> navController.navigate(Route.EnglishDocumentsResultsDetail)
+                            GuideDetailItemId.AIRPORT_DEPARTURE_PREPARATION_CHECK -> navController.navigate(Route.AirportDeparturePreparationDetail)
                         }
                     }
                 )
@@ -188,6 +196,18 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.ReceiptInsuranceDocumentsDetail> {
             ReceiptInsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.MedicationScheduleDetail> {
+            MedicationScheduleDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PostTreatmentPrecautionsDetail> {
+            PostTreatmentPrecautionsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.EnglishDocumentsResultsDetail> {
+            EnglishDocumentsResultsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.AirportDeparturePreparationDetail> {
+            AirportDeparturePreparationDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()

@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
@@ -39,6 +40,14 @@ import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 
 // S-06 하위 상세 화면 공용 컴포넌트 (STEP 상세, 체크리스트 항목 상세 등에서 재사용)
+
+// 기본 CJK 줄바꿈은 단어 경계 없이 아무 글자 사이에서나 끊는다(예: "귀국"이 "귀"/"국"으로 분리).
+// Phrase는 단어·구 단위로만 끊어서 이 문제를 막는다 (API 33 미만에서는 기본 동작으로 자동 폴백).
+private val PhraseLineBreak = LineBreak.Paragraph.copy(
+    strategy = LineBreak.Strategy.Balanced,
+    strictness = LineBreak.Strictness.Strict,
+    wordBreak = LineBreak.WordBreak.Phrase
+)
 
 // 텍스트가 이미지 픽셀에 합성된 기존 배너용 (STEP01·STEP02 등). 언어 전환 대응 불가.
 @Composable
@@ -77,10 +86,13 @@ fun GuideDetailBanner(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+        // 삽화가 배너 오른쪽에 배치되므로 텍스트 폭을 왼쪽 60%로 제한한다 — 그래야 제목/부제목이
+        // 길어져도 줄바꿈만 될 뿐 삽화 위로 겹치지 않는다.
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(horizontal = 24.dp)
+                .fillMaxWidth(0.6f)
+                .padding(start = 24.dp, end = 8.dp)
         ) {
             if (stepLabel != null) {
                 Box(
@@ -100,13 +112,13 @@ fun GuideDetailBanner(
             }
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineSmall.copy(lineBreak = PhraseLineBreak),
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(lineBreak = PhraseLineBreak),
                 color = TextPrimary,
                 modifier = Modifier.padding(top = 8.dp)
             )

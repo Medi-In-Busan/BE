@@ -82,7 +82,7 @@ fun HospitalInquiryDetailScreen(onBack: () -> Unit) {
         ) {
             GuideDetailBanner(
                 backgroundResId = R.drawable.img_entry_preparation_banner,
-                aspectRatio = 1536f / 1024f,
+                aspectRatio = 1672f / 941f,
                 title = "입국 전 필요한 준비를 미리 챙겨두세요.",
                 subtitle = "여권, 체류기간, 방문 목적, 연락처 등 기본 정보를 미리 정리하면 입국과 병원 방문이 편리해요.",
                 stepLabel = "STEP 01",

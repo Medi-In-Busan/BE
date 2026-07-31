@@ -22,39 +22,39 @@ import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.PageBackground
 
-private data class DocumentChecklistItem(
+private data class MedicationChecklistItem(
     @param:DrawableRes val iconResId: Int,
     val title: String,
     val description: String
 )
 
-private val DOCUMENT_CHECKLIST = listOf(
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_passport_copy,
-        title = "여권 사본",
-        description = "출입국 심사와 병원 접수 시 필요할 수 있어요."
+private val MEDICATION_CHECKLIST = listOf(
+    MedicationChecklistItem(
+        iconResId = R.drawable.ic_current_medication_info,
+        title = "약 이름 확인",
+        description = "처방받은 약 이름과 성분을 확인해두세요."
     ),
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_appointment_confirmation,
-        title = "진료 예약 확인서",
-        description = "예약한 병원의 예약 확인서나 문자를 준비해 두세요."
+    MedicationChecklistItem(
+        iconResId = R.drawable.ic_expected_arrival_time,
+        title = "복용 시간·식전후 여부 확인",
+        description = "정해진 복용 시간과 식전·식후 여부를 놓치지 않도록 확인하세요."
     ),
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_medical_report_document,
-        title = "진단서 또는 소견서",
-        description = "기존에 받은 진단서나 소견서가 있다면 함께 준비하세요."
+    MedicationChecklistItem(
+        iconResId = R.drawable.ic_return_date_calendar,
+        title = "복용 기간 확인",
+        description = "며칠간 복용해야 하는지, 언제까지 복용하는지 확인하세요."
     ),
-    DocumentChecklistItem(
-        iconResId = R.drawable.ic_medical_receipt,
-        title = "진료비 영수증",
-        description = "보험 청구나 세금 환급에 필요할 수 있어 보관해 두세요."
+    MedicationChecklistItem(
+        iconResId = R.drawable.ic_caution_warning,
+        title = "보관 및 주의사항 확인",
+        description = "보관 방법과 함께 복용하면 안 되는 약이 있는지 확인하세요."
     )
 )
 
-// S-06 하위 STEP 상세의 "보험·서류 준비" 카드 상세
+// S-06 하위 STEP06 상세의 "약 복용 방법 확인" 카드 상세
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
+fun MedicationScheduleDetailScreen(onBack: () -> Unit) {
     Scaffold(
         containerColor = PageBackground,
         topBar = {
@@ -66,7 +66,7 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
                 },
                 title = {
                     Text(
-                        text = "01-02 보험·서류 준비",
+                        text = "06-01 약 복용 방법 확인",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -81,21 +81,21 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
                 .padding(horizontal = 20.dp)
         ) {
             GuideDetailBanner(
-                backgroundResId = R.drawable.img_insurance_documents_banner,
+                backgroundResId = R.drawable.img_post_treatment_travel_preparation_banner,
                 aspectRatio = 1672f / 941f,
-                title = "보험과 서류를 미리 준비하면 진료와 보상이 더 쉬워져요.",
-                subtitle = "치료비 보장 범위, 필요 서류, 청구 절차를 미리 확인하고 준비해 주세요.",
-                stepLabel = "STEP 01",
+                title = "약 복용 방법 확인",
+                subtitle = "약 이름과 복용 시간, 복용 기간을 미리 확인하면 안전하게 복용할 수 있어요.",
+                stepLabel = "STEP 06",
                 modifier = Modifier.padding(top = 20.dp)
             )
 
             Column(modifier = Modifier.padding(top = 28.dp)) {
-                GuideDetailSectionTitle(title = "준비 서류 체크리스트")
+                GuideDetailSectionTitle(title = "복용 전 체크리스트")
                 Column(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    DOCUMENT_CHECKLIST.forEach { item ->
+                    MEDICATION_CHECKLIST.forEach { item ->
                         GuideDetailItemCard(iconResId = item.iconResId, title = item.title, description = item.description)
                     }
                 }
@@ -103,7 +103,7 @@ fun InsuranceDocumentsDetailScreen(onBack: () -> Unit) {
 
             GuideDetailNoticeBanner(
                 iconResId = R.drawable.ic_guide_information,
-                text = "본 안내는 보험 보장 범위를 보장하지 않습니다. 정확한 보장 내용은 가입한 보험사에 확인해 주세요.",
+                text = "정확한 복용법은 처방전과 약사 안내를 기준으로 다시 확인해 주세요.",
                 modifier = Modifier.padding(top = 28.dp, bottom = 24.dp)
             )
         }

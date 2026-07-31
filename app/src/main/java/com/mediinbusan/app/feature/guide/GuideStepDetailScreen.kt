@@ -69,7 +69,7 @@ fun GuideStepDetailScreen(
             if (content.bannerResId != null) {
                 GuideDetailBanner(
                     backgroundResId = content.bannerResId,
-                    aspectRatio = 1536f / 1024f,
+                    aspectRatio = content.bannerAspectRatio,
                     title = content.bannerTitle,
                     subtitle = content.bannerSubtitle,
                     stepLabel = content.bannerStepLabel,

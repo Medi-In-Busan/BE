@@ -95,7 +95,7 @@ fun PaymentMethodCheckDetailScreen(onBack: () -> Unit) {
         ) {
             GuideDetailBanner(
                 backgroundResId = R.drawable.img_available_payment_methods_banner,
-                aspectRatio = 1448f / 1086f,
+                aspectRatio = 1672f / 941f,
                 title = "결제 가능 수단 확인",
                 subtitle = "치료 전이나 퇴원 전에 실제로 사용 가능한 결제 수단을 미리 확인해 보세요.",
                 stepLabel = "STEP 05",

@@ -92,7 +92,7 @@ fun PreInquiryInformationDetailScreen(onBack: () -> Unit) {
         ) {
             GuideDetailBanner(
                 backgroundResId = R.drawable.img_pre_inquiry_information_banner,
-                aspectRatio = 1536f / 1024f,
+                aspectRatio = 1672f / 941f,
                 title = "문의 전 전달할 정보 정리",
                 subtitle = "희망 진료와 증상, 방문 시기 등 핵심 정보만 정리해 두면 병원이 더 정확하게 안내할 수 있어요.",
                 stepLabel = "STEP 02",
