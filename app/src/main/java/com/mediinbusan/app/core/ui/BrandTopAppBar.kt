@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -35,7 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.SettingsBorder
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SkyBlue
@@ -88,6 +90,9 @@ private fun BrandWordmark() {
     }
 }
 
+// 닫혀있을 때 보이는 트리거는 수정 전 원래 디자인 그대로(회색 아웃라인). 드롭다운을 펼쳤을 때는
+// DropdownMenuItem 대신 직접 Row를 그린다 — DropdownMenuItem은 내부적으로 최소 112dp 폭을
+// 강제해서 contentPadding/모디파이어로는 줄일 수 없었다. 직접 그리면 텍스트 크기만큼만 차지한다.
 @Composable
 private fun BrandLanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -101,30 +106,31 @@ private fun BrandLanguageDropdown(currentLanguageCode: String, onLanguageSelecte
                 .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(
-                text = "${currentLanguageCode.toTopBarLanguageLabel()} ▾",
+                text = "${currentLanguageCode.toLanguageBadgeLabel()} ▾",
                 style = MaterialTheme.typography.labelSmall,
                 color = SettingsSecondaryText
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            listOf("ko", "en", "ja", "zh").forEach { code ->
-                DropdownMenuItem(
-                    text = { Text(text = code.toTopBarLanguageLabel()) },
-                    onClick = {
-                        onLanguageSelected(code)
-                        expanded = false
-                    }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = Color.White
+        ) {
+            SupportedLanguage.CODES.forEach { code ->
+                val selected = code == currentLanguageCode
+                Text(
+                    text = code.toLanguageBadgeLabel(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) CoralPrimary else SettingsSecondaryText,
+                    modifier = Modifier
+                        .clickable {
+                            onLanguageSelected(code)
+                            expanded = false
+                        }
+                        .background(if (selected) CoralPrimaryContainer else Color.Transparent)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 )
             }
         }
     }
-}
-
-// HomeScreen.kt의 toLanguageBadgeLabel()과 표기를 맞춘다(ko/en/zh/ja → KO/EN/CN/JP).
-fun String.toTopBarLanguageLabel(): String = when (this) {
-    "ko" -> "KO"
-    "en" -> "EN"
-    "zh" -> "CN"
-    "ja" -> "JP"
-    else -> this.uppercase()
 }

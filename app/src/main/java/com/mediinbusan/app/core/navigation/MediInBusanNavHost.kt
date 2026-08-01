@@ -30,13 +30,12 @@ import com.mediinbusan.app.feature.guide.TreatmentExaminationDetailScreen
 import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
-import com.mediinbusan.app.feature.hospitallist.HospitalListScreen
+import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
 import com.mediinbusan.app.feature.map.MapScreen
 import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
-import com.mediinbusan.app.feature.onboarding.LanguageSelectScreen
+import com.mediinbusan.app.feature.languageselect.LanguageSelectScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
-import com.mediinbusan.app.feature.search.SearchScreen
 import com.mediinbusan.app.feature.selfdiagnosis.SelfDiagnosisScreen
 import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
@@ -73,9 +72,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Onboarding> {
-            // 팀원이 스켈레톤 단계에서 만든 OnboardingScreen(언어+의료목적 통합 샘플)은 라우팅에서
-            // 제거하고 파일만 보존한다. 언어선택 UI 개선 작업으로 독립 화면을 새로 배선한다.
-            // 의료 목적 선택(F-003)은 별도 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
+            // 스켈레톤 단계의 통합 샘플(구 OnboardingScreen, 언어+의료목적 통합)은 삭제됐고
+            // feature/languageselect의 언어선택 화면만 배선한다. 의료 목적 선택(F-003)은 별도
+            // 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
             LanguageSelectScreen(
                 onNext = {
                     navController.navigate(Route.Home) {
@@ -86,29 +85,23 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.Home> {
             HomeScreen(
-                onNavigateToHospitalList = { purpose -> navController.navigate(Route.HospitalList(purpose)) },
                 onNavigateToHospitalDetail = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
-                onNavigateToGuide = { navController.navigate(Route.Guide) },
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
-                // TODO: '추천 웰니스' 전용 진입 route가 없음. Route.Nearby(hospitalId)는 병원 맥락이
-                // 필수라 Home에서 못 쓰기 때문에, 임시로 '웰니스' 카테고리의 HospitalList로 연결한다.
-                // 전용 route가 생기면 교체할 것.
-                onNavigateToWellness = { navController.navigate(Route.HospitalList(medicalPurpose = "웰니스")) },
-                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) },
                 onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
-                onNavigateToSearch = { navController.navigate(Route.Search) }
+                // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
+                // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
+                // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
+                onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
+                onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
+                // 의료목적 선택/의료기관 찾기/웰니스/검색바 4개 진입점이 전부 여기 하나로 모인다.
+                // purpose가 있으면 HospitalSearchListScreen 진입 시 해당 필터로 자동 검색된다.
+                onNavigateToSearch = { purpose -> navController.navigateToTab(Route.HospitalSearchList(purpose)) }
             )
         }
-        composable<Route.Search> {
-            SearchScreen(
-                onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
-                onBack = navController::popBackStack
-            )
-        }
-        composable<Route.HospitalList> { backStackEntry ->
-            val route = backStackEntry.toRoute<Route.HospitalList>()
-            HospitalListScreen(
+        composable<Route.HospitalSearchList> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.HospitalSearchList>()
+            HospitalSearchListScreen(
                 medicalPurpose = route.medicalPurpose,
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onBack = navController::popBackStack

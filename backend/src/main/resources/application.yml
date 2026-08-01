@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: backend
+
+# 시크릿(API 키 등)은 이 파일에 직접 넣지 않는다.
+# Android의 local.properties 패턴과 동일하게, 로컬 실행용 값은
+# application-local.yml(gitignore 대상)에 분리하고 여기서는 참조만 한다.

@@ -35,9 +35,9 @@
 | 화면 | 기능 ID | 패키지 |
 | --- | --- | --- |
 | S-01 스플래시 | F-001 | `feature/splash` |
-| S-02 온보딩 | F-002, F-003 | `feature/onboarding` |
+| S-02 온보딩(언어 선택) | F-002, F-003 | `feature/languageselect` (구 `feature/onboarding`. 스켈레톤 단계 통합 샘플은 삭제, 언어선택 화면만 존재) |
 | S-03 홈 | - | `feature/home` |
-| S-04 의료기관 목록 | F-004, F-005 | `feature/hospitallist` |
+| S-04 의료기관 목록/검색 | F-004, F-005 | `feature/hospitalsearchlist` (구 `feature/hospitallist` + `feature/search` 통합. Home의 의료목적 선택/의료기관 찾기/웰니스/검색바 4개 진입점이 모두 이 화면 하나로 모인다) |
 | S-05 의료기관 상세 | F-006, F-007, F-009 | `feature/hospitaldetail` |
 | S-06 의료 이용 가이드 | F-008 | `feature/guide` |
 | S-07 주변 관광·웰니스 | F-011, F-012, F-014 | `feature/nearby` (+ `domain/nearby`, `domain/course`) |

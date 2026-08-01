@@ -39,45 +39,57 @@ class PlaceRepositoryImpl @Inject constructor(
                 latitude = 35.1587,
                 longitude = 129.1604,
                 imageUrl = null,
-                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
+                description = "진료 후 가볍게 바닷가를 걸으며 회복 시간을 보내기 좋은 부산 대표 관광지입니다.",
                 phoneNumber = null,
                 distanceFromHospitalMeters = 500.0
             ),
             Place(
                 id = "place-2",
-                name = "센텀시티 맛집거리",
-                type = PlaceType.RESTAURANT,
-                address = "부산 해운대구 센텀중앙로 79",
-                latitude = 35.1701,
-                longitude = 129.1298,
+                name = "동백섬 산책로",
+                type = PlaceType.WALK,
+                address = "부산광역시 해운대구 동백로 67",
+                latitude = 35.1532,
+                longitude = 129.1515,
                 imageUrl = null,
-                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
+                description = "완만한 해안 산책로와 전망 포인트가 있어 무리하지 않는 회복형 코스에 적합합니다.",
                 phoneNumber = null,
-                distanceFromHospitalMeters = 350.0
+                distanceFromHospitalMeters = 900.0
             ),
             Place(
                 id = "place-3",
-                name = "동백섬",
-                type = PlaceType.TOURIST_ATTRACTION,
-                address = "부산 해운대구 동백로 116",
-                latitude = 35.1553,
-                longitude = 129.1494,
+                name = "스파랜드 센텀시티",
+                type = PlaceType.SPA,
+                address = "부산광역시 해운대구 센텀남대로 35",
+                latitude = 35.1688,
+                longitude = 129.1295,
                 imageUrl = null,
-                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
-                phoneNumber = null,
-                distanceFromHospitalMeters = 1200.0
+                description = "휴식 중심 일정에 넣기 좋은 도심형 스파 시설입니다. 시술 직후 이용 가능 여부는 의료진 안내를 우선하세요.",
+                phoneNumber = "1668-2850",
+                distanceFromHospitalMeters = 1300.0
             ),
             Place(
                 id = "place-4",
-                name = "국제시장 먹자골목",
+                name = "센텀시티 카페 거리",
                 type = PlaceType.RESTAURANT,
-                address = "부산 중구 신창동4가",
-                latitude = 35.1005,
-                longitude = 129.0294,
+                address = "부산광역시 해운대구 센텀 일대",
+                latitude = 35.1697,
+                longitude = 129.1326,
                 imageUrl = null,
-                description = "실제 데이터 연동 전 표시되는 샘플 장소입니다.",
+                description = "대기 시간이나 진료 후 짧은 휴식에 맞춰 들르기 쉬운 카페·가벼운 식사 권역입니다.",
                 phoneNumber = null,
-                distanceFromHospitalMeters = 800.0
+                distanceFromHospitalMeters = 1500.0
+            ),
+            Place(
+                id = "place-5",
+                name = "신세계 센텀시티",
+                type = PlaceType.SHOPPING,
+                address = "부산광역시 해운대구 센텀남대로 35",
+                latitude = 35.1688,
+                longitude = 129.1295,
+                imageUrl = null,
+                description = "실내 이동 중심이라 날씨 영향을 덜 받는 쇼핑·식사·휴식 복합 공간입니다.",
+                phoneNumber = "1588-1234",
+                distanceFromHospitalMeters = 1400.0
             )
         )
     }
