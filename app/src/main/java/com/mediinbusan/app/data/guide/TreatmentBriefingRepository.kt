@@ -3,10 +3,13 @@ package com.mediinbusan.app.data.guide
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mediinbusan.app.core.datastore.TreatmentBriefingDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import javax.inject.Inject
 
 // S-06 STEP04 "내 진료 브리핑 카드" 입력값. 목업의 샘플 문구를 기본값으로 둔다.
@@ -47,16 +50,21 @@ class TreatmentBriefingRepositoryImpl @Inject constructor(
     @TreatmentBriefingDataStore private val dataStore: DataStore<Preferences>
 ) : TreatmentBriefingRepository {
 
-    override val treatmentBriefing: Flow<TreatmentBriefing> = dataStore.data.map { prefs ->
-        val defaults = TreatmentBriefing()
-        TreatmentBriefing(
-            visitPurpose = prefs[TreatmentBriefingKeys.VISIT_PURPOSE] ?: defaults.visitPurpose,
-            symptoms = prefs[TreatmentBriefingKeys.SYMPTOMS] ?: defaults.symptoms,
-            allergyMedication = prefs[TreatmentBriefingKeys.ALLERGY_MEDICATION] ?: defaults.allergyMedication,
-            returnDate = prefs[TreatmentBriefingKeys.RETURN_DATE] ?: defaults.returnDate,
-            memo = prefs[TreatmentBriefingKeys.MEMO] ?: defaults.memo
-        )
-    }
+    override val treatmentBriefing: Flow<TreatmentBriefing> = dataStore.data
+        // 파일 손상·디스크 오류(IOException) 시 빈 값으로 복구해 기본값으로 대체한다.
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { prefs ->
+            val defaults = TreatmentBriefing()
+            TreatmentBriefing(
+                visitPurpose = prefs[TreatmentBriefingKeys.VISIT_PURPOSE] ?: defaults.visitPurpose,
+                symptoms = prefs[TreatmentBriefingKeys.SYMPTOMS] ?: defaults.symptoms,
+                allergyMedication = prefs[TreatmentBriefingKeys.ALLERGY_MEDICATION] ?: defaults.allergyMedication,
+                returnDate = prefs[TreatmentBriefingKeys.RETURN_DATE] ?: defaults.returnDate,
+                memo = prefs[TreatmentBriefingKeys.MEMO] ?: defaults.memo
+            )
+        }
 
     override suspend fun updateField(field: TreatmentBriefingField, value: String) {
         dataStore.edit { it[TreatmentBriefingKeys.keyFor(field)] = value }
