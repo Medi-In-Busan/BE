@@ -1,9 +1,12 @@
 package com.mediinbusan.app.feature.guide
 
+import android.content.Intent
+import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,12 +18,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,16 +42,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
+import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.ui.launchIntentSafely
 
 // S-06 하위 상세 화면 공용 컴포넌트 (STEP 상세, 체크리스트 항목 상세 등에서 재사용)
 
@@ -229,5 +246,226 @@ fun GuideDetailNoticeBanner(@DrawableRes iconResId: Int, text: String, modifier:
             color = TextSecondary,
             modifier = Modifier.padding(start = 12.dp)
         )
+    }
+}
+
+// 상황별 GRID 레이아웃 전용 컴팩트 카드 (아이콘 위, 제목·설명 아래로 세로 배치, 2열로 나란히 배치됨).
+@Composable
+fun GuideGridItemCard(item: GuideDetailItem, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = item.cardBackgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Image(painter = painterResource(id = item.iconResId), contentDescription = null, modifier = Modifier.size(36.dp))
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                modifier = Modifier.padding(top = 10.dp)
+            )
+            Text(
+                text = item.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+}
+
+// 번호 매긴 질문 카드 ("이렇게 물어보세요" 등 문의 스크립트 예시 섹션에서 사용).
+@Composable
+fun GuideQuestionCard(number: Int, question: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, BorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(SkyBlue),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = number.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Text(
+                text = question,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                modifier = Modifier.padding(start = 14.dp)
+            )
+        }
+    }
+}
+
+// S-06 하위 STEP 상세·항목별 상세 화면 공용 템플릿 (배너 + 체크리스트 + 상황별 확인 + 안내 배너).
+// GuideStepDetailScreen(STEP 단위)과 항목별 leaf 상세 화면이 전부 이 템플릿 + GuideStepDetailContent
+// 모델을 통해서만 화면을 구성한다 — 화면마다 Scaffold/배너/체크리스트 구조를 복제하지 않는다.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GuideDetailTemplateScreen(
+    topBarTitle: String,
+    content: GuideStepDetailContent,
+    onBack: () -> Unit,
+    onItemClick: (GuideDetailItem) -> Unit = {}
+) {
+    Scaffold(
+        containerColor = PageBackground,
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                    }
+                },
+                title = {
+                    Text(text = topBarTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+        ) {
+            if (content.bannerResId != null) {
+                GuideDetailBanner(
+                    backgroundResId = content.bannerResId,
+                    aspectRatio = content.bannerAspectRatio,
+                    title = content.bannerTitle,
+                    subtitle = content.bannerSubtitle,
+                    stepLabel = content.bannerStepLabel,
+                    modifier = Modifier.padding(top = 20.dp)
+                )
+            }
+
+            if (content.checklistItems.isNotEmpty()) {
+                GuideDetailItemSection(
+                    title = content.checklistTitle,
+                    items = content.checklistItems,
+                    layout = GuideSituationalLayout.LIST,
+                    onItemClick = onItemClick
+                )
+            }
+            if (content.situationalItems.isNotEmpty()) {
+                GuideDetailItemSection(
+                    title = content.situationalTitle,
+                    items = content.situationalItems,
+                    layout = content.situationalLayout,
+                    onItemClick = onItemClick
+                )
+            }
+            if (content.questions.isNotEmpty()) {
+                Column(modifier = Modifier.padding(top = 28.dp)) {
+                    if (content.questionsTitle.isNotBlank()) {
+                        GuideDetailSectionTitle(title = content.questionsTitle)
+                    }
+                    Column(
+                        modifier = Modifier.padding(top = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        content.questions.forEachIndexed { index, question ->
+                            GuideQuestionCard(number = index + 1, question = question)
+                        }
+                    }
+                }
+            }
+
+            GuideDetailNoticeBanner(
+                iconResId = content.noticeIconResId,
+                text = content.noticeText,
+                modifier = Modifier.padding(top = 28.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun GuideDetailItemSection(
+    title: String,
+    items: List<GuideDetailItem>,
+    layout: GuideSituationalLayout,
+    onItemClick: (GuideDetailItem) -> Unit
+) {
+    Column(modifier = Modifier.padding(top = 28.dp)) {
+        if (title.isNotBlank()) {
+            GuideDetailSectionTitle(title = title)
+        }
+        if (layout == GuideSituationalLayout.GRID) {
+            Row(
+                modifier = Modifier.padding(top = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items.forEach { item -> GuideGridItemCard(item = item, modifier = Modifier.weight(1f)) }
+            }
+        } else {
+            val context = LocalContext.current
+            Column(
+                modifier = Modifier.padding(top = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items.forEach { item ->
+                    val url = item.url
+                    when {
+                        url != null -> GuideDetailItemCard(
+                            iconResId = item.iconResId,
+                            title = item.title,
+                            description = item.description,
+                            trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                            trailingIconTint = SkyBlue,
+                            onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
+                            containerColor = item.cardBackgroundColor,
+                            badgeLabel = item.badgeLabel,
+                            badgeBackgroundColor = item.badgeBackgroundColor,
+                            badgeTextColor = item.badgeTextColor
+                        )
+                        item.navigable -> GuideDetailItemCard(
+                            iconResId = item.iconResId,
+                            title = item.title,
+                            description = item.description,
+                            trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            onClick = { onItemClick(item) },
+                            containerColor = item.cardBackgroundColor,
+                            badgeLabel = item.badgeLabel,
+                            badgeBackgroundColor = item.badgeBackgroundColor,
+                            badgeTextColor = item.badgeTextColor
+                        )
+                        else -> GuideDetailItemCard(
+                            iconResId = item.iconResId,
+                            title = item.title,
+                            description = item.description,
+                            containerColor = item.cardBackgroundColor,
+                            badgeLabel = item.badgeLabel,
+                            badgeBackgroundColor = item.badgeBackgroundColor,
+                            badgeTextColor = item.badgeTextColor
+                        )
+                    }
+                }
+            }
+        }
     }
 }
