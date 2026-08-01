@@ -39,11 +39,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -118,7 +120,7 @@ fun TreatmentExaminationDetailScreen(
 ) {
     val context = LocalContext.current
     val briefing by viewModel.briefing.collectAsStateWithLifecycle()
-    var editingIndex by remember { mutableStateOf<Int?>(null) }
+    var editingIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
     Scaffold(
         containerColor = PageBackground,
@@ -172,10 +174,8 @@ fun TreatmentExaminationDetailScreen(
                                 value = field.valueOf(briefing),
                                 isEditing = editingIndex == index,
                                 onStartEdit = { editingIndex = index },
-                                onCommit = { newValue ->
-                                    viewModel.updateField(field.field, newValue)
-                                    editingIndex = null
-                                }
+                                onSave = { newValue -> viewModel.updateField(field.field, newValue) },
+                                onFinishEdit = { editingIndex = null }
                             )
                             if (index != BRIEFING_FIELDS.lastIndex) {
                                 HorizontalDivider(color = DividerColor)
@@ -232,13 +232,16 @@ fun TreatmentExaminationDetailScreen(
 // 라벨은 위, 값은 아래로 세로 배치해서 값이 길어져도 줄바꿈되며 깨지지 않는다(반응형).
 // 편집 중 입력값(draft)은 이 행 안에서만 remember한다 — 상위 화면 상태로 올리면 키 입력마다
 // 화면 전체가 리컴포지션되면서 한글 조합(IME composing) 상태가 끊겨 완성된 글자가 반영되지 않는다.
+// onSave(저장)와 onFinishEdit(편집 종료)를 분리한다 — 포커스 손실 시 저장만 하고 editingIndex는
+// 건드리지 않아야, 다른 행을 선택해 편집을 이어가는 경우에도 방금 시작한 편집이 취소되지 않는다.
 @Composable
 private fun BriefingInfoRow(
     field: BriefingField,
     value: String,
     isEditing: Boolean,
     onStartEdit: () -> Unit,
-    onCommit: (String) -> Unit
+    onSave: (String) -> Unit,
+    onFinishEdit: () -> Unit
 ) {
     val rowModifier = if (isEditing) Modifier else Modifier.clickable(onClick = onStartEdit)
 
@@ -265,11 +268,17 @@ private fun BriefingInfoRow(
             if (isEditing) {
                 // TextFieldValue로 관리해야 IME의 조합 중(composition) 범위가 리컴포지션 사이에도
                 // 유지된다 — 한글처럼 자모를 조합해 완성하는 입력 방식에서 필수.
-                var draft by remember(field.field) {
+                // rememberSaveable로 구성 변경(화면 회전 등)에도 입력 중이던 값을 보존한다.
+                var draft by rememberSaveable(field.field, stateSaver = TextFieldValue.Saver) {
                     mutableStateOf(TextFieldValue(text = value, selection = TextRange(value.length)))
                 }
                 val focusRequester = remember { FocusRequester() }
                 LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+                fun finishEdit() {
+                    onSave(draft.text)
+                    onFinishEdit()
+                }
 
                 OutlinedTextField(
                     value = draft,
@@ -277,13 +286,15 @@ private fun BriefingInfoRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp)
-                        .focusRequester(focusRequester),
+                        .focusRequester(focusRequester)
+                        // 다른 행을 선택하는 등 포커스를 잃는 모든 경우에 값을 저장한다.
+                        .onFocusChanged { if (!it.isFocused) onSave(draft.text) },
                     textStyle = MaterialTheme.typography.bodyMedium,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { onCommit(draft.text) }),
+                    keyboardActions = KeyboardActions(onDone = { finishEdit() }),
                     trailingIcon = {
-                        IconButton(onClick = { onCommit(draft.text) }) {
+                        IconButton(onClick = { finishEdit() }) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = "저장", tint = CoralPrimary)
                         }
                     },
