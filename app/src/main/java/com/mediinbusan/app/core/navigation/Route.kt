@@ -1,5 +1,6 @@
 package com.mediinbusan.app.core.navigation
 
+import com.mediinbusan.app.data.guide.GuidePhase
 import kotlinx.serialization.Serializable
 
 /**
@@ -29,7 +30,7 @@ sealed interface Route {
     data object Guide : Route // S-06
 
     @Serializable
-    data class GuideStepDetail(val phase: String, val title: String) : Route // S-06 하위 STEP 상세 (phase = GuidePhase.name)
+    data class GuideStepDetail(val phase: GuidePhase, val title: String) : Route // S-06 하위 STEP 상세
 
     @Serializable
     data object VisaEntryCheckDetail : Route // S-06 STEP 01 하위 "비자·입국 조건 확인" 상세

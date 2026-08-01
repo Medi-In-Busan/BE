@@ -128,13 +128,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             GuideScreen(
                 onMenuClick = { navController.navigate(Route.Settings) },
                 onStepClick = { step ->
-                    navController.navigate(Route.GuideStepDetail(phase = step.phase.name, title = step.title))
+                    navController.navigate(Route.GuideStepDetail(phase = step.phase, title = step.title))
                 }
             )
         }
         composable<Route.GuideStepDetail> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.GuideStepDetail>()
-            val phase = GuidePhase.valueOf(route.phase)
+            val phase = route.phase
             if (phase == GuidePhase.TREATMENT_EXAMINATION) {
                 // STEP04는 브리핑 카드 섹션이 있어 공용 GuideStepDetailScreen 대신 전용 화면을 쓴다.
                 TreatmentExaminationDetailScreen(onBack = navController::popBackStack)

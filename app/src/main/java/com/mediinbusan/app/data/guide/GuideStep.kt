@@ -1,5 +1,7 @@
 package com.mediinbusan.app.data.guide
 
+import kotlinx.serialization.Serializable
+
 data class GuideStep(
     val id: String,
     val phase: GuidePhase,
@@ -9,7 +11,8 @@ data class GuideStep(
     val sortOrder: Int
 )
 
-// res/drawable ic_guide_* 아이콘 6종 1:1 대응 (STEP 01~06)
+// res/drawable ic_guide_* 아이콘 6종 1:1 대응 (STEP 01~06). Navigation 타입세이프 라우트 인자로 쓰여 Serializable 필요.
+@Serializable
 enum class GuidePhase {
     ENTRY_PREPARATION, // STEP 01 입국 전 준비
     RESERVATION_INQUIRY, // STEP 02 예약 및 문의
