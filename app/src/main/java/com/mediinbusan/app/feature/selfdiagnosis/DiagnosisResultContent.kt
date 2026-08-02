@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -42,8 +41,10 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
 import com.mediinbusan.app.core.designsystem.HeroTitleStyle
 import com.mediinbusan.app.core.designsystem.InfoBackground
+import com.mediinbusan.app.core.designsystem.MediTeal40
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
+import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.designsystem.WarningBackground
 
 @Composable
@@ -68,33 +69,30 @@ fun DiagnosisResultContent(
         ) {
             Image(
                 painter = painterResource(id = resultType.bannerDrawableRes()),
-                // 아래 오버레이 Text가 같은 정보를 이미 전달하므로 이미지 자체는 장식으로 취급한다.
+                // 삽화 오른쪽 배치, 왼쪽 여백 배경
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
-            )
+            // 삽화와 겹침 방지용 텍스트 폭 제한(왼쪽 55%)
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(20.dp),
+                    .align(Alignment.CenterStart)
+                    .fillMaxWidth(0.55f)
+                    .padding(start = 24.dp, end = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     text = resultType.typeLabel,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.85f)
+                    color = MediTeal40
                 )
-                Text(text = resultType.title, style = HeroTitleStyle, color = Color.White)
+                Text(text = resultType.title, style = HeroTitleStyle, color = TextPrimary)
                 Text(
                     text = resultType.description,
                     style = HeroSubtitleStyle,
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = TextSecondary
                 )
             }
         }
