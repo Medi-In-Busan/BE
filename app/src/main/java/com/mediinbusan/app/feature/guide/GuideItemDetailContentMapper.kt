@@ -12,7 +12,7 @@ val visaEntryCheckContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_visa_entry_check_banner,
     bannerAspectRatio = 1672f / 941f,
     bannerStepLabel = "STEP 01",
-    bannerTitle = "비자와 입국 조건을 먼저 확인하세요.",
+    bannerTitle = "비자·입국 조건 확인",
     bannerSubtitle = "국적과 체류기간, 방문 목적에 따라 비자 또는 K-ETA가 필요할 수 있어요.",
     checklistItems = listOf(
         GuideDetailItem(
@@ -46,7 +46,7 @@ val insuranceDocumentsContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_insurance_documents_banner,
     bannerAspectRatio = 1672f / 941f,
     bannerStepLabel = "STEP 01",
-    bannerTitle = "보험과 서류를 미리 준비하면 진료와 보상이 더 쉬워져요.",
+    bannerTitle = "보험·서류 준비",
     bannerSubtitle = "치료비 보장 범위, 필요 서류, 청구 절차를 미리 확인하고 준비해 주세요.",
     checklistTitle = "준비 서류 체크리스트",
     checklistItems = listOf(
@@ -84,7 +84,7 @@ val hospitalInquiryContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_entry_preparation_banner,
     bannerAspectRatio = 1672f / 941f,
     bannerStepLabel = "STEP 01",
-    bannerTitle = "입국 전 필요한 준비를 미리 챙겨두세요.",
+    bannerTitle = "병원 문의 전 정보 정리",
     bannerSubtitle = "여권, 체류기간, 방문 목적, 연락처 등 기본 정보를 미리 정리하면 입국과 병원 방문이 편리해요.",
     checklistTitle = "정보 정리 체크리스트",
     checklistItems = listOf(
@@ -276,10 +276,12 @@ val medicalRecordsTestResultsContent = GuideStepDetailContent(
 // S-06 STEP05 하위 "총 비용과 포함 항목 확인" — situational 없이 checklist + questions 조합.
 val totalCostCoverageCheckContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_payment_billing_banner,
-    bannerAspectRatio = 1448f / 1086f,
+    // 원본 캔버스(1448x1086)는 위아래에 흰 여백이 커서 그대로 쓰면 그림이 작아 보인다 —
+    // 실제 카드 그림 비율(1416x796)로 좁혀 Crop이 여백을 잘라내고 그림이 프레임을 채우게 한다.
+    bannerAspectRatio = 1416f / 796f,
     bannerStepLabel = "STEP 05",
     bannerTitle = "총 비용과 포함 항목 확인",
-    bannerSubtitle = "결제 전, 상담료·검사비·시술비·약제비 등 총 비용과 포함·불포함 항목을 꼼꼼히 확인하세요.",
+    bannerSubtitle = "총 비용과 포함·불포함 항목을 결제 전 확인하세요.",
     checklistTitle = "먼저 확인하세요",
     checklistItems = listOf(
         GuideDetailItem(
@@ -373,10 +375,12 @@ val paymentMethodCheckContent = GuideStepDetailContent(
 // S-06 STEP05 하위 "영수증·보험 청구 서류 확인" — checklist + situational + questions 세 섹션 모두 사용.
 val receiptInsuranceDocumentsContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_receipt_insurance_documents_banner,
-    bannerAspectRatio = 1448f / 1086f,
+    // 원본 캔버스(1448x1086)는 위아래 흰 여백이 특히 커서 그대로 쓰면 그림이 작아 보인다 —
+    // 실제 카드 그림 비율(1400x672)로 좁혀 Crop이 여백을 잘라내고 그림이 프레임을 채우게 한다.
+    bannerAspectRatio = 1400f / 672f,
     bannerStepLabel = "STEP 05",
     bannerTitle = "영수증·보험 청구 서류 확인",
-    bannerSubtitle = "결제 후 필요한 서류를 미리 확인하고 발급 가능 여부를 체크하면 보험 청구와 환급 절차가 더 쉬워집니다.",
+    bannerSubtitle = "결제 후 필요한 서류의 발급 가능 여부를 확인하세요.",
     checklistTitle = "받아야 할 서류",
     checklistItems = listOf(
         GuideDetailItem(

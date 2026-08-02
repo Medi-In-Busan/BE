@@ -7,12 +7,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-/** F-002 언어 선택, F-003 의료 목적 선택, F-001 최초 실행 여부를 담는 스칼라 값 3개. */
+/** F-002 언어 선택, F-003 의료 목적 선택, F-001 최초 실행 여부를 담는 스칼라 값들. */
 data class UserPreferences(
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val onboardingComplete: Boolean = false,
     val medicalPurpose: String? = null,
-    val notificationsEnabled: Boolean = true
+    val notificationsEnabled: Boolean = true,
+    val diagnosisComplete: Boolean = false
 )
 
 interface UserPreferencesRepository {
@@ -21,6 +22,7 @@ interface UserPreferencesRepository {
     suspend fun setOnboardingComplete(complete: Boolean)
     suspend fun setMedicalPurpose(purpose: String?)
     suspend fun setNotificationsEnabled(enabled: Boolean)
+    suspend fun setDiagnosisComplete(complete: Boolean)
 }
 
 class UserPreferencesRepositoryImpl @Inject constructor(
@@ -32,7 +34,8 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             languageCode = prefs[UserPreferencesKeys.LANGUAGE_CODE] ?: SupportedLanguage.DEFAULT.code,
             onboardingComplete = prefs[UserPreferencesKeys.ONBOARDING_COMPLETE] ?: false,
             medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE],
-            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
+            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true,
+            diagnosisComplete = prefs[UserPreferencesKeys.DIAGNOSIS_COMPLETE] ?: false
         )
     }
 
@@ -56,5 +59,9 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[UserPreferencesKeys.NOTIFICATIONS_ENABLED] = enabled }
+    }
+
+    override suspend fun setDiagnosisComplete(complete: Boolean) {
+        dataStore.edit { it[UserPreferencesKeys.DIAGNOSIS_COMPLETE] = complete }
     }
 }

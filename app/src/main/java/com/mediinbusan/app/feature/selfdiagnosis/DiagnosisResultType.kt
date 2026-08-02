@@ -2,6 +2,7 @@ package com.mediinbusan.app.feature.selfdiagnosis
 
 /** 5개 질문에 대한 답변을 바탕으로 안내하는 준비 유형. 매핑 로직은 DiagnosisTypeMapper 참고. */
 enum class DiagnosisResultType(
+    val typeLabel: String,
     val title: String,
     val description: String,
     val checklist: List<String>,
@@ -9,6 +10,7 @@ enum class DiagnosisResultType(
     val ctas: List<DiagnosisCta>
 ) {
     TYPE_A(
+        typeLabel = "TYPE A · 개인 직접 문의형",
         title = "개인 직접 문의형에 가까워요",
         description = "피부·미용, 치과 상담, 건강검진, 웰니스처럼 방문 목적이 비교적 명확한 경우 " +
             "병원 공식 홈페이지, 이메일, 전화 등을 통해 먼저 문의할 수 있어요.",
@@ -26,6 +28,7 @@ enum class DiagnosisResultType(
         )
     ),
     TYPE_B(
+        typeLabel = "TYPE B · 국제진료센터 문의형",
         title = "병원 국제진료센터 문의형에 가까워요",
         description = "외국어 접수, 지원 언어, 진료 절차, 준비서류 확인이 필요한 경우 " +
             "병원 공식 채널 또는 국제진료센터를 통해 안내를 확인해보세요.",
@@ -44,6 +47,7 @@ enum class DiagnosisResultType(
         )
     ),
     TYPE_C(
+        typeLabel = "TYPE C · 등록 유치기관 확인형",
         title = "등록 유치기관 확인이 필요할 수 있어요",
         description = "입원, 장기 치료, 여러 일정 조율, 숙박·차량·통역 등 부가 지원이 필요한 경우 " +
             "등록된 외국인환자 유치기관 또는 병원 공식 채널의 안내를 확인해 주세요.",
@@ -57,12 +61,13 @@ enum class DiagnosisResultType(
         noticeText = "메디인부산은 유치기관을 중개하거나 패키지를 판매하지 않습니다. " +
             "등록 여부, 수수료, 포함 서비스 범위는 사용자가 직접 확인해 주세요.",
         ctas = listOf(
-            DiagnosisCta("확인 항목 보기", DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST),
+            DiagnosisCta("유치기관 등록 여부 확인", DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST),
             DiagnosisCta("비자·입국 확인 가이드 보기", DiagnosisCtaTarget.VISA_ENTRY_GUIDE),
-            DiagnosisCta("의료 이용 절차 보기", DiagnosisCtaTarget.MEDICAL_PROCEDURE_GUIDE)
+            DiagnosisCta("총 비용과 포함 항목 확인", DiagnosisCtaTarget.TOTAL_COST_COVERAGE_CHECK)
         )
     ),
     TYPE_D(
+        typeLabel = "TYPE D · 장기치료·비자 확인형",
         title = "장기치료·비자 확인형에 가까워요",
         description = "치료·요양 기간이 길어질 수 있거나 동반 가족, 초청 서류, 체류자격 확인이 필요한 경우 " +
             "병원 또는 공식 기관 안내를 우선 확인해 주세요.",
@@ -81,8 +86,9 @@ enum class DiagnosisResultType(
         )
     ),
     TYPE_E(
+        typeLabel = "TYPE E · 관광 중심 웰니스 체험형",
         title = "관광 중심 웰니스 체험형에 가까워요",
-        description = "의료 시술보다 스파, 명상, 휴식, 자연 치유, 전통·한방 테마 체험에 가까운 목적이라면 " +
+        description = "의료 시설보다 스파, 명상, 휴식, 자연 치유, 전통·한방 테마 체험에 가까운 목적이라면 " +
             "부산의 웰니스 장소와 짧은 이동 코스를 중심으로 확인해볼 수 있어요.",
         checklist = listOf(
             "원하는 웰니스 유형 확인",
@@ -94,7 +100,6 @@ enum class DiagnosisResultType(
         noticeText = null,
         ctas = listOf(
             DiagnosisCta("부산 웰니스 장소 보기", DiagnosisCtaTarget.WELLNESS_PLACES),
-            DiagnosisCta("부산 의료·웰니스 정보 보기", DiagnosisCtaTarget.MEDICAL_WELLNESS_INFO),
             DiagnosisCta("비자·입국 확인 가이드 보기", DiagnosisCtaTarget.VISA_ENTRY_GUIDE)
         )
     );
