@@ -169,10 +169,12 @@ private val hospitalCheckinContent = GuideStepDetailContent(
 
 private val paymentReceiptContent = GuideStepDetailContent(
     bannerResId = R.drawable.img_payment_billing_banner,
-    bannerAspectRatio = 1448f / 1086f,
+    // 원본 캔버스(1448x1086)는 위아래에 흰 여백이 커서 그대로 쓰면 그림이 작아 보인다 —
+    // 실제 카드 그림 비율(1416x796)로 좁혀 Crop이 여백을 잘라내고 그림이 프레임을 채우게 한다.
+    bannerAspectRatio = 1416f / 796f,
     bannerStepLabel = "STEP 05",
-    bannerTitle = "결제 전, 비용·수단·서류를 꼼꼼히 확인하세요",
-    bannerSubtitle = "총 비용과 포함 항목, 결제 수단, 발급 서류를 미리 확인하면 안전하고 편리하게 결제할 수 있어요.",
+    bannerTitle = "결제 전 비용·수단·서류 확인",
+    bannerSubtitle = "총 비용, 결제 수단, 발급 서류를 미리 확인하세요.",
     checklistTitle = "이번 단계에서 꼭 확인할 3가지",
     checklistItems = listOf(
         GuideDetailItem(
