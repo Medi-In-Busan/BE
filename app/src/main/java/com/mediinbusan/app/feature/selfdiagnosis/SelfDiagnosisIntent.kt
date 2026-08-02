@@ -11,4 +11,7 @@ sealed interface SelfDiagnosisIntent {
 
     /** 상단바 뒤로가기/시스템 백. 결과→질문, 질문 1번째→인트로, 인트로→화면 밖(NavigateBack 이벤트) 순으로 한 단계씩 되돌아간다. */
     data object ClickBack : SelfDiagnosisIntent
+
+    /** 최초 실행 흐름(fromOnboarding=true) 전용: 인트로의 "건너뛰기" 또는 결과 화면의 "홈으로 시작하기". */
+    data object FinishSetup : SelfDiagnosisIntent
 }

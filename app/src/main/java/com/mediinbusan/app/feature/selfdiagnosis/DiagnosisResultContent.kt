@@ -4,10 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -36,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
+import com.mediinbusan.app.core.designsystem.HeroTitleStyle
 import com.mediinbusan.app.core.designsystem.InfoBackground
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
@@ -46,6 +51,7 @@ fun DiagnosisResultContent(
     resultType: DiagnosisResultType,
     onCtaClick: (DiagnosisCtaTarget) -> Unit,
     onRestart: () -> Unit,
+    onFinishSetup: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -54,15 +60,44 @@ fun DiagnosisResultContent(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Image(
-            painter = painterResource(id = resultType.bannerDrawableRes()),
-            contentDescription = "${resultType.title}. ${resultType.description}",
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1536f / 1024f)
                 .clip(RoundedCornerShape(20.dp))
-        )
+        ) {
+            Image(
+                painter = painterResource(id = resultType.bannerDrawableRes()),
+                // 아래 오버레이 Text가 같은 정보를 이미 전달하므로 이미지 자체는 장식으로 취급한다.
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
+            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = resultType.typeLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+                Text(text = resultType.title, style = HeroTitleStyle, color = Color.White)
+                Text(
+                    text = resultType.description,
+                    style = HeroSubtitleStyle,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+            }
+        }
 
         ResultCard(resultType = resultType)
 
@@ -70,6 +105,17 @@ fun DiagnosisResultContent(
             NoticeBanner(text = resultType.noticeText, isWarning = true)
         }
         NoticeBanner(text = DiagnosisResultType.COMMON_SAFETY_NOTICE, isWarning = false)
+
+        if (onFinishSetup != null) {
+            Button(
+                onClick = onFinishSetup,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
+            ) {
+                Text(text = "홈으로 시작하기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             resultType.ctas.forEach { cta ->

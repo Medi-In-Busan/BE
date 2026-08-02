@@ -7,4 +7,7 @@ sealed interface SelfDiagnosisEvent {
 
     /** 결과 화면 CTA 클릭. 대상 하위 페이지는 아직 없어 호출부에서 콜백을 no-op으로 둬도 된다. */
     data class NavigateToCtaTarget(val target: DiagnosisCtaTarget) : SelfDiagnosisEvent
+
+    /** FinishSetup 처리 완료(진단완료 상태 저장 후) - 최초 실행 흐름에서만 발생, Home으로 보낸다. */
+    data object NavigateToHome : SelfDiagnosisEvent
 }

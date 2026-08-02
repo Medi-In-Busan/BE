@@ -1,13 +1,17 @@
 package com.mediinbusan.app.core.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
 import com.mediinbusan.app.feature.guide.AirportDeparturePreparationDetailScreen
@@ -36,6 +40,7 @@ import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
 import com.mediinbusan.app.feature.languageselect.LanguageSelectScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
+import com.mediinbusan.app.feature.selfdiagnosis.DiagnosisCtaTarget
 import com.mediinbusan.app.feature.selfdiagnosis.SelfDiagnosisScreen
 import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
@@ -64,6 +69,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                         popUpTo(Route.Splash) { inclusive = true }
                     }
                 },
+                onNavigateToSelfDiagnosis = {
+                    // 언어선택은 이미 끝냈고(재개된 세션) 진단만 남은 경우. Splash가 스스로를
+                    // 스택에서 지우므로 뒤로가기는 SelfDiagnosisScreen의 onBack(popBackStack)이
+                    // 처리할 대상이 없어 앱을 벗어난다 — 언어선택을 다시 거치게 하고 싶지 않아 의도한 동작이다.
+                    navController.navigate(Route.SelfDiagnosis(fromOnboarding = true)) {
+                        popUpTo(Route.Splash) { inclusive = true }
+                    }
+                },
                 onNavigateToHome = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Splash) { inclusive = true }
@@ -77,9 +90,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             // 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
             LanguageSelectScreen(
                 onNext = {
-                    navController.navigate(Route.Home) {
-                        popUpTo(Route.Onboarding) { inclusive = true }
-                    }
+                    // popUpTo 없이 그대로 push한다 — 진단 화면에서 시스템 뒤로가기를 누르면
+                    // 이 언어선택 화면으로 돌아와야 하기 때문(스택에 남겨둬야 함).
+                    navController.navigate(Route.SelfDiagnosis(fromOnboarding = true))
                 }
             )
         }
@@ -88,7 +101,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToHospitalDetail = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
-                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
+                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis()) },
                 // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
                 // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
                 // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
@@ -256,8 +269,39 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onBack = navController::popBackStack
             )
         }
-        composable<Route.SelfDiagnosis> {
-            SelfDiagnosisScreen(onBack = navController::popBackStack)
+        composable<Route.SelfDiagnosis> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.SelfDiagnosis>()
+            val context = LocalContext.current
+            SelfDiagnosisScreen(
+                fromOnboarding = route.fromOnboarding,
+                onBack = navController::popBackStack,
+                onFinishSetup = { navController.navigateToHomeAfterSetup() },
+                onNavigateToCtaTarget = { target ->
+                    when (target) {
+                        DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST ->
+                            navController.navigate(Route.HospitalInquiryDetail)
+                        DiagnosisCtaTarget.HOSPITAL_BROWSE ->
+                            navController.navigate(Route.HospitalSearchList())
+                        DiagnosisCtaTarget.INTERPRETATION_SUPPORT ->
+                            navController.navigate(
+                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = "예약 및 문의")
+                            )
+                        DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST ->
+                            context.launchIntentSafely(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://www.medicalkorea.or.kr/en/registeredhospitals"))
+                            )
+                        DiagnosisCtaTarget.VISA_ENTRY_GUIDE ->
+                            navController.navigate(Route.VisaEntryCheckDetail)
+                        DiagnosisCtaTarget.TOTAL_COST_COVERAGE_CHECK ->
+                            navController.navigate(Route.TotalCostCoverageCheckDetail)
+                        DiagnosisCtaTarget.DEPARTURE_CHECKLIST ->
+                            navController.navigate(Route.AirportDeparturePreparationDetail)
+                        DiagnosisCtaTarget.WELLNESS_PLACES -> {
+                            // TODO: 팀원이 작업 중인 웰니스 전용 화면 완성 후 연결
+                        }
+                    }
+                }
+            )
         }
     }
 }

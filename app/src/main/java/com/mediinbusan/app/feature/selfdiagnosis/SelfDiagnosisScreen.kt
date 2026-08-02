@@ -35,6 +35,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -59,13 +60,16 @@ import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 
 /**
- * S-XX 준비 유형 진단(인트로 → 5문항 → 준비 유형). NavHost 연결은 이번 범위 밖이라
- * [onBack]/[onNavigateToCtaTarget]은 기본값 no-op으로 둬도 컴파일된다 — 실제 라우팅은 후속 작업에서 배선한다.
+ * S-XX 준비 유형 진단(인트로 → 5문항 → 준비 유형).
+ * [fromOnboarding]이 true면 최초 실행 흐름(Splash -> 언어선택 -> 진단 -> Home) 중이라는 뜻으로,
+ * 인트로에 "건너뛰기"가, 결과 화면에 "홈으로 시작하기"가 추가로 노출된다.
  */
 @Composable
 fun SelfDiagnosisScreen(
+    fromOnboarding: Boolean = false,
     onBack: () -> Unit = {},
     onNavigateToCtaTarget: (DiagnosisCtaTarget) -> Unit = {},
+    onFinishSetup: () -> Unit = {},
     viewModel: SelfDiagnosisViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -75,12 +79,14 @@ fun SelfDiagnosisScreen(
             when (event) {
                 SelfDiagnosisEvent.NavigateBack -> onBack()
                 is SelfDiagnosisEvent.NavigateToCtaTarget -> onNavigateToCtaTarget(event.target)
+                SelfDiagnosisEvent.NavigateToHome -> onFinishSetup()
             }
         }
     }
 
     SelfDiagnosisContent(
         uiState = uiState,
+        fromOnboarding = fromOnboarding,
         onIntent = viewModel::onIntent
     )
 }
@@ -89,6 +95,7 @@ fun SelfDiagnosisScreen(
 @Composable
 private fun SelfDiagnosisContent(
     uiState: SelfDiagnosisUiState,
+    fromOnboarding: Boolean,
     onIntent: (SelfDiagnosisIntent) -> Unit
 ) {
     Scaffold(
@@ -114,13 +121,25 @@ private fun SelfDiagnosisContent(
                             DiagnosisResultContent(
                                 resultType = resultType,
                                 onCtaClick = { target -> onIntent(SelfDiagnosisIntent.ClickCta(target)) },
-                                onRestart = { onIntent(SelfDiagnosisIntent.Restart) }
+                                onRestart = { onIntent(SelfDiagnosisIntent.Restart) },
+                                onFinishSetup = if (fromOnboarding) {
+                                    { onIntent(SelfDiagnosisIntent.FinishSetup) }
+                                } else {
+                                    null
+                                }
                             )
                         }
                     }
                 }
                 uiState.isIntroVisible -> {
-                    IntroContent(onStart = { onIntent(SelfDiagnosisIntent.StartDiagnosis) })
+                    IntroContent(
+                        onStart = { onIntent(SelfDiagnosisIntent.StartDiagnosis) },
+                        onSkip = if (fromOnboarding) {
+                            { onIntent(SelfDiagnosisIntent.FinishSetup) }
+                        } else {
+                            null
+                        }
+                    )
                 }
                 else -> {
                     QuestionContent(uiState = uiState, onIntent = onIntent)
@@ -131,7 +150,7 @@ private fun SelfDiagnosisContent(
 }
 
 @Composable
-private fun IntroContent(onStart: () -> Unit) {
+private fun IntroContent(onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -181,6 +200,12 @@ private fun IntroContent(onStart: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
         ) {
             Text(text = "진단 시작하기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        if (onSkip != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onSkip) {
+                Text(text = "건너뛰고 홈으로", color = TextSecondary)
+            }
         }
     }
 }
