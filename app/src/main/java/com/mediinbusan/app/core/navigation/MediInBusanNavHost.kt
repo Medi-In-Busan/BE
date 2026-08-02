@@ -8,8 +8,26 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
+import com.mediinbusan.app.feature.guide.AirportDeparturePreparationDetailScreen
+import com.mediinbusan.app.feature.guide.EnglishDocumentsResultsDetailScreen
+import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
+import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
+import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
+import com.mediinbusan.app.feature.guide.HospitalLocationCheckinDetailScreen
+import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
+import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
+import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
+import com.mediinbusan.app.feature.guide.PassportReservationInfoDetailScreen
+import com.mediinbusan.app.feature.guide.PaymentMethodCheckDetailScreen
+import com.mediinbusan.app.feature.guide.PostTreatmentPrecautionsDetailScreen
+import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
+import com.mediinbusan.app.feature.guide.ReceiptInsuranceDocumentsDetailScreen
+import com.mediinbusan.app.feature.guide.TotalCostCoverageCheckDetailScreen
+import com.mediinbusan.app.feature.guide.TreatmentExaminationDetailScreen
+import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
 import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
@@ -100,7 +118,89 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Guide> {
-            GuideScreen(onBack = navController::popBackStack)
+            GuideScreen(
+                onMenuClick = { navController.navigate(Route.Settings) },
+                onStepClick = { step ->
+                    navController.navigate(Route.GuideStepDetail(phase = step.phase, title = step.title))
+                }
+            )
+        }
+        composable<Route.GuideStepDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.GuideStepDetail>()
+            val phase = route.phase
+            if (phase == GuidePhase.TREATMENT_EXAMINATION) {
+                // STEP04는 브리핑 카드 섹션이 있어 공용 GuideStepDetailScreen 대신 전용 화면을 쓴다.
+                TreatmentExaminationDetailScreen(onBack = navController::popBackStack)
+            } else {
+                GuideStepDetailScreen(
+                    phase = phase,
+                    title = route.title,
+                    onBack = navController::popBackStack,
+                    onItemClick = { item ->
+                        when (item.id) {
+                            GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
+                            GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
+                            GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
+                            GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
+                            GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
+                            GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
+                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.HospitalLocationCheckinDetail)
+                            GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
+                            GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
+                            GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
+                            GuideDetailItemId.MEDICATION_SCHEDULE_CHECK -> navController.navigate(Route.MedicationScheduleDetail)
+                            GuideDetailItemId.POST_TREATMENT_PRECAUTIONS_CHECK -> navController.navigate(Route.PostTreatmentPrecautionsDetail)
+                            GuideDetailItemId.ENGLISH_DOCUMENTS_RESULTS_CHECK -> navController.navigate(Route.EnglishDocumentsResultsDetail)
+                            GuideDetailItemId.AIRPORT_DEPARTURE_PREPARATION_CHECK -> navController.navigate(Route.AirportDeparturePreparationDetail)
+                        }
+                    }
+                )
+            }
+        }
+        composable<Route.VisaEntryCheckDetail> {
+            VisaEntryCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.InsuranceDocumentsDetail> {
+            InsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.HospitalInquiryDetail> {
+            HospitalInquiryDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PreInquiryInformationDetail> {
+            PreInquiryInformationDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PassportReservationInfoDetail> {
+            PassportReservationInfoDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.MedicalRecordsTestResultsDetail> {
+            MedicalRecordsTestResultsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.HospitalLocationCheckinDetail> {
+            HospitalLocationCheckinDetailScreen(
+                onBack = navController::popBackStack,
+                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) }
+            )
+        }
+        composable<Route.TotalCostCoverageCheckDetail> {
+            TotalCostCoverageCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PaymentMethodCheckDetail> {
+            PaymentMethodCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.ReceiptInsuranceDocumentsDetail> {
+            ReceiptInsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.MedicationScheduleDetail> {
+            MedicationScheduleDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PostTreatmentPrecautionsDetail> {
+            PostTreatmentPrecautionsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.EnglishDocumentsResultsDetail> {
+            EnglishDocumentsResultsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.AirportDeparturePreparationDetail> {
+            AirportDeparturePreparationDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()

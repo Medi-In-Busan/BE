@@ -52,3 +52,20 @@ val BorderColor = Color(0xFFE5E7EB)
 val PageBackground = Color(0xFFF8FAFC)
 val InfoBackground = Color(0xFFEAF5FF)
 val WarningBackground = Color(0xFFFFF4E5)
+
+// 이용 가이드(S-06) STEP 카드 강조색 6종.
+val GuideStepBlue = Color(0xFF4A90D9)
+val GuideStepRed = Color(0xFFEF6B6B)
+val GuideStepPurple = Color(0xFF8B7FE8)
+val GuideStepTeal = Color(0xFF2FB6B6)
+val GuideStepOrange = Color(0xFFF0A93A)
+val GuideStepGreen = Color(0xFF4CAF50)
+
+// 이용 가이드(S-06) STEP03 카드 배지·상황별 카드 배경 톤.
+val GuideBadgeGreenBackground = Color(0xFFE3F6EA)
+val GuideBadgePurpleBackground = Color(0xFFEFEBFB)
+val GuideCardPeachBackground = Color(0xFFFDF0E1)
+val GuideCardLavenderBackground = Color(0xFFEDEAFB)
+
+// 이용 가이드(S-06) STEP05 카드 배지 톤.
+val GuideBadgeOrangeBackground = Color(0xFFFDF0DD)

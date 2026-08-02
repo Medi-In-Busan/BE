@@ -1,5 +1,6 @@
 package com.mediinbusan.app.core.navigation
 
+import com.mediinbusan.app.data.guide.GuidePhase
 import androidx.navigation.NavHostController
 import kotlinx.serialization.Serializable
 
@@ -25,6 +26,51 @@ sealed interface Route {
 
     @Serializable
     data object Guide : Route // S-06
+
+    @Serializable
+    data class GuideStepDetail(val phase: GuidePhase, val title: String) : Route // S-06 하위 STEP 상세
+
+    @Serializable
+    data object VisaEntryCheckDetail : Route // S-06 STEP 01 하위 "비자·입국 조건 확인" 상세
+
+    @Serializable
+    data object InsuranceDocumentsDetail : Route // S-06 STEP 01 하위 "보험·서류 준비" 상세
+
+    @Serializable
+    data object HospitalInquiryDetail : Route // S-06 STEP 01 하위 "병원 문의 전 정보 정리" 상세
+
+    @Serializable
+    data object PreInquiryInformationDetail : Route // S-06 STEP 02 하위 "문의 전 전달할 정보 정리" 상세
+
+    @Serializable
+    data object PassportReservationInfoDetail : Route // S-06 STEP 03 하위 "여권·예약정보 준비" 상세
+
+    @Serializable
+    data object MedicalRecordsTestResultsDetail : Route // S-06 STEP 03 하위 "기존 진단서·검사결과 준비" 상세
+
+    @Serializable
+    data object HospitalLocationCheckinDetail : Route // S-06 STEP 03 하위 "병원 위치와 접수 절차 확인" 상세
+
+    @Serializable
+    data object TotalCostCoverageCheckDetail : Route // S-06 STEP 05 하위 "총 비용과 포함 항목 확인" 상세
+
+    @Serializable
+    data object PaymentMethodCheckDetail : Route // S-06 STEP 05 하위 "결제 가능 수단 확인" 상세
+
+    @Serializable
+    data object ReceiptInsuranceDocumentsDetail : Route // S-06 STEP 05 하위 "영수증·보험 청구 서류 확인" 상세
+
+    @Serializable
+    data object MedicationScheduleDetail : Route // S-06 STEP 06 하위 "약 복용 방법 확인" 상세
+
+    @Serializable
+    data object PostTreatmentPrecautionsDetail : Route // S-06 STEP 06 하위 "진료 후 주의사항 확인" 상세
+
+    @Serializable
+    data object EnglishDocumentsResultsDetail : Route // S-06 STEP 06 하위 "영문 서류·검사결과 수령 확인" 상세
+
+    @Serializable
+    data object AirportDeparturePreparationDetail : Route // S-06 STEP 06 하위 "귀국 전 반입·공항 준비" 상세
 
     @Serializable
     data class Nearby(val hospitalId: String) : Route // S-07
