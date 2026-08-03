@@ -4,10 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,9 +38,13 @@ import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
+import com.mediinbusan.app.core.designsystem.HeroTitleStyle
 import com.mediinbusan.app.core.designsystem.InfoBackground
+import com.mediinbusan.app.core.designsystem.MediTeal40
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
+import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.designsystem.WarningBackground
 
 @Composable
@@ -46,6 +52,7 @@ fun DiagnosisResultContent(
     resultType: DiagnosisResultType,
     onCtaClick: (DiagnosisCtaTarget) -> Unit,
     onRestart: () -> Unit,
+    onFinishSetup: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -54,15 +61,41 @@ fun DiagnosisResultContent(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Image(
-            painter = painterResource(id = resultType.bannerDrawableRes()),
-            contentDescription = "${resultType.title}. ${resultType.description}",
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1536f / 1024f)
                 .clip(RoundedCornerShape(20.dp))
-        )
+        ) {
+            Image(
+                painter = painterResource(id = resultType.bannerDrawableRes()),
+                // 삽화 오른쪽 배치, 왼쪽 여백 배경
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            // 삽화와 겹침 방지용 텍스트 폭 제한(왼쪽 55%)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxWidth(0.55f)
+                    .padding(start = 24.dp, end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = resultType.typeLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MediTeal40
+                )
+                Text(text = resultType.title, style = HeroTitleStyle, color = TextPrimary)
+                Text(
+                    text = resultType.description,
+                    style = HeroSubtitleStyle,
+                    color = TextSecondary
+                )
+            }
+        }
 
         ResultCard(resultType = resultType)
 
@@ -70,6 +103,17 @@ fun DiagnosisResultContent(
             NoticeBanner(text = resultType.noticeText, isWarning = true)
         }
         NoticeBanner(text = DiagnosisResultType.COMMON_SAFETY_NOTICE, isWarning = false)
+
+        if (onFinishSetup != null) {
+            Button(
+                onClick = onFinishSetup,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
+            ) {
+                Text(text = "홈으로 시작하기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             resultType.ctas.forEach { cta ->

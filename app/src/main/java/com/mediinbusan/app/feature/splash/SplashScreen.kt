@@ -46,6 +46,7 @@ private val pillHeights = listOf(8.dp, 12.dp, 16.dp, 28.dp, 16.dp, 12.dp, 8.dp)
 @Composable
 fun SplashScreen(
     onNavigateToOnboarding: () -> Unit,
+    onNavigateToSelfDiagnosis: () -> Unit,
     onNavigateToHome: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
@@ -54,6 +55,7 @@ fun SplashScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             SplashUiState.NavigateToOnboarding -> onNavigateToOnboarding()
+            SplashUiState.NavigateToSelfDiagnosis -> onNavigateToSelfDiagnosis()
             SplashUiState.NavigateToHome -> onNavigateToHome()
             SplashUiState.Loading -> Unit
         }

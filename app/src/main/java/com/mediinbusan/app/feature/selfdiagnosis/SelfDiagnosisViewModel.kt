@@ -2,6 +2,7 @@ package com.mediinbusan.app.feature.selfdiagnosis
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +14,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** 준비 유형 진단(인트로 → 5문항 → 준비 유형) 화면 상태. Repository 연동 없이 로컬 답변만으로 동작한다. */
+/**
+ * 준비 유형 진단(인트로 → 5문항 → 준비 유형) 화면 상태. 답변 자체는 로컬 상태로만 관리하고,
+ * "진단을 완료(또는 건너뜀)했는지" 여부만 DataStore에 저장해 앱 재실행 시 최초 실행 흐름을
+ * 반복하지 않도록 한다 (SplashViewModel 참고).
+ */
 @HiltViewModel
-class SelfDiagnosisViewModel @Inject constructor() : ViewModel() {
+class SelfDiagnosisViewModel @Inject constructor(
+    private val userPreferencesRepository: UserPreferencesRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SelfDiagnosisUiState())
     val uiState: StateFlow<SelfDiagnosisUiState> = _uiState.asStateFlow()
@@ -31,6 +38,7 @@ class SelfDiagnosisViewModel @Inject constructor() : ViewModel() {
             SelfDiagnosisIntent.Restart -> restart()
             is SelfDiagnosisIntent.ClickCta -> emitEvent(SelfDiagnosisEvent.NavigateToCtaTarget(intent.target))
             SelfDiagnosisIntent.ClickBack -> clickBack()
+            SelfDiagnosisIntent.FinishSetup -> finishSetup()
         }
     }
 
@@ -48,15 +56,27 @@ class SelfDiagnosisViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun goNext() {
+        var reachedResult = false
         _uiState.update { state ->
             if (!state.canGoNext) {
                 state
             } else if (state.isLastQuestion) {
+                reachedResult = true
                 state.copy(resultType = DiagnosisTypeMapper.map(state.selectedAnswers))
             } else {
                 state.copy(currentQuestionIndex = state.currentQuestionIndex + 1)
             }
         }
+        if (reachedResult) markDiagnosisComplete()
+    }
+
+    private fun finishSetup() {
+        markDiagnosisComplete()
+        emitEvent(SelfDiagnosisEvent.NavigateToHome)
+    }
+
+    private fun markDiagnosisComplete() {
+        viewModelScope.launch { userPreferencesRepository.setDiagnosisComplete(true) }
     }
 
     private fun restart() {

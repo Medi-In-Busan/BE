@@ -1,15 +1,37 @@
 package com.mediinbusan.app.core.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mediinbusan.app.core.ui.launchIntentSafely
+import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
+import com.mediinbusan.app.feature.guide.AirportDeparturePreparationDetailScreen
+import com.mediinbusan.app.feature.guide.EnglishDocumentsResultsDetailScreen
+import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
+import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
+import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
+import com.mediinbusan.app.feature.guide.HospitalLocationCheckinDetailScreen
+import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
+import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
+import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
+import com.mediinbusan.app.feature.guide.PassportReservationInfoDetailScreen
+import com.mediinbusan.app.feature.guide.PaymentMethodCheckDetailScreen
+import com.mediinbusan.app.feature.guide.PostTreatmentPrecautionsDetailScreen
+import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
+import com.mediinbusan.app.feature.guide.ReceiptInsuranceDocumentsDetailScreen
+import com.mediinbusan.app.feature.guide.TotalCostCoverageCheckDetailScreen
+import com.mediinbusan.app.feature.guide.TreatmentExaminationDetailScreen
+import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
 import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
@@ -18,6 +40,7 @@ import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
 import com.mediinbusan.app.feature.languageselect.LanguageSelectScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
+import com.mediinbusan.app.feature.selfdiagnosis.DiagnosisCtaTarget
 import com.mediinbusan.app.feature.selfdiagnosis.SelfDiagnosisScreen
 import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
@@ -46,6 +69,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                         popUpTo(Route.Splash) { inclusive = true }
                     }
                 },
+                onNavigateToSelfDiagnosis = {
+                    // 언어선택은 이미 끝냈고(재개된 세션) 진단만 남은 경우. Splash가 스스로를
+                    // 스택에서 지우므로 뒤로가기는 SelfDiagnosisScreen의 onBack(popBackStack)이
+                    // 처리할 대상이 없어 앱을 벗어난다 — 언어선택을 다시 거치게 하고 싶지 않아 의도한 동작이다.
+                    navController.navigate(Route.SelfDiagnosis(fromOnboarding = true)) {
+                        popUpTo(Route.Splash) { inclusive = true }
+                    }
+                },
                 onNavigateToHome = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Splash) { inclusive = true }
@@ -59,9 +90,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             // 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
             LanguageSelectScreen(
                 onNext = {
-                    navController.navigate(Route.Home) {
-                        popUpTo(Route.Onboarding) { inclusive = true }
-                    }
+                    // popUpTo 없이 그대로 push한다 — 진단 화면에서 시스템 뒤로가기를 누르면
+                    // 이 언어선택 화면으로 돌아와야 하기 때문(스택에 남겨둬야 함).
+                    navController.navigate(Route.SelfDiagnosis(fromOnboarding = true))
                 }
             )
         }
@@ -70,7 +101,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToHospitalDetail = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
-                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
+                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis()) },
                 // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
                 // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
                 // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
@@ -100,7 +131,89 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.Guide> {
-            GuideScreen(onBack = navController::popBackStack)
+            GuideScreen(
+                onMenuClick = { navController.navigate(Route.Settings) },
+                onStepClick = { step ->
+                    navController.navigate(Route.GuideStepDetail(phase = step.phase, title = step.title))
+                }
+            )
+        }
+        composable<Route.GuideStepDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.GuideStepDetail>()
+            val phase = route.phase
+            if (phase == GuidePhase.TREATMENT_EXAMINATION) {
+                // STEP04는 브리핑 카드 섹션이 있어 공용 GuideStepDetailScreen 대신 전용 화면을 쓴다.
+                TreatmentExaminationDetailScreen(onBack = navController::popBackStack)
+            } else {
+                GuideStepDetailScreen(
+                    phase = phase,
+                    title = route.title,
+                    onBack = navController::popBackStack,
+                    onItemClick = { item ->
+                        when (item.id) {
+                            GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
+                            GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
+                            GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
+                            GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
+                            GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
+                            GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
+                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.HospitalLocationCheckinDetail)
+                            GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
+                            GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
+                            GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
+                            GuideDetailItemId.MEDICATION_SCHEDULE_CHECK -> navController.navigate(Route.MedicationScheduleDetail)
+                            GuideDetailItemId.POST_TREATMENT_PRECAUTIONS_CHECK -> navController.navigate(Route.PostTreatmentPrecautionsDetail)
+                            GuideDetailItemId.ENGLISH_DOCUMENTS_RESULTS_CHECK -> navController.navigate(Route.EnglishDocumentsResultsDetail)
+                            GuideDetailItemId.AIRPORT_DEPARTURE_PREPARATION_CHECK -> navController.navigate(Route.AirportDeparturePreparationDetail)
+                        }
+                    }
+                )
+            }
+        }
+        composable<Route.VisaEntryCheckDetail> {
+            VisaEntryCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.InsuranceDocumentsDetail> {
+            InsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.HospitalInquiryDetail> {
+            HospitalInquiryDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PreInquiryInformationDetail> {
+            PreInquiryInformationDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PassportReservationInfoDetail> {
+            PassportReservationInfoDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.MedicalRecordsTestResultsDetail> {
+            MedicalRecordsTestResultsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.HospitalLocationCheckinDetail> {
+            HospitalLocationCheckinDetailScreen(
+                onBack = navController::popBackStack,
+                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) }
+            )
+        }
+        composable<Route.TotalCostCoverageCheckDetail> {
+            TotalCostCoverageCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PaymentMethodCheckDetail> {
+            PaymentMethodCheckDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.ReceiptInsuranceDocumentsDetail> {
+            ReceiptInsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.MedicationScheduleDetail> {
+            MedicationScheduleDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.PostTreatmentPrecautionsDetail> {
+            PostTreatmentPrecautionsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.EnglishDocumentsResultsDetail> {
+            EnglishDocumentsResultsDetailScreen(onBack = navController::popBackStack)
+        }
+        composable<Route.AirportDeparturePreparationDetail> {
+            AirportDeparturePreparationDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()
@@ -156,8 +269,39 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onBack = navController::popBackStack
             )
         }
-        composable<Route.SelfDiagnosis> {
-            SelfDiagnosisScreen(onBack = navController::popBackStack)
+        composable<Route.SelfDiagnosis> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.SelfDiagnosis>()
+            val context = LocalContext.current
+            SelfDiagnosisScreen(
+                fromOnboarding = route.fromOnboarding,
+                onBack = navController::popBackStack,
+                onFinishSetup = { navController.navigateToHomeAfterSetup() },
+                onNavigateToCtaTarget = { target ->
+                    when (target) {
+                        DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST ->
+                            navController.navigate(Route.HospitalInquiryDetail)
+                        DiagnosisCtaTarget.HOSPITAL_BROWSE ->
+                            navController.navigate(Route.HospitalSearchList())
+                        DiagnosisCtaTarget.INTERPRETATION_SUPPORT ->
+                            navController.navigate(
+                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = "예약 및 문의")
+                            )
+                        DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST ->
+                            context.launchIntentSafely(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://www.medicalkorea.or.kr/en/registeredhospitals"))
+                            )
+                        DiagnosisCtaTarget.VISA_ENTRY_GUIDE ->
+                            navController.navigate(Route.VisaEntryCheckDetail)
+                        DiagnosisCtaTarget.TOTAL_COST_COVERAGE_CHECK ->
+                            navController.navigate(Route.TotalCostCoverageCheckDetail)
+                        DiagnosisCtaTarget.DEPARTURE_CHECKLIST ->
+                            navController.navigate(Route.AirportDeparturePreparationDetail)
+                        DiagnosisCtaTarget.WELLNESS_PLACES -> {
+                            // TODO: 팀원이 작업 중인 웰니스 전용 화면 완성 후 연결
+                        }
+                    }
+                }
+            )
         }
     }
 }

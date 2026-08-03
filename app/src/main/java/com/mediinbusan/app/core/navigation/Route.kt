@@ -1,5 +1,6 @@
 package com.mediinbusan.app.core.navigation
 
+import com.mediinbusan.app.data.guide.GuidePhase
 import androidx.navigation.NavHostController
 import kotlinx.serialization.Serializable
 
@@ -27,6 +28,51 @@ sealed interface Route {
     data object Guide : Route // S-06
 
     @Serializable
+    data class GuideStepDetail(val phase: GuidePhase, val title: String) : Route // S-06 하위 STEP 상세
+
+    @Serializable
+    data object VisaEntryCheckDetail : Route // S-06 STEP 01 하위 "비자·입국 조건 확인" 상세
+
+    @Serializable
+    data object InsuranceDocumentsDetail : Route // S-06 STEP 01 하위 "보험·서류 준비" 상세
+
+    @Serializable
+    data object HospitalInquiryDetail : Route // S-06 STEP 01 하위 "병원 문의 전 정보 정리" 상세
+
+    @Serializable
+    data object PreInquiryInformationDetail : Route // S-06 STEP 02 하위 "문의 전 전달할 정보 정리" 상세
+
+    @Serializable
+    data object PassportReservationInfoDetail : Route // S-06 STEP 03 하위 "여권·예약정보 준비" 상세
+
+    @Serializable
+    data object MedicalRecordsTestResultsDetail : Route // S-06 STEP 03 하위 "기존 진단서·검사결과 준비" 상세
+
+    @Serializable
+    data object HospitalLocationCheckinDetail : Route // S-06 STEP 03 하위 "병원 위치와 접수 절차 확인" 상세
+
+    @Serializable
+    data object TotalCostCoverageCheckDetail : Route // S-06 STEP 05 하위 "총 비용과 포함 항목 확인" 상세
+
+    @Serializable
+    data object PaymentMethodCheckDetail : Route // S-06 STEP 05 하위 "결제 가능 수단 확인" 상세
+
+    @Serializable
+    data object ReceiptInsuranceDocumentsDetail : Route // S-06 STEP 05 하위 "영수증·보험 청구 서류 확인" 상세
+
+    @Serializable
+    data object MedicationScheduleDetail : Route // S-06 STEP 06 하위 "약 복용 방법 확인" 상세
+
+    @Serializable
+    data object PostTreatmentPrecautionsDetail : Route // S-06 STEP 06 하위 "진료 후 주의사항 확인" 상세
+
+    @Serializable
+    data object EnglishDocumentsResultsDetail : Route // S-06 STEP 06 하위 "영문 서류·검사결과 수령 확인" 상세
+
+    @Serializable
+    data object AirportDeparturePreparationDetail : Route // S-06 STEP 06 하위 "귀국 전 반입·공항 준비" 상세
+
+    @Serializable
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable
@@ -50,8 +96,10 @@ sealed interface Route {
     @Serializable
     data object RecentlyViewed : Route // S-10 하위 최근 본 항목 (F-016)
 
+    // 준비 유형 진단(TYPE A~E). Home 퀵링크·설정에서 재진입 시 fromOnboarding=false,
+    // 최초 실행 흐름(Splash -> 언어선택 -> 진단 -> Home) 중에는 true.
     @Serializable
-    data object SelfDiagnosis : Route // TODO: 화면 미구현, 진입점만 예약 (자가진단 플로우는 별도 이슈)
+    data class SelfDiagnosis(val fromOnboarding: Boolean = false) : Route
 }
 
 /**
@@ -71,5 +119,17 @@ internal fun NavHostController.navigateToTab(route: Route) {
         popUpTo(Route.Home) { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+/**
+ * 최초 실행 설정 흐름(언어선택 -> 진단) 완료 시 Home으로 이동하며 그 전까지 쌓인 스택을 비운다.
+ * 앱을 종료했다가 재개한 세션에서는 Splash가 언어선택을 건너뛰고 진단으로 바로 보낼 수도 있어
+ * (SplashViewModel 참고) 스택에 Onboarding이 있을 수도, 없을 수도 있다 — 특정 destination을
+ * popUpTo 기준으로 잡을 수 없으므로 그래프 전체를 기준으로 비운다.
+ */
+internal fun NavHostController.navigateToHomeAfterSetup() {
+    navigate(Route.Home) {
+        popUpTo(graph.id) { inclusive = true }
     }
 }
