@@ -34,8 +34,11 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         UserPreferences(
             languageCode = prefs[UserPreferencesKeys.LANGUAGE_CODE] ?: SupportedLanguage.DEFAULT.code,
             onboardingComplete = prefs[UserPreferencesKeys.ONBOARDING_COMPLETE] ?: false,
-            medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE]?.let { name ->
-                MedicalCategory.entries.find { it.name == name }
+            medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE]?.let { stored ->
+                // enum 도입 전에는 라벨 문자열("피부·미용" 등)을 그대로 저장했다. 기존 저장값이
+                // 업데이트 후 조용히 null이 되지 않도록 name 매칭 실패 시 label로도 조회한다.
+                MedicalCategory.entries.find { it.name == stored }
+                    ?: MedicalCategory.entries.find { it.label == stored }
             },
             notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true,
             diagnosisComplete = prefs[UserPreferencesKeys.DIAGNOSIS_COMPLETE] ?: false
