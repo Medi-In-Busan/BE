@@ -1,5 +1,6 @@
 package com.mediinbusan.app.core.navigation
 
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.data.guide.GuidePhase
 import androidx.navigation.NavHostController
 import kotlinx.serialization.Serializable
@@ -19,7 +20,7 @@ sealed interface Route {
     data object Home : Route // S-03
 
     @Serializable
-    data class HospitalSearchList(val medicalPurpose: String? = null) : Route // S-04, 구 HospitalList + Search 통합. medicalPurpose가 있으면 진입 시 해당 필터로 자동 검색
+    data class HospitalSearchList(val medicalPurpose: MedicalCategory? = null) : Route // S-04, 구 HospitalList + Search 통합. medicalPurpose가 있으면 진입 시 해당 필터로 자동 검색
 
     @Serializable
     data class HospitalDetail(val hospitalId: String) : Route // S-05

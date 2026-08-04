@@ -1,5 +1,6 @@
 package com.mediinbusan.app.data.hospital
 
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -13,7 +14,7 @@ class HospitalRepositoryImpl @Inject constructor(
     private val hospitalApi: HospitalApi
 ) : HospitalRepository {
 
-    override fun getHospitals(medicalPurpose: String?, languageCode: String): Flow<Result<List<Hospital>>> = flow {
+    override fun getHospitals(medicalPurpose: MedicalCategory?, languageCode: String): Flow<Result<List<Hospital>>> = flow {
         emit(Result.Loading)
         emit(Result.Success(sampleHospitals))
     }

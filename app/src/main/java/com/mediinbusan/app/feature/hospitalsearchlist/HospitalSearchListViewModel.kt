@@ -2,6 +2,7 @@ package com.mediinbusan.app.feature.hospitalsearchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.Favorite
@@ -32,7 +33,7 @@ class HospitalSearchListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HospitalSearchListUiState())
     val uiState: StateFlow<HospitalSearchListUiState> = _uiState
 
-    private var currentPurpose: String? = null
+    private var currentPurpose: MedicalCategory? = null
     private var initialized = false
 
     init {
@@ -54,13 +55,13 @@ class HospitalSearchListViewModel @Inject constructor(
 
     // Home에서 의료목적 칩/웰니스 퀵링크로 진입할 때 해당 필터 칩을 선택 상태로 반영하고,
     // 그 목적에 맞는 결과만 서버에서 걸러 불러온다. 화면 재구성 시 중복 초기화되지 않도록 1회만 실행.
-    fun initialize(medicalPurpose: String?) {
+    fun initialize(medicalPurpose: MedicalCategory?) {
         if (initialized) return
         initialized = true
         currentPurpose = medicalPurpose
         if (medicalPurpose != null) {
             _uiState.update { state ->
-                state.copy(filters = state.filters.map { it.copy(selected = it.label == medicalPurpose) })
+                state.copy(filters = state.filters.map { it.copy(selected = it.label == medicalPurpose.label) })
             }
         }
         loadResults()

@@ -68,6 +68,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.BadgeText
@@ -104,7 +105,7 @@ fun HomeScreen(
     onNavigateToSelfDiagnosis: () -> Unit = {},
     // 의료목적 선택 칩/의료기관 찾기/웰니스 퀵링크/검색바가 전부 여기로 모인다.
     // purpose가 있으면 진입한 통합 검색 화면(HospitalSearchList)이 해당 필터로 자동 검색한다.
-    onNavigateToSearch: (String?) -> Unit = {},
+    onNavigateToSearch: (MedicalCategory?) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -133,10 +134,10 @@ private fun HomeContent(
     onNavigateToGuide: () -> Unit,
     onNavigateToMap: () -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
-    onNavigateToSearch: (String?) -> Unit,
+    onNavigateToSearch: (MedicalCategory?) -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onPurposeSelected: (String) -> Unit,
+    onPurposeSelected: (MedicalCategory) -> Unit,
     onFavoriteClick: (String) -> Unit,
     onRetry: () -> Unit,
     onLanguageSelected: (String) -> Unit
@@ -205,7 +206,7 @@ private fun HomeContent(
                             when (type) {
                                 QuickLinkType.HOSPITAL_LIST -> onNavigateToSearch(null)
                                 QuickLinkType.GUIDE -> onNavigateToGuide()
-                                QuickLinkType.WELLNESS -> onNavigateToSearch("웰니스")
+                                QuickLinkType.WELLNESS -> onNavigateToSearch(MedicalCategory.WELLNESS)
                                 QuickLinkType.MAP -> onNavigateToMap()
                                 QuickLinkType.SELF_DIAGNOSIS -> onNavigateToSelfDiagnosis()
                                 QuickLinkType.FAVORITE -> onNavigateToFavorite()
@@ -463,19 +464,19 @@ private fun SearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
 @Composable
 private fun MedicalPurposeSection(
     modifier: Modifier = Modifier,
-    purposes: List<MedicalPurposeItem>,
-    selectedPurpose: String?,
-    onPurposeClick: (String) -> Unit
+    purposes: List<MedicalCategory>,
+    selectedPurpose: MedicalCategory?,
+    onPurposeClick: (MedicalCategory) -> Unit
 ) {
     Column(modifier = modifier) {
         Text(text = "의료 목적 선택", style = SectionTitleStyle, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            items(purposes, key = { it.label }) { item ->
+            items(purposes, key = { it.name }) { item ->
                 MedicalPurposeChip(
                     item = item,
-                    selected = item.label == selectedPurpose,
-                    onClick = { onPurposeClick(item.label) }
+                    selected = item == selectedPurpose,
+                    onClick = { onPurposeClick(item) }
                 )
             }
         }
@@ -483,7 +484,7 @@ private fun MedicalPurposeSection(
 }
 
 @Composable
-private fun MedicalPurposeChip(item: MedicalPurposeItem, selected: Boolean, onClick: () -> Unit) {
+private fun MedicalPurposeChip(item: MedicalCategory, selected: Boolean, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(76.dp)
@@ -744,7 +745,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
 private fun HomeContentDataPreview() {
     PreviewHomeContent(
         uiState = HomeUiState(
-            selectedPurpose = "피부·미용",
+            selectedPurpose = MedicalCategory.SKIN_BEAUTY,
             recommendedHospitals = PreviewHospitals,
             favoriteHospitalIds = setOf("preview-1"),
             isLoading = false,
