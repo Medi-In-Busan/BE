@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.BadgeText
 
@@ -24,19 +25,9 @@ fun LanguageBadge(text: String, modifier: Modifier = Modifier) {
 }
 
 /** Hospital.supportedLanguages의 ISO 계열 코드(en/ja/zh)를 배지 표시용 라벨로 매핑한다. */
-fun String.toLanguageBadgeLabel(): String = when (this.lowercase()) {
-    "ko" -> "KO"
-    "en" -> "EN"
-    "zh" -> "CN"
-    "ja" -> "JP"
-    else -> this.uppercase()
-}
+fun String.toLanguageBadgeLabel(): String =
+    SupportedLanguage.entries.find { it.code == this.lowercase() }?.badgeLabel ?: this.uppercase()
 
 /** 기본 정보 섹션 등에서 쓰는 언어 코드의 사람이 읽는 전체 이름(예: en → English). */
-fun String.toLanguageDisplayName(): String = when (this.lowercase()) {
-    "ko" -> "한국어"
-    "en" -> "English"
-    "zh" -> "中文"
-    "ja" -> "日本語"
-    else -> this.uppercase()
-}
+fun String.toLanguageDisplayName(): String =
+    SupportedLanguage.entries.find { it.code == this.lowercase() }?.displayName ?: this.uppercase()
