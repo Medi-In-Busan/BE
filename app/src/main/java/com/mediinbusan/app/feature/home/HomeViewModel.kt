@@ -2,6 +2,7 @@ package com.mediinbusan.app.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.Favorite
@@ -63,7 +64,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onMedicalPurposeSelected(purpose: String) {
+    fun onMedicalPurposeSelected(purpose: MedicalCategory) {
         viewModelScope.launch {
             userPreferencesRepository.setMedicalPurpose(purpose)
         }

@@ -1,5 +1,6 @@
 package com.mediinbusan.app.feature.hospitalsearchlist
 
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.data.hospital.Hospital
 
@@ -20,10 +21,10 @@ data class HospitalSearchListUiState(
         get() = if (query.isBlank()) results else results.filter { it.name.contains(query, ignoreCase = true) }
 }
 
-/** TODO: 병원 6개 카테고리 + 관광지 스텁. 초기 진입 필터(medicalPurpose) 외의 토글 필터링 연결은 다음 이슈. */
+/** TODO: MedicalCategory 10종 + 관광지 스텁. 초기 진입 필터(medicalPurpose) 외의 토글 필터링 연결은 다음 이슈. */
 data class SearchFilterChip(val label: String, val selected: Boolean = false) {
     companion object {
-        val DEFAULTS = listOf("피부·미용", "건강검진", "치과", "한방", "재활", "웰니스", "관광지")
+        val DEFAULTS = (MedicalCategory.entries.map { it.label } + "관광지")
             .map { SearchFilterChip(label = it) }
     }
 }

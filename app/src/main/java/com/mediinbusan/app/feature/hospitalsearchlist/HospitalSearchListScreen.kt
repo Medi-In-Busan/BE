@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -53,11 +53,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
-import com.mediinbusan.app.core.designsystem.SettingsBorder
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
@@ -79,7 +79,7 @@ import com.mediinbusan.app.data.hospital.Hospital
 
 @Composable
 fun HospitalSearchListScreen(
-    medicalPurpose: String?,
+    medicalPurpose: MedicalCategory?,
     onSelectHospital: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: HospitalSearchListViewModel = hiltViewModel()
@@ -235,49 +235,16 @@ private fun SearchInputBar(query: String, onQueryChanged: (String) -> Unit, modi
     }
 }
 
-// 칩 3개(피부·미용/건강검진/치과)만 서치바 너비에 맞춰 바로 노출하고, 나머지(한방/재활/웰니스/
-// 관광지)는 필터 상세 아이콘의 드롭다운에서 전체 목록으로 보여준다.
-private const val PinnedFilterChipCount = 3
-
+// 전체 의료 태그 + 관광지를 한 줄에 모두 배치하고 가로로 슬라이드해서 볼 수 있게 한다.
 @Composable
 private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (String) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        filters.take(PinnedFilterChipCount).forEach { chip ->
+        items(filters, key = { it.label }) { chip ->
             FilterChipPill(label = chip.label, selected = chip.selected, onClick = { onFilterToggled(chip.label) })
-        }
-        FilterDetailButton(filters = filters, onFilterToggled = onFilterToggled)
-    }
-}
-
-// 3개 외 나머지 카테고리(한방/재활/웰니스/관광지)를 포함한 전체 목록을 드롭다운으로 보여준다.
-// 항목을 눌러도 메뉴가 닫히지 않아 여러 개를 이어서 선택/해제할 수 있다.
-@Composable
-private fun FilterDetailButton(filters: List<SearchFilterChip>, onFilterToggled: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .border(width = 1.dp, color = SettingsBorder, shape = CircleShape)
-                .clickable { expanded = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(imageVector = Icons.Outlined.Tune, contentDescription = "필터 상세", tint = SettingsSecondaryText, modifier = Modifier.size(18.dp))
-        }
-        BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            filters.forEach { chip ->
-                BrandDropdownMenuItem(
-                    label = chip.label,
-                    selected = chip.selected,
-                    onClick = { onFilterToggled(chip.label) }
-                )
-            }
         }
     }
 }
