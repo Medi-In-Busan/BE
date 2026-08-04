@@ -1,0 +1,13 @@
+# 테스트는 실제 MySQL(docker-compose) 없이 H2로 독립 실행한다.
+# Flyway는 MySQL 전용 마이그레이션이라 테스트에서는 끄고, Hibernate가 매 테스트마다 스키마를 새로 만든다.
+spring:
+  datasource:
+    url: jdbc:h2:mem:mediinbusan;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false

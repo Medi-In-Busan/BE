@@ -1,0 +1,21 @@
+# 로컬 개발용 MySQL. 모니터링(prometheus/grafana)·redis는 지금 단계에 필요 없어서 뺐다 —
+# 필요해지면 그때 서비스만 추가하면 된다.
+# 비밀번호는 .env(gitignore 대상)에서 읽는다. backend/.env.example을 복사해서 backend/.env로 채울 것.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: mediinbusan-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD:
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:

@@ -4,7 +4,11 @@ import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.data.hospital.Hospital
 
-/** S-04 통합 화면(구 HospitalList + Search) UI 상태. 카테고리 필터 칩 중 진입 시 전달된 의료목적만 서버 필터링에 반영되고, 나머지 토글/정렬은 스텁이라 결과에 영향을 주지 않는다. */
+/**
+ * S-04 통합 화면(구 HospitalList + Search) UI 상태. query/filters 둘 다 백엔드
+ * GET /api/hospitals(keyword OR 검색 + specialties IN 필터)로 그대로 넘어가서, results는
+ * 이미 서버에서 필터링된 결과다 — 여기서 다시 클라이언트 필터링하지 않는다.
+ */
 data class HospitalSearchListUiState(
     val isLoading: Boolean = true,
     val query: String = "",
@@ -16,12 +20,9 @@ data class HospitalSearchListUiState(
     val errorMessage: String? = null,
     // 무한스크롤은 UI 훅만 미리 잡아두는 단계라, 실제로는 항상 마지막 페이지로 취급한다.
     val hasReachedEnd: Boolean = true
-) {
-    val filteredResults: List<Hospital>
-        get() = if (query.isBlank()) results else results.filter { it.name.contains(query, ignoreCase = true) }
-}
+)
 
-/** TODO: MedicalCategory 10종 + 관광지 스텁. 초기 진입 필터(medicalPurpose) 외의 토글 필터링 연결은 다음 이슈. */
+/** MedicalCategory 10종 + 관광지(백엔드 필터 대상 아님, 선택해도 결과에 영향 없음) 스텁. */
 data class SearchFilterChip(val label: String, val selected: Boolean = false) {
     companion object {
         val DEFAULTS = (MedicalCategory.entries.map { it.label } + "관광지")

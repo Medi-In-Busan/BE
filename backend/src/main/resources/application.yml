@@ -1,7 +1,32 @@
+# 프로필/VM 옵션 아무것도 없어도 항상 로드된다. 지금은 H2만 있음 — 도커/MySQL 없이 바로 실행.
+# 실제 MySQL/배포용 설정은 필요해지면 application-{profile}.yml을 따로 추가한다.
 spring:
   application:
     name: backend
 
-# 시크릿(API 키 등)은 이 파일에 직접 넣지 않는다.
-# Android의 local.properties 패턴과 동일하게, 로컬 실행용 값은
-# application-local.yml(gitignore 대상)에 분리하고 여기서는 참조만 한다.
+  datasource:
+    url: jdbc:h2:file:./data/mediinbusan-h2;MODE=MySQL;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
