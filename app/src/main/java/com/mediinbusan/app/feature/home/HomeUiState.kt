@@ -2,12 +2,13 @@ package com.mediinbusan.app.feature.home
 
 import androidx.annotation.DrawableRes
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.data.hospital.Hospital
 
 data class HomeUiState(
-    val medicalPurposes: List<MedicalPurposeItem> = MedicalPurposeItem.DEFAULTS,
-    val selectedPurpose: String? = null,
+    val medicalPurposes: List<MedicalCategory> = MedicalCategory.entries,
+    val selectedPurpose: MedicalCategory? = null,
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val quickLinks: List<QuickLinkItem> = QuickLinkItem.DEFAULTS,
     val recommendedHospitals: List<Hospital> = emptyList(),
@@ -15,22 +16,6 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val error: String? = null
 )
-
-data class MedicalPurposeItem(
-    val label: String,
-    @param:DrawableRes val iconRes: Int
-) {
-    companion object {
-        val DEFAULTS = listOf(
-            MedicalPurposeItem("피부·미용", R.drawable.select_skin),
-            MedicalPurposeItem("건강검진", R.drawable.select_healthcheck),
-            MedicalPurposeItem("치과", R.drawable.select_tooth),
-            MedicalPurposeItem("한방", R.drawable.select_hanbang),
-            MedicalPurposeItem("재활", R.drawable.select_recover),
-            MedicalPurposeItem("웰니스", R.drawable.select_wellness)
-        )
-    }
-}
 
 enum class QuickLinkType { HOSPITAL_LIST, GUIDE, WELLNESS, MAP, SELF_DIAGNOSIS, FAVORITE }
 
