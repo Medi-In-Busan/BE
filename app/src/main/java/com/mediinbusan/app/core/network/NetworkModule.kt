@@ -54,9 +54,17 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
 
+    // HospitalApi는 한국관광공사 API가 아니라 자체 백엔드(backend/)를 바라봐서, TOUR_API_BASE_URL을 쓰는
+    // 공용 Retrofit 대신 별도 base URL로 직접 빌드한다.
     @Provides
     @Singleton
-    fun provideHospitalApi(retrofit: Retrofit): HospitalApi = retrofit.create(HospitalApi::class.java)
+    fun provideHospitalApi(okHttpClient: OkHttpClient, json: Json): HospitalApi =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.MEDIINBUSAN_API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(HospitalApi::class.java)
 
     @Provides
     @Singleton

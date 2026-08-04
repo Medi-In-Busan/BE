@@ -2,22 +2,42 @@ package com.mediinbusan.app.data.hospital
 
 import kotlinx.serialization.Serializable
 
-/**
- * 한국관광공사 의료관광정보 서비스 응답 DTO.
- * TODO: 실제 API 문서 확인 후 정확한 필드명/구조로 교체한다 (현재는 플레이스홀더 형태).
- */
 @Serializable
-data class HospitalDto(
-    val contentId: String? = null,
-    val name: String? = null,
-    val specialties: List<String>? = null,
-    val address: String? = null,
+data class HospitalPageDto(
+    val content: List<HospitalListItemDto> = emptyList(),
+    val page: Int = 0,
+    val size: Int = 0,
+    val totalElements: Long = 0,
+    val totalPages: Int = 0
+)
+
+/** GET /api/hospitals 리스트 항목. 백엔드 HospitalListItemResponse와 1:1. */
+@Serializable
+data class HospitalListItemDto(
+    val regNo: String,
+    val name: String,
+    val institutionType: String,
+    val address: String,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val phoneNumber: String? = null,
-    val homepageUrl: String? = null,
-    val supportedLanguages: List<String>? = null,
-    val description: String? = null,
-    val imageUrl: String? = null,
-    val modifiedDate: String? = null
+    val phone: String? = null,
+    val specialties: List<String> = emptyList()
+)
+
+/** GET /api/hospitals/{regNo} 상세. 백엔드 HospitalDetailResponse와 1:1. */
+@Serializable
+data class HospitalDetailDto(
+    val regNo: String,
+    val name: String,
+    val institutionType: String,
+    val address: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val phone: String? = null,
+    val website: String? = null,
+    val businessHours: String? = null,
+    val descriptionKo: String? = null,
+    val descriptionEn: String? = null,
+    val specialties: List<String> = emptyList(),
+    val targetCountries: List<String> = emptyList()
 )

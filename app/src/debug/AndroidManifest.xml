@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 디버그 빌드에만 병합된다. 로컬 백엔드(HTTP, 10.0.2.2)에 붙기 위한 cleartext 예외를 여기서만 켠다. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application android:networkSecurityConfig="@xml/network_security_config" />
+
+</manifest>

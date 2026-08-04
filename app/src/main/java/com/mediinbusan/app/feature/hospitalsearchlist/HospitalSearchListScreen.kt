@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -95,6 +98,7 @@ fun HospitalSearchListScreen(
         onBack = onBack,
         onLanguageSelected = viewModel::onLanguageSelected,
         onQueryChanged = viewModel::onQueryChanged,
+        onSearchSubmit = viewModel::onSearchSubmit,
         onFilterToggled = viewModel::onFilterToggled,
         onSortSelected = viewModel::onSortSelected,
         onLoadMore = viewModel::onLoadMore,
@@ -111,6 +115,7 @@ private fun HospitalSearchListContent(
     onBack: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
     onFilterToggled: (String) -> Unit,
     onSortSelected: (SearchSortOption) -> Unit,
     onLoadMore: () -> Unit,
@@ -140,6 +145,7 @@ private fun HospitalSearchListContent(
                 SearchInputBar(
                     query = uiState.query,
                     onQueryChanged = onQueryChanged,
+                    onSearchSubmit = onSearchSubmit,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
 
@@ -152,20 +158,20 @@ private fun HospitalSearchListContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SearchResultCountLabel(query = uiState.query, count = uiState.filteredResults.size)
+                    SearchResultCountLabel(query = uiState.query, count = uiState.results.size)
                     SortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected)
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Box(modifier = Modifier.weight(1f)) {
-                    if (uiState.filteredResults.isEmpty()) {
+                    if (uiState.results.isEmpty()) {
                         EmptySearchBanner(
                             onReset = onResetSearchConditions,
                             modifier = Modifier.padding(horizontal = 20.dp)
                         )
                     } else {
                         SearchResultList(
-                            results = uiState.filteredResults,
+                            results = uiState.results,
                             favoriteHospitalIds = uiState.favoriteHospitalIds,
                             hasReachedEnd = uiState.hasReachedEnd,
                             onLoadMore = onLoadMore,
@@ -198,8 +204,14 @@ private fun SearchResultCountLabel(query: String, count: Int) {
 }
 
 // Home의 알약형 검색바(SearchBar)와 같은 룩을 쓰되, 여기서는 실제 입력 가능한 텍스트필드다.
+// 타이핑 중에는 재조회하지 않고, 돋보기 아이콘 클릭 또는 키보드 검색 액션에서만 onSearchSubmit이 불린다.
 @Composable
-private fun SearchInputBar(query: String, onQueryChanged: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun SearchInputBar(
+    query: String,
+    onQueryChanged: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -223,11 +235,17 @@ private fun SearchInputBar(query: String, onQueryChanged: (String) -> Unit, modi
                 onValueChange = onQueryChanged,
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
                 modifier = Modifier.fillMaxWidth()
             )
         }
         Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(CoralPrimary),
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(CoralPrimary)
+                .clickable(onClick = onSearchSubmit),
             contentAlignment = Alignment.Center
         ) {
             Icon(imageVector = Icons.Filled.Search, contentDescription = "검색", tint = Color.White)
@@ -426,6 +444,7 @@ private fun HospitalSearchListContentPreview() {
             onBack = {},
             onLanguageSelected = {},
             onQueryChanged = {},
+            onSearchSubmit = {},
             onFilterToggled = {},
             onSortSelected = {},
             onLoadMore = {},
