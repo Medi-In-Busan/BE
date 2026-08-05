@@ -19,9 +19,13 @@ import javax.inject.Inject
 
 /**
  * S-04 통합 화면(구 HospitalList F-004/F-005 + Search UI 스켈레톤) ViewModel.
- * 병원+장소 통합 검색, 필터 칩 토글 실제 적용, 정렬 적용, 서버 페이지네이션은 전부 다음 이슈로
- * 넘긴 상태다. 진입 시 전달되는 medicalPurpose만 서버 필터링(HospitalRepository)에 반영하고,
- * 그 외에는 병원 샘플 데이터에 대해 이름만 클라이언트 필터링한다.
+ * query(키워드)와 filters(specialties 선택 상태)가 백엔드 GET /api/hospitals의
+ * keyword OR 검색 + specialties IN 필터 그대로 넘어간다 — filters 선택 상태가 검색 조건의
+ * 단일 소스라, medicalPurpose는 별도 변수로 안 들고 매번 filters에서 뽑아 쓴다.
+ * 필터 칩은 누르는 즉시 재조회되지만, 키워드는 타이핑마다가 아니라 검색 버튼(돋보기 아이콘/키보드
+ * 검색 액션)을 눌렀을 때만 onSearchSubmit()으로 재조회한다 — onQueryChanged는 텍스트 상태만 갱신.
+ * "관광지" 칩은 백엔드에 대응 카테고리가 없어 선택해도 결과에 영향을 주지 않는다.
+ * 정렬/서버 페이지네이션은 다음 이슈.
  */
 @HiltViewModel
 class HospitalSearchListViewModel @Inject constructor(
@@ -33,7 +37,6 @@ class HospitalSearchListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HospitalSearchListUiState())
     val uiState: StateFlow<HospitalSearchListUiState> = _uiState
 
-    private var currentPurpose: MedicalCategory? = null
     private var initialized = false
 
     init {
@@ -58,7 +61,6 @@ class HospitalSearchListViewModel @Inject constructor(
     fun initialize(medicalPurpose: MedicalCategory?) {
         if (initialized) return
         initialized = true
-        currentPurpose = medicalPurpose
         if (medicalPurpose != null) {
             _uiState.update { state ->
                 state.copy(filters = state.filters.map { it.copy(selected = it.label == medicalPurpose.label) })
@@ -71,7 +73,17 @@ class HospitalSearchListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
-            when (val result = hospitalRepository.getHospitals(currentPurpose, languageCode).first { it !is Result.Loading }) {
+            val selectedSpecialties = _uiState.value.filters
+                .filter { it.selected }
+                .mapNotNull { chip -> MedicalCategory.entries.find { it.label == chip.label } }
+            val keyword = _uiState.value.query
+            when (
+                val result = hospitalRepository.getHospitals(
+                    keyword = keyword,
+                    specialties = selectedSpecialties,
+                    languageCode = languageCode
+                ).first { it !is Result.Loading }
+            ) {
                 is Result.Success -> _uiState.update {
                     it.copy(isLoading = false, results = result.data, errorMessage = null)
                 }
@@ -87,7 +99,11 @@ class HospitalSearchListViewModel @Inject constructor(
         _uiState.update { it.copy(query = query) }
     }
 
-    // TODO: 필터 칩 실제 적용은 카테고리 확정 후 다음 이슈에서 연결한다. 지금은 선택 상태만 토글.
+    // 돋보기 아이콘 클릭 또는 키보드 검색 액션에서 호출. 여기서만 실제로 재조회한다.
+    fun onSearchSubmit() {
+        loadResults()
+    }
+
     fun onFilterToggled(label: String) {
         _uiState.update { state ->
             state.copy(
@@ -96,6 +112,7 @@ class HospitalSearchListViewModel @Inject constructor(
                 }
             )
         }
+        loadResults()
     }
 
     // TODO: 정렬 기준 확정 후 실제 정렬 로직을 연결한다. 지금은 선택 상태만 보관.
@@ -104,7 +121,6 @@ class HospitalSearchListViewModel @Inject constructor(
     }
 
     fun onResetSearchConditions() {
-        currentPurpose = null
         _uiState.update {
             it.copy(query = "", filters = SearchFilterChip.DEFAULTS)
         }

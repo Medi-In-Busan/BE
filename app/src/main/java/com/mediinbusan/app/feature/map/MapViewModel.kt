@@ -80,7 +80,7 @@ class MapViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
 
-            val hospitalsResult = hospitalRepository.getHospitals(null, languageCode)
+            val hospitalsResult = hospitalRepository.getHospitals(languageCode = languageCode)
                 .first { it !is Result.Loading }
             val hospitals = (hospitalsResult as? Result.Success)?.data.orEmpty()
 

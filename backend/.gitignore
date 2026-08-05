@@ -1,7 +1,8 @@
 HELP.md
 .gradle
 build/
-application-local.yml
+.env
+/data/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

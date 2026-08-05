@@ -39,6 +39,12 @@ android {
         buildConfigField("String", "TOURISM_API_SERVICE_KEY", "\"${secret("TOURISM_API_SERVICE_KEY")}\"")
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"${secret("KAKAO_NATIVE_APP_KEY")}\"")
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = secret("KAKAO_NATIVE_APP_KEY")
+
+        // 자체 백엔드(backend/) 주소. 10.0.2.2는 에뮬레이터에서 호스트 PC의 localhost를 가리키는 값이라
+        // 별도 설정 없이 기본값만으로 동작한다. 실기기로 테스트할 땐 local.properties에
+        // MEDIINBUSAN_API_BASE_URL=http://<PC의 LAN IP>:8080/ 로 덮어쓴다.
+        val backendBaseUrl = localProperties.getProperty("MEDIINBUSAN_API_BASE_URL") ?: "http://10.0.2.2:8080/"
+        buildConfigField("String", "MEDIINBUSAN_API_BASE_URL", "\"$backendBaseUrl\"")
     }
 
     buildTypes {

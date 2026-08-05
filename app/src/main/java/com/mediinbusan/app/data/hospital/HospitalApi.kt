@@ -1,30 +1,24 @@
 package com.mediinbusan.app.data.hospital
 
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
-/**
- * 한국관광공사 의료관광정보 서비스 (F-004, F-006, F-007, F-009).
- * TODO: 정확한 엔드포인트 경로/오퍼레이션명/파라미터는 실제 API 문서 확인 후 확정한다.
- * 아래 경로/파라미터명은 확정 전 플레이스홀더다.
- */
+/** MediInBusan 자체 백엔드(backend/, com.mediinbusan.backend.hospital)의 병원 검색/상세 API. */
 interface HospitalApi {
-    @GET("MedicalTourismService/getHospitalList")
-    suspend fun getHospitalList(
-        @Query("serviceKey") serviceKey: String,
-        @Query("areaCode") areaCode: String = BUSAN_AREA_CODE,
-        @Query("langCode") langCode: String,
-        @Query("medicalPurpose") medicalPurpose: String? = null
-    ): List<HospitalDto>
+    @GET("api/hospitals")
+    suspend fun getHospitals(
+        @Query("keyword") keyword: String? = null,
+        @Query("specialties") specialties: String? = null,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = DEFAULT_PAGE_SIZE
+    ): HospitalPageDto
 
-    @GET("MedicalTourismService/getHospitalDetail")
-    suspend fun getHospitalDetail(
-        @Query("serviceKey") serviceKey: String,
-        @Query("contentId") contentId: String,
-        @Query("langCode") langCode: String
-    ): HospitalDto
+    @GET("api/hospitals/{regNo}")
+    suspend fun getHospitalDetail(@Path("regNo") regNo: String): HospitalDetailDto
 
     companion object {
-        const val BUSAN_AREA_CODE = "6"
+        // 실제 페이지네이션 UI가 붙기 전까지는, 현재 시딩 규모(122건)를 한 번에 다 받아오는 값으로 둔다.
+        const val DEFAULT_PAGE_SIZE = 200
     }
 }

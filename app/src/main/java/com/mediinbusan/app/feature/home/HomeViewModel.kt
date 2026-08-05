@@ -52,7 +52,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
             // 추천 의료기관 섹션은 선택된 의료 목적과 무관하게 전체 추천 목록을 보여준다.
-            when (val result = hospitalRepository.getHospitals(null, languageCode).first { it !is Result.Loading }) {
+            when (val result = hospitalRepository.getHospitals(languageCode = languageCode).first { it !is Result.Loading }) {
                 is Result.Success -> _uiState.update {
                     it.copy(isLoading = false, recommendedHospitals = result.data, error = null)
                 }
