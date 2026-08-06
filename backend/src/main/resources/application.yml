@@ -30,3 +30,19 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+wellness:
+  ingestion:
+    tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
+    tour-api-service-key: ${TOURISM_API_SERVICE_KEY:}
+    kakao-local-base-url: https://dapi.kakao.com
+    kakao-rest-api-key: ${KAKAO_REST_API_KEY:}
+    tour-api-rows-per-type: 30
+    kakao-rows-per-keyword: 10
+    kakao-keywords:
+      - 해운대 카페
+      - 해운대 스파
+      - 해운대 마사지
+      - 부산 온천
+      - 부산 산책 공원
+      - 부산 웰니스
