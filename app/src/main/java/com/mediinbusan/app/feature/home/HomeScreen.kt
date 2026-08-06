@@ -101,6 +101,7 @@ fun HomeScreen(
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToMap: () -> Unit = {},
+    onNavigateToWellness: () -> Unit = {},
     // SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
     onNavigateToSelfDiagnosis: () -> Unit = {},
     // 의료목적 선택 칩/의료기관 찾기/웰니스 퀵링크/검색바가 전부 여기로 모인다.
@@ -115,6 +116,7 @@ fun HomeScreen(
         onNavigateToHospitalDetail = onNavigateToHospitalDetail,
         onNavigateToGuide = onNavigateToGuide,
         onNavigateToMap = onNavigateToMap,
+        onNavigateToWellness = onNavigateToWellness,
         onNavigateToSelfDiagnosis = onNavigateToSelfDiagnosis,
         onNavigateToSearch = onNavigateToSearch,
         onNavigateToFavorite = onNavigateToFavorite,
@@ -133,6 +135,7 @@ private fun HomeContent(
     onNavigateToHospitalDetail: (String) -> Unit,
     onNavigateToGuide: () -> Unit,
     onNavigateToMap: () -> Unit,
+    onNavigateToWellness: () -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
     onNavigateToSearch: (MedicalCategory?) -> Unit,
     onNavigateToFavorite: () -> Unit,
@@ -206,7 +209,7 @@ private fun HomeContent(
                             when (type) {
                                 QuickLinkType.HOSPITAL_LIST -> onNavigateToSearch(null)
                                 QuickLinkType.GUIDE -> onNavigateToGuide()
-                                QuickLinkType.WELLNESS -> onNavigateToSearch(MedicalCategory.WELLNESS)
+                                QuickLinkType.WELLNESS -> onNavigateToWellness()
                                 QuickLinkType.MAP -> onNavigateToMap()
                                 QuickLinkType.SELF_DIAGNOSIS -> onNavigateToSelfDiagnosis()
                                 QuickLinkType.FAVORITE -> onNavigateToFavorite()
@@ -728,6 +731,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToHospitalDetail = {},
             onNavigateToGuide = {},
             onNavigateToMap = {},
+            onNavigateToWellness = {},
             onNavigateToSelfDiagnosis = {},
             onNavigateToSearch = {},
             onNavigateToFavorite = {},

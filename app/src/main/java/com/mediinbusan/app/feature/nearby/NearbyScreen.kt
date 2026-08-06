@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,10 +62,12 @@ import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediBlue40
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
+import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
+import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
@@ -101,8 +106,10 @@ private fun NearbyContent(
     onRetry: () -> Unit
 ) {
     Scaffold(
+        containerColor = WellnessCanvas,
         topBar = {
             CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
@@ -152,8 +159,8 @@ private fun NearbyLoadedContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        contentPadding = PaddingValues(start = 20.dp, top = 14.dp, end = 20.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         item {
             NearbySummaryCard(
@@ -195,27 +202,47 @@ private fun NearbySummaryCard(
     Surface(
         shape = MaterialTheme.shapes.large,
         color = CoralPrimaryContainer,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.8f)),
+        border = BorderStroke(1.dp, Color.White),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(CoralPrimaryContainer, Color.White, Color(0xFFEAF7FF))
+                    )
+                )
+                .padding(20.dp)
         ) {
-            Text(text = "진료 전후에 무리 없는 동선", style = SectionTitleStyle, color = TextPrimary)
-            Text(
-                text = "가까운 관광지, 산책로, 스파와 식사 장소를 병원 주변 거리 기준으로 묶었습니다.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+            Box(
+                modifier = Modifier
+                    .size(118.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 42.dp, y = (-34).dp)
+                    .clip(CircleShape)
+                    .background(CoralPrimary.copy(alpha = 0.10f))
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                InfoPill(text = "${placeCount}곳 추천")
-                InfoPill(text = "가장 가까운 곳 $nearestDistanceLabel")
-            }
-            Button(onClick = onNavigateToMap, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "지도에서 동선 보기")
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(text = "진료 전후 무리 없는 동선", style = SectionTitleStyle, color = TextPrimary)
+                Text(
+                    text = "병원 근처에서 바로 갈 수 있는 휴식·산책·스파·식사 장소를 거리순으로 정리했습니다.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    InfoPill(text = "${placeCount}곳 추천")
+                    InfoPill(text = "가장 가까운 곳 $nearestDistanceLabel")
+                }
+                Button(
+                    onClick = onNavigateToMap,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = SkyBlue, contentColor = Color.White)
+                ) {
+                    Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "지도에서 동선 보기")
+                }
             }
         }
     }
@@ -237,8 +264,9 @@ private fun WellnessCourseSection(courses: List<WellnessCourse>, onSelectPlace: 
 private fun WellnessCourseCard(course: WellnessCourse, onSelectPlace: (String) -> Unit) {
     Card(
         modifier = Modifier.width(280.dp),
-        shape = MaterialTheme.shapes.large,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(
@@ -347,9 +375,10 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, DividerColor)
     ) {
-        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             PlaceThumbnail(place = place)
             Column(
                 modifier = Modifier
@@ -358,7 +387,7 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                         Text(
                             text = place.name,
                             style = CardTitleStyle,
@@ -375,7 +404,14 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                    Text(text = place.type.label, style = MaterialTheme.typography.labelSmall, color = BadgeText)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(place.type.tint.copy(alpha = 0.12f))
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = place.type.label, style = MaterialTheme.typography.labelSmall, color = place.type.tint, fontWeight = FontWeight.SemiBold)
+                    }
                     Text(
                         text = place.address,
                         style = MaterialTheme.typography.bodySmall,
@@ -385,7 +421,7 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
                     )
                 }
                 Text(
-                    text = place.description.orEmpty(),
+                    text = place.description?.takeUnless { it.startsWith("http") } ?: "상세 정보를 확인해 방문 동선을 조정하세요.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     maxLines = 2,
@@ -400,25 +436,63 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
 private fun PlaceThumbnail(place: Place) {
     Box(
         modifier = Modifier
-            .size(width = 92.dp, height = 104.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(place.type.tint.copy(alpha = 0.16f)),
+            .size(width = 104.dp, height = 112.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(CoralPrimaryContainer, Color(0xFFF1F8FF))
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Place,
-            contentDescription = null,
-            tint = place.type.tint,
-            modifier = Modifier.size(30.dp)
-        )
-        Text(
-            text = place.type.shortLabel,
-            style = MaterialTheme.typography.labelSmall,
-            color = place.type.tint,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 12.dp)
-        )
+        if (place.imageUrl != null) {
+            AsyncImageBox(
+                model = place.imageUrl,
+                contentDescription = place.name,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.48f))
+                        )
+                    )
+            )
+            Text(
+                text = place.type.shortLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 10.dp, bottom = 10.dp)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Place,
+                    contentDescription = null,
+                    tint = place.type.tint,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Text(
+                text = place.type.shortLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = place.type.tint,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, bottom = 12.dp)
+            )
+        }
     }
 }
 
@@ -466,14 +540,16 @@ private val PlaceType.shortLabel: String
 
 private val PlaceType.tint: Color
     get() = when (this) {
-        PlaceType.TOURIST_ATTRACTION -> Color(0xFF2F6690)
-        PlaceType.RESTAURANT -> Color(0xFF3A7D7B)
-        PlaceType.SHOPPING -> Color(0xFF9A5C7F)
-        PlaceType.LODGING -> Color(0xFF6A6F4C)
-        PlaceType.SPA -> Color(0xFF7C6A9B)
-        PlaceType.WALK -> Color(0xFF4F8A5B)
+        PlaceType.TOURIST_ATTRACTION -> SkyBlue
+        PlaceType.RESTAURANT -> MediBlue40
+        PlaceType.SHOPPING -> CoralPrimary
+        PlaceType.LODGING -> MediBlue40
+        PlaceType.SPA -> CoralPrimary
+        PlaceType.WALK -> SkyBlue
         PlaceType.OTHER -> Color(0xFF667085)
     }
 
 private fun Double.toDistanceLabel(): String =
     if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)
+
+private val WellnessCanvas = Color(0xFFFFFAFF)

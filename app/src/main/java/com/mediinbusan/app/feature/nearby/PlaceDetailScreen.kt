@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,6 +56,7 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.ErrorState
+import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
@@ -150,20 +153,56 @@ private fun PlaceHeroCard(place: Place) {
         color = place.type.tint.copy(alpha = 0.14f),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(58.dp)
-                    .clip(CircleShape)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = Icons.Default.Place, contentDescription = null, tint = place.type.tint)
+        if (place.imageUrl != null) {
+            Box {
+                AsyncImageBox(
+                    model = place.imageUrl,
+                    contentDescription = place.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.05f),
+                                    Color.Black.copy(alpha = 0.72f)
+                                )
+                            )
+                        )
+                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    place.description?.takeUnless { it.startsWith("http") }?.let {
+                        Text(text = it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
+                    }
+                }
             }
-            Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = place.type.tint)
-            Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
-            place.description?.let {
-                Text(text = it, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        } else {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(58.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.Place, contentDescription = null, tint = place.type.tint)
+                    }
+                Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = place.type.tint)
+                Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
+                place.description?.takeUnless { it.startsWith("http") }?.let {
+                    Text(text = it, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                }
             }
         }
     }
