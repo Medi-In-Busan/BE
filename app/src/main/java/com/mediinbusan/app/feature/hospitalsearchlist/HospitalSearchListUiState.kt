@@ -19,7 +19,11 @@ data class HospitalSearchListUiState(
     val selectedLanguage: String = SupportedLanguage.DEFAULT.code,
     val errorMessage: String? = null,
     // 무한스크롤은 UI 훅만 미리 잡아두는 단계라, 실제로는 항상 마지막 페이지로 취급한다.
-    val hasReachedEnd: Boolean = true
+    val hasReachedEnd: Boolean = true,
+    // 최신순, 최대 10건(SearchHistoryDao 쿼리 기준). 검색창 포커스 + 입력 비어있을 때 노출.
+    val recentSearches: List<String> = emptyList(),
+    // 타이핑 중 병원명 부분일치 후보. 입력이 비어있으면 항상 빈 리스트.
+    val autocompleteSuggestions: List<String> = emptyList()
 )
 
 /** MedicalCategory 10종 + 관광지(백엔드 필터 대상 아님, 선택해도 결과에 영향 없음) 스텁. */
