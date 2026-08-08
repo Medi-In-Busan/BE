@@ -34,6 +34,24 @@ class HospitalRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getAllHospitals(languageCode: String): Flow<Result<List<Hospital>>> = flow {
+        emit(Result.Loading)
+        try {
+            val allHospitals = mutableListOf<Hospital>()
+            var page = 0
+            do {
+                val pageDto = hospitalApi.getHospitals(page = page)
+                allHospitals += pageDto.content.map { it.toDomain() }
+                page++
+            } while (page < pageDto.totalPages)
+            emit(Result.Success(allHospitals))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emit(Result.Error(throwable = e, message = "병원 목록을 불러오지 못했습니다."))
+        }
+    }
+
     override fun getHospitalDetail(hospitalId: String, languageCode: String): Flow<Result<Hospital>> = flow {
         emit(Result.Loading)
         try {

@@ -94,12 +94,14 @@ class HospitalSearchListViewModel @Inject constructor(
         loadAutocompleteSource()
     }
 
-    // 자동완성 후보용 전체 병원 스냅샷을 1회 채운다. 실패해도 자동완성이 그냥 비어있게 될 뿐,
-    // 화면의 검색/필터 기능(loadResults)에는 영향을 주지 않으므로 에러를 별도로 표면화하지 않는다.
+    // 자동완성 후보용 전체 병원 스냅샷을 1회 채운다. getAllHospitals가 서버 페이지를 모두 순회해
+    // 합쳐주므로 총 병원 수가 한 페이지 크기를 넘어도 누락되지 않는다. 실패해도 자동완성이
+    // 그냥 비어있게 될 뿐, 화면의 검색/필터 기능(loadResults)에는 영향을 주지 않으므로
+    // 에러를 별도로 표면화하지 않는다.
     private fun loadAutocompleteSource() {
         viewModelScope.launch {
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
-            val result = hospitalRepository.getHospitals(languageCode = languageCode).first { it !is Result.Loading }
+            val result = hospitalRepository.getAllHospitals(languageCode = languageCode).first { it !is Result.Loading }
             if (result is Result.Success) {
                 allHospitalsCache = result.data
             }
