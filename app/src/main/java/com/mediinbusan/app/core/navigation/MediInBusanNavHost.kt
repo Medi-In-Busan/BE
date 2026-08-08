@@ -107,6 +107,8 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
                 onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
                 onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
+                // 병원 검색 API가 실패해도 웰니스 UI/API를 확인할 수 있도록 MVP 확인용 기준 병원(해운대권 regNo=14)으로 바로 진입한다.
+                onNavigateToWellness = { navController.navigate(Route.Nearby(hospitalId = "14")) },
                 // 의료목적 선택/의료기관 찾기/웰니스/검색바 4개 진입점이 전부 여기 하나로 모인다.
                 // purpose가 있으면 HospitalSearchListScreen 진입 시 해당 필터로 자동 검색된다.
                 onNavigateToSearch = { purpose -> navController.navigateToTab(Route.HospitalSearchList(purpose)) }

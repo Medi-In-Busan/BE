@@ -68,5 +68,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideTourismApi(retrofit: Retrofit): TourismApi = retrofit.create(TourismApi::class.java)
+    fun provideTourismApi(okHttpClient: OkHttpClient, json: Json): TourismApi =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.MEDIINBUSAN_API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(TourismApi::class.java)
 }
