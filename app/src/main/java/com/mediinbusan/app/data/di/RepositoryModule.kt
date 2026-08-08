@@ -10,6 +10,8 @@ import com.mediinbusan.app.data.place.PlaceRepository
 import com.mediinbusan.app.data.place.PlaceRepositoryImpl
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.recent.RecentRepositoryImpl
+import com.mediinbusan.app.data.searchhistory.SearchHistoryRepository
+import com.mediinbusan.app.data.searchhistory.SearchHistoryRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -32,4 +34,7 @@ interface RepositoryModule {
 
     @Binds
     fun bindRecentRepository(impl: RecentRepositoryImpl): RecentRepository
+
+    @Binds
+    fun bindSearchHistoryRepository(impl: SearchHistoryRepositoryImpl): SearchHistoryRepository
 }
