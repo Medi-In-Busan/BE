@@ -156,8 +156,8 @@ private fun HospitalSearchListContent(
     ) { innerPadding ->
         when {
             uiState.isLoading -> LoadingState(modifier = Modifier.padding(innerPadding).padding(bottom = BottomNavBarHeight))
-            uiState.errorMessage != null -> ErrorState(
-                message = uiState.errorMessage,
+            uiState.isError -> ErrorState(
+                message = uiState.errorMessage ?: LocalAppStrings.current.search.loadErrorFallback,
                 modifier = Modifier.padding(innerPadding).padding(bottom = BottomNavBarHeight),
                 onRetry = onRetry
             )

@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -50,15 +49,17 @@ class HomeViewModel @Inject constructor(
 
     private fun loadRecommendedHospitals() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true, isError = false, error = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
             // 추천 의료기관 섹션은 선택된 의료 목적과 무관하게 전체 추천 목록을 보여준다.
             when (val result = hospitalRepository.getHospitals(languageCode = languageCode).first { it !is Result.Loading }) {
                 is Result.Success -> _uiState.update {
-                    it.copy(isLoading = false, recommendedHospitals = result.data, error = null)
+                    it.copy(isLoading = false, isError = false, recommendedHospitals = result.data, error = null)
                 }
                 is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, error = result.message ?: appStringsFor(languageCode).home.loadErrorFallback)
+                    // 서버 메시지가 없을 때 보여줄 폴백 문구는 여기서 언어를 고정해 넣지 않고,
+                    // 화면(HomeScreen)이 LocalAppStrings로 매 리컴포지션마다 새로 읽게 한다.
+                    it.copy(isLoading = false, isError = true, error = result.message)
                 }
                 Result.Loading -> Unit
             }

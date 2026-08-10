@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -36,15 +35,13 @@ class HospitalDetailViewModel @Inject constructor(
             hospitalRepository.getHospitalDetail(hospitalId, languageCode).collect { result ->
                 _uiState.update { state ->
                     when (result) {
-                        is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
+                        is Result.Loading -> state.copy(isLoading = true, isError = false, errorMessage = null)
                         is Result.Success -> {
                             recordView(result.data.id, result.data.name, result.data.imageUrl)
-                            state.copy(isLoading = false, hospital = result.data, errorMessage = null)
+                            state.copy(isLoading = false, isError = false, hospital = result.data, errorMessage = null)
                         }
-                        is Result.Error -> state.copy(
-                            isLoading = false,
-                            errorMessage = result.message ?: appStringsFor(languageCode).hospitalDetail.genericErrorFallback
-                        )
+                        // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
+                        is Result.Error -> state.copy(isLoading = false, isError = true, errorMessage = result.message)
                     }
                 }
             }

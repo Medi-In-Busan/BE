@@ -106,7 +106,6 @@ fun HospitalDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val hospital = uiState.hospital
-    val errorMessage = uiState.errorMessage
 
     LaunchedEffect(hospitalId) {
         viewModel.load(hospitalId)
@@ -114,7 +113,10 @@ fun HospitalDetailScreen(
 
     when {
         uiState.isLoading -> LoadingState()
-        errorMessage != null -> ErrorState(message = errorMessage, onRetry = { viewModel.load(hospitalId) })
+        uiState.isError -> ErrorState(
+            message = uiState.errorMessage ?: LocalAppStrings.current.hospitalDetail.genericErrorFallback,
+            onRetry = { viewModel.load(hospitalId) }
+        )
         hospital != null -> HospitalDetailContent(
             hospital = hospital,
             isFavorite = uiState.isFavorite,

@@ -149,7 +149,7 @@ private fun HomeContent(
     onLanguageSelected: (String) -> Unit
 ) {
     val isLoading = uiState.isLoading
-    val error = uiState.error
+    val isError = uiState.isError
 
     Scaffold(
         topBar = {
@@ -179,8 +179,8 @@ private fun HomeContent(
         // 것처럼 보여서 순간 전환으로 되돌린다. 샘플 데이터라 로딩 자체가 사실상 즉시 끝난다.
         when {
             isLoading -> LoadingState(modifier = Modifier.padding(contentPadding))
-            error != null -> ErrorState(
-                message = error,
+            isError -> ErrorState(
+                message = uiState.error ?: LocalAppStrings.current.home.loadErrorFallback,
                 modifier = Modifier.padding(contentPadding),
                 onRetry = onRetry
             )

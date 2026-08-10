@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -111,7 +110,7 @@ class HospitalSearchListViewModel @Inject constructor(
 
     private fun loadResults() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, isError = false, errorMessage = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
             val selectedSpecialties = _uiState.value.filters
                 .filter { it.selected }
@@ -125,10 +124,11 @@ class HospitalSearchListViewModel @Inject constructor(
                 ).first { it !is Result.Loading }
             ) {
                 is Result.Success -> _uiState.update {
-                    it.copy(isLoading = false, results = result.data, errorMessage = null)
+                    it.copy(isLoading = false, isError = false, results = result.data, errorMessage = null)
                 }
                 is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: appStringsFor(languageCode).search.loadErrorFallback)
+                    // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
+                    it.copy(isLoading = false, isError = true, errorMessage = result.message)
                 }
                 Result.Loading -> Unit
             }
