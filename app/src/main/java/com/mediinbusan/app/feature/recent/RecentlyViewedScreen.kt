@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.RecentlyViewedStrings
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -74,6 +76,7 @@ private fun RecentlyViewedContent(
     onLanguageSelected: (String) -> Unit,
     onSelectItem: (RecentlyViewed) -> Unit
 ) {
+    val appStrings = LocalAppStrings.current
     Scaffold(
         topBar = {
             BrandBackTopAppBar(
@@ -86,20 +89,20 @@ private fun RecentlyViewedContent(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(20.dp))
-                Text(text = "최근 본 항목", style = SettingsTitleStyle, color = SettingsPrimaryText)
+                Text(text = appStrings.settings.recentlyViewedTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             Box(modifier = Modifier.weight(1f)) {
                 if (items.isEmpty()) {
-                    EmptyState(message = "최근 확인한 병원·장소가 없습니다.")
+                    EmptyState(message = appStrings.recentlyViewed.emptyMessage)
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp)
                     ) {
                         items(items, key = { it.itemId }) { item ->
-                            RecentlyViewedRow(item = item, onClick = { onSelectItem(item) })
+                            RecentlyViewedRow(item = item, onClick = { onSelectItem(item) }, strings = appStrings.recentlyViewed)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
@@ -110,7 +113,7 @@ private fun RecentlyViewedContent(
 }
 
 @Composable
-private fun RecentlyViewedRow(item: RecentlyViewed, onClick: () -> Unit) {
+private fun RecentlyViewedRow(item: RecentlyViewed, onClick: () -> Unit, strings: RecentlyViewedStrings) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -138,7 +141,7 @@ private fun RecentlyViewedRow(item: RecentlyViewed, onClick: () -> Unit) {
                 ItemTypeBadge(itemType = item.itemType)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = item.viewedAt.toRelativeTimeLabel(),
+                    text = item.viewedAt.toRelativeTimeLabel(strings),
                     style = SettingsDescriptionStyle.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize),
                     color = SettingsSecondaryText,
                     modifier = Modifier.padding(top = 3.dp)
@@ -148,16 +151,16 @@ private fun RecentlyViewedRow(item: RecentlyViewed, onClick: () -> Unit) {
     }
 }
 
-private fun Long.toRelativeTimeLabel(): String {
+private fun Long.toRelativeTimeLabel(strings: RecentlyViewedStrings): String {
     val elapsedMillis = System.currentTimeMillis() - this
     val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedMillis)
     val hours = TimeUnit.MILLISECONDS.toHours(elapsedMillis)
     val days = TimeUnit.MILLISECONDS.toDays(elapsedMillis)
     return when {
-        minutes < 1 -> "방금 전"
-        minutes < 60 -> "${minutes}분 전"
-        hours < 24 -> "${hours}시간 전"
-        else -> "${days}일 전"
+        minutes < 1 -> strings.relativeJustNow
+        minutes < 60 -> strings.relativeMinutesFormat.format(minutes)
+        hours < 24 -> strings.relativeHoursFormat.format(hours)
+        else -> strings.relativeDaysFormat.format(days)
     }
 }
 
