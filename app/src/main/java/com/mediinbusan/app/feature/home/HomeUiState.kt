@@ -14,6 +14,9 @@ data class HomeUiState(
     val recommendedHospitals: List<Hospital> = emptyList(),
     val favoriteHospitalIds: Set<String> = emptySet(),
     val isLoading: Boolean = true,
+    // 로드 실패 여부와 서버 메시지를 분리한다. error가 null이어도 isError가 true면 화면에서
+    // LocalAppStrings 기준으로 폴백 문구를 그려, 에러가 떠 있는 동안 언어를 바꿔도 즉시 반영되게 한다.
+    val isError: Boolean = false,
     val error: String? = null
 )
 

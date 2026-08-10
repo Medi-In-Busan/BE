@@ -12,8 +12,11 @@ import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -22,12 +25,24 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.mediinbusan.app.core.i18n.AppLanguageViewModel
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.core.ui.BottomNavBar
 import com.mediinbusan.app.core.ui.BottomNavTabUiModel
 
 /** MainActivity가 호출하는 앱 최상위 컴포저블. 공용 하단 내비게이션 바 노출 여부/활성 탭을 결정한다. */
 @Composable
-fun MediInBusanApp() {
+fun MediInBusanApp(languageViewModel: AppLanguageViewModel = hiltViewModel()) {
+    val language by languageViewModel.language.collectAsState()
+
+    CompositionLocalProvider(LocalAppStrings provides appStringsFor(language)) {
+        MediInBusanAppContent()
+    }
+}
+
+@Composable
+private fun MediInBusanAppContent() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination

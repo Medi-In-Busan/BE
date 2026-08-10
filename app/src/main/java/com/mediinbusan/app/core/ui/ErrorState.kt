@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 
 /** F-019: 네트워크 오류 등에서 재시도 버튼과 함께 표시하는 공용 컴포넌트. */
 @Composable
@@ -26,7 +27,7 @@ fun ErrorState(
         Text(text = message)
         if (onRetry != null) {
             Button(onClick = onRetry) {
-                Text(text = "다시 시도")
+                Text(text = LocalAppStrings.current.common.retryButtonLabel)
             }
         }
     }

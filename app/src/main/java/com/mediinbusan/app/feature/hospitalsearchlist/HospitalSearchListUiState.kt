@@ -17,6 +17,9 @@ data class HospitalSearchListUiState(
     val filters: List<SearchFilterChip> = SearchFilterChip.DEFAULTS,
     val selectedSort: SearchSortOption = SearchSortOption.RELEVANCE,
     val selectedLanguage: String = SupportedLanguage.DEFAULT.code,
+    // 로드 실패 여부와 서버 메시지를 분리한다. errorMessage가 null이어도 isError가 true면
+    // 화면에서 LocalAppStrings 기준 폴백 문구를 그려, 에러 표시 중 언어를 바꿔도 즉시 반영된다.
+    val isError: Boolean = false,
     val errorMessage: String? = null,
     // 무한스크롤은 UI 훅만 미리 잡아두는 단계라, 실제로는 항상 마지막 페이지로 취급한다.
     val hasReachedEnd: Boolean = true,

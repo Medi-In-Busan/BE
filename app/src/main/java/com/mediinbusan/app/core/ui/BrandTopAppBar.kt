@@ -36,6 +36,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.datastore.SupportedLanguage
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.SettingsBorder
@@ -58,7 +59,7 @@ fun BrandBackTopAppBar(
     CenterAlignedTopAppBar(
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(imageVector = navigationIcon, contentDescription = "뒤로가기")
+                Icon(imageVector = navigationIcon, contentDescription = LocalAppStrings.current.common.backContentDescription)
             }
         },
         title = { BrandWordmark() },
@@ -76,7 +77,7 @@ private fun BrandWordmark() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Image(
             painter = painterResource(id = R.drawable.favicon),
-            contentDescription = "메디인부산 로고",
+            contentDescription = LocalAppStrings.current.common.logoContentDescription,
             modifier = Modifier.size(28.dp)
         )
         Text(

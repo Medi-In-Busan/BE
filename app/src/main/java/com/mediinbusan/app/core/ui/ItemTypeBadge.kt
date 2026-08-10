@@ -14,14 +14,16 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
 import com.mediinbusan.app.core.designsystem.SkyBlue
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 
 /** 즐겨찾기·최근 본 항목 목록에서 병원/장소를 구분하는 색상 배지. */
 @Composable
 fun ItemTypeBadge(itemType: FavoriteItemType, modifier: Modifier = Modifier) {
+    val common = LocalAppStrings.current.common
     val (background, tint, label) = when (itemType) {
-        FavoriteItemType.HOSPITAL -> Triple(InfoBackgroundBlue, SkyBlue, "병원")
-        FavoriteItemType.PLACE -> Triple(CoralPrimaryContainer, CoralPrimary, "장소")
+        FavoriteItemType.HOSPITAL -> Triple(InfoBackgroundBlue, SkyBlue, common.itemTypeHospitalBadge)
+        FavoriteItemType.PLACE -> Triple(CoralPrimaryContainer, CoralPrimary, common.itemTypePlaceBadge)
     }
     Box(
         modifier = modifier
