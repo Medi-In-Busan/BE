@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -57,7 +58,7 @@ class HomeViewModel @Inject constructor(
                     it.copy(isLoading = false, recommendedHospitals = result.data, error = null)
                 }
                 is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, error = result.message ?: "추천 의료기관을 불러오지 못했습니다.")
+                    it.copy(isLoading = false, error = result.message ?: appStringsFor(languageCode).home.loadErrorFallback)
                 }
                 Result.Loading -> Unit
             }

@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.NotificationSettingsStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
@@ -69,6 +71,7 @@ private fun NotificationSettingsContent(
     onToggle: (Boolean) -> Unit,
     onLanguageSelected: (String) -> Unit
 ) {
+    val appStrings = LocalAppStrings.current
     Scaffold(
         topBar = {
             BrandBackTopAppBar(
@@ -80,12 +83,12 @@ private fun NotificationSettingsContent(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(horizontal = 20.dp)) {
             Spacer(modifier = Modifier.height(20.dp))
-            Text(text = "알림 설정", style = SettingsTitleStyle, color = SettingsPrimaryText)
+            Text(text = appStrings.settings.notificationTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(20.dp))
-            NotificationCard(enabled = notificationsEnabled, onToggle = onToggle)
+            NotificationCard(enabled = notificationsEnabled, onToggle = onToggle, strings = appStrings.notificationSettings)
 
             Spacer(modifier = Modifier.height(16.dp))
-            NoticeCard()
+            NoticeCard(text = appStrings.notificationSettings.noticeText)
 
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -93,7 +96,7 @@ private fun NotificationSettingsContent(
 }
 
 @Composable
-private fun NotificationCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+private fun NotificationCard(enabled: Boolean, onToggle: (Boolean) -> Unit, strings: NotificationSettingsStrings) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -118,10 +121,10 @@ private fun NotificationCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "이벤트 및 소식 알림", style = SettingsItemTitleStyle, color = SettingsPrimaryText)
+                Text(text = strings.cardTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "새로운 소식과 이벤트 알림을 받아보세요",
+                    text = strings.cardDescription,
                     style = SettingsDescriptionStyle,
                     color = SettingsSecondaryText
                 )
@@ -136,7 +139,7 @@ private fun NotificationCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
         HorizontalDivider(color = SettingsDivider, modifier = Modifier.padding(horizontal = 22.dp))
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
             Text(
-                text = if (enabled) "현재 알림이 켜져 있어요." else "현재 알림이 꺼져 있어요.",
+                text = if (enabled) strings.statusOnLabel else strings.statusOffLabel,
                 style = SettingsDescriptionStyle,
                 color = if (enabled) CoralPrimary else SettingsSecondaryText
             )
@@ -145,7 +148,7 @@ private fun NotificationCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun NoticeCard() {
+private fun NoticeCard(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -162,7 +165,7 @@ private fun NoticeCard() {
         }
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = "실제 알림 발송 기능은 준비 중이에요. 여기서 설정한 값은 추후 알림 기능이 제공될 때 그대로 반영됩니다.",
+            text = text,
             style = SettingsDescriptionStyle,
             color = SettingsSecondaryText
         )

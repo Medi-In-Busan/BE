@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -40,7 +41,10 @@ class HospitalDetailViewModel @Inject constructor(
                             recordView(result.data.id, result.data.name, result.data.imageUrl)
                             state.copy(isLoading = false, hospital = result.data, errorMessage = null)
                         }
-                        is Result.Error -> state.copy(isLoading = false, errorMessage = result.message ?: "오류가 발생했습니다.")
+                        is Result.Error -> state.copy(
+                            isLoading = false,
+                            errorMessage = result.message ?: appStringsFor(languageCode).hospitalDetail.genericErrorFallback
+                        )
                     }
                 }
             }

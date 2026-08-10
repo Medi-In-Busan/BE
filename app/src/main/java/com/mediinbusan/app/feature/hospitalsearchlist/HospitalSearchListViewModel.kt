@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -127,7 +128,7 @@ class HospitalSearchListViewModel @Inject constructor(
                     it.copy(isLoading = false, results = result.data, errorMessage = null)
                 }
                 is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "검색 결과를 불러오지 못했습니다.")
+                    it.copy(isLoading = false, errorMessage = result.message ?: appStringsFor(languageCode).search.loadErrorFallback)
                 }
                 Result.Loading -> Unit
             }

@@ -64,6 +64,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.datastore.SupportedLanguage
+import com.mediinbusan.app.core.i18n.HospitalDetailStrings
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
@@ -119,7 +124,7 @@ fun HospitalDetailScreen(
             onNavigateToMap = onNavigateToMap,
             onBack = onBack
         )
-        else -> EmptyState(message = "병원 정보를 찾을 수 없습니다.")
+        else -> EmptyState(message = LocalAppStrings.current.hospitalDetail.notFoundMessage)
     }
 }
 
@@ -135,6 +140,7 @@ private fun HospitalDetailContent(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val strings = LocalAppStrings.current.hospitalDetail
     // 하드코딩한 값 대신 실측한 풋터 높이를 그대로 스크롤 콘텐츠 하단 여백으로 써서, 콘텐츠와
     // 풋터 사이에 뜬 여백(또는 반대로 풋터에 가려지는 현상) 없이 정확히 맞닿게 한다.
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
@@ -151,11 +157,12 @@ private fun HospitalDetailContent(
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
                 onBack = onBack,
-                onShare = { context.shareHospital(hospital) }
+                onShare = { context.shareHospital(hospital) },
+                strings = strings
             )
 
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                CategoryAndStatusRow(hospital = hospital)
+                CategoryAndStatusRow(hospital = hospital, strings = strings)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = hospital.name,
@@ -182,47 +189,50 @@ private fun HospitalDetailContent(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                ActionButtonsRow(hospital = hospital)
+                ActionButtonsRow(hospital = hospital, strings = strings)
             }
 
             HorizontalDivider(thickness = 8.dp, color = DividerColor)
-            InfoSection(title = "병원 소개") {
+            InfoSection(title = strings.introSectionTitle) {
                 Text(
-                    text = hospital.description ?: "등록된 소개 정보가 없습니다.",
+                    text = hospital.description ?: strings.introEmpty,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary
                 )
             }
 
             HorizontalDivider(thickness = 8.dp, color = DividerColor)
-            InfoSection(title = "기본 정보") {
-                BasicInfoRow(icon = Icons.Default.AccessTime, label = "운영시간", value = hospital.openingHours ?: "정보 없음")
-                BasicInfoRow(icon = Icons.Default.Phone, label = "전화", value = hospital.phoneNumber ?: "정보 없음")
-                BasicInfoRow(icon = Icons.Default.Public, label = "홈페이지", value = hospital.homepageUrl ?: "정보 없음")
+            InfoSection(title = strings.basicInfoSectionTitle) {
+                BasicInfoRow(icon = Icons.Default.AccessTime, label = strings.openingHoursLabel, value = hospital.openingHours ?: strings.infoNotAvailable)
+                BasicInfoRow(icon = Icons.Default.Phone, label = strings.phoneLabel, value = hospital.phoneNumber ?: strings.infoNotAvailable)
+                BasicInfoRow(icon = Icons.Default.Public, label = strings.homepageLabel, value = hospital.homepageUrl ?: strings.infoNotAvailable)
                 BasicInfoRow(
                     icon = Icons.Default.Language,
-                    label = "지원 언어",
+                    label = strings.supportedLanguagesLabel,
                     value = hospital.supportedLanguages.takeIf { it.isNotEmpty() }
                         ?.joinToString(" · ") { it.toLanguageDisplayName() }
-                        ?: "정보 없음"
+                        ?: strings.infoNotAvailable
                 )
             }
 
             if (hospital.specialties.isNotEmpty()) {
                 HorizontalDivider(thickness = 8.dp, color = DividerColor)
-                InfoSection(title = "진료과목") {
+                InfoSection(title = strings.specialtiesSectionTitle) {
+                    val language = LocalAppStrings.current.language
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        hospital.specialties.forEach { specialty -> SpecialtyChip(text = specialty) }
+                        hospital.specialties.forEach { specialty ->
+                            SpecialtyChip(text = translatedSpecialtyLabel(specialty, language))
+                        }
                     }
                 }
             }
 
             HorizontalDivider(thickness = 8.dp, color = DividerColor)
-            InfoSection(title = "위치") {
-                LocationMiniMap(hospital = hospital, onExpandClick = onNavigateToMap)
+            InfoSection(title = strings.locationSectionTitle) {
+                LocationMiniMap(hospital = hospital, onExpandClick = onNavigateToMap, strings = strings)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -241,14 +251,14 @@ private fun HospitalDetailContent(
                 ) {
                     Icon(imageVector = Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "길찾기")
+                    Text(text = strings.directionsButton)
                 }
             }
 
             HorizontalDivider(thickness = 8.dp, color = DividerColor)
-            QuickLinkRow(label = "의료 이용 가이드 보기", onClick = onNavigateToGuide)
+            QuickLinkRow(label = strings.guideQuickLink, onClick = onNavigateToGuide)
             HorizontalDivider(thickness = 1.dp, color = DividerColor)
-            QuickLinkRow(label = "주변 관광·웰니스 보기", onClick = onNavigateToNearby)
+            QuickLinkRow(label = strings.nearbyQuickLink, onClick = onNavigateToNearby)
         }
 
         BottomActionBar(
@@ -256,6 +266,7 @@ private fun HospitalDetailContent(
             onToggleFavorite = onToggleFavorite,
             onCallClick = { context.dialPhone(hospital.phoneNumber) },
             callEnabled = !hospital.phoneNumber.isNullOrBlank(),
+            strings = strings,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .onGloballyPositioned { coordinates ->
@@ -271,7 +282,8 @@ private fun ImageCarouselSection(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    strings: HospitalDetailStrings
 ) {
     val pageCount = imageUrls.size.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { pageCount })
@@ -298,7 +310,7 @@ private fun ImageCarouselSection(
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "병원 대표 이미지", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                        Text(text = strings.imagePlaceholderLabel, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                     }
                 }
             }
@@ -306,7 +318,7 @@ private fun ImageCarouselSection(
 
         RoundIconButton(
             icon = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = "뒤로가기",
+            contentDescription = LocalAppStrings.current.common.backContentDescription,
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
             size = 36.dp
@@ -315,7 +327,7 @@ private fun ImageCarouselSection(
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            RoundIconButton(icon = Icons.Default.Share, contentDescription = "공유", onClick = onShare, size = 36.dp)
+            RoundIconButton(icon = Icons.Default.Share, contentDescription = strings.shareContentDescription, onClick = onShare, size = 36.dp)
             FavoriteHeartButton(isFavorite = isFavorite, onClick = onToggleFavorite)
         }
 
@@ -336,8 +348,15 @@ private fun ImageCarouselSection(
     }
 }
 
+// hospital.specialties는 API 응답 원문(현재는 샘플 데이터) 그대로라 건드리지 않고, 화면에
+// 그릴 때만 MedicalCategory 라벨과 일치하면 언어별 문구로 바꿔 보여준다. 매칭되는 카테고리가
+// 없는 자유 문구(예: 실제 API의 세부 진료과목명)는 원문을 그대로 표시한다.
+private fun translatedSpecialtyLabel(specialty: String, language: SupportedLanguage): String =
+    MedicalCategory.entries.find { it.label == specialty }?.translatedLabel(language) ?: specialty
+
 @Composable
-private fun CategoryAndStatusRow(hospital: Hospital) {
+private fun CategoryAndStatusRow(hospital: Hospital, strings: HospitalDetailStrings) {
+    val language = LocalAppStrings.current.language
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -351,12 +370,12 @@ private fun CategoryAndStatusRow(hospital: Hospital) {
                         .background(CoralPrimaryContainer)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text(text = specialty, style = MaterialTheme.typography.labelSmall, color = CoralPrimary)
+                    Text(text = translatedSpecialtyLabel(specialty, language), style = MaterialTheme.typography.labelSmall, color = CoralPrimary)
                 }
             }
         }
         hospital.isOpen?.let { isOpen ->
-            val (color, label) = if (isOpen) StatusOpenGreen to "영업 중" else StatusClosedGray to "영업 종료"
+            val (color, label) = if (isOpen) StatusOpenGreen to strings.statusOpen else StatusClosedGray to strings.statusClosed
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(color))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -367,14 +386,14 @@ private fun CategoryAndStatusRow(hospital: Hospital) {
 }
 
 @Composable
-private fun ActionButtonsRow(hospital: Hospital) {
+private fun ActionButtonsRow(hospital: Hospital, strings: HospitalDetailStrings) {
     val context = LocalContext.current
     val hasPhoneNumber = !hospital.phoneNumber.isNullOrBlank()
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ActionButton(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Phone,
-            label = "전화",
+            label = strings.actionCall,
             backgroundColor = CoralPrimaryContainer,
             iconTint = CoralPrimary,
             enabled = hasPhoneNumber,
@@ -383,7 +402,7 @@ private fun ActionButtonsRow(hospital: Hospital) {
         ActionButton(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Navigation,
-            label = "길찾기",
+            label = strings.actionDirections,
             backgroundColor = Color(0xFFEAF4FB),
             iconTint = SkyBlue,
             onClick = { context.launchDirections(hospital) }
@@ -391,16 +410,16 @@ private fun ActionButtonsRow(hospital: Hospital) {
         ActionButton(
             modifier = Modifier.weight(1f),
             icon = Icons.AutoMirrored.Filled.Chat,
-            label = "문의",
+            label = strings.actionInquiry,
             backgroundColor = Color(0xFFF2F2F2),
             iconTint = TextSecondary,
             enabled = hasPhoneNumber,
-            onClick = { context.smsInquiry(hospital) }
+            onClick = { context.smsInquiry(hospital, strings) }
         )
         ActionButton(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Share,
-            label = "공유",
+            label = strings.actionShare,
             backgroundColor = Color(0xFFF2F2F2),
             iconTint = TextSecondary,
             onClick = { context.shareHospital(hospital) }
@@ -477,7 +496,7 @@ private fun SpecialtyChip(text: String) {
 }
 
 @Composable
-private fun LocationMiniMap(hospital: Hospital, onExpandClick: () -> Unit) {
+private fun LocationMiniMap(hospital: Hospital, onExpandClick: () -> Unit, strings: HospitalDetailStrings) {
     val lat = hospital.latitude
     val lng = hospital.longitude
     Box(
@@ -497,7 +516,7 @@ private fun LocationMiniMap(hospital: Hospital, onExpandClick: () -> Unit) {
                 modifier = Modifier.fillMaxSize().background(Color(0xFFE9E9EE)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "위치 정보가 없습니다", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Text(text = strings.noLocationInfo, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
             }
         }
     }
@@ -528,6 +547,7 @@ private fun BottomActionBar(
     onToggleFavorite: () -> Unit,
     onCallClick: () -> Unit,
     callEnabled: Boolean,
+    strings: HospitalDetailStrings,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -560,7 +580,7 @@ private fun BottomActionBar(
                 colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
             ) {
                 Text(
-                    text = if (callEnabled) "전화 문의하기" else "전화번호 정보 없음",
+                    text = if (callEnabled) strings.callButton else strings.callButtonDisabled,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -585,11 +605,11 @@ private fun Context.dialPhone(phoneNumber: String?) {
 
 // CLAUDE.md의 "실시간 상담/통역사 매칭 기능 없음" 제약을 지키기 위해 인앱 채팅 대신
 // 사용자의 기본 메시지 앱으로 넘기는 SMS 인텐트만 연다.
-private fun Context.smsInquiry(hospital: Hospital) {
+private fun Context.smsInquiry(hospital: Hospital, strings: HospitalDetailStrings) {
     val phoneNumber = hospital.phoneNumber
     if (phoneNumber.isNullOrBlank()) return
     val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phoneNumber")).apply {
-        putExtra("sms_body", "[메디인부산] ${hospital.name} 문의드립니다.")
+        putExtra("sms_body", strings.smsInquiryTemplateFormat.format(hospital.name))
     }
     launchIntentSafely(intent)
 }

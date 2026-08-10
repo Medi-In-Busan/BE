@@ -55,6 +55,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.core.designsystem.BodyRegularStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.DisplayTitleStyle
@@ -90,6 +92,9 @@ private fun LanguageSelectContent(
     onLanguageSelected: (String) -> Unit,
     onNextClick: () -> Unit
 ) {
+    // 아직 저장되지 않은(=LocalAppStrings에 반영되지 않은) 선택 중인 언어를 바로 미리보기로
+    // 보여줘야 하므로, 전역 CompositionLocal 대신 uiState.selectedCode 기준으로 직접 조회한다.
+    val strings = appStringsFor(uiState.selectedCode).languageSelect
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -104,9 +109,9 @@ private fun LanguageSelectContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        Text(text = "언어를 선택해주세요", style = DisplayTitleStyle, color = TextPrimary)
+        Text(text = strings.title, style = DisplayTitleStyle, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "앱에서 사용할 언어를 선택할 수 있습니다.", style = BodyRegularStyle, color = TextSecondary)
+        Text(text = strings.subtitle, style = BodyRegularStyle, color = TextSecondary)
 
         Spacer(modifier = Modifier.height(24.dp))
         uiState.options.forEachIndexed { index, option ->
@@ -121,10 +126,10 @@ private fun LanguageSelectContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        InfoCard()
+        InfoCard(text = strings.infoNote)
 
         Spacer(modifier = Modifier.height(24.dp))
-        PrimaryButton(text = "다음", onClick = onNextClick)
+        PrimaryButton(text = strings.nextButton, onClick = onNextClick)
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -135,7 +140,7 @@ private fun LogoLockup() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Image(
             painter = painterResource(id = R.drawable.favicon),
-            contentDescription = "메디인부산 로고",
+            contentDescription = LocalAppStrings.current.common.logoContentDescription,
             modifier = Modifier.size(32.dp)
         )
         Text(
@@ -233,7 +238,7 @@ private fun SelectionIndicator(selected: Boolean) {
 }
 
 @Composable
-private fun InfoCard() {
+private fun InfoCard(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -258,7 +263,7 @@ private fun InfoCard() {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "언어는 설정 화면에서 언제든 변경 가능합니다.",
+            text = text,
             style = HeroSubtitleStyle,
             color = TextSecondary
         )
