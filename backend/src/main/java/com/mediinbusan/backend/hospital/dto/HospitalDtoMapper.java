@@ -25,6 +25,20 @@ public final class HospitalDtoMapper {
         );
     }
 
+    public static HospitalNearbyResponse toNearbyItem(Hospital hospital, Double distanceMeters) {
+        return new HospitalNearbyResponse(
+            hospital.getRegNo(),
+            hospital.getName(),
+            hospital.getInstitutionType().name(),
+            hospital.getAddress(),
+            latitude(hospital),
+            longitude(hospital),
+            hospital.getPhone(),
+            sortedNames(hospital.getSpecialties()),
+            distanceMeters
+        );
+    }
+
     public static HospitalDetailResponse toDetail(Hospital hospital) {
         return new HospitalDetailResponse(
             hospital.getRegNo(),

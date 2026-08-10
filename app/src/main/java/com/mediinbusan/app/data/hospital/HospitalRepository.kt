@@ -12,4 +12,12 @@ interface HospitalRepository {
         languageCode: String
     ): Flow<Result<List<Hospital>>>
     fun getHospitalDetail(hospitalId: String, languageCode: String): Flow<Result<Hospital>>
+
+    // 사용자가 지도에서 이동/탭한 좌표 기준. 기기 GPS는 조회하지 않는다 — 좌표는 항상 호출부(UI)가 넘긴다.
+    fun getNearbyHospitals(
+        latitude: Double,
+        longitude: Double,
+        radiusMeters: Double? = null,
+        specialties: List<MedicalCategory> = emptyList()
+    ): Flow<Result<List<Hospital>>>
 }

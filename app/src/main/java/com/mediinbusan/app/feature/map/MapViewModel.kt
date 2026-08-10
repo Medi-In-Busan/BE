@@ -102,6 +102,28 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    /**
+     * "이 위치에서 검색" 버튼용. latitude/longitude는 지도 카메라 중심(core/ui/KakaoMapView.kt의
+     * searchAreaRequestId 트리거) — 사용자가 지도를 움직여서 만든 좌표이지 기기 GPS가 아니다.
+     */
+    fun searchThisArea(latitude: Double, longitude: Double) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSearchingArea = true, errorMessage = null) }
+            val result = hospitalRepository.getNearbyHospitals(latitude = latitude, longitude = longitude)
+                .first { it !is Result.Loading }
+            val hospitals = (result as? Result.Success)?.data.orEmpty()
+
+            _uiState.update {
+                it.copy(
+                    isSearchingArea = false,
+                    allHospitals = hospitals,
+                    selectedMarkerId = null,
+                    errorMessage = if (result is Result.Error) "이 위치 주변 병원을 불러오지 못했습니다." else null
+                )
+            }
+        }
+    }
+
     fun onCategorySelected(category: MapCategory) {
         _uiState.update { it.copy(selectedCategory = category, selectedMarkerId = null) }
     }

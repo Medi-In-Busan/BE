@@ -44,4 +44,26 @@ class HospitalRepositoryImpl @Inject constructor(
             emit(Result.Error(throwable = e, message = "병원 정보를 찾을 수 없습니다."))
         }
     }
+
+    override fun getNearbyHospitals(
+        latitude: Double,
+        longitude: Double,
+        radiusMeters: Double?,
+        specialties: List<MedicalCategory>
+    ): Flow<Result<List<Hospital>>> = flow {
+        emit(Result.Loading)
+        try {
+            val results = hospitalApi.getNearbyHospitals(
+                latitude = latitude,
+                longitude = longitude,
+                radiusMeters = radiusMeters,
+                specialties = specialties.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name }
+            )
+            emit(Result.Success(results.map { it.toDomain() }))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emit(Result.Error(throwable = e, message = "이 위치 주변 병원을 불러오지 못했습니다."))
+        }
+    }
 }
