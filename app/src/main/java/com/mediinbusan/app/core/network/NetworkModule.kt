@@ -2,6 +2,7 @@ package com.mediinbusan.app.core.network
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.mediinbusan.app.BuildConfig
+import com.mediinbusan.app.data.document.DocumentOcrApi
 import com.mediinbusan.app.data.hospital.HospitalApi
 import com.mediinbusan.app.data.place.TourismApi
 import dagger.Module
@@ -13,6 +14,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 // TODO: 한국관광공사 의료관광정보/관광정보 서비스의 정확한 base URL·오퍼레이션명은
@@ -40,8 +42,13 @@ object NetworkModule {
                 HttpLoggingInterceptor.Level.NONE
             }
         }
+        // 기본 10초 타임아웃은 문서 스캔 이미지 업로드(멀티파트, CLOVA OCR 왕복 포함)에는
+        // 빠듯할 수 있어 전체 클라이언트 기준으로 여유를 둔다.
         return OkHttpClient.Builder()
             .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
@@ -75,4 +82,15 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(TourismApi::class.java)
+
+    // DocumentOcrApi도 자체 백엔드(backend/document)를 바라본다.
+    @Provides
+    @Singleton
+    fun provideDocumentOcrApi(okHttpClient: OkHttpClient, json: Json): DocumentOcrApi =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.MEDIINBUSAN_API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(DocumentOcrApi::class.java)
 }
