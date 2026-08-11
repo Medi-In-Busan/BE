@@ -25,7 +25,7 @@ public final class HospitalDtoMapper {
         );
     }
 
-    public static HospitalDetailResponse toDetail(Hospital hospital) {
+    public static HospitalDetailResponse toDetail(Hospital hospital, String lang) {
         return new HospitalDetailResponse(
             hospital.getRegNo(),
             hospital.getName(),
@@ -35,12 +35,32 @@ public final class HospitalDtoMapper {
             longitude(hospital),
             hospital.getPhone(),
             hospital.getWebsite(),
-            hospital.getBusinessHours(),
-            hospital.getDescriptionKo(),
-            hospital.getDescriptionEn(),
+            businessHoursFor(hospital, lang),
+            descriptionFor(hospital, lang),
             sortedNames(hospital.getSpecialties()),
             hospital.getTargetCountries().stream().sorted().toList()
         );
+    }
+
+    // 요청 언어의 번역이 비어 있으면(아직 번역 안 된 병원 등) ko로 폴백한다.
+    private static String descriptionFor(Hospital hospital, String lang) {
+        String translated = switch (lang) {
+            case "en" -> hospital.getDescriptionEn();
+            case "zh" -> hospital.getDescriptionZh();
+            case "ja" -> hospital.getDescriptionJa();
+            default -> hospital.getDescriptionKo();
+        };
+        return translated != null ? translated : hospital.getDescriptionKo();
+    }
+
+    private static String businessHoursFor(Hospital hospital, String lang) {
+        String translated = switch (lang) {
+            case "en" -> hospital.getBusinessHoursEn();
+            case "zh" -> hospital.getBusinessHoursZh();
+            case "ja" -> hospital.getBusinessHoursJa();
+            default -> hospital.getBusinessHoursKo();
+        };
+        return translated != null ? translated : hospital.getBusinessHoursKo();
     }
 
     private static Double latitude(Hospital hospital) {

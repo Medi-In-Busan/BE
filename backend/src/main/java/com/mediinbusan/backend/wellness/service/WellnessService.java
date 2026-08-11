@@ -1,6 +1,6 @@
 package com.mediinbusan.backend.wellness.service;
 
-import com.mediinbusan.backend.hospital.domain.Coordinates;
+import com.mediinbusan.backend.common.GeoDistance;
 import com.mediinbusan.backend.hospital.domain.Hospital;
 import com.mediinbusan.backend.hospital.repository.HospitalRepository;
 import com.mediinbusan.backend.wellness.domain.WellnessPlace;
@@ -20,7 +20,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional(readOnly = true)
 public class WellnessService {
 
-    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final double DEFAULT_RADIUS_METERS = 3_000.0;
 
     private final WellnessPlaceRepository wellnessPlaceRepository;
@@ -37,7 +36,7 @@ public class WellnessService {
         double effectiveRadius = radiusMeters != null ? radiusMeters : DEFAULT_RADIUS_METERS;
 
         return wellnessPlaceRepository.findAll().stream()
-            .map(place -> new PlaceDistance(place, distanceMeters(hospital.getCoordinates(), place.getCoordinates())))
+            .map(place -> new PlaceDistance(place, GeoDistance.meters(hospital.getCoordinates(), place.getCoordinates())))
             .filter(item -> item.distance == null || item.distance <= effectiveRadius)
             .sorted(Comparator.comparing(
                 PlaceDistance::distanceForSort,
@@ -51,24 +50,6 @@ public class WellnessService {
         WellnessPlace place = wellnessPlaceRepository.findByContentId(contentId)
             .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "웰니스 장소를 찾을 수 없습니다: " + contentId));
         return WellnessDtoMapper.toPlaceResponse(place, null);
-    }
-
-    private static Double distanceMeters(Coordinates from, Coordinates to) {
-        if (from == null || to == null
-            || from.getLatitude() == null || from.getLongitude() == null
-            || to.getLatitude() == null || to.getLongitude() == null) {
-            return null;
-        }
-
-        double fromLat = Math.toRadians(from.getLatitude());
-        double toLat = Math.toRadians(to.getLatitude());
-        double deltaLat = Math.toRadians(to.getLatitude() - from.getLatitude());
-        double deltaLon = Math.toRadians(to.getLongitude() - from.getLongitude());
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
-            + Math.cos(fromLat) * Math.cos(toLat)
-            * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS_METERS * c;
     }
 
     private record PlaceDistance(WellnessPlace place, Double distance) {
