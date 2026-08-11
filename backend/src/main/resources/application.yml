@@ -24,6 +24,10 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 springdoc:
   swagger-ui:
@@ -46,3 +50,17 @@ wellness:
       - 부산 온천
       - 부산 산책 공원
       - 부산 웰니스
+
+clova:
+  ocr:
+    api-url: ${CLOVA_OCR_API_URL:}
+    secret-key: ${CLOVA_OCR_SECRET_KEY:}
+
+document:
+  ocr:
+    # spring.servlet.multipart.max-file-size와 별개로, 우리 서비스가 CLOVA 호출 전에 직접 거절하는 기준값이다.
+    max-image-size-bytes: 10485760 # 10MB
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
