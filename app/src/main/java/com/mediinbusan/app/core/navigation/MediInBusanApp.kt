@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Map
@@ -89,11 +90,12 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
             // 향후 MapOverview / MapDetail(hospitalId)로 route 자체를 분리하는 걸 고려한다.
             backStackEntry.toRoute<Route.MapView>().hospitalId == null
         }
+        destination.hasRoute(Route.DocumentScan::class) -> true
         else -> false
     }
 }
 
-// TODO: 4개 탭 아이콘 전부 디자인팀 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
+// TODO: 5개 탭 아이콘 전부 디자인팀 전용 PNG 리소스 확정되면 교체하고 material-icons-extended 의존성 재검토
 @Composable
 private fun bottomNavTabs(
     navController: NavHostController,
@@ -122,6 +124,12 @@ private fun bottomNavTabs(
         icon = Icons.Default.Map,
         selected = currentDestination.isRouteSelected<Route.MapView>(),
         onClick = { navController.navigateToTab(Route.MapView()) }
+    ),
+    BottomNavTabUiModel(
+        label = "문서 스캔",
+        icon = Icons.Default.CameraAlt,
+        selected = currentDestination.isRouteSelected<Route.DocumentScan>(),
+        onClick = { navController.navigateToTab(Route.DocumentScan) }
     )
 )
 
