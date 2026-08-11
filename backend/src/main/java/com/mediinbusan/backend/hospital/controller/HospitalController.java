@@ -39,9 +39,12 @@ public class HospitalController {
         return hospitalService.search(keyword, specialties, pageable);
     }
 
-    @Operation(summary = "의료기관 상세 조회")
+    @Operation(summary = "의료기관 상세 조회", description = "lang(ko/en/zh/ja, 기본값 ko)에 맞는 소개글·영업시간을 반환한다. 해당 언어 번역이 없으면 ko로 폴백한다.")
     @GetMapping("/{regNo}")
-    public HospitalDetailResponse getDetail(@PathVariable String regNo) {
-        return hospitalService.getDetail(regNo);
+    public HospitalDetailResponse getDetail(
+        @PathVariable String regNo,
+        @RequestParam(defaultValue = "ko") String lang
+    ) {
+        return hospitalService.getDetail(regNo, lang);
     }
 }
