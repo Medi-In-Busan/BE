@@ -46,6 +46,7 @@ import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
+import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
 
 /** 10개 화면(S-01~S-10)을 잇는 단일 NavHost. feature 패키지는 서로를 직접 참조하지 않고 이 파일을 통해서만 연결된다. */
 @Composable
@@ -270,6 +271,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
                 onBack = navController::popBackStack
             )
+        }
+        composable<Route.DocumentScan> {
+            DocumentScanScreen(onMenuClick = { navController.navigate(Route.Settings) })
         }
         composable<Route.SelfDiagnosis> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.SelfDiagnosis>()

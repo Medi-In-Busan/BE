@@ -18,7 +18,8 @@ data class AppStrings(
     val settingsInfoDetail: SettingsInfoDetailStrings,
     val notificationSettings: NotificationSettingsStrings,
     val favorite: FavoriteStrings,
-    val recentlyViewed: RecentlyViewedStrings
+    val recentlyViewed: RecentlyViewedStrings,
+    val documentScan: DocumentScanStrings
 )
 
 private val KoreanAppStrings = AppStrings(
@@ -32,7 +33,8 @@ private val KoreanAppStrings = AppStrings(
     settingsInfoDetail = SettingsInfoDetailStrings.Ko,
     notificationSettings = NotificationSettingsStrings.Ko,
     favorite = FavoriteStrings.Ko,
-    recentlyViewed = RecentlyViewedStrings.Ko
+    recentlyViewed = RecentlyViewedStrings.Ko,
+    documentScan = DocumentScanStrings.Ko
 )
 
 private val EnglishAppStrings = AppStrings(
@@ -46,7 +48,8 @@ private val EnglishAppStrings = AppStrings(
     settingsInfoDetail = SettingsInfoDetailStrings.En,
     notificationSettings = NotificationSettingsStrings.En,
     favorite = FavoriteStrings.En,
-    recentlyViewed = RecentlyViewedStrings.En
+    recentlyViewed = RecentlyViewedStrings.En,
+    documentScan = DocumentScanStrings.En
 )
 
 private val ChineseAppStrings = AppStrings(
@@ -60,7 +63,8 @@ private val ChineseAppStrings = AppStrings(
     settingsInfoDetail = SettingsInfoDetailStrings.Zh,
     notificationSettings = NotificationSettingsStrings.Zh,
     favorite = FavoriteStrings.Zh,
-    recentlyViewed = RecentlyViewedStrings.Zh
+    recentlyViewed = RecentlyViewedStrings.Zh,
+    documentScan = DocumentScanStrings.Zh
 )
 
 private val JapaneseAppStrings = AppStrings(
@@ -74,7 +78,8 @@ private val JapaneseAppStrings = AppStrings(
     settingsInfoDetail = SettingsInfoDetailStrings.Ja,
     notificationSettings = NotificationSettingsStrings.Ja,
     favorite = FavoriteStrings.Ja,
-    recentlyViewed = RecentlyViewedStrings.Ja
+    recentlyViewed = RecentlyViewedStrings.Ja,
+    documentScan = DocumentScanStrings.Ja
 )
 
 fun appStringsFor(language: SupportedLanguage): AppStrings = when (language) {

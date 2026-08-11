@@ -43,3 +43,17 @@ data class HospitalDetailDto(
     val specialties: List<String> = emptyList(),
     val targetCountries: List<String> = emptyList()
 )
+
+/** GET /api/hospitals/nearby 결과 항목. 백엔드 HospitalNearbyResponse와 1:1(HospitalListItemDto + distanceMeters). */
+@Serializable
+data class HospitalNearbyDto(
+    val regNo: String,
+    val name: String,
+    val institutionType: String,
+    val address: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val phone: String? = null,
+    val specialties: List<String> = emptyList(),
+    val distanceMeters: Double? = null
+)
