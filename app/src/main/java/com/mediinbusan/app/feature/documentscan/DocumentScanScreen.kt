@@ -1,6 +1,7 @@
 package com.mediinbusan.app.feature.documentscan
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,8 +68,8 @@ import java.io.File
 
 /**
  * 진단서·처방전 OCR 번역(문서 스캔) 화면. 바텀바 5번째 탭.
- * OCR/번역 백엔드가 아직 없어, 이 화면은 이미지 촬영/선택 + 미리보기까지만 담당한다.
- * "분석하기"는 지금은 안내 스낵바만 띄우는 스텁이고, 실제 호출은 후속 이슈에서 붙인다.
+ * 이미지 촬영/선택 + 미리보기 + backend/document(CLOVA OCR 프록시) 호출·결과 표시를 담당한다.
+ * 번역은 아직 백엔드가 원문 텍스트만 내려주는 단계라 이 화면에서는 다루지 않는다.
  */
 @Composable
 fun DocumentScanScreen(
@@ -79,7 +83,8 @@ fun DocumentScanScreen(
         onMenuClick = onMenuClick,
         onLanguageSelected = viewModel::onLanguageSelected,
         onImageSelected = viewModel::onImageSelected,
-        onImageCleared = viewModel::onImageCleared
+        onImageCleared = viewModel::onImageCleared,
+        onAnalyzeClick = viewModel::onAnalyzeClick
     )
 }
 
@@ -90,16 +95,23 @@ private fun DocumentScanContent(
     onMenuClick: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onImageSelected: (Uri) -> Unit,
-    onImageCleared: () -> Unit
+    onImageCleared: () -> Unit,
+    onAnalyzeClick: () -> Unit
 ) {
     val strings = LocalAppStrings.current.documentScan
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // 에뮬레이터·카메라가 없는 기기에서는 hasSystemFeature가 false거나, true여도 실제 촬영
+    // 액티비티를 처리할 카메라 앱이 없을 수 있다 — 전자는 여기서, 후자는 launchCamera의
+    // try/catch로 막는다. 둘 다 없으면 launch()가 ActivityNotFoundException으로 크래시한다.
+    val hasCameraHardware = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
+
     // TakePicture()는 결과를 Bitmap이 아니라 우리가 미리 만들어 넘긴 Uri에 저장한다 — 그 Uri를
-    // 콜백 시점까지 들고 있어야 해서 별도 상태로 보관한다.
-    var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
+    // 콜백 시점까지 들고 있어야 해서 별도 상태로 보관한다. Uri는 Parcelable이라 프로세스가
+    // 죽었다 복원돼도(카메라 앱 전환 중 메모리 회수 등) rememberSaveable이 그대로 복원해준다.
+    var pendingCaptureUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
@@ -108,11 +120,20 @@ private fun DocumentScanContent(
         pendingCaptureUri = null
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            val uri = createCaptureImageUri(context)
+    fun launchCamera() {
+        val uri = createCaptureImageUri(context)
+        try {
             pendingCaptureUri = uri
             cameraLauncher.launch(uri)
+        } catch (e: ActivityNotFoundException) {
+            pendingCaptureUri = null
+            coroutineScope.launch { snackbarHostState.showSnackbar(strings.cameraUnavailableMessage) }
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            launchCamera()
         } else {
             coroutineScope.launch { snackbarHostState.showSnackbar(strings.cameraPermissionDeniedMessage) }
         }
@@ -124,11 +145,13 @@ private fun DocumentScanContent(
     }
 
     fun onCaptureClick() {
+        if (!hasCameraHardware) {
+            coroutineScope.launch { snackbarHostState.showSnackbar(strings.cameraUnavailableMessage) }
+            return
+        }
         val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            val uri = createCaptureImageUri(context)
-            pendingCaptureUri = uri
-            cameraLauncher.launch(uri)
+            launchCamera()
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -168,10 +191,12 @@ private fun DocumentScanContent(
                 DocumentScanPreview(
                     strings = strings,
                     imageUri = imageUri,
+                    isAnalyzing = uiState.isAnalyzing,
+                    extractedText = uiState.extractedText,
+                    isAnalysisError = uiState.isAnalysisError,
+                    analysisError = uiState.analysisError,
                     onRetake = onImageCleared,
-                    onAnalyze = {
-                        coroutineScope.launch { snackbarHostState.showSnackbar(strings.comingSoonMessage) }
-                    }
+                    onAnalyze = onAnalyzeClick
                 )
             }
         }
@@ -207,6 +232,10 @@ private fun DocumentScanIntro(
 private fun DocumentScanPreview(
     strings: DocumentScanStrings,
     imageUri: Uri,
+    isAnalyzing: Boolean,
+    extractedText: String?,
+    isAnalysisError: Boolean,
+    analysisError: String?,
     onRetake: () -> Unit,
     onAnalyze: () -> Unit
 ) {
@@ -220,15 +249,34 @@ private fun DocumentScanPreview(
     )
     Spacer(modifier = Modifier.height(16.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onRetake, modifier = Modifier.weight(1f)) {
+        OutlinedButton(onClick = onRetake, modifier = Modifier.weight(1f), enabled = !isAnalyzing) {
             Text(text = strings.retakeButton)
         }
         Button(
             onClick = onAnalyze,
             modifier = Modifier.weight(1f),
+            enabled = !isAnalyzing,
             colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary)
         ) {
             Text(text = strings.analyzeButton)
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    when {
+        isAnalyzing -> Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = strings.analyzingMessage, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        }
+        isAnalysisError -> Text(
+            text = analysisError ?: strings.analysisErrorFallback,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error
+        )
+        extractedText != null -> Column {
+            Text(text = strings.resultTitle, style = MaterialTheme.typography.titleSmall, color = TextPrimary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = extractedText, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
         }
     }
 }
@@ -250,7 +298,8 @@ private fun DocumentScanContentEmptyPreview() {
             onMenuClick = {},
             onLanguageSelected = {},
             onImageSelected = {},
-            onImageCleared = {}
+            onImageCleared = {},
+            onAnalyzeClick = {}
         )
     }
 }

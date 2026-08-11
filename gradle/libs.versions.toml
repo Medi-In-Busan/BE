@@ -34,6 +34,7 @@ datastorePreferences = "1.1.2"
 
 # Images
 coil = "3.1.0"
+exifinterface = "1.4.2"
 
 # Map
 kakaoMapSdk = "2.13.5"
@@ -79,6 +80,7 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 kakao-map-sdk = { group = "com.kakao.maps.open", name = "android", version.ref = "kakaoMapSdk" }
 
