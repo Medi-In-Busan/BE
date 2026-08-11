@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.mediinbusan.app.data.favorite.FavoriteDao
 import com.mediinbusan.app.data.recent.RecentlyViewedDao
+import com.mediinbusan.app.data.searchhistory.SearchHistoryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,4 +32,7 @@ object DatabaseModule {
 
     @Provides
     fun provideRecentlyViewedDao(database: AppDatabase): RecentlyViewedDao = database.recentlyViewedDao()
+
+    @Provides
+    fun provideSearchHistoryDao(database: AppDatabase): SearchHistoryDao = database.searchHistoryDao()
 }

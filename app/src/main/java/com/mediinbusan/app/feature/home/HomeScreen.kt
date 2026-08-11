@@ -70,6 +70,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
+import com.mediinbusan.app.core.i18n.HomeStrings
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
@@ -146,7 +149,7 @@ private fun HomeContent(
     onLanguageSelected: (String) -> Unit
 ) {
     val isLoading = uiState.isLoading
-    val error = uiState.error
+    val isError = uiState.isError
 
     Scaffold(
         topBar = {
@@ -176,8 +179,8 @@ private fun HomeContent(
         // 것처럼 보여서 순간 전환으로 되돌린다. 샘플 데이터라 로딩 자체가 사실상 즉시 끝난다.
         when {
             isLoading -> LoadingState(modifier = Modifier.padding(contentPadding))
-            error != null -> ErrorState(
-                message = error,
+            isError -> ErrorState(
+                message = uiState.error ?: LocalAppStrings.current.home.loadErrorFallback,
                 modifier = Modifier.padding(contentPadding),
                 onRetry = onRetry
             )
@@ -241,10 +244,11 @@ private fun HomeTopAppBar(
     currentLanguageCode: String,
     onLanguageSelected: (String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     CenterAlignedTopAppBar(
         navigationIcon = {
             IconButton(onClick = onMenuClick) {
-                Icon(imageVector = Icons.Default.Menu, contentDescription = "설정 메뉴")
+                Icon(imageVector = Icons.Default.Menu, contentDescription = strings.home.settingsMenuContentDescription)
             }
         },
         title = { HomeWordmark() },
@@ -262,7 +266,7 @@ private fun HomeWordmark() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Image(
             painter = painterResource(id = R.drawable.favicon),
-            contentDescription = "메디인부산 로고",
+            contentDescription = LocalAppStrings.current.common.logoContentDescription,
             modifier = Modifier.size(28.dp)
         )
         Text(
@@ -383,9 +387,9 @@ private fun HeroBannerSection(onSearchClick: () -> Unit) {
                                 .padding(bottom = 50.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(text = "부산에서 만나는\n맞춤 의료 여행", style = HeroTitleStyle, color = Color.White)
+                            Text(text = LocalAppStrings.current.home.heroTitle, style = HeroTitleStyle, color = Color.White)
                             Text(
-                                text = "의료 목적에 맞는 부산 의료기관을 찾아보세요",
+                                text = LocalAppStrings.current.home.heroSubtitle,
                                 style = HeroSubtitleStyle,
                                 color = Color.White.copy(alpha = 0.9f)
                             )
@@ -446,8 +450,9 @@ private fun SearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
             .padding(start = 20.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val strings = LocalAppStrings.current
         Text(
-            text = "병원 이름, 진료과목으로 검색",
+            text = strings.common.searchPlaceholder,
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             modifier = Modifier.weight(1f)
@@ -459,7 +464,7 @@ private fun SearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
                 .background(CoralPrimary),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Default.Search, contentDescription = "검색", tint = Color.White)
+            Icon(imageVector = Icons.Default.Search, contentDescription = strings.common.searchContentDescription, tint = Color.White)
         }
     }
 }
@@ -472,7 +477,7 @@ private fun MedicalPurposeSection(
     onPurposeClick: (MedicalCategory) -> Unit
 ) {
     Column(modifier = modifier) {
-        Text(text = "의료 목적 선택", style = SectionTitleStyle, color = TextPrimary)
+        Text(text = LocalAppStrings.current.home.medicalPurposeSectionTitle, style = SectionTitleStyle, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             items(purposes, key = { it.name }) { item ->
@@ -488,6 +493,7 @@ private fun MedicalPurposeSection(
 
 @Composable
 private fun MedicalPurposeChip(item: MedicalCategory, selected: Boolean, onClick: () -> Unit) {
+    val label = item.translatedLabel(LocalAppStrings.current.language)
     Column(
         modifier = Modifier
             .width(76.dp)
@@ -508,13 +514,13 @@ private fun MedicalPurposeChip(item: MedicalCategory, selected: Boolean, onClick
         ) {
             Image(
                 painter = painterResource(id = item.iconRes),
-                contentDescription = item.label,
+                contentDescription = label,
                 modifier = Modifier.size(56.dp)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = item.label,
+            text = label,
             style = MaterialTheme.typography.labelMedium,
             color = if (selected) CoralPrimary else TextPrimary,
             maxLines = 1,
@@ -530,7 +536,7 @@ private fun QuickLinksSection(
     onQuickLinkClick: (QuickLinkType) -> Unit
 ) {
     Column(modifier = modifier) {
-        Text(text = "바로가기", style = SectionTitleStyle, color = TextPrimary)
+        Text(text = LocalAppStrings.current.home.quickLinksSectionTitle, style = SectionTitleStyle, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         quickLinks.chunked(3).forEach { row ->
             Row(
@@ -552,6 +558,7 @@ private fun QuickLinksSection(
 
 @Composable
 private fun QuickLinkCard(item: QuickLinkItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val label = quickLinkLabel(item.type, LocalAppStrings.current.home)
     Card(
         onClick = onClick,
         modifier = modifier.aspectRatio(1f),
@@ -568,12 +575,12 @@ private fun QuickLinkCard(item: QuickLinkItem, modifier: Modifier = Modifier, on
         ) {
             Image(
                 painter = painterResource(id = item.iconRes),
-                contentDescription = item.label,
+                contentDescription = label,
                 modifier = Modifier.size(42.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = item.label,
+                text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = TextPrimary,
                 textAlign = TextAlign.Center,
@@ -582,6 +589,16 @@ private fun QuickLinkCard(item: QuickLinkItem, modifier: Modifier = Modifier, on
         }
     }
 }
+
+private fun quickLinkLabel(type: QuickLinkType, strings: HomeStrings): String =
+    when (type) {
+        QuickLinkType.HOSPITAL_LIST -> strings.quickLinkHospitalList
+        QuickLinkType.GUIDE -> strings.quickLinkGuide
+        QuickLinkType.WELLNESS -> strings.quickLinkWellness
+        QuickLinkType.MAP -> strings.quickLinkMap
+        QuickLinkType.SELF_DIAGNOSIS -> strings.quickLinkSelfDiagnosis
+        QuickLinkType.FAVORITE -> strings.quickLinkFavorite
+    }
 
 @Composable
 private fun RecommendedHospitalSection(
@@ -592,15 +609,16 @@ private fun RecommendedHospitalSection(
     onHospitalClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit
 ) {
+    val strings = LocalAppStrings.current.home
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "추천 의료기관", style = SectionTitleStyle, color = TextPrimary)
+            Text(text = strings.recommendedHospitalsSectionTitle, style = SectionTitleStyle, color = TextPrimary)
             Text(
-                text = "전체보기",
+                text = strings.viewAllLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = CoralPrimary,
                 modifier = Modifier.clickable(onClick = onSeeAllClick)
@@ -610,7 +628,7 @@ private fun RecommendedHospitalSection(
         if (hospitals.isEmpty()) {
             // F-019 전체화면 EmptyState 대신, 결정사항에 따라 섹션 내부에 텍스트만 인라인 표시
             Text(
-                text = "추천 의료기관이 없습니다",
+                text = strings.recommendedHospitalsEmpty,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,

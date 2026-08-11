@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.i18n.FavoriteStrings
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -90,6 +92,7 @@ private fun FavoriteContent(
     onRemove: (Favorite) -> Unit
 ) {
     val favorites = uiState.displayedFavorites
+    val strings = LocalAppStrings.current.favorite
 
     Scaffold(
         topBar = {
@@ -103,13 +106,14 @@ private fun FavoriteContent(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(20.dp))
-                Text(text = "즐겨찾기 관리", style = SettingsTitleStyle, color = SettingsPrimaryText)
+                Text(text = strings.screenTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             FavoriteFilterChipsRow(
                 selectedFilter = uiState.selectedFilter,
                 onFilterSelected = onFilterSelected,
+                strings = strings,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
 
@@ -120,17 +124,17 @@ private fun FavoriteContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "총 ${favorites.size}건",
+                    text = strings.totalCountFormat.format(favorites.size),
                     style = SettingsDescriptionStyle,
                     color = SettingsSecondaryText
                 )
-                FavoriteSortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected)
+                FavoriteSortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected, strings = strings)
             }
 
             Spacer(modifier = Modifier.height(14.dp))
             Box(modifier = Modifier.weight(1f)) {
                 if (favorites.isEmpty()) {
-                    EmptyState(message = "저장한 병원·장소가 없습니다.")
+                    EmptyState(message = strings.emptyMessage)
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -153,10 +157,22 @@ private fun FavoriteContent(
 
 // HospitalSearchListScreen의 필터 칩과 같은 룩이지만, 즐겨찾기 항목 타입(전체/병원/장소)은
 // 상호 배타적이라 다중 토글이 아닌 단일 선택으로 동작한다.
+private fun displayLabelForTypeFilter(filter: FavoriteTypeFilter, strings: FavoriteStrings): String = when (filter) {
+    FavoriteTypeFilter.ALL -> strings.filterAll
+    FavoriteTypeFilter.HOSPITAL -> strings.filterHospital
+    FavoriteTypeFilter.PLACE -> strings.filterPlace
+}
+
+private fun displayLabelForSortOption(option: FavoriteSortOption, strings: FavoriteStrings): String = when (option) {
+    FavoriteSortOption.RECENT -> strings.sortRecent
+    FavoriteSortOption.NAME -> strings.sortName
+}
+
 @Composable
 private fun FavoriteFilterChipsRow(
     selectedFilter: FavoriteTypeFilter,
     onFilterSelected: (FavoriteTypeFilter) -> Unit,
+    strings: FavoriteStrings,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -165,7 +181,7 @@ private fun FavoriteFilterChipsRow(
     ) {
         FavoriteTypeFilter.entries.forEach { filter ->
             FilterChipPill(
-                label = filter.label,
+                label = displayLabelForTypeFilter(filter, strings),
                 selected = filter == selectedFilter,
                 onClick = { onFilterSelected(filter) }
             )
@@ -176,7 +192,7 @@ private fun FavoriteFilterChipsRow(
 // HospitalSearchListScreen의 정렬 드롭다운과 동일한 디자인. 저장순/이름순은 실제 데이터(savedAt,
 // name)로 바로 정렬 가능해서 스텁이 아니라 실제 동작한다.
 @Composable
-private fun FavoriteSortDropdownButton(selected: FavoriteSortOption, onSortSelected: (FavoriteSortOption) -> Unit) {
+private fun FavoriteSortDropdownButton(selected: FavoriteSortOption, onSortSelected: (FavoriteSortOption) -> Unit, strings: FavoriteStrings) {
     var expanded by remember { mutableStateOf(false) }
 
     Box {
@@ -184,7 +200,7 @@ private fun FavoriteSortDropdownButton(selected: FavoriteSortOption, onSortSelec
             modifier = Modifier.clickable { expanded = true },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = selected.label, style = MaterialTheme.typography.labelMedium, color = SettingsSecondaryText)
+            Text(text = displayLabelForSortOption(selected, strings), style = MaterialTheme.typography.labelMedium, color = SettingsSecondaryText)
             Icon(
                 imageVector = Icons.Filled.ArrowDropDown,
                 contentDescription = null,
@@ -195,7 +211,7 @@ private fun FavoriteSortDropdownButton(selected: FavoriteSortOption, onSortSelec
         BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             FavoriteSortOption.entries.forEach { option ->
                 BrandDropdownMenuItem(
-                    label = option.label,
+                    label = displayLabelForSortOption(option, strings),
                     selected = option == selected,
                     onClick = {
                         onSortSelected(option)

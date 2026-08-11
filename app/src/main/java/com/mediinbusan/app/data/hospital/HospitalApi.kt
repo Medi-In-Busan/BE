@@ -15,7 +15,10 @@ interface HospitalApi {
     ): HospitalPageDto
 
     @GET("api/hospitals/{regNo}")
-    suspend fun getHospitalDetail(@Path("regNo") regNo: String): HospitalDetailDto
+    suspend fun getHospitalDetail(
+        @Path("regNo") regNo: String,
+        @Query("lang") lang: String
+    ): HospitalDetailDto
 
     @GET("api/hospitals/nearby")
     suspend fun getNearbyHospitals(

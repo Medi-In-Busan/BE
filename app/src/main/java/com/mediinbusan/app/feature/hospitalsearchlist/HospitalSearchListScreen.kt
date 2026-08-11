@@ -27,10 +27,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -46,7 +49,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +62,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.datastore.SupportedLanguage
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.SearchStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
@@ -99,6 +108,9 @@ fun HospitalSearchListScreen(
         onLanguageSelected = viewModel::onLanguageSelected,
         onQueryChanged = viewModel::onQueryChanged,
         onSearchSubmit = viewModel::onSearchSubmit,
+        onSuggestionSelected = viewModel::onSuggestionSelected,
+        onRecentSearchSelected = viewModel::onRecentSearchSelected,
+        onRecentSearchDeleted = viewModel::onRecentSearchDeleted,
         onFilterToggled = viewModel::onFilterToggled,
         onSortSelected = viewModel::onSortSelected,
         onLoadMore = viewModel::onLoadMore,
@@ -116,6 +128,9 @@ private fun HospitalSearchListContent(
     onLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
     onSearchSubmit: () -> Unit,
+    onSuggestionSelected: (String) -> Unit,
+    onRecentSearchSelected: (String) -> Unit,
+    onRecentSearchDeleted: (String) -> Unit,
     onFilterToggled: (String) -> Unit,
     onSortSelected: (SearchSortOption) -> Unit,
     onLoadMore: () -> Unit,
@@ -124,6 +139,12 @@ private fun HospitalSearchListContent(
     onSelectHospital: (String) -> Unit,
     onRetry: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    var isSearchFocused by remember { mutableStateOf(false) }
+    // 콘텐츠 유무가 아니라 포커스 여부만으로 패널을 띄운다. 자동완성 후보 개수는 한글 조합
+    // 중간 단계(예: "부산" 입력 중 "부"+미완성 글자)에서 순간적으로 0건이 될 수 있는데,
+    // 콘텐츠 유무로 판단하면 그 찰나에 패널이 사라지고 뒤의 결과 리스트가 노출돼버린다.
+    val showAssistPanel = isSearchFocused
     Scaffold(
         topBar = {
             BrandBackTopAppBar(
@@ -135,8 +156,8 @@ private fun HospitalSearchListContent(
     ) { innerPadding ->
         when {
             uiState.isLoading -> LoadingState(modifier = Modifier.padding(innerPadding).padding(bottom = BottomNavBarHeight))
-            uiState.errorMessage != null -> ErrorState(
-                message = uiState.errorMessage,
+            uiState.isError -> ErrorState(
+                message = uiState.errorMessage ?: LocalAppStrings.current.search.loadErrorFallback,
                 modifier = Modifier.padding(innerPadding).padding(bottom = BottomNavBarHeight),
                 onRetry = onRetry
             )
@@ -145,39 +166,53 @@ private fun HospitalSearchListContent(
                 SearchInputBar(
                     query = uiState.query,
                     onQueryChanged = onQueryChanged,
-                    onSearchSubmit = onSearchSubmit,
+                    onSearchSubmit = { focusManager.clearFocus(); onSearchSubmit() },
+                    onFocusChanged = { isSearchFocused = it },
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
-                FilterChipsRow(filters = uiState.filters, onFilterToggled = onFilterToggled)
+                if (showAssistPanel) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SearchAssistPanel(
+                        query = uiState.query,
+                        recentSearches = uiState.recentSearches,
+                        autocompleteSuggestions = uiState.autocompleteSuggestions,
+                        onSuggestionSelected = { focusManager.clearFocus(); onSuggestionSelected(it) },
+                        onRecentSearchSelected = { focusManager.clearFocus(); onRecentSearchSelected(it) },
+                        onRecentSearchDeleted = onRecentSearchDeleted,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    FilterChipsRow(filters = uiState.filters, onFilterToggled = onFilterToggled)
 
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SearchResultCountLabel(query = uiState.query, count = uiState.results.size)
-                    SortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected)
-                }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SearchResultCountLabel(query = uiState.query, count = uiState.results.size)
+                        SortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected)
+                    }
 
-                Spacer(modifier = Modifier.height(14.dp))
-                Box(modifier = Modifier.weight(1f)) {
-                    if (uiState.results.isEmpty()) {
-                        EmptySearchBanner(
-                            onReset = onResetSearchConditions,
-                            modifier = Modifier.padding(horizontal = 20.dp)
-                        )
-                    } else {
-                        SearchResultList(
-                            results = uiState.results,
-                            favoriteHospitalIds = uiState.favoriteHospitalIds,
-                            hasReachedEnd = uiState.hasReachedEnd,
-                            onLoadMore = onLoadMore,
-                            onSelectHospital = onSelectHospital,
-                            onToggleFavorite = onToggleFavorite
-                        )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (uiState.results.isEmpty()) {
+                            EmptySearchBanner(
+                                onReset = onResetSearchConditions,
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                            )
+                        } else {
+                            SearchResultList(
+                                results = uiState.results,
+                                favoriteHospitalIds = uiState.favoriteHospitalIds,
+                                hasReachedEnd = uiState.hasReachedEnd,
+                                onLoadMore = onLoadMore,
+                                onSelectHospital = onSelectHospital,
+                                onToggleFavorite = onToggleFavorite
+                            )
+                        }
                     }
                 }
             }
@@ -188,16 +223,17 @@ private fun HospitalSearchListContent(
 // 검색어가 있으면 "'피부과' 검색결과"까지 굵은 검정으로, 건수는 브랜드 코랄 컬러로 강조한다.
 @Composable
 private fun SearchResultCountLabel(query: String, count: Int) {
+    val strings = LocalAppStrings.current.search
     val text = buildAnnotatedString {
         withStyle(SpanStyle(color = SettingsPrimaryText, fontWeight = FontWeight.Bold)) {
             if (query.isNotBlank()) {
-                append("'$query' 검색결과 ")
+                append(strings.resultCountWithQueryFormat.format(query))
             } else {
-                append("검색결과 ")
+                append(strings.resultCountGenericLabel)
             }
         }
         withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) {
-            append("${count}건")
+            append(strings.resultCountSuffixFormat.format(count))
         }
     }
     Text(text = text, style = SettingsDescriptionStyle)
@@ -210,6 +246,7 @@ private fun SearchInputBar(
     query: String,
     onQueryChanged: (String) -> Unit,
     onSearchSubmit: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -225,7 +262,7 @@ private fun SearchInputBar(
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    text = "병원 이름, 진료과목으로 검색",
+                    text = LocalAppStrings.current.common.searchPlaceholder,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
@@ -237,7 +274,9 @@ private fun SearchInputBar(
                 textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { onFocusChanged(it.isFocused) }
             )
         }
         Box(
@@ -248,21 +287,150 @@ private fun SearchInputBar(
                 .clickable(onClick = onSearchSubmit),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Filled.Search, contentDescription = "검색", tint = Color.White)
+            Icon(imageVector = Icons.Filled.Search, contentDescription = LocalAppStrings.current.common.searchContentDescription, tint = Color.White)
         }
     }
 }
 
+// 검색창 포커스 중에만 결과 리스트 자리를 대신 채운다. 입력이 비어있으면 최근 검색어,
+// 입력 중이면 자동완성 후보 — 둘 중 하나만 보여준다(showAssistPanel이 이미 상위에서 분기).
+@Composable
+private fun SearchAssistPanel(
+    query: String,
+    recentSearches: List<String>,
+    autocompleteSuggestions: List<String>,
+    onSuggestionSelected: (String) -> Unit,
+    onRecentSearchSelected: (String) -> Unit,
+    onRecentSearchDeleted: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalAppStrings.current.search
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp)
+    ) {
+        if (query.isBlank()) {
+            if (recentSearches.isEmpty()) {
+                item { SearchAssistEmptyLabel(text = strings.recentSearchesEmpty) }
+            } else {
+                item {
+                    Text(
+                        text = strings.recentSearchesTitle,
+                        style = SettingsDescriptionStyle,
+                        color = SettingsSecondaryText,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                items(recentSearches, key = { it }) { keyword ->
+                    RecentSearchRow(
+                        keyword = keyword,
+                        onClick = { onRecentSearchSelected(keyword) },
+                        onDelete = { onRecentSearchDeleted(keyword) }
+                    )
+                }
+            }
+        } else {
+            if (autocompleteSuggestions.isEmpty()) {
+                item { SearchAssistEmptyLabel(text = strings.noMatchingHospitals) }
+            } else {
+                items(autocompleteSuggestions, key = { it }) { suggestion ->
+                    AutocompleteSuggestionRow(name = suggestion, onClick = { onSuggestionSelected(suggestion) })
+                }
+            }
+        }
+    }
+}
+
+// 조합 중인 한글 입력 등으로 후보가 잠깐 0건이 되는 순간에도 패널 자체는 계속 떠 있고
+// 이 빈 상태만 보이게 해서, 뒤에 깔린 결과 리스트가 새어나오지 않게 한다.
+@Composable
+private fun SearchAssistEmptyLabel(text: String) {
+    Text(
+        text = text,
+        style = SettingsDescriptionStyle,
+        color = SettingsSecondaryText,
+        modifier = Modifier.padding(vertical = 20.dp)
+    )
+}
+
+@Composable
+private fun RecentSearchRow(keyword: String, onClick: () -> Unit, onDelete: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = Icons.Outlined.History, contentDescription = null, tint = SettingsSecondaryText, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = keyword,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = LocalAppStrings.current.search.deleteSearchTermContentDescription,
+                tint = SettingsSecondaryText,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AutocompleteSuggestionRow(name: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = Icons.Filled.Search, contentDescription = null, tint = SettingsSecondaryText, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 // 전체 의료 태그 + 관광지를 한 줄에 모두 배치하고 가로로 슬라이드해서 볼 수 있게 한다.
+// 칩의 selected 상태 토글/서버 specialties 파라미터는 전부 chip.label(한국어) 값을 키로 쓰고
+// 있어 그대로 두고(HospitalSearchListViewModel.kt 참고), 화면에 보여줄 때만 언어별 문구로 바꾼다.
+private fun displayLabelForFilterChip(chipLabel: String, language: SupportedLanguage, strings: SearchStrings): String =
+    MedicalCategory.entries.find { it.label == chipLabel }?.translatedLabel(language)
+        ?: strings.tourismFilterLabel
+
+private fun displayLabelForSortOption(option: SearchSortOption, strings: SearchStrings): String = when (option) {
+    SearchSortOption.RELEVANCE -> strings.sortRelevance
+    SearchSortOption.NAME -> strings.sortName
+    SearchSortOption.DISTANCE -> strings.sortDistance
+}
+
 @Composable
 private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (String) -> Unit) {
+    val appStrings = LocalAppStrings.current
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(filters, key = { it.label }) { chip ->
-            FilterChipPill(label = chip.label, selected = chip.selected, onClick = { onFilterToggled(chip.label) })
+            FilterChipPill(
+                label = displayLabelForFilterChip(chip.label, appStrings.language, appStrings.search),
+                selected = chip.selected,
+                onClick = { onFilterToggled(chip.label) }
+            )
         }
     }
 }
@@ -271,13 +439,14 @@ private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (St
 @Composable
 private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (SearchSortOption) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val strings = LocalAppStrings.current.search
 
     Box {
         Row(
             modifier = Modifier.clickable { expanded = true },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "정렬", style = MaterialTheme.typography.labelMedium, color = SettingsSecondaryText)
+            Text(text = strings.sortLabel, style = MaterialTheme.typography.labelMedium, color = SettingsSecondaryText)
             Icon(
                 imageVector = Icons.Filled.ArrowDropDown,
                 contentDescription = null,
@@ -288,7 +457,7 @@ private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (Sear
         BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             SearchSortOption.entries.forEach { option ->
                 BrandDropdownMenuItem(
-                    label = option.label,
+                    label = displayLabelForSortOption(option, strings),
                     selected = option == selected,
                     onClick = {
                         onSortSelected(option)
@@ -396,6 +565,7 @@ private fun SearchResultCard(
 
 @Composable
 private fun EmptySearchBanner(onReset: () -> Unit, modifier: Modifier = Modifier) {
+    val strings = LocalAppStrings.current.search
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -417,10 +587,10 @@ private fun EmptySearchBanner(onReset: () -> Unit, modifier: Modifier = Modifier
             Icon(imageVector = Icons.Outlined.SearchOff, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(26.dp))
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "원하는 결과가 없으신가요?", style = SettingsItemTitleStyle, color = SettingsPrimaryText)
+        Text(text = strings.emptyResultsTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "검색어를 변경하거나 필터 조건을 확인해보세요",
+            text = strings.emptyResultsSubtitle,
             style = SettingsDescriptionStyle,
             color = SettingsSecondaryText
         )
@@ -430,7 +600,7 @@ private fun EmptySearchBanner(onReset: () -> Unit, modifier: Modifier = Modifier
             colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(text = "검색조건 초기화")
+            Text(text = strings.resetFiltersButton)
         }
     }
 }
@@ -445,6 +615,9 @@ private fun HospitalSearchListContentPreview() {
             onLanguageSelected = {},
             onQueryChanged = {},
             onSearchSubmit = {},
+            onSuggestionSelected = {},
+            onRecentSearchSelected = {},
+            onRecentSearchDeleted = {},
             onFilterToggled = {},
             onSortSelected = {},
             onLoadMore = {},
