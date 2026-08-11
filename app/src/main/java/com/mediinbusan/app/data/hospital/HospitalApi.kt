@@ -20,6 +20,14 @@ interface HospitalApi {
         @Query("lang") lang: String
     ): HospitalDetailDto
 
+    @GET("api/hospitals/nearby")
+    suspend fun getNearbyHospitals(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("radiusMeters") radiusMeters: Double? = null,
+        @Query("specialties") specialties: String? = null
+    ): List<HospitalNearbyDto>
+
     companion object {
         // 실제 페이지네이션 UI가 붙기 전까지는, 현재 시딩 규모(122건)를 한 번에 다 받아오는 값으로 둔다.
         const val DEFAULT_PAGE_SIZE = 200
