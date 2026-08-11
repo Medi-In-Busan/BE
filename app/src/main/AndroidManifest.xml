@@ -9,6 +9,10 @@
     -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- feature/documentscan(진단서·처방전 OCR 번역)의 촬영 기능 전용. 위치 권한과 달리
+         이 기능에 실제로 필요한 정당한 권한이라 CLAUDE.md MVP 제약과 무관하다. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".MediInBusanApp"
@@ -35,6 +39,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- feature/documentscan이 카메라 촬영본을 시스템 카메라 앱과 주고받기 위한 FileProvider.
+             앱 캐시 디렉토리 밖으로는 아무것도 노출하지 않는다(res/xml/file_paths.xml 참고). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

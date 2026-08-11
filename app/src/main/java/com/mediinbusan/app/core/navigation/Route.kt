@@ -101,6 +101,11 @@ sealed interface Route {
     // 최초 실행 흐름(Splash -> 언어선택 -> 진단 -> Home) 중에는 true.
     @Serializable
     data class SelfDiagnosis(val fromOnboarding: Boolean = false) : Route
+
+    // 진단서·처방전 OCR 번역(문서 스캔). 바텀바 5번째 탭. OCR/번역 백엔드 연동 전, 이미지
+    // 촬영·선택까지만 우선 배선한다 — 관련 이슈 참고.
+    @Serializable
+    data object DocumentScan : Route
 }
 
 /**
