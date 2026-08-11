@@ -9,7 +9,8 @@ import javax.inject.Inject
 
 /**
  * MediInBusan 자체 백엔드(backend/)를 호출한다.
- * languageCode는 백엔드가 아직 다국어를 지원하지 않아(TODO) 지금은 쓰이지 않는다.
+ * languageCode는 병원 상세(getHospitalDetail)의 소개글·영업시간에만 반영된다 — 목록 조회(getHospitals/
+ * getAllHospitals) 응답에는 언어별로 달라지는 필드가 없어(이름·주소는 번역 대상 아님) 전달하지 않는다.
  */
 class HospitalRepositoryImpl @Inject constructor(
     private val hospitalApi: HospitalApi
@@ -55,7 +56,7 @@ class HospitalRepositoryImpl @Inject constructor(
     override fun getHospitalDetail(hospitalId: String, languageCode: String): Flow<Result<Hospital>> = flow {
         emit(Result.Loading)
         try {
-            emit(Result.Success(hospitalApi.getHospitalDetail(hospitalId).toDomain()))
+            emit(Result.Success(hospitalApi.getHospitalDetail(hospitalId, languageCode).toDomain()))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

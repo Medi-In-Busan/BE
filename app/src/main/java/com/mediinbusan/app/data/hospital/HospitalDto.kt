@@ -24,7 +24,10 @@ data class HospitalListItemDto(
     val specialties: List<String> = emptyList()
 )
 
-/** GET /api/hospitals/{regNo} 상세. 백엔드 HospitalDetailResponse와 1:1. */
+/**
+ * GET /api/hospitals/{regNo} 상세. 백엔드 HospitalDetailResponse와 1:1.
+ * description/businessHours는 요청한 lang 쿼리 파라미터에 맞는 값 하나만 내려온다(백엔드가 ko로 폴백 처리).
+ */
 @Serializable
 data class HospitalDetailDto(
     val regNo: String,
@@ -36,8 +39,7 @@ data class HospitalDetailDto(
     val phone: String? = null,
     val website: String? = null,
     val businessHours: String? = null,
-    val descriptionKo: String? = null,
-    val descriptionEn: String? = null,
+    val description: String? = null,
     val specialties: List<String> = emptyList(),
     val targetCountries: List<String> = emptyList()
 )

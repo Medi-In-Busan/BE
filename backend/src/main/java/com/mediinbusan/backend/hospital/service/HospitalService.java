@@ -32,9 +32,9 @@ public class HospitalService {
         return PageResponse.from(page.map(HospitalDtoMapper::toListItem));
     }
 
-    public HospitalDetailResponse getDetail(String regNo) {
+    public HospitalDetailResponse getDetail(String regNo, String lang) {
         Hospital hospital = hospitalRepository.findByRegNo(regNo)
             .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "병원을 찾을 수 없습니다: " + regNo));
-        return HospitalDtoMapper.toDetail(hospital);
+        return HospitalDtoMapper.toDetail(hospital, lang);
     }
 }

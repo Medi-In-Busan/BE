@@ -15,7 +15,10 @@ interface HospitalApi {
     ): HospitalPageDto
 
     @GET("api/hospitals/{regNo}")
-    suspend fun getHospitalDetail(@Path("regNo") regNo: String): HospitalDetailDto
+    suspend fun getHospitalDetail(
+        @Path("regNo") regNo: String,
+        @Query("lang") lang: String
+    ): HospitalDetailDto
 
     companion object {
         // 실제 페이지네이션 UI가 붙기 전까지는, 현재 시딩 규모(122건)를 한 번에 다 받아오는 값으로 둔다.

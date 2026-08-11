@@ -57,14 +57,29 @@ public class Hospital {
     @Column(name = "website", length = 300)
     private String website;
 
-    @Column(name = "business_hours", columnDefinition = "TEXT")
-    private String businessHours;
+    @Column(name = "business_hours_ko", columnDefinition = "TEXT")
+    private String businessHoursKo;
+
+    @Column(name = "business_hours_en", columnDefinition = "TEXT")
+    private String businessHoursEn;
+
+    @Column(name = "business_hours_zh", columnDefinition = "TEXT")
+    private String businessHoursZh;
+
+    @Column(name = "business_hours_ja", columnDefinition = "TEXT")
+    private String businessHoursJa;
 
     @Column(name = "description_ko", columnDefinition = "TEXT")
     private String descriptionKo;
 
     @Column(name = "description_en", columnDefinition = "TEXT")
     private String descriptionEn;
+
+    @Column(name = "description_zh", columnDefinition = "TEXT")
+    private String descriptionZh;
+
+    @Column(name = "description_ja", columnDefinition = "TEXT")
+    private String descriptionJa;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "hospital_specialty", joinColumns = @JoinColumn(name = "hospital_id"))
@@ -101,9 +116,14 @@ public class Hospital {
         Coordinates coordinates,
         String phone,
         String website,
-        String businessHours,
+        String businessHoursKo,
+        String businessHoursEn,
+        String businessHoursZh,
+        String businessHoursJa,
         String descriptionKo,
         String descriptionEn,
+        String descriptionZh,
+        String descriptionJa,
         Set<MedicalSpecialty> specialties,
         Set<String> targetCountries,
         LocalDate verifiedAt,
@@ -118,9 +138,14 @@ public class Hospital {
         this.coordinates = coordinates;
         this.phone = phone;
         this.website = website;
-        this.businessHours = businessHours;
+        this.businessHoursKo = businessHoursKo;
+        this.businessHoursEn = businessHoursEn;
+        this.businessHoursZh = businessHoursZh;
+        this.businessHoursJa = businessHoursJa;
         this.descriptionKo = descriptionKo;
         this.descriptionEn = descriptionEn;
+        this.descriptionZh = descriptionZh;
+        this.descriptionJa = descriptionJa;
         this.specialties = specialties != null ? specialties : new HashSet<>();
         this.targetCountries = targetCountries != null ? targetCountries : new HashSet<>();
         this.verifiedAt = verifiedAt;
@@ -164,8 +189,20 @@ public class Hospital {
         return website;
     }
 
-    public String getBusinessHours() {
-        return businessHours;
+    public String getBusinessHoursKo() {
+        return businessHoursKo;
+    }
+
+    public String getBusinessHoursEn() {
+        return businessHoursEn;
+    }
+
+    public String getBusinessHoursZh() {
+        return businessHoursZh;
+    }
+
+    public String getBusinessHoursJa() {
+        return businessHoursJa;
     }
 
     public String getDescriptionKo() {
@@ -174,6 +211,14 @@ public class Hospital {
 
     public String getDescriptionEn() {
         return descriptionEn;
+    }
+
+    public String getDescriptionZh() {
+        return descriptionZh;
+    }
+
+    public String getDescriptionJa() {
+        return descriptionJa;
     }
 
     public Set<MedicalSpecialty> getSpecialties() {
