@@ -117,6 +117,8 @@ dependencies {
     // Images
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    // feature/documentscan에서 OCR 업로드 전 EXIF 방향을 읽어 재인코딩 전 회전을 보정하는 데 사용.
+    implementation(libs.androidx.exifinterface)
 
     // Map
     implementation(libs.kakao.map.sdk)

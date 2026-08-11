@@ -3,7 +3,9 @@ package com.mediinbusan.app.data.document
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import com.mediinbusan.app.core.common.Result
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -41,8 +43,25 @@ class DocumentOcrRepositoryImpl @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
+    // 다운스케일 → EXIF 방향 보정 → 용량 제한(MAX_UPLOAD_BYTES) 안에 들어올 때까지 품질을 낮추고,
+    // 그래도 안 되면 비트맵을 추가로 축소해서 재시도한다. 그래도 실패하면 업로드 대신 에러를 낸다.
     private fun prepareImageBytes(imageUri: Uri): ByteArray {
-        val bitmap = decodeDownscaledBitmap(imageUri)
+        var bitmap = decodeDownscaledBitmap(imageUri)
+        bitmap = applyExifRotation(bitmap, readExifRotationDegrees(imageUri))
+
+        repeat(MAX_DOWNSCALE_ATTEMPTS) { attempt ->
+            val bytes = compressToJpeg(bitmap)
+            if (bytes.size <= MAX_UPLOAD_BYTES) return bytes
+            if (attempt < MAX_DOWNSCALE_ATTEMPTS - 1) {
+                val resized = Bitmap.createScaledBitmap(bitmap, bitmap.width / 2, bitmap.height / 2, true)
+                bitmap.recycle()
+                bitmap = resized
+            }
+        }
+        error("이미지 용량이 너무 커서 업로드할 수 없습니다.")
+    }
+
+    private fun compressToJpeg(bitmap: Bitmap): ByteArray {
         val output = ByteArrayOutputStream()
         var quality = INITIAL_JPEG_QUALITY
         bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
@@ -52,6 +71,28 @@ class DocumentOcrRepositoryImpl @Inject constructor(
             bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)
         }
         return output.toByteArray()
+    }
+
+    // BitmapFactory는 EXIF Orientation 태그를 읽지 않고 픽셀만 디코드한다 — 세로로 찍은 사진이
+    // 가로 픽셀 + 회전 태그로 저장된 경우, 이 보정 없이 재인코딩하면 텍스트가 옆으로 눕는다.
+    private fun readExifRotationDegrees(imageUri: Uri): Int {
+        val orientation = context.contentResolver.openInputStream(imageUri)?.use { input ->
+            ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        } ?: ExifInterface.ORIENTATION_NORMAL
+        return when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270
+            else -> 0
+        }
+    }
+
+    private fun applyExifRotation(bitmap: Bitmap, degrees: Int): Bitmap {
+        if (degrees == 0) return bitmap
+        val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (rotated !== bitmap) bitmap.recycle()
+        return rotated
     }
 
     private fun decodeDownscaledBitmap(imageUri: Uri): Bitmap {
@@ -80,5 +121,6 @@ class DocumentOcrRepositoryImpl @Inject constructor(
         private const val INITIAL_JPEG_QUALITY = 90
         private const val MIN_JPEG_QUALITY = 40
         private const val JPEG_QUALITY_STEP = 10
+        private const val MAX_DOWNSCALE_ATTEMPTS = 3 // 2000px에서 3회면 250px까지 축소 — 그래도 넘으면 포기하고 에러.
     }
 }

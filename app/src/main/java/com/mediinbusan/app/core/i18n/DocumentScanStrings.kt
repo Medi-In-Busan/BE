@@ -17,7 +17,7 @@ data class DocumentScanStrings(
     companion object {
         val Ko = DocumentScanStrings(
             introTitle = "진단서·처방전을 스캔해보세요",
-            introSubtitle = "사진을 촬영하거나 갤러리에서 선택하면 번역해서 보여드려요.",
+            introSubtitle = "사진을 촬영하거나 갤러리에서 선택하면 텍스트를 인식해서 보여드려요.",
             captureButton = "촬영하기",
             galleryButton = "갤러리에서 선택",
             retakeButton = "다시 선택",
@@ -31,7 +31,7 @@ data class DocumentScanStrings(
         )
         val En = DocumentScanStrings(
             introTitle = "Scan a diagnosis certificate or prescription",
-            introSubtitle = "Take a photo or pick one from your gallery and we'll translate it for you.",
+            introSubtitle = "Take a photo or pick one from your gallery and we'll recognize the text for you.",
             captureButton = "Take photo",
             galleryButton = "Choose from gallery",
             retakeButton = "Choose again",
@@ -45,7 +45,7 @@ data class DocumentScanStrings(
         )
         val Zh = DocumentScanStrings(
             introTitle = "扫描诊断书·处方笺",
-            introSubtitle = "拍照或从相册中选择，我们将为您翻译。",
+            introSubtitle = "拍照或从相册中选择，我们将为您识别文字。",
             captureButton = "拍照",
             galleryButton = "从相册选择",
             retakeButton = "重新选择",
@@ -59,7 +59,7 @@ data class DocumentScanStrings(
         )
         val Ja = DocumentScanStrings(
             introTitle = "診断書・処方箋をスキャンしてみましょう",
-            introSubtitle = "写真を撮影するかギャラリーから選択すると、翻訳してお見せします。",
+            introSubtitle = "写真を撮影するかギャラリーから選択すると、テキストを認識してお見せします。",
             captureButton = "撮影する",
             galleryButton = "ギャラリーから選択",
             retakeButton = "選び直す",

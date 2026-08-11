@@ -50,12 +50,17 @@ class DocumentScanViewModel @Inject constructor(
     }
 
     fun onAnalyzeClick() {
+        // isAnalyzing을 여기서 동기적으로 먼저 세팅해야 한다 — Repository의 flow가
+        // flowOn(Dispatchers.IO)를 쓰기 때문에 Result.Loading emit도 IO 디스패치를 거쳐 약간
+        // 늦게 도착한다. 그 틈에 버튼이 눌리는 걸 이 가드가 막는다.
+        if (_uiState.value.isAnalyzing) return
         val imageUri = _uiState.value.selectedImageUri ?: return
+        _uiState.update { it.copy(isAnalyzing = true, isAnalysisError = false, analysisError = null) }
         viewModelScope.launch {
             documentOcrRepository.extractText(imageUri).collect { result ->
                 _uiState.update { state ->
                     when (result) {
-                        is Result.Loading -> state.copy(isAnalyzing = true, isAnalysisError = false, analysisError = null)
+                        is Result.Loading -> state
                         is Result.Success -> state.copy(isAnalyzing = false, extractedText = result.data, isAnalysisError = false, analysisError = null)
                         // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
                         is Result.Error -> state.copy(isAnalyzing = false, isAnalysisError = true, analysisError = result.message)
