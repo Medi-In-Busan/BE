@@ -20,9 +20,9 @@ class DocumentOcrDtoMapperTest {
             new ClovaOcrResponse.Field("급성 인두염", 0.99, "NORMAL", true)
         ));
 
-        DocumentOcrResponse result = DocumentOcrDtoMapper.toResponse(response);
+        String result = DocumentOcrDtoMapper.extractText(response);
 
-        assertThat(result.text()).isEqualTo("환자명 홍길동\n진단명 급성 인두염");
+        assertThat(result).isEqualTo("환자명 홍길동\n진단명 급성 인두염");
     }
 
     @Test
@@ -32,7 +32,7 @@ class DocumentOcrDtoMapperTest {
             List.of(new ClovaOcrResponse.ImageResult("document", "FAILURE", "인식 실패", List.of()))
         );
 
-        assertThatThrownBy(() -> DocumentOcrDtoMapper.toResponse(response))
+        assertThatThrownBy(() -> DocumentOcrDtoMapper.extractText(response))
             .isInstanceOf(DocumentOcrFailedException.class);
     }
 
@@ -40,7 +40,7 @@ class DocumentOcrDtoMapperTest {
     void images가_비어있으면_예외를_던진다() {
         ClovaOcrResponse response = new ClovaOcrResponse("V2", "req-1", 0L, List.of());
 
-        assertThatThrownBy(() -> DocumentOcrDtoMapper.toResponse(response))
+        assertThatThrownBy(() -> DocumentOcrDtoMapper.extractText(response))
             .isInstanceOf(DocumentOcrFailedException.class);
     }
 
