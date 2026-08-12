@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.map
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,17 +12,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocalHospital
@@ -73,6 +75,7 @@ import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
+import com.mediinbusan.app.data.place.PlaceType
 
 /**
  * S-08. hospitalId가 있으면 상세페이지 '지도에서 보기'로 진입한 "특정 병원 지도" 모드,
@@ -107,7 +110,8 @@ fun MapScreen(
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onMarkerSelected = viewModel::onMarkerSelected,
             onToggleFavorite = viewModel::onToggleFavorite,
-            onSelectHospital = onSelectHospital
+            onSelectHospital = onSelectHospital,
+            onSearchThisArea = viewModel::searchThisArea
         )
     }
 }
@@ -176,7 +180,8 @@ private fun BrowseMap(
     onSearchQueryChanged: (String) -> Unit,
     onMarkerSelected: (String?) -> Unit,
     onToggleFavorite: (String) -> Unit,
-    onSelectHospital: (String) -> Unit
+    onSelectHospital: (String) -> Unit,
+    onSearchThisArea: (latitude: Double, longitude: Double) -> Unit
 ) {
     val hospitalPins = remember(uiState.visibleHospitals, uiState.selectedMarkerId) {
         uiState.visibleHospitals.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
@@ -184,25 +189,33 @@ private fun BrowseMap(
     val placePins = remember(uiState.visiblePlaces, uiState.selectedMarkerId) {
         uiState.visiblePlaces.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
     }
-    val pins = if (uiState.selectedCategory == MapCategory.HOSPITAL) hospitalPins else placePins
+    val pins = when (uiState.selectedCategory) {
+        MapCategory.ALL -> hospitalPins + placePins
+        MapCategory.HOSPITAL -> hospitalPins
+        else -> placePins
+    }
     // 0은 "아직 요청 없음"을 의미하는 초기값이라 KakaoMapView가 무시한다 — 버튼 클릭마다 증가시켜 트리거한다.
     var recenterRequestId by remember { mutableIntStateOf(0) }
+    var searchAreaRequestId by remember { mutableIntStateOf(0) }
 
-    // BottomNavBarHeight(81dp)는 탭바 자체의 고정 콘텐츠 높이일 뿐이다. 실제 BottomNavBar는
-    // NavigationBar 기본값으로 시스템 제스처/내비게이션 바 인셋만큼을 내부에서 추가로 소비하므로,
-    // 그 인셋을 여기서 더해주지 않으면 제스처 내비게이션 기기에서 선택된 병원/장소 카드의 아래쪽이
-    // 실제 탭바에 가려 안 보인다.
+    // BottomNavBar가 이제 자기 높이(제스처/내비게이션 바 인셋 포함)를 스스로 navigationBarsPadding()으로
+    // 소비하므로(core/ui/BottomNavBar.kt 참고), 여기서 또 호출하면 인셋이 중복 적용된다.
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(bottom = BottomNavBarHeight)
-            .navigationBarsPadding()
     ) {
         KakaoMapView(
             pins = pins,
             modifier = Modifier.fillMaxSize(),
             onPinClick = onMarkerSelected,
-            recenterRequestId = recenterRequestId
+            recenterRequestId = recenterRequestId,
+            searchAreaRequestId = searchAreaRequestId,
+            onSearchArea = onSearchThisArea,
+            // 병원 전체(366개)가 부산 전역에 흩어져 있어 fitMapPoints를 쓰면 서면 클러스터가
+            // 화면에서 작아진다. 서면 기본 중심으로 고정하고, "이 위치에서 검색" 이후에도
+            // 사용자가 옮긴 카메라 위치를 결과 목록 때문에 다시 튕겨내지 않는다.
+            fitCameraToPins = false
         )
 
         Column(
@@ -219,6 +232,14 @@ private fun BrowseMap(
             }
             Spacer(modifier = Modifier.height(12.dp))
             CategoryTabsRow(selected = uiState.selectedCategory, onSelected = onCategorySelected)
+            if (uiState.selectedCategory == MapCategory.HOSPITAL || uiState.selectedCategory == MapCategory.ALL) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SearchThisAreaButton(
+                    isLoading = uiState.isSearchingArea,
+                    onClick = { searchAreaRequestId++ },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
         }
 
         Column(
@@ -241,34 +262,27 @@ private fun BrowseMap(
         }
 
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-            when (uiState.selectedCategory) {
-                MapCategory.HOSPITAL -> {
-                    val selected = uiState.visibleHospitals.firstOrNull { it.id == uiState.selectedMarkerId }
-                    when {
-                        selected != null -> SelectedHospitalCard(
-                            hospital = selected,
-                            isFavorite = selected.id in uiState.favoriteHospitalIds,
-                            onFavoriteClick = { onToggleFavorite(selected.id) },
-                            onDetailClick = { onSelectHospital(selected.id) }
-                        )
-                        uiState.visibleHospitals.isNotEmpty() -> HospitalCardRow(
-                            hospitals = uiState.visibleHospitals,
-                            onCardClick = { onMarkerSelected(it) }
-                        )
-                        else -> EmptyResultCard(message = "표시할 병원이 없습니다.")
-                    }
-                }
-                else -> {
-                    val selected = uiState.visiblePlaces.firstOrNull { it.id == uiState.selectedMarkerId }
-                    when {
-                        selected != null -> SelectedPlaceCard(place = selected)
-                        uiState.visiblePlaces.isNotEmpty() -> PlaceCardRow(
-                            places = uiState.visiblePlaces,
-                            onCardClick = { onMarkerSelected(it) }
-                        )
-                        else -> EmptyResultCard(message = "표시할 장소가 없습니다.")
-                    }
-                }
+            // "전체" 탭에서는 마커가 병원/장소 둘 중 무엇이든 선택될 수 있어, 카테고리로 분기하는 대신
+            // uiState.categoryHospitals(현재 탭에서 병원을 보여줘야 하는지 이미 판단됨)/visiblePlaces
+            // 두 목록에서 직접 선택된 항목을 찾는다.
+            val selectedHospital = uiState.categoryHospitals.firstOrNull { it.id == uiState.selectedMarkerId }
+            val selectedPlace = if (selectedHospital == null) {
+                uiState.visiblePlaces.firstOrNull { it.id == uiState.selectedMarkerId }
+            } else {
+                null
+            }
+            val entries = uiState.categoryHospitals.map { it.toCardEntry() } + uiState.visiblePlaces.map { it.toCardEntry() }
+            when {
+                selectedHospital != null -> SelectedHospitalCard(
+                    hospital = selectedHospital,
+                    isFavorite = selectedHospital.id in uiState.favoriteHospitalIds,
+                    onFavoriteClick = { onToggleFavorite(selectedHospital.id) },
+                    onDetailClick = { onSelectHospital(selectedHospital.id) }
+                )
+                selectedPlace != null -> SelectedPlaceCard(place = selectedPlace)
+                entries.isNotEmpty() -> EntryCardRow(entries = entries, onCardClick = { onMarkerSelected(it) })
+                uiState.selectedCategory == MapCategory.HOSPITAL -> EmptyResultCard(message = "표시할 병원이 없습니다.")
+                else -> EmptyResultCard(message = "표시할 장소가 없습니다.")
             }
         }
     }
@@ -318,9 +332,36 @@ private fun FilterPillButton(modifier: Modifier = Modifier) {
     }
 }
 
+// "이 위치에서 검색": 지도를 옮긴 뒤 눌러야 그 시점의 카메라 중심 좌표로 GET /api/hospitals/nearby를 호출한다.
+// 기기 GPS를 쓰지 않고 사용자가 명시적으로 요청했을 때만 좌표를 서버로 보낸다(CLAUDE.md §1).
+@Composable
+private fun SearchThisAreaButton(isLoading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(Color.White)
+            .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(percent = 50))
+            .clickable(enabled = !isLoading, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = if (isLoading) "검색 중…" else "이 위치에서 검색",
+            style = MaterialTheme.typography.labelMedium,
+            color = CoralPrimary
+        )
+    }
+}
+
 @Composable
 private fun CategoryTabsRow(selected: MapCategory, onSelected: (MapCategory) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        CategoryTab(label = "전체", icon = Icons.Default.Apps, selected = selected == MapCategory.ALL, onClick = { onSelected(MapCategory.ALL) })
         CategoryTab(label = "병원", icon = Icons.Default.LocalHospital, selected = selected == MapCategory.HOSPITAL, onClick = { onSelected(MapCategory.HOSPITAL) })
         CategoryTab(label = "관광", icon = Icons.Default.Park, selected = selected == MapCategory.TOURIST, onClick = { onSelected(MapCategory.TOURIST) })
         CategoryTab(label = "음식", icon = Icons.Default.Restaurant, selected = selected == MapCategory.FOOD, onClick = { onSelected(MapCategory.FOOD) })
@@ -343,35 +384,26 @@ private fun CategoryTab(label: String, icon: ImageVector, selected: Boolean, onC
     }
 }
 
-@Composable
-private fun HospitalCardRow(hospitals: List<Hospital>, onCardClick: (String) -> Unit) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(hospitals, key = { it.id }) { hospital ->
-            InfoMiniCard(
-                title = hospital.name,
-                subtitle = hospital.districtLabel(),
-                languages = hospital.supportedLanguages,
-                onClick = { onCardClick(hospital.id) }
-            )
-        }
-    }
-}
+// "전체" 탭에서 병원과 장소가 한 줄에 섞여 나올 수 있어, 카드에 필요한 필드만 뽑아
+// Hospital/Place 구분 없이 하나의 목록으로 다룬다.
+private data class CardEntry(val id: String, val title: String, val subtitle: String, val languages: List<String>)
+
+private fun Hospital.toCardEntry() = CardEntry(id = id, title = name, subtitle = districtLabel(), languages = supportedLanguages)
+
+private fun Place.toCardEntry() = CardEntry(id = id, title = name, subtitle = address, languages = emptyList())
 
 @Composable
-private fun PlaceCardRow(places: List<Place>, onCardClick: (String) -> Unit) {
+private fun EntryCardRow(entries: List<CardEntry>, onCardClick: (String) -> Unit) {
     LazyRow(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(places, key = { it.id }) { place ->
+        items(entries, key = { it.id }) { entry ->
             InfoMiniCard(
-                title = place.name,
-                subtitle = place.address,
-                languages = emptyList(),
-                onClick = { onCardClick(place.id) }
+                title = entry.title,
+                subtitle = entry.subtitle,
+                languages = entry.languages,
+                onClick = { onCardClick(entry.id) }
             )
         }
     }
@@ -494,5 +526,8 @@ private fun Hospital.toMapPin(selectedId: String?): MapPin? {
 private fun Place.toMapPin(selectedId: String?): MapPin? {
     val lat = latitude ?: return null
     val lng = longitude ?: return null
-    return MapPin(id = id, latitude = lat, longitude = lng, type = MapPinType.PLACE, selected = id == selectedId)
+    // TOURIST_ATTRACTION 외 나머지(SHOPPING/LODGING/SPA/WALK/OTHER)는 지도 카테고리 탭(전체/병원/관광/음식)에
+    // 아직 전용 탭이 없어 일단 "관광" 마커로 묶는다.
+    val pinType = if (type == PlaceType.RESTAURANT) MapPinType.FOOD else MapPinType.TOURIST
+    return MapPin(id = id, latitude = lat, longitude = lng, type = pinType, selected = id == selectedId)
 }

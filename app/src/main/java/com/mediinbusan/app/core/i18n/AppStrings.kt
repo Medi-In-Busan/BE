@@ -21,6 +21,7 @@ data class AppStrings(
     val recentlyViewed: RecentlyViewedStrings,
     val guide: GuideStrings,
     val selfDiagnosis: SelfDiagnosisStrings
+    val documentScan: DocumentScanStrings
 )
 
 private val KoreanAppStrings = AppStrings(
@@ -37,6 +38,7 @@ private val KoreanAppStrings = AppStrings(
     recentlyViewed = RecentlyViewedStrings.Ko,
     guide = GuideStrings.Ko,
     selfDiagnosis = SelfDiagnosisStrings.Ko
+    documentScan = DocumentScanStrings.Ko
 )
 
 private val EnglishAppStrings = AppStrings(
@@ -53,6 +55,7 @@ private val EnglishAppStrings = AppStrings(
     recentlyViewed = RecentlyViewedStrings.En,
     guide = GuideStrings.En,
     selfDiagnosis = SelfDiagnosisStrings.En
+    documentScan = DocumentScanStrings.En
 )
 
 private val ChineseAppStrings = AppStrings(
@@ -69,6 +72,7 @@ private val ChineseAppStrings = AppStrings(
     recentlyViewed = RecentlyViewedStrings.Zh,
     guide = GuideStrings.Zh,
     selfDiagnosis = SelfDiagnosisStrings.Zh
+    documentScan = DocumentScanStrings.Zh
 )
 
 private val JapaneseAppStrings = AppStrings(
@@ -85,6 +89,7 @@ private val JapaneseAppStrings = AppStrings(
     recentlyViewed = RecentlyViewedStrings.Ja,
     guide = GuideStrings.Ja,
     selfDiagnosis = SelfDiagnosisStrings.Ja
+    documentScan = DocumentScanStrings.Ja
 )
 
 fun appStringsFor(language: SupportedLanguage): AppStrings = when (language) {

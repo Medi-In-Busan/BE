@@ -17,5 +17,7 @@ data class Hospital(
     // 실제 연동 시 HospitalDto/HospitalMapper에서 채워 넣도록 교체한다.
     val imageUrls: List<String> = emptyList(),
     val openingHours: String? = null,
-    val isOpen: Boolean? = null
+    val isOpen: Boolean? = null,
+    // getNearbyHospitals()로 조회했을 때만 채워진다(기준 좌표로부터의 거리, m). 그 외 조회 경로에서는 null.
+    val distanceMeters: Double? = null
 )

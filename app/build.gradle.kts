@@ -36,6 +36,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        // Kakao Map SDK(libK3fAndroid.so)는 arm64-v8a/armeabi-v7a로만 배포된다. x86_64가 1순위 ABI인
+        // 기기/에뮬레이터에 설치하면 PackageManager가 x86_64 lib 폴더만 골라 설치해서(다른 ABI는 아예
+        // 무시) 카카오 라이브러리가 통째로 빠진다 — arm64-v8a로 강제해 그 폴더가 선택되게 한다.
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+
         buildConfigField("String", "TOURISM_API_SERVICE_KEY", "\"${secret("TOURISM_API_SERVICE_KEY")}\"")
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"${secret("KAKAO_NATIVE_APP_KEY")}\"")
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = secret("KAKAO_NATIVE_APP_KEY")
@@ -117,7 +124,13 @@ dependencies {
     // Images
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    // feature/documentscan에서 OCR 업로드 전 EXIF 방향을 읽어 재인코딩 전 회전을 보정하는 데 사용.
+    implementation(libs.androidx.exifinterface)
 
     // Map
     implementation(libs.kakao.map.sdk)
+
+    // UI effects — BottomNavBar의 실시간 backdrop blur(glassmorphism)에 사용.
+    implementation(libs.haze)
+    implementation(libs.haze.materials)
 }
