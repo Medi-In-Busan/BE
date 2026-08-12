@@ -171,7 +171,8 @@ fun TreatmentExaminationDetailScreen(
                         fields.forEachIndexed { index, field ->
                             BriefingInfoRow(
                                 field = field,
-                                value = field.valueOf(briefing).ifBlank { field.defaultValue },
+                                value = field.valueOf(briefing),
+                                placeholder = field.defaultValue,
                                 editContentDescription = s.editContentDescription,
                                 saveContentDescription = s.saveContentDescription,
                                 isEditing = editingIndex == index,
@@ -240,6 +241,7 @@ fun TreatmentExaminationDetailScreen(
 private fun BriefingInfoRow(
     field: BriefingField,
     value: String,
+    placeholder: String,
     editContentDescription: String,
     saveContentDescription: String,
     isEditing: Boolean,
@@ -297,6 +299,7 @@ private fun BriefingInfoRow(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { finishEdit() }),
+                    placeholder = { Text(text = placeholder, style = MaterialTheme.typography.bodyMedium, color = TextSecondary) },
                     trailingIcon = {
                         IconButton(onClick = { finishEdit() }) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = saveContentDescription, tint = CoralPrimary)
@@ -311,7 +314,7 @@ private fun BriefingInfoRow(
                 )
             } else {
                 Text(
-                    text = value,
+                    text = value.ifBlank { placeholder },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
