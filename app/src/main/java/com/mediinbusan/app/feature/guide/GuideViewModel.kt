@@ -34,15 +34,19 @@ class GuideViewModel @Inject constructor(
                 .map { it.languageCode }
                 .distinctUntilChanged()
                 // 언어가 바뀔 때마다 STEP 목록을 다시 불러와야 카드 제목/요약이 즉시 갱신된다.
-                .flatMapLatest { languageCode -> guideRepository.getGuideSteps(languageCode) }
-                .collect { result ->
+                // 요청을 만든 languageCode를 Result와 함께 들고 다녀야, 별도 코루틴이 갱신하는
+                // state.languageCode와의 타이밍 차이로 fallback 메시지가 이전 언어로 나가는 것을 막는다.
+                .flatMapLatest { languageCode ->
+                    guideRepository.getGuideSteps(languageCode).map { result -> languageCode to result }
+                }
+                .collect { (languageCode, result) ->
                     _uiState.update { state ->
                         when (result) {
                             is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
                             is Result.Success -> state.copy(isLoading = false, steps = result.data, errorMessage = null)
                             is Result.Error -> state.copy(
                                 isLoading = false,
-                                errorMessage = result.message ?: appStringsFor(state.languageCode).guide.loadErrorFallback
+                                errorMessage = result.message ?: appStringsFor(languageCode).guide.loadErrorFallback
                             )
                         }
                     }

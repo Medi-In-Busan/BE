@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ExternalStorageConfigurationManager" enabled="true" />
+<<<<<<< HEAD
   <component name="ProjectRootManager" version="2" languageLevel="JDK_17" project-jdk-name="jbr-21" project-jdk-type="JavaSDK">
+=======
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" project-jdk-name="21" project-jdk-type="JavaSDK">
+>>>>>>> b237b51 (fix: 가이드 언어 전환 시 오류 fallback 메시지가 이전 언어로 표시되는 문제 수정)
     <output url="file://$PROJECT_DIR$/build/classes" />
   </component>
   <component name="ProjectType">
