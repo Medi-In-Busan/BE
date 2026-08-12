@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.MedicalCategory
@@ -154,14 +155,26 @@ private fun HospitalSearchListContent(
             )
         }
     ) { innerPadding ->
+        // Home에서 검증한 패턴과 동일: 바깥 Column에 bottom padding을 걸어 레이아웃 영역 자체를
+        // 줄이는 대신(그러면 그 안의 LazyColumn이 스크롤해도 바텀바 뒤엔 절대 그려질 수 없다),
+        // top padding만 유지하고 실제 바텀바 회피는 아래 SearchResultList의 LazyColumn이 자기
+        // contentPadding/트레일링 아이템으로 직접 처리한다.
+        val contentPadding = PaddingValues(
+            top = innerPadding.calculateTopPadding(),
+            bottom = innerPadding.calculateBottomPadding() + BottomNavBarHeight
+        )
         when {
-            uiState.isLoading -> LoadingState(modifier = Modifier.padding(innerPadding).padding(bottom = BottomNavBarHeight))
+            uiState.isLoading -> LoadingState(modifier = Modifier.padding(contentPadding))
             uiState.isError -> ErrorState(
                 message = uiState.errorMessage ?: LocalAppStrings.current.search.loadErrorFallback,
-                modifier = Modifier.padding(innerPadding).padding(bottom = BottomNavBarHeight),
+                modifier = Modifier.padding(contentPadding),
                 onRetry = onRetry
             )
-            else -> Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(bottom = BottomNavBarHeight)) {
+            else -> Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = contentPadding.calculateTopPadding())
+            ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 SearchInputBar(
                     query = uiState.query,
@@ -210,7 +223,8 @@ private fun HospitalSearchListContent(
                                 hasReachedEnd = uiState.hasReachedEnd,
                                 onLoadMore = onLoadMore,
                                 onSelectHospital = onSelectHospital,
-                                onToggleFavorite = onToggleFavorite
+                                onToggleFavorite = onToggleFavorite,
+                                bottomContentPadding = contentPadding.calculateBottomPadding()
                             )
                         }
                     }
@@ -476,7 +490,8 @@ private fun SearchResultList(
     hasReachedEnd: Boolean,
     onLoadMore: () -> Unit,
     onSelectHospital: (String) -> Unit,
-    onToggleFavorite: (String) -> Unit
+    onToggleFavorite: (String) -> Unit,
+    bottomContentPadding: Dp
 ) {
     val listState = rememberLazyListState()
 
@@ -491,10 +506,14 @@ private fun SearchResultList(
             }
     }
 
+    // LazyColumn은 Column+verticalScroll과 달리 자체 contentPadding 파라미터가 있다. bottom을
+    // 0dp로 두고(레이아웃 영역 자체는 안 줄임) 대신 맨 마지막 item으로 바텀바 회피용 Spacer를
+    // 넣는다 — 스크롤 중엔 카드가 바텀바 뒤로 실제로 지나가고, 끝까지 내리면 이 Spacer가 자리를
+    // 벌려줘서 마지막 카드는 여전히 바텀바에 가려 클릭 안 되는 일이 없다.
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 0.dp)
     ) {
         items(results, key = { it.id }) { hospital ->
             SearchResultCard(
@@ -504,6 +523,9 @@ private fun SearchResultList(
                 onFavoriteClick = { onToggleFavorite(hospital.id) }
             )
             Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            Spacer(modifier = Modifier.height(bottomContentPadding))
         }
     }
 }

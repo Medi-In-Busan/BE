@@ -129,4 +129,8 @@ dependencies {
 
     // Map
     implementation(libs.kakao.map.sdk)
+
+    // UI effects — BottomNavBar의 실시간 backdrop blur(glassmorphism)에 사용.
+    implementation(libs.haze)
+    implementation(libs.haze.materials)
 }

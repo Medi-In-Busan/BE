@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -199,15 +198,12 @@ private fun BrowseMap(
     var recenterRequestId by remember { mutableIntStateOf(0) }
     var searchAreaRequestId by remember { mutableIntStateOf(0) }
 
-    // BottomNavBarHeight(81dp)는 탭바 자체의 고정 콘텐츠 높이일 뿐이다. 실제 BottomNavBar는
-    // NavigationBar 기본값으로 시스템 제스처/내비게이션 바 인셋만큼을 내부에서 추가로 소비하므로,
-    // 그 인셋을 여기서 더해주지 않으면 제스처 내비게이션 기기에서 선택된 병원/장소 카드의 아래쪽이
-    // 실제 탭바에 가려 안 보인다.
+    // BottomNavBar가 이제 자기 높이(제스처/내비게이션 바 인셋 포함)를 스스로 navigationBarsPadding()으로
+    // 소비하므로(core/ui/BottomNavBar.kt 참고), 여기서 또 호출하면 인셋이 중복 적용된다.
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(bottom = BottomNavBarHeight)
-            .navigationBarsPadding()
     ) {
         KakaoMapView(
             pins = pins,
