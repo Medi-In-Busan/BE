@@ -7,6 +7,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -82,6 +84,56 @@ class PapagoTranslationClientTest {
 
         assertThatThrownBy(() -> clientWithoutCredentials.translate("환자명 홍길동", "en"))
             .isInstanceOf(PapagoTranslationApiException.class);
+    }
+
+    @Test
+    void 최대_길이를_넘는_텍스트는_공백_경계에서_청크로_나뉜다() {
+        String text = "A".repeat(3000) + " " + "B".repeat(3000);
+
+        List<String> chunks = client.splitIntoChunks(text);
+
+        assertThat(chunks).hasSize(2);
+        assertThat(chunks).allSatisfy(chunk -> assertThat(chunk.length()).isLessThanOrEqualTo(5000));
+        // 경계 문자가 앞 청크에 포함되므로 그대로 이어붙이면 원문이 복원되어야 한다.
+        assertThat(String.join("", chunks)).isEqualTo(text);
+    }
+
+    @Test
+    void 최대_길이_이하_텍스트는_한_청크로_유지된다() {
+        String text = "환자명 홍길동".repeat(100);
+
+        List<String> chunks = client.splitIntoChunks(text);
+
+        assertThat(chunks).containsExactly(text);
+    }
+
+    @Test
+    void 최대_길이를_넘는_텍스트는_여러_번_호출해_순서대로_결합한다() {
+        String text = "A".repeat(3000) + " " + "B".repeat(3000);
+
+        server.expect(requestTo(API_URL))
+            .andRespond(withSuccess(bodyWithTranslatedText("TRANSLATED_A"), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(API_URL))
+            .andRespond(withSuccess(bodyWithTranslatedText("TRANSLATED_B"), MediaType.APPLICATION_JSON));
+
+        String result = client.translate(text, "en");
+
+        assertThat(result).isEqualTo("TRANSLATED_ATRANSLATED_B");
+        server.verify();
+    }
+
+    private String bodyWithTranslatedText(String translatedText) {
+        return """
+            {
+              "message": {
+                "result": {
+                  "srcLangType": "ko",
+                  "tarLangType": "en",
+                  "translatedText": "%s"
+                }
+              }
+            }
+            """.formatted(translatedText);
     }
 
     private String successBody() {
