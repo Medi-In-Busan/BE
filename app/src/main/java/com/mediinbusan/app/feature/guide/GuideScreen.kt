@@ -37,6 +37,7 @@ import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandBackTopAppBar
 import com.mediinbusan.app.core.ui.ErrorState
@@ -96,6 +97,7 @@ private fun GuideContent(
 
 @Composable
 private fun GuideStepList(steps: List<GuideStep>, onStepClick: (GuideStep) -> Unit) {
+    val strings = LocalAppStrings.current.guide
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -105,9 +107,9 @@ private fun GuideStepList(steps: List<GuideStep>, onStepClick: (GuideStep) -> Un
     ) {
         item {
             Column(modifier = Modifier.padding(top = 20.dp, bottom = 4.dp)) {
-                Text(text = "이용 가이드", style = SettingsTitleStyle, color = TextPrimary)
+                Text(text = strings.screenTitle, style = SettingsTitleStyle, color = TextPrimary)
                 Text(
-                    text = "입국 전부터 진료 후 귀국까지 단계별 안내",
+                    text = strings.screenSubtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.padding(top = 6.dp)

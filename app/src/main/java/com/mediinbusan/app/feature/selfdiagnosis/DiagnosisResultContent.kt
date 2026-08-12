@@ -46,6 +46,7 @@ import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.designsystem.WarningBackground
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 
 @Composable
 fun DiagnosisResultContent(
@@ -55,6 +56,8 @@ fun DiagnosisResultContent(
     onFinishSetup: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current.selfDiagnosis
+    val display = resultType.toDisplay(strings.results)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -83,26 +86,26 @@ fun DiagnosisResultContent(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = resultType.typeLabel,
+                    text = display.typeLabel,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MediTeal40
                 )
-                Text(text = resultType.title, style = HeroTitleStyle, color = TextPrimary)
+                Text(text = display.title, style = HeroTitleStyle, color = TextPrimary)
                 Text(
-                    text = resultType.description,
+                    text = display.description,
                     style = HeroSubtitleStyle,
                     color = TextSecondary
                 )
             }
         }
 
-        ResultCard(resultType = resultType)
+        ResultCard(display = display, nextChecksTitle = strings.nextChecksTitle)
 
-        if (resultType.noticeText != null) {
-            NoticeBanner(text = resultType.noticeText, isWarning = true)
+        if (display.noticeText != null) {
+            NoticeBanner(text = display.noticeText, isWarning = true)
         }
-        NoticeBanner(text = DiagnosisResultType.COMMON_SAFETY_NOTICE, isWarning = false)
+        NoticeBanner(text = strings.commonSafetyNotice, isWarning = false)
 
         if (onFinishSetup != null) {
             Button(
@@ -111,12 +114,12 @@ fun DiagnosisResultContent(
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
             ) {
-                Text(text = "홈으로 시작하기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = strings.startFromHomeButton, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            resultType.ctas.forEach { cta ->
+            display.ctas.forEach { cta ->
                 CtaButton(cta = cta, onClick = { onCtaClick(cta.target) })
             }
         }
@@ -126,7 +129,7 @@ fun DiagnosisResultContent(
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = MaterialTheme.shapes.medium
         ) {
-            Text(text = "다시 진단하기")
+            Text(text = strings.restartButton)
         }
     }
 }
@@ -141,7 +144,7 @@ private fun DiagnosisResultType.bannerDrawableRes(): Int = when (this) {
 }
 
 @Composable
-private fun ResultCard(resultType: DiagnosisResultType) {
+private fun ResultCard(display: DiagnosisResultDisplay, nextChecksTitle: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -150,14 +153,14 @@ private fun ResultCard(resultType: DiagnosisResultType) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "다음 확인 항목",
+                text = nextChecksTitle,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                resultType.checklist.forEach { item -> ChecklistRow(text = item) }
+                display.checklist.forEach { item -> ChecklistRow(text = item) }
             }
         }
     }

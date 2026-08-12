@@ -43,6 +43,8 @@ import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.HospitalLocationCheckinStrings
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 
 private data class ReceptionStep(
     @param:DrawableRes val iconResId: Int,
@@ -50,45 +52,32 @@ private data class ReceptionStep(
     val description: String
 )
 
-private val RECEPTION_STEPS = listOf(
-    ReceptionStep(
-        iconResId = R.drawable.ic_reception_direction_sign,
-        title = "접수 위치 확인",
-        description = "국제진료센터/외래 접수처 중 어디로 가는지 확인"
-    ),
-    ReceptionStep(
-        iconResId = R.drawable.ic_passport_document,
-        title = "서류 제시",
-        description = "여권 또는 예약정보를 제시하고 필요한 서류를 제출"
-    ),
-    ReceptionStep(
-        iconResId = R.drawable.ic_waiting_chair,
-        title = "대기 및 안내",
-        description = "접수 후 대기 장소와 다음 안내를 확인"
-    ),
-    ReceptionStep(
-        iconResId = R.drawable.ic_examination_room_door,
-        title = "진료 또는 검사 이동",
-        description = "진료실/검사실 위치 안내 후 이동"
-    )
+private fun receptionSteps(s: HospitalLocationCheckinStrings): List<ReceptionStep> = listOf(
+    ReceptionStep(iconResId = R.drawable.ic_reception_direction_sign, title = s.step1Title, description = s.step1Description),
+    ReceptionStep(iconResId = R.drawable.ic_passport_document, title = s.step2Title, description = s.step2Description),
+    ReceptionStep(iconResId = R.drawable.ic_waiting_chair, title = s.step3Title, description = s.step3Description),
+    ReceptionStep(iconResId = R.drawable.ic_examination_room_door, title = s.step4Title, description = s.step4Description)
 )
 
 // S-06 하위 STEP03 상세의 "병원 위치와 접수 절차 확인" 카드 상세
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HospitalLocationCheckinDetailScreen(onBack: () -> Unit, onNavigateToMap: () -> Unit = {}) {
+    val strings = LocalAppStrings.current
+    val s = strings.guide.hospitalLocationCheckin
+    val steps = receptionSteps(s)
     Scaffold(
         containerColor = PageBackground,
         topBar = {
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.common.backContentDescription)
                     }
                 },
                 title = {
                     Text(
-                        text = "03-03 병원 위치 및 접수 절차",
+                        text = "03-03 ${s.title}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -105,8 +94,8 @@ fun HospitalLocationCheckinDetailScreen(onBack: () -> Unit, onNavigateToMap: () 
             GuideDetailBanner(
                 backgroundResId = R.drawable.img_hospital_reception_banner,
                 aspectRatio = 1448f / 1086f,
-                title = "병원 정보와 접수 절차 한눈에",
-                subtitle = "병원 위치, 교통편, 주차 정보와 접수 절차를 한눈에 확인하세요.",
+                title = s.bannerTitle,
+                subtitle = s.bannerSubtitle,
                 stepLabel = "STEP 03",
                 modifier = Modifier.padding(top = 20.dp)
             )
@@ -114,21 +103,21 @@ fun HospitalLocationCheckinDetailScreen(onBack: () -> Unit, onNavigateToMap: () 
             Column(modifier = Modifier.padding(top = 20.dp)) {
                 GuideDetailItemCard(
                     iconResId = R.drawable.ic_hospital_location_map,
-                    title = "병원 정보 확인하기",
-                    description = "병원 위치, 교통편, 주차 정보와 경로 안내를 확인할 수 있어요.",
+                    title = s.itemCardTitle,
+                    description = s.itemCardDescription,
                     trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     onClick = onNavigateToMap
                 )
             }
 
             Column(modifier = Modifier.padding(top = 28.dp)) {
-                GuideDetailSectionTitle(title = "접수 절차")
+                GuideDetailSectionTitle(title = s.sectionTitle)
                 Column(modifier = Modifier.padding(top = 14.dp)) {
-                    RECEPTION_STEPS.forEachIndexed { index, step ->
+                    steps.forEachIndexed { index, step ->
                         ReceptionStepRow(
                             number = index + 1,
                             step = step,
-                            showConnector = index != RECEPTION_STEPS.lastIndex
+                            showConnector = index != steps.lastIndex
                         )
                     }
                 }
@@ -136,7 +125,7 @@ fun HospitalLocationCheckinDetailScreen(onBack: () -> Unit, onNavigateToMap: () 
 
             GuideDetailNoticeBanner(
                 iconResId = R.drawable.ic_guide_information,
-                text = "병원마다 접수 위치와 절차가 다를 수 있으니 병원 안내를 다시 확인해 주세요.",
+                text = s.noticeText,
                 modifier = Modifier.padding(top = 28.dp, bottom = 24.dp)
             )
         }

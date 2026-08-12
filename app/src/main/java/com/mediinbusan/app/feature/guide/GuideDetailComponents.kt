@@ -54,6 +54,7 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.launchIntentSafely
 
 // S-06 하위 상세 화면 공용 컴포넌트 (STEP 상세, 체크리스트 항목 상세 등에서 재사용)
@@ -329,13 +330,14 @@ fun GuideDetailTemplateScreen(
     onBack: () -> Unit,
     onItemClick: (GuideDetailItem) -> Unit = {}
 ) {
+    val backContentDescription = LocalAppStrings.current.common.backContentDescription
     Scaffold(
         containerColor = PageBackground,
         topBar = {
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = backContentDescription)
                     }
                 },
                 title = {
