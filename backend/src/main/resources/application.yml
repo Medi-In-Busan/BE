@@ -56,6 +56,14 @@ clova:
     api-url: ${CLOVA_OCR_API_URL:}
     secret-key: ${CLOVA_OCR_SECRET_KEY:}
 
+papago:
+  translation:
+    # CLOVA OCR과 달리 계정별 커스텀 URL이 아니라 고정된 공개 엔드포인트라 기본값을 박아둔다.
+    # 참고: https://api.ncloud-docs.com/docs/en/ai-naver-papagonmt-translation
+    api-url: ${PAPAGO_TRANSLATION_API_URL:https://papago.apigw.ntruss.com/nmt/v1/translation}
+    client-id: ${PAPAGO_TRANSLATION_CLIENT_ID:}
+    client-secret: ${PAPAGO_TRANSLATION_CLIENT_SECRET:}
+
 document:
   ocr:
     # spring.servlet.multipart.max-file-size와 별개로, 우리 서비스가 CLOVA 호출 전에 직접 거절하는 기준값이다.
