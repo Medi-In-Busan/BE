@@ -198,10 +198,13 @@ private fun DocumentScanContent(
         },
         snackbarHost = { BrandSnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
+        // Home/HospitalSearchListScreen/GuideScreen과 동일한 패턴: Modifier.padding(bottom = ...)로
+        // Column 자체 레이아웃 영역을 줄이는 대신(그러면 스크롤해도 바텀바 뒤엔 절대 안 그려짐),
+        // top padding만 유지하고 bottom은 맨 마지막 자식 Spacer로 확보한다.
+        val bottomSafePadding = innerPadding.calculateBottomPadding() + BottomNavBarHeight
         Column(
             modifier = Modifier
-                .padding(innerPadding)
-                .padding(bottom = BottomNavBarHeight)
+                .padding(top = innerPadding.calculateTopPadding())
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 24.dp),
@@ -229,6 +232,7 @@ private fun DocumentScanContent(
                     onCopyClick = ::onCopyClick
                 )
             }
+            Spacer(modifier = Modifier.height(bottomSafePadding))
         }
     }
 }

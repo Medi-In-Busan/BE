@@ -5,9 +5,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -96,11 +99,12 @@ private fun GuideContent(
 
 @Composable
 private fun GuideStepList(steps: List<GuideStep>, onStepClick: (GuideStep) -> Unit) {
+    // Home/HospitalSearchListScreen과 동일한 패턴: Modifier.padding(bottom = ...)로 LazyColumn
+    // 자체 레이아웃 영역을 줄이는 대신(그러면 스크롤해도 바텀바 뒤엔 절대 안 그려짐),
+    // contentPadding.bottom은 0으로 두고 맨 마지막 item에 바텀바 회피용 Spacer를 넣는다.
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = BottomNavBarHeight),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -116,6 +120,9 @@ private fun GuideStepList(steps: List<GuideStep>, onStepClick: (GuideStep) -> Un
         }
         items(items = steps, key = { it.id }) { step ->
             GuideStepCard(step = step, onClick = { onStepClick(step) })
+        }
+        item {
+            Spacer(modifier = Modifier.height(BottomNavBarHeight))
         }
     }
 }

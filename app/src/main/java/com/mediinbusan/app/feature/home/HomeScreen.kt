@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -31,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -73,7 +77,6 @@ import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.HomeStrings
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
-import com.mediinbusan.app.core.designsystem.BadgeOutline
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
@@ -185,10 +188,18 @@ private fun HomeContent(
                 onRetry = onRetry
             )
             else -> {
+                // contentPadding을 Column 전체에 걸면(이전 방식) 바텀바 높이만큼 Column 자신의
+                // 레이아웃 영역 자체가 줄어들어서, 그 안의 어떤 자식도 스크롤을 아무리 해도 바텀바
+                // 뒤 영역엔 절대 그려질 수 없다(hazeEffect가 블러링할 콘텐츠가 거기 없는 원인이었음).
+                // 대신 Column은 fillMaxSize로 화면 전체(바텀바 뒤 포함)를 그대로 쓰고, 상단
+                // 패딩만 유지한 채, 맨 마지막 자식으로 bottom padding만큼의 Spacer 하나만 둔다 —
+                // 스크롤 중엔 카드/배너가 바텀바 뒤로 실제로 지나가고, 끝까지 내리면 이 Spacer가
+                // 자리를 벌려줘서 마지막 카드는 여전히 바텀바에 안 가린다.
                 Column(
                     modifier = Modifier
-                        .padding(contentPadding)
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
+                        .padding(top = contentPadding.calculateTopPadding())
                 ) {
                     HeroBannerSection(onSearchClick = { onNavigateToSearch(null) })
 
@@ -231,6 +242,10 @@ private fun HomeContent(
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
+                    // 바텀바 뒤로 밀려 들어간 만큼의 여백 — 이게 있어야 마지막 카드가 끝까지
+                    // 스크롤됐을 때 바텀바에 가려지지 않는다(Column 자체는 더 이상 이 영역을
+                    // 제외하지 않으므로, 콘텐츠 쪽에서 직접 확보해야 한다).
+                    Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
                 }
             }
         }
@@ -257,7 +272,10 @@ private fun HomeTopAppBar(
                 currentLanguageCode = currentLanguageCode,
                 onLanguageSelected = onLanguageSelected
             )
-        }
+        },
+        // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백만 줄인다
+        // (core/ui/BrandTopAppBar.kt의 BrandBackTopAppBar와 동일한 값으로 맞춤).
+        windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp))
     )
 }
 
@@ -289,39 +307,71 @@ private fun HomeWordmark() {
 private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
+    // 닫혀있을 때 트리거는 크기(패딩/폰트/모서리)를 원래 그대로 유지한다 — 지금 표시된 코드가
+    // 곧 "현재 활성 언어"이므로 코랄 컬러로 칠해서 활성 상태임을 드러낸다(이전엔 회색이라 활성화가
+    // 안 보인다는 피드백을 받음). 펼쳐졌을 때 목록만 1.5배 크기 + 알약(pill) 모양 선택 표시로 꾸민다.
+    val expandedItemTextStyle = MaterialTheme.typography.labelSmall.copy(
+        fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.2f,
+        lineHeight = MaterialTheme.typography.labelSmall.lineHeight * 1.2f
+    )
+    val pillShape = RoundedCornerShape(percent = 50)
+
     Box(modifier = Modifier.padding(end = 12.dp)) {
         Box(
             modifier = Modifier
-                .clip(MaterialTheme.shapes.medium)
-                .border(width = 1.dp, color = BadgeOutline, shape = MaterialTheme.shapes.medium)
+                .clip(pillShape)
+                .border(width = 1.dp, color = CoralPrimary, shape = pillShape)
+                .background(CoralPrimaryContainer)
                 .clickable { expanded = true }
                 .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(
                 text = "${currentLanguageCode.toLanguageBadgeLabel()} ▾",
                 style = MaterialTheme.typography.labelSmall,
-                color = BadgeText
+                color = CoralPrimary,
+                fontWeight = FontWeight.Bold
             )
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            shape = MaterialTheme.shapes.large,
             containerColor = Color.White
         ) {
-            SupportedLanguage.CODES.forEach { code ->
-                val selected = code == currentLanguageCode
-                Text(
-                    text = code.toLanguageBadgeLabel(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) CoralPrimary else BadgeText,
-                    modifier = Modifier
-                        .clickable {
-                            onLanguageSelected(code)
-                            expanded = false
+            Column(
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SupportedLanguage.CODES.forEach { code ->
+                    val selected = code == currentLanguageCode
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(pillShape)
+                            .clickable {
+                                onLanguageSelected(code)
+                                expanded = false
+                            }
+                            .background(if (selected) CoralPrimaryContainer else Color.Transparent)
+                            .padding(horizontal = 10.dp * 1.5f, vertical = 6.dp * 1.5f)
+                    ) {
+                        Text(
+                            text = code.toLanguageBadgeLabel(),
+                            style = expandedItemTextStyle,
+                            color = if (selected) CoralPrimary else BadgeText,
+                            fontWeight = if (selected) FontWeight.Bold else null
+                        )
+                        if (selected) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = CoralPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
-                        .background(if (selected) CoralPrimaryContainer else Color.Transparent)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                )
+                    }
+                }
             }
         }
     }
