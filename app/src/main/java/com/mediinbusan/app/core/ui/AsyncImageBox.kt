@@ -12,13 +12,14 @@ import coil3.compose.AsyncImage
 fun AsyncImageBox(
     model: Any?,
     contentDescription: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         AsyncImage(
             model = model,
             contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
+            contentScale = contentScale,
             modifier = Modifier.fillMaxSize()
         )
     }

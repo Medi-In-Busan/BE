@@ -12,7 +12,10 @@ data class DocumentScanStrings(
     val cameraUnavailableMessage: String,
     val analyzingMessage: String,
     val resultTitle: String,
-    val analysisErrorFallback: String
+    val analysisErrorFallback: String,
+    val privacyNote: String,
+    val copyButtonContentDescription: String,
+    val copiedMessage: String
 ) {
     companion object {
         val Ko = DocumentScanStrings(
@@ -27,7 +30,10 @@ data class DocumentScanStrings(
             cameraUnavailableMessage = "이 기기에서는 카메라를 사용할 수 없습니다.",
             analyzingMessage = "이미지를 분석하고 있어요...",
             resultTitle = "인식된 텍스트",
-            analysisErrorFallback = "분석에 실패했어요. 다시 시도해주세요."
+            analysisErrorFallback = "분석에 실패했어요. 다시 시도해주세요.",
+            privacyNote = "촬영한 이미지는 분석 후 서버에 저장되지 않아요.",
+            copyButtonContentDescription = "텍스트 복사",
+            copiedMessage = "복사되었습니다"
         )
         val En = DocumentScanStrings(
             introTitle = "Scan a diagnosis certificate or prescription",
@@ -41,7 +47,10 @@ data class DocumentScanStrings(
             cameraUnavailableMessage = "Camera is not available on this device.",
             analyzingMessage = "Analyzing your image...",
             resultTitle = "Recognized text",
-            analysisErrorFallback = "Analysis failed. Please try again."
+            analysisErrorFallback = "Analysis failed. Please try again.",
+            privacyNote = "Your photo isn't stored on our server after analysis.",
+            copyButtonContentDescription = "Copy text",
+            copiedMessage = "Copied to clipboard"
         )
         val Zh = DocumentScanStrings(
             introTitle = "扫描诊断书·处方笺",
@@ -55,7 +64,10 @@ data class DocumentScanStrings(
             cameraUnavailableMessage = "此设备无法使用相机。",
             analyzingMessage = "正在分析图片...",
             resultTitle = "识别出的文字",
-            analysisErrorFallback = "分析失败，请重试。"
+            analysisErrorFallback = "分析失败，请重试。",
+            privacyNote = "拍摄的图片在分析后不会保存在服务器上。",
+            copyButtonContentDescription = "复制文字",
+            copiedMessage = "已复制"
         )
         val Ja = DocumentScanStrings(
             introTitle = "診断書・処方箋をスキャンしてみましょう",
@@ -69,7 +81,10 @@ data class DocumentScanStrings(
             cameraUnavailableMessage = "この端末ではカメラを使用できません。",
             analyzingMessage = "画像を分析しています...",
             resultTitle = "認識されたテキスト",
-            analysisErrorFallback = "分析に失敗しました。もう一度お試しください。"
+            analysisErrorFallback = "分析に失敗しました。もう一度お試しください。",
+            privacyNote = "撮影した画像は分析後にサーバーに保存されません。",
+            copyButtonContentDescription = "テキストをコピー",
+            copiedMessage = "コピーしました"
         )
     }
 }
