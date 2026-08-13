@@ -6,14 +6,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,10 +45,9 @@ import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
-import com.mediinbusan.app.core.designsystem.SettingsBorder
-import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SkyBlue
 
 /**
@@ -84,7 +88,7 @@ private fun BrandWordmark() {
         Image(
             painter = painterResource(id = R.drawable.favicon),
             contentDescription = LocalAppStrings.current.common.logoContentDescription,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(42.dp)
         )
         Text(
             text = buildAnnotatedString {
@@ -92,51 +96,82 @@ private fun BrandWordmark() {
                 append(" ")
                 withStyle(SpanStyle(color = SkyBlue, fontWeight = FontWeight.Bold)) { append("BUSAN") }
             },
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.headlineSmall
         )
     }
 }
 
-// 닫혀있을 때 보이는 트리거는 수정 전 원래 디자인 그대로(회색 아웃라인). 드롭다운을 펼쳤을 때는
+// HomeScreen.kt의 LanguageDropdown과 같은 톤(다른 팀원 PR과의 충돌 때문에 Home은 로컬 사본을
+// 따로 둔다). 닫혀있을 때 트리거를 코랄 색으로 칠해 "현재 활성 언어"임을 드러내고, 펼쳤을 때는
+// 목록을 1.5배 크기 + 알약(pill) 모양 선택 표시 + 체크 아이콘으로 활성화 상태를 보여준다.
 // DropdownMenuItem 대신 직접 Row를 그린다 — DropdownMenuItem은 내부적으로 최소 112dp 폭을
 // 강제해서 contentPadding/모디파이어로는 줄일 수 없었다. 직접 그리면 텍스트 크기만큼만 차지한다.
 @Composable
 private fun BrandLanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
+    val expandedItemTextStyle = MaterialTheme.typography.labelSmall.copy(
+        fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.2f,
+        lineHeight = MaterialTheme.typography.labelSmall.lineHeight * 1.2f
+    )
+    val pillShape = RoundedCornerShape(percent = 50)
+
     Box(modifier = Modifier.padding(end = 12.dp)) {
         Box(
             modifier = Modifier
-                .clip(MaterialTheme.shapes.medium)
-                .border(width = 1.dp, color = SettingsBorder, shape = MaterialTheme.shapes.medium)
+                .clip(pillShape)
+                .border(width = 1.dp, color = CoralPrimary, shape = pillShape)
+                .background(CoralPrimaryContainer)
                 .clickable { expanded = true }
                 .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(
                 text = "${currentLanguageCode.toLanguageBadgeLabel()} ▾",
                 style = MaterialTheme.typography.labelSmall,
-                color = SettingsSecondaryText
+                color = CoralPrimary,
+                fontWeight = FontWeight.Bold
             )
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            shape = MaterialTheme.shapes.large,
             containerColor = Color.White
         ) {
-            SupportedLanguage.CODES.forEach { code ->
-                val selected = code == currentLanguageCode
-                Text(
-                    text = code.toLanguageBadgeLabel(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) CoralPrimary else SettingsSecondaryText,
-                    modifier = Modifier
-                        .clickable {
-                            onLanguageSelected(code)
-                            expanded = false
+            Column(
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SupportedLanguage.CODES.forEach { code ->
+                    val selected = code == currentLanguageCode
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(pillShape)
+                            .clickable {
+                                onLanguageSelected(code)
+                                expanded = false
+                            }
+                            .background(if (selected) CoralPrimaryContainer else Color.Transparent)
+                            .padding(horizontal = 10.dp * 1.5f, vertical = 6.dp * 1.5f)
+                    ) {
+                        Text(
+                            text = code.toLanguageBadgeLabel(),
+                            style = expandedItemTextStyle,
+                            color = if (selected) CoralPrimary else BadgeText,
+                            fontWeight = if (selected) FontWeight.Bold else null
+                        )
+                        if (selected) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = CoralPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
-                        .background(if (selected) CoralPrimaryContainer else Color.Transparent)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                )
+                    }
+                }
             }
         }
     }

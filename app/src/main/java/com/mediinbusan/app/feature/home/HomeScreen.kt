@@ -285,7 +285,7 @@ private fun HomeWordmark() {
         Image(
             painter = painterResource(id = R.drawable.favicon),
             contentDescription = LocalAppStrings.current.common.logoContentDescription,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(42.dp)
         )
         Text(
             text = buildAnnotatedString {
@@ -293,7 +293,7 @@ private fun HomeWordmark() {
                 append(" ")
                 withStyle(SpanStyle(color = SkyBlue, fontWeight = FontWeight.Bold)) { append("BUSAN") }
             },
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.headlineSmall
         )
     }
 }

@@ -9,7 +9,13 @@ data class CommonStrings(
     val retryButtonLabel: String,
     // ItemTypeBadge(즐겨찾기·최근 본 항목 목록)가 공유하는 병원/장소 구분 배지 라벨.
     val itemTypeHospitalBadge: String,
-    val itemTypePlaceBadge: String
+    val itemTypePlaceBadge: String,
+    // 공용 하단 내비게이션 바(core/ui/BottomNavBar.kt) 5개 탭 라벨.
+    val bottomNavHomeLabel: String,
+    val bottomNavHospitalLabel: String,
+    val bottomNavGuideLabel: String,
+    val bottomNavMapLabel: String,
+    val bottomNavDocumentScanLabel: String
 ) {
     companion object {
         val Ko = CommonStrings(
@@ -19,7 +25,12 @@ data class CommonStrings(
             searchPlaceholder = "병원 이름, 진료과목으로 검색",
             retryButtonLabel = "다시 시도",
             itemTypeHospitalBadge = "병원",
-            itemTypePlaceBadge = "장소"
+            itemTypePlaceBadge = "장소",
+            bottomNavHomeLabel = "홈",
+            bottomNavHospitalLabel = "의료기관",
+            bottomNavGuideLabel = "가이드",
+            bottomNavMapLabel = "지도",
+            bottomNavDocumentScanLabel = "문서 스캔"
         )
         val En = CommonStrings(
             logoContentDescription = "MediIn Busan logo",
@@ -28,7 +39,12 @@ data class CommonStrings(
             searchPlaceholder = "Search by hospital name or specialty",
             retryButtonLabel = "Retry",
             itemTypeHospitalBadge = "Hospital",
-            itemTypePlaceBadge = "Place"
+            itemTypePlaceBadge = "Place",
+            bottomNavHomeLabel = "Home",
+            bottomNavHospitalLabel = "Hospitals",
+            bottomNavGuideLabel = "Guide",
+            bottomNavMapLabel = "Map",
+            bottomNavDocumentScanLabel = "Scan"
         )
         val Zh = CommonStrings(
             logoContentDescription = "MediIn Busan 标志",
@@ -37,7 +53,12 @@ data class CommonStrings(
             searchPlaceholder = "按医院名称或诊疗科目搜索",
             retryButtonLabel = "重试",
             itemTypeHospitalBadge = "医院",
-            itemTypePlaceBadge = "场所"
+            itemTypePlaceBadge = "场所",
+            bottomNavHomeLabel = "首页",
+            bottomNavHospitalLabel = "医疗机构",
+            bottomNavGuideLabel = "指南",
+            bottomNavMapLabel = "地图",
+            bottomNavDocumentScanLabel = "文档扫描"
         )
         val Ja = CommonStrings(
             logoContentDescription = "メディインブサンのロゴ",
@@ -46,7 +67,12 @@ data class CommonStrings(
             searchPlaceholder = "病院名・診療科目で検索",
             retryButtonLabel = "再試行",
             itemTypeHospitalBadge = "病院",
-            itemTypePlaceBadge = "スポット"
+            itemTypePlaceBadge = "スポット",
+            bottomNavHomeLabel = "ホーム",
+            bottomNavHospitalLabel = "医療機関",
+            bottomNavGuideLabel = "ガイド",
+            bottomNavMapLabel = "地図",
+            bottomNavDocumentScanLabel = "文書スキャン"
         )
     }
 }

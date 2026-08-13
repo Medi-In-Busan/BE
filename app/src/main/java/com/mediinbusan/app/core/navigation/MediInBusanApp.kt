@@ -119,43 +119,46 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
 private fun bottomNavTabs(
     navController: NavHostController,
     currentDestination: NavDestination?
-): List<BottomNavTabUiModel> = listOf(
-    BottomNavTabUiModel(
-        label = "홈",
-        icon = Icons.Outlined.Home,
-        selectedIcon = Icons.Filled.Home,
-        selected = currentDestination.isRouteSelected<Route.Home>(),
-        onClick = { navController.navigateToTab(Route.Home) }
-    ),
-    BottomNavTabUiModel(
-        label = "의료기관",
-        icon = Icons.Outlined.LocalHospital,
-        selectedIcon = Icons.Filled.LocalHospital,
-        selected = currentDestination.isRouteSelected<Route.HospitalSearchList>(),
-        onClick = { navController.navigateToTab(Route.HospitalSearchList()) }
-    ),
-    BottomNavTabUiModel(
-        label = "가이드",
-        icon = Icons.AutoMirrored.Outlined.MenuBook,
-        selectedIcon = Icons.AutoMirrored.Filled.MenuBook,
-        selected = currentDestination.isRouteSelected<Route.Guide>(),
-        onClick = { navController.navigateToTab(Route.Guide) }
-    ),
-    BottomNavTabUiModel(
-        label = "지도",
-        icon = Icons.Outlined.Map,
-        selectedIcon = Icons.Filled.Map,
-        selected = currentDestination.isRouteSelected<Route.MapView>(),
-        onClick = { navController.navigateToTab(Route.MapView()) }
-    ),
-    BottomNavTabUiModel(
-        label = "문서 스캔",
-        icon = Icons.Outlined.CameraAlt,
-        selectedIcon = Icons.Filled.CameraAlt,
-        selected = currentDestination.isRouteSelected<Route.DocumentScan>(),
-        onClick = { navController.navigateToTab(Route.DocumentScan) }
+): List<BottomNavTabUiModel> {
+    val strings = LocalAppStrings.current.common
+    return listOf(
+        BottomNavTabUiModel(
+            label = strings.bottomNavHomeLabel,
+            icon = Icons.Outlined.Home,
+            selectedIcon = Icons.Filled.Home,
+            selected = currentDestination.isRouteSelected<Route.Home>(),
+            onClick = { navController.navigateToTab(Route.Home) }
+        ),
+        BottomNavTabUiModel(
+            label = strings.bottomNavHospitalLabel,
+            icon = Icons.Outlined.LocalHospital,
+            selectedIcon = Icons.Filled.LocalHospital,
+            selected = currentDestination.isRouteSelected<Route.HospitalSearchList>(),
+            onClick = { navController.navigateToTab(Route.HospitalSearchList()) }
+        ),
+        BottomNavTabUiModel(
+            label = strings.bottomNavGuideLabel,
+            icon = Icons.AutoMirrored.Outlined.MenuBook,
+            selectedIcon = Icons.AutoMirrored.Filled.MenuBook,
+            selected = currentDestination.isRouteSelected<Route.Guide>(),
+            onClick = { navController.navigateToTab(Route.Guide) }
+        ),
+        BottomNavTabUiModel(
+            label = strings.bottomNavMapLabel,
+            icon = Icons.Outlined.Map,
+            selectedIcon = Icons.Filled.Map,
+            selected = currentDestination.isRouteSelected<Route.MapView>(),
+            onClick = { navController.navigateToTab(Route.MapView()) }
+        ),
+        BottomNavTabUiModel(
+            label = strings.bottomNavDocumentScanLabel,
+            icon = Icons.Outlined.CameraAlt,
+            selectedIcon = Icons.Filled.CameraAlt,
+            selected = currentDestination.isRouteSelected<Route.DocumentScan>(),
+            onClick = { navController.navigateToTab(Route.DocumentScan) }
+        )
     )
-)
+}
 
 private inline fun <reified T : Route> NavDestination?.isRouteSelected(): Boolean =
     this?.hierarchy?.any { it.hasRoute(T::class) } == true
