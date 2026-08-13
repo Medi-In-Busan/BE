@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -29,19 +30,29 @@ class DocumentOcrRepositoryImpl @Inject constructor(
     private val documentOcrApi: DocumentOcrApi
 ) : DocumentOcrRepository {
 
-    override fun extractText(imageUri: Uri): Flow<Result<String>> = flow {
+    override fun extractText(imageUri: Uri, targetLanguage: String?): Flow<Result<DocumentOcrResult>> = flow {
         emit(Result.Loading)
         try {
             val imageBytes = prepareImageBytes(imageUri)
             val requestBody = imageBytes.toRequestBody("image/jpeg".toMediaType())
             val part = MultipartBody.Part.createFormData("image", "document.jpg", requestBody)
-            emit(Result.Success(documentOcrApi.extractText(part).text))
+            val response = documentOcrApi.extractText(part, toPapagoLanguageCode(targetLanguage))
+            emit(Result.Success(DocumentOcrResult(response.text, response.translatedText, response.targetLanguage)))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             emit(Result.Error(throwable = e))
         }
     }.flowOn(Dispatchers.IO)
+
+    // 원본 문서는 한국어라고 가정하므로(백엔드 SOURCE_LANGUAGE 고정) 대상 언어가 한국어면 번역이
+    // 의미가 없어 요청 자체를 생략한다. 앱의 SupportedLanguage.ZH("zh")는 Papago 코드(zh-CN)와
+    // 달라서 별도로 변환해야 한다.
+    private fun toPapagoLanguageCode(languageCode: String?): String? = when (languageCode) {
+        null, SupportedLanguage.KO.code -> null
+        SupportedLanguage.ZH.code -> "zh-CN"
+        else -> languageCode
+    }
 
     // 다운스케일 → EXIF 방향 보정 → 용량 제한(MAX_UPLOAD_BYTES) 안에 들어올 때까지 품질을 낮추고,
     // 그래도 안 되면 비트맵을 추가로 축소해서 재시도한다. 그래도 실패하면 업로드 대신 에러를 낸다.

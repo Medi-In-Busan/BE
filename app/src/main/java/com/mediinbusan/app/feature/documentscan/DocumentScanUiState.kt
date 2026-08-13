@@ -8,6 +8,7 @@ data class DocumentScanUiState(
     val selectedImageUri: Uri? = null,
     val isAnalyzing: Boolean = false,
     val extractedText: String? = null,
+    val translatedText: String? = null,
     val isAnalysisError: Boolean = false,
     val analysisError: String? = null
 )
