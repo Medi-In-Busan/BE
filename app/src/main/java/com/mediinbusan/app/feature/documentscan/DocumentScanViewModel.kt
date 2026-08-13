@@ -41,12 +41,16 @@ class DocumentScanViewModel @Inject constructor(
 
     fun onImageSelected(uri: Uri) {
         savedStateHandle[KEY_SELECTED_IMAGE_URI] = uri.toString()
-        _uiState.update { it.copy(selectedImageUri = uri, extractedText = null, isAnalysisError = false, analysisError = null) }
+        _uiState.update {
+            it.copy(selectedImageUri = uri, extractedText = null, translatedText = null, isAnalysisError = false, analysisError = null)
+        }
     }
 
     fun onImageCleared() {
         savedStateHandle[KEY_SELECTED_IMAGE_URI] = null
-        _uiState.update { it.copy(selectedImageUri = null, extractedText = null, isAnalysisError = false, analysisError = null) }
+        _uiState.update {
+            it.copy(selectedImageUri = null, extractedText = null, translatedText = null, isAnalysisError = false, analysisError = null)
+        }
     }
 
     fun onAnalyzeClick() {
@@ -55,13 +59,20 @@ class DocumentScanViewModel @Inject constructor(
         // 늦게 도착한다. 그 틈에 버튼이 눌리는 걸 이 가드가 막는다.
         if (_uiState.value.isAnalyzing) return
         val imageUri = _uiState.value.selectedImageUri ?: return
+        val targetLanguage = _uiState.value.languageCode
         _uiState.update { it.copy(isAnalyzing = true, isAnalysisError = false, analysisError = null) }
         viewModelScope.launch {
-            documentOcrRepository.extractText(imageUri).collect { result ->
+            documentOcrRepository.extractText(imageUri, targetLanguage).collect { result ->
                 _uiState.update { state ->
                     when (result) {
                         is Result.Loading -> state
-                        is Result.Success -> state.copy(isAnalyzing = false, extractedText = result.data, isAnalysisError = false, analysisError = null)
+                        is Result.Success -> state.copy(
+                            isAnalyzing = false,
+                            extractedText = result.data.text,
+                            translatedText = result.data.translatedText,
+                            isAnalysisError = false,
+                            analysisError = null
+                        )
                         // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
                         is Result.Error -> state.copy(isAnalyzing = false, isAnalysisError = true, analysisError = result.message)
                     }

@@ -89,8 +89,8 @@ import java.io.File
 
 /**
  * 진단서·처방전 OCR 번역(문서 스캔) 화면. 바텀바 5번째 탭.
- * 이미지 촬영/선택 + 미리보기 + backend/document(CLOVA OCR 프록시) 호출·결과 표시를 담당한다.
- * 번역은 아직 백엔드가 원문 텍스트만 내려주는 단계라 이 화면에서는 다루지 않는다.
+ * 이미지 촬영/선택 + 미리보기 + backend/document(CLOVA OCR + Papago 번역 프록시) 호출·결과 표시를 담당한다.
+ * 번역은 앱 언어가 한국어가 아닐 때만 요청하며(원문이 한국어라고 가정), 실패해도 원문(extractedText)은 항상 표시된다.
  */
 @Composable
 fun DocumentScanScreen(
@@ -125,11 +125,9 @@ private fun DocumentScanContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
 
-    fun onCopyClick() {
-        uiState.extractedText?.let { text ->
-            clipboardManager.setText(AnnotatedString(text))
-            coroutineScope.launch { snackbarHostState.showSnackbar(strings.copiedMessage) }
-        }
+    fun onCopyClick(text: String) {
+        clipboardManager.setText(AnnotatedString(text))
+        coroutineScope.launch { snackbarHostState.showSnackbar(strings.copiedMessage) }
     }
 
     // 에뮬레이터·카메라가 없는 기기에서는 hasSystemFeature가 false거나, true여도 실제 촬영
@@ -225,6 +223,7 @@ private fun DocumentScanContent(
                     imageUri = imageUri,
                     isAnalyzing = uiState.isAnalyzing,
                     extractedText = uiState.extractedText,
+                    translatedText = uiState.translatedText,
                     isAnalysisError = uiState.isAnalysisError,
                     analysisError = uiState.analysisError,
                     onRetake = onImageCleared,
@@ -288,11 +287,12 @@ private fun DocumentScanPreview(
     imageUri: Uri,
     isAnalyzing: Boolean,
     extractedText: String?,
+    translatedText: String?,
     isAnalysisError: Boolean,
     analysisError: String?,
     onRetake: () -> Unit,
     onAnalyze: () -> Unit,
-    onCopyClick: () -> Unit
+    onCopyClick: (String) -> Unit
 ) {
     // 분석을 시작한 뒤(로딩/에러/결과)에는 실물 사진이 결과 카드와 같은 비중으로 붙어있으면
     // "사진 모드"와 "텍스트 결과 모드"가 한 화면에서 부딪혀 보인다 — 원본 사진은 작은 썸네일로
@@ -387,42 +387,69 @@ private fun DocumentScanPreview(
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
         }
-        extractedText != null -> Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
-                .background(Color.White)
-                .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.large)
+        extractedText != null -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            // 번역 결과가 있으면(=앱 언어가 한국어가 아니고 Papago 호출이 성공했으면) 번역문을
+            // 먼저 보여주고 원문은 그 아래에 보조로 둔다. 번역이 없으면 원문 카드 하나만 보인다.
+            if (translatedText != null) {
+                DocumentScanTextResultCard(
+                    title = strings.translatedResultTitle,
+                    text = translatedText,
+                    copyContentDescription = strings.copyButtonContentDescription,
+                    onCopyClick = { onCopyClick(translatedText) }
+                )
+            }
+            DocumentScanTextResultCard(
+                title = strings.resultTitle,
+                text = extractedText,
+                copyContentDescription = strings.copyButtonContentDescription,
+                onCopyClick = { onCopyClick(extractedText) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DocumentScanTextResultCard(
+    title: String,
+    text: String,
+    copyContentDescription: String,
+    onCopyClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(Color.White)
+            .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.large)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = strings.resultTitle,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onCopyClick) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = strings.copyButtonContentDescription,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            HorizontalDivider(color = DividerColor)
-            SelectionContainer {
-                Text(
-                    text = extractedText,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
-                    color = TextPrimary,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onCopyClick) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = copyContentDescription,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
+        }
+        HorizontalDivider(color = DividerColor)
+        SelectionContainer {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
+                color = TextPrimary,
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            )
         }
     }
 }
