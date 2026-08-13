@@ -19,6 +19,8 @@ data class AppStrings(
     val notificationSettings: NotificationSettingsStrings,
     val favorite: FavoriteStrings,
     val recentlyViewed: RecentlyViewedStrings,
+    val guide: GuideStrings,
+    val selfDiagnosis: SelfDiagnosisStrings
     val documentScan: DocumentScanStrings
 )
 
@@ -34,6 +36,8 @@ private val KoreanAppStrings = AppStrings(
     notificationSettings = NotificationSettingsStrings.Ko,
     favorite = FavoriteStrings.Ko,
     recentlyViewed = RecentlyViewedStrings.Ko,
+    guide = GuideStrings.Ko,
+    selfDiagnosis = SelfDiagnosisStrings.Ko
     documentScan = DocumentScanStrings.Ko
 )
 
@@ -49,6 +53,8 @@ private val EnglishAppStrings = AppStrings(
     notificationSettings = NotificationSettingsStrings.En,
     favorite = FavoriteStrings.En,
     recentlyViewed = RecentlyViewedStrings.En,
+    guide = GuideStrings.En,
+    selfDiagnosis = SelfDiagnosisStrings.En
     documentScan = DocumentScanStrings.En
 )
 
@@ -64,6 +70,8 @@ private val ChineseAppStrings = AppStrings(
     notificationSettings = NotificationSettingsStrings.Zh,
     favorite = FavoriteStrings.Zh,
     recentlyViewed = RecentlyViewedStrings.Zh,
+    guide = GuideStrings.Zh,
+    selfDiagnosis = SelfDiagnosisStrings.Zh
     documentScan = DocumentScanStrings.Zh
 )
 
@@ -79,6 +87,8 @@ private val JapaneseAppStrings = AppStrings(
     notificationSettings = NotificationSettingsStrings.Ja,
     favorite = FavoriteStrings.Ja,
     recentlyViewed = RecentlyViewedStrings.Ja,
+    guide = GuideStrings.Ja,
+    selfDiagnosis = SelfDiagnosisStrings.Ja
     documentScan = DocumentScanStrings.Ja
 )
 

@@ -44,9 +44,8 @@ class SelfDiagnosisViewModel @Inject constructor(
 
     private fun selectAnswer(questionId: DiagnosisQuestionId, option: DiagnosisAnswerOption) {
         _uiState.update { state ->
-            val question = state.questions.first { it.id == questionId }
             val current = state.selectedAnswers[questionId].orEmpty()
-            val updated = if (question.isMultiSelect) {
+            val updated = if (questionId.isMultiSelect()) {
                 if (option in current) current - option else current + option
             } else {
                 setOf(option)

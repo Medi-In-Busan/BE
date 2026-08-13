@@ -12,13 +12,14 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 
-// S-06 STEP04 "내 진료 브리핑 카드" 입력값. 목업의 샘플 문구를 기본값으로 둔다.
+// S-06 STEP04 "내 진료 브리핑 카드" 입력값. 값이 비어있을 때 보여줄 언어별 예시 문구는
+// core/i18n/GuideStrings의 treatmentBriefingDefaults를 화면에서 조회한다(리포지토리는 언어를 모른다).
 data class TreatmentBriefing(
-    val visitPurpose: String = "상담/검사 문의",
-    val symptoms: String = "피부 트러블, 가려움",
-    val allergyMedication: String = "페니실린 알레르기 / 복용약 없음",
-    val returnDate: String = "7월 28일",
-    val memo: String = "빠른 검사 가능 여부 확인 희망"
+    val visitPurpose: String = "",
+    val symptoms: String = "",
+    val allergyMedication: String = "",
+    val returnDate: String = "",
+    val memo: String = ""
 )
 
 enum class TreatmentBriefingField {

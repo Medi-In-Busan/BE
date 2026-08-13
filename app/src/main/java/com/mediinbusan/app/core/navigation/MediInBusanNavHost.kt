@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
@@ -150,7 +151,6 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             } else {
                 GuideStepDetailScreen(
                     phase = phase,
-                    title = route.title,
                     onBack = navController::popBackStack,
                     onItemClick = { item ->
                         when (item.id) {
@@ -278,6 +278,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable<Route.SelfDiagnosis> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.SelfDiagnosis>()
             val context = LocalContext.current
+            val reservationInquiryTitle = LocalAppStrings.current.guide.stepReservationInquiryTitle
             SelfDiagnosisScreen(
                 fromOnboarding = route.fromOnboarding,
                 onBack = navController::popBackStack,
@@ -290,7 +291,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             navController.navigate(Route.HospitalSearchList())
                         DiagnosisCtaTarget.INTERPRETATION_SUPPORT ->
                             navController.navigate(
-                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = "예약 및 문의")
+                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = reservationInquiryTitle)
                             )
                         DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST ->
                             context.launchIntentSafely(
