@@ -1,5 +1,7 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
+import com.mediinbusan.app.core.i18n.DiagnosisQuestionStrings
+
 enum class DiagnosisQuestionId {
     Q1_VISIT_PURPOSE,
     Q2_STAY_DURATION,
@@ -18,38 +20,50 @@ data class DiagnosisQuestion(
     val noticeText: String? = null
 )
 
-val DiagnosisQuestions: List<DiagnosisQuestion> = listOf(
+// 질문별 선택지 구성과 다중선택 여부는 언어와 무관한 구조적 정보라 DiagnosisQuestionStrings와 분리해 둔다.
+fun DiagnosisQuestionId.options(): List<DiagnosisAnswerOption> = when (this) {
+    DiagnosisQuestionId.Q1_VISIT_PURPOSE -> DiagnosisAnswerOption.VisitPurpose.entries
+    DiagnosisQuestionId.Q2_STAY_DURATION -> DiagnosisAnswerOption.StayDuration.entries
+    DiagnosisQuestionId.Q3_RESERVATION_STATUS -> DiagnosisAnswerOption.ReservationStatus.entries
+    DiagnosisQuestionId.Q4_INTERPRETATION_NEED -> DiagnosisAnswerOption.InterpretationNeed.entries
+    DiagnosisQuestionId.Q5_ENTRY_STAY_CONDITION -> DiagnosisAnswerOption.EntryStayCondition.entries
+}
+
+fun DiagnosisQuestionId.isMultiSelect(): Boolean = this == DiagnosisQuestionId.Q5_ENTRY_STAY_CONDITION
+
+/** 언어별 문항 목록. 순서는 [DiagnosisQuestionId] 선언 순서(Q1~Q5)와 항상 일치한다. */
+fun diagnosisQuestions(strings: DiagnosisQuestionStrings): List<DiagnosisQuestion> = listOf(
     DiagnosisQuestion(
         id = DiagnosisQuestionId.Q1_VISIT_PURPOSE,
-        title = "어떤 방문 목적을 고려하고 있나요?",
-        description = "가장 가까운 목적을 선택해 주세요. 나중에 다시 변경할 수 있습니다.",
-        options = DiagnosisAnswerOption.VisitPurpose.entries
+        title = strings.q1Title,
+        description = strings.q1Description,
+        options = DiagnosisQuestionId.Q1_VISIT_PURPOSE.options()
     ),
     DiagnosisQuestion(
         id = DiagnosisQuestionId.Q2_STAY_DURATION,
-        title = "한국에 얼마나 머무를 예정인가요?",
-        description = "체류기간에 따라 준비해야 할 항목이 달라질 수 있어요.",
-        options = DiagnosisAnswerOption.StayDuration.entries
+        title = strings.q2Title,
+        description = strings.q2Description,
+        options = DiagnosisQuestionId.Q2_STAY_DURATION.options()
     ),
     DiagnosisQuestion(
         id = DiagnosisQuestionId.Q3_RESERVATION_STATUS,
-        title = "현재 병원 예약 상태는 어떤가요?",
-        description = "현재 상황에 맞는 준비 흐름을 안내해드릴게요.",
-        options = DiagnosisAnswerOption.ReservationStatus.entries
+        title = strings.q3Title,
+        description = strings.q3Description,
+        options = DiagnosisQuestionId.Q3_RESERVATION_STATUS.options()
     ),
     DiagnosisQuestion(
         id = DiagnosisQuestionId.Q4_INTERPRETATION_NEED,
-        title = "진료 시 통역이나 외국어 지원이 필요한가요?",
-        description = "병원마다 지원 언어와 통역 가능 여부가 다를 수 있습니다.",
-        options = DiagnosisAnswerOption.InterpretationNeed.entries,
-        noticeText = "메디인부산은 통역사를 매칭하지 않습니다. 병원별 지원 언어와 문의 채널 확인을 도와드립니다."
+        title = strings.q4Title,
+        description = strings.q4Description,
+        options = DiagnosisQuestionId.Q4_INTERPRETATION_NEED.options(),
+        noticeText = strings.q4NoticeText
     ),
     DiagnosisQuestion(
         id = DiagnosisQuestionId.Q5_ENTRY_STAY_CONDITION,
-        title = "입국·체류와 관련해 해당되는 상황이 있나요?",
-        description = "국적, 체류기간, 방문 목적에 따라 공식 확인이 필요할 수 있습니다.",
-        options = DiagnosisAnswerOption.EntryStayCondition.entries,
+        title = strings.q5Title,
+        description = strings.q5Description,
+        options = DiagnosisQuestionId.Q5_ENTRY_STAY_CONDITION.options(),
         isMultiSelect = true,
-        noticeText = "메디인부산은 비자 발급 가능 여부를 판단하거나 대행하지 않습니다."
+        noticeText = strings.q5NoticeText
     )
 )

@@ -40,6 +40,7 @@ import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandBackTopAppBar
 import com.mediinbusan.app.core.ui.ErrorState
@@ -99,9 +100,7 @@ private fun GuideContent(
 
 @Composable
 private fun GuideStepList(steps: List<GuideStep>, onStepClick: (GuideStep) -> Unit) {
-    // Home/HospitalSearchListScreen과 동일한 패턴: Modifier.padding(bottom = ...)로 LazyColumn
-    // 자체 레이아웃 영역을 줄이는 대신(그러면 스크롤해도 바텀바 뒤엔 절대 안 그려짐),
-    // contentPadding.bottom은 0으로 두고 맨 마지막 item에 바텀바 회피용 Spacer를 넣는다.
+    val strings = LocalAppStrings.current.guide
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -109,9 +108,9 @@ private fun GuideStepList(steps: List<GuideStep>, onStepClick: (GuideStep) -> Un
     ) {
         item {
             Column(modifier = Modifier.padding(top = 20.dp, bottom = 4.dp)) {
-                Text(text = "이용 가이드", style = SettingsTitleStyle, color = TextPrimary)
+                Text(text = strings.screenTitle, style = SettingsTitleStyle, color = TextPrimary)
                 Text(
-                    text = "입국 전부터 진료 후 귀국까지 단계별 안내",
+                    text = strings.screenSubtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.padding(top = 6.dp)
