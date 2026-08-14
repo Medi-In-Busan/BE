@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,7 +81,7 @@ import com.mediinbusan.app.core.i18n.DocumentScanStrings
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
 import kotlinx.coroutines.launch
 import java.io.File
@@ -187,11 +186,10 @@ private fun DocumentScanContent(
     Scaffold(
         containerColor = PageBackground,
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onMenuClick,
+            BrandTopAppBar(
+                onSettingsClick = onMenuClick,
                 currentLanguageCode = uiState.languageCode,
-                onLanguageSelected = onLanguageSelected,
-                navigationIcon = Icons.Default.Menu
+                onLanguageSelected = onLanguageSelected
             )
         },
         snackbarHost = { BrandSnackbarHost(hostState = snackbarHostState) }

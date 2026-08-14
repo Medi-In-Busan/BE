@@ -38,7 +38,8 @@ import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.ui.AsyncImageBox
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ItemTypeBadge
 import com.mediinbusan.app.data.favorite.FavoriteItemType
@@ -49,7 +50,7 @@ import java.util.concurrent.TimeUnit
 fun RecentlyViewedScreen(
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: RecentlyViewedViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -57,7 +58,7 @@ fun RecentlyViewedScreen(
     RecentlyViewedContent(
         items = uiState.items,
         selectedLanguage = uiState.selectedLanguage,
-        onBack = onBack,
+        onNavigateToSettings = onNavigateToSettings,
         onLanguageSelected = viewModel::onLanguageSelected,
         onSelectItem = { item ->
             when (item.itemType) {
@@ -72,21 +73,21 @@ fun RecentlyViewedScreen(
 private fun RecentlyViewedContent(
     items: List<RecentlyViewed>,
     selectedLanguage: String,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onSelectItem: (RecentlyViewed) -> Unit
 ) {
     val appStrings = LocalAppStrings.current
     Scaffold(
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
+            BrandTopAppBar(
+                onSettingsClick = onNavigateToSettings,
                 currentLanguageCode = selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(text = appStrings.settings.recentlyViewedTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
@@ -99,7 +100,12 @@ private fun RecentlyViewedContent(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp)
+                        contentPadding = PaddingValues(
+                            start = 20.dp,
+                            end = 20.dp,
+                            top = 20.dp,
+                            bottom = 20.dp + BottomNavBarHeight + innerPadding.calculateBottomPadding()
+                        )
                     ) {
                         items(items, key = { it.itemId }) { item ->
                             RecentlyViewedRow(item = item, onClick = { onSelectItem(item) }, strings = appStrings.recentlyViewed)
@@ -179,7 +185,7 @@ private fun RecentlyViewedContentPreview() {
                 )
             ),
             selectedLanguage = "ko",
-            onBack = {},
+            onNavigateToSettings = {},
             onLanguageSelected = {},
             onSelectItem = {}
         )

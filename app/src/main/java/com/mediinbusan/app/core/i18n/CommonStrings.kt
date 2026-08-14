@@ -4,6 +4,7 @@ package com.mediinbusan.app.core.i18n
 data class CommonStrings(
     val logoContentDescription: String,
     val backContentDescription: String,
+    val settingsMenuContentDescription: String,
     val searchContentDescription: String,
     val searchPlaceholder: String,
     val retryButtonLabel: String,
@@ -21,6 +22,7 @@ data class CommonStrings(
         val Ko = CommonStrings(
             logoContentDescription = "메디인부산 로고",
             backContentDescription = "뒤로가기",
+            settingsMenuContentDescription = "설정 메뉴",
             searchContentDescription = "검색",
             searchPlaceholder = "병원 이름, 진료과목으로 검색",
             retryButtonLabel = "다시 시도",
@@ -35,6 +37,7 @@ data class CommonStrings(
         val En = CommonStrings(
             logoContentDescription = "MediIn Busan logo",
             backContentDescription = "Back",
+            settingsMenuContentDescription = "Settings menu",
             searchContentDescription = "Search",
             searchPlaceholder = "Search by hospital name or specialty",
             retryButtonLabel = "Retry",
@@ -49,6 +52,7 @@ data class CommonStrings(
         val Zh = CommonStrings(
             logoContentDescription = "MediIn Busan 标志",
             backContentDescription = "返回",
+            settingsMenuContentDescription = "设置菜单",
             searchContentDescription = "搜索",
             searchPlaceholder = "按医院名称或诊疗科目搜索",
             retryButtonLabel = "重试",
@@ -63,6 +67,7 @@ data class CommonStrings(
         val Ja = CommonStrings(
             logoContentDescription = "メディインブサンのロゴ",
             backContentDescription = "戻る",
+            settingsMenuContentDescription = "設定メニュー",
             searchContentDescription = "検索",
             searchPlaceholder = "病院名・診療科目で検索",
             retryButtonLabel = "再試行",

@@ -46,7 +46,8 @@ import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.ui.AsyncImageBox
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
 import com.mediinbusan.app.core.ui.EmptyState
@@ -60,14 +61,14 @@ import com.mediinbusan.app.data.favorite.FavoriteItemType
 fun FavoriteScreen(
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: FavoriteViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     FavoriteContent(
         uiState = uiState,
-        onBack = onBack,
+        onNavigateToSettings = onNavigateToSettings,
         onLanguageSelected = viewModel::onLanguageSelected,
         onFilterSelected = viewModel::onFilterSelected,
         onSortSelected = viewModel::onSortSelected,
@@ -84,7 +85,7 @@ fun FavoriteScreen(
 @Composable
 private fun FavoriteContent(
     uiState: FavoriteUiState,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onFilterSelected: (FavoriteTypeFilter) -> Unit,
     onSortSelected: (FavoriteSortOption) -> Unit,
@@ -96,14 +97,14 @@ private fun FavoriteContent(
 
     Scaffold(
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
+            BrandTopAppBar(
+                onSettingsClick = onNavigateToSettings,
                 currentLanguageCode = uiState.selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(text = strings.screenTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
@@ -138,7 +139,12 @@ private fun FavoriteContent(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp)
+                        contentPadding = PaddingValues(
+                            start = 20.dp,
+                            end = 20.dp,
+                            top = 4.dp,
+                            bottom = 4.dp + BottomNavBarHeight + innerPadding.calculateBottomPadding()
+                        )
                     ) {
                         items(favorites, key = { it.itemId }) { favorite ->
                             FavoriteRow(
@@ -270,7 +276,7 @@ private fun FavoriteContentPreview() {
                     )
                 )
             ),
-            onBack = {},
+            onNavigateToSettings = {},
             onLanguageSelected = {},
             onFilterSelected = {},
             onSortSelected = {},

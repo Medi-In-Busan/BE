@@ -45,13 +45,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -69,7 +73,6 @@ import com.mediinbusan.app.core.i18n.SearchStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
-import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -79,7 +82,7 @@ import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
 import com.mediinbusan.app.core.ui.ErrorState
@@ -94,7 +97,9 @@ import com.mediinbusan.app.data.hospital.Hospital
 fun HospitalSearchListScreen(
     medicalPurpose: MedicalCategory?,
     onSelectHospital: (String) -> Unit,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    // true면 Home 검색바를 탭한 경우처럼 결과 목록 대신 검색 입력창에 바로 포커스를 준다.
+    autoFocusSearch: Boolean = false,
     viewModel: HospitalSearchListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,7 +110,8 @@ fun HospitalSearchListScreen(
 
     HospitalSearchListContent(
         uiState = uiState,
-        onBack = onBack,
+        autoFocusSearch = autoFocusSearch,
+        onNavigateToSettings = onNavigateToSettings,
         onLanguageSelected = viewModel::onLanguageSelected,
         onQueryChanged = viewModel::onQueryChanged,
         onSearchSubmit = viewModel::onSearchSubmit,
@@ -125,7 +131,8 @@ fun HospitalSearchListScreen(
 @Composable
 private fun HospitalSearchListContent(
     uiState: HospitalSearchListUiState,
-    onBack: () -> Unit,
+    autoFocusSearch: Boolean,
+    onNavigateToSettings: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -141,15 +148,41 @@ private fun HospitalSearchListContent(
     onRetry: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
-    var isSearchFocused by remember { mutableStateOf(false) }
+    var isSearchFocused by remember { mutableStateOf(autoFocusSearch) }
     // 콘텐츠 유무가 아니라 포커스 여부만으로 패널을 띄운다. 자동완성 후보 개수는 한글 조합
     // 중간 단계(예: "부산" 입력 중 "부"+미완성 글자)에서 순간적으로 0건이 될 수 있는데,
     // 콘텐츠 유무로 판단하면 그 찰나에 패널이 사라지고 뒤의 결과 리스트가 노출돼버린다.
     val showAssistPanel = isSearchFocused
+    val searchFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    // Home 검색바를 탭해 들어온 경우, 진짜로 검색창을 탭한 것처럼 키보드까지 바로 띄운다.
+    // 진입 직후엔 uiState.isLoading이 true라 SearchInputBar 자체가 아직 화면에 없는 상태다 —
+    // 그때 requestFocus()를 부르면 타깃이 없어 허공에 날아가고, 잠시 뒤 로딩이 끝나 텍스트필드가
+    // 처음 마운트되면서 "포커스 없음" 초기 상태를 onFocusChanged(false)로 보고해 위에서 세팅해둔
+    // isSearchFocused=true를 덮어써버린다(그래서 패널이 잠깐 보였다가 바로 결과 목록으로 바뀌었다).
+    // isLoading이 false로 바뀐 시점(=SearchInputBar가 실제로 존재하는 시점)에 걸어야 하고, 이후
+    // 재검색 등으로 isLoading이 다시 토글돼도 매번 포커스를 뺏지 않도록 최초 1회만 실행한다.
+    //
+    // 그런데 이 요청을 아무리 빨리 걸어도, 텍스트필드가 "처음 화면에 붙는" 바로 그 프레임에
+    // 안드로이드가 "아직 포커스 없음"이라는 초기 상태를 onFocusChanged(false)로 합성해서 먼저
+    // 보고한다 — 이게 위에서 세팅해둔 isSearchFocused=true를 한 프레임 덮어써서 결과 목록이
+    // 찰나에 보였다가 그다음 프레임(실제 requestFocus 성공 시점)에 다시 패널로 돌아오는
+    // "깜빡임"의 원인이었다. autoFocusSearch가 대기 중(hasAppliedAutoFocus==false)인 동안 오는
+    // onFocusChanged 이벤트는 전부 이 합성 이벤트이므로 무시하고, 우리가 실제로 포커스를 건
+    // 이후(hasAppliedAutoFocus==true)부터만 사용자의 진짜 포커스 변화를 반영한다.
+    var hasAppliedAutoFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        if (autoFocusSearch && !uiState.isLoading && !hasAppliedAutoFocus) {
+            hasAppliedAutoFocus = true
+            withFrameNanos {}
+            searchFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
     Scaffold(
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
+            BrandTopAppBar(
+                onSettingsClick = onNavigateToSettings,
                 currentLanguageCode = uiState.selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
@@ -180,8 +213,15 @@ private fun HospitalSearchListContent(
                     query = uiState.query,
                     onQueryChanged = onQueryChanged,
                     onSearchSubmit = { focusManager.clearFocus(); onSearchSubmit() },
-                    onFocusChanged = { isSearchFocused = it },
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                    onFocusChanged = { focused ->
+                        // autoFocusSearch 대기 중에 오는 이벤트는 텍스트필드가 처음 붙을 때 항상
+                        // 한 번 오는 합성 초기값(false)이라 무시한다 — 위 LaunchedEffect 주석 참고.
+                        if (hasAppliedAutoFocus || !autoFocusSearch) {
+                            isSearchFocused = focused
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    focusRequester = searchFocusRequester
                 )
 
                 if (showAssistPanel) {
@@ -261,7 +301,8 @@ private fun SearchInputBar(
     onQueryChanged: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester = remember { FocusRequester() }
 ) {
     Row(
         modifier = modifier
@@ -269,7 +310,7 @@ private fun SearchInputBar(
             .height(50.dp)
             .clip(RoundedCornerShape(percent = 50))
             .background(Color.White)
-            .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(percent = 50))
+            .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.35f), shape = RoundedCornerShape(percent = 50))
             .padding(start = 20.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -290,18 +331,17 @@ private fun SearchInputBar(
                 keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() }),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .onFocusChanged { onFocusChanged(it.isFocused) }
             )
         }
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .clip(CircleShape)
-                .background(CoralPrimary)
                 .clickable(onClick = onSearchSubmit),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Filled.Search, contentDescription = LocalAppStrings.current.common.searchContentDescription, tint = Color.White)
+            Icon(imageVector = Icons.Filled.Search, contentDescription = LocalAppStrings.current.common.searchContentDescription, tint = CoralPrimary)
         }
     }
 }
@@ -633,7 +673,8 @@ private fun HospitalSearchListContentPreview() {
     MediInBusanTheme {
         HospitalSearchListContent(
             uiState = HospitalSearchListUiState(isLoading = false),
-            onBack = {},
+            autoFocusSearch = false,
+            onNavigateToSettings = {},
             onLanguageSelected = {},
             onQueryChanged = {},
             onSearchSubmit = {},

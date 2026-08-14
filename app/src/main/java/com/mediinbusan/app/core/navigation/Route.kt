@@ -19,8 +19,11 @@ sealed interface Route {
     @Serializable
     data object Home : Route // S-03
 
+    // S-04, 구 HospitalList + Search 통합. medicalPurpose가 있으면 진입 시 해당 필터로 자동 검색.
+    // initialSearchFocus=true면 Home 검색바를 누른 경우처럼 결과 목록 대신 검색 입력창에
+    // 바로 포커스를 줘서 최근 검색어/자동완성 패널(SearchAssistPanel)을 먼저 보여준다.
     @Serializable
-    data class HospitalSearchList(val medicalPurpose: MedicalCategory? = null) : Route // S-04, 구 HospitalList + Search 통합. medicalPurpose가 있으면 진입 시 해당 필터로 자동 검색
+    data class HospitalSearchList(val medicalPurpose: MedicalCategory? = null, val initialSearchFocus: Boolean = false) : Route
 
     @Serializable
     data class HospitalDetail(val hospitalId: String) : Route // S-05
@@ -126,6 +129,19 @@ internal fun NavHostController.navigateToTab(route: Route) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/**
+ * Home 검색바 → HospitalSearchList 검색 입력 모드(최근 검색어/자동완성 패널) 전용 진입점.
+ * navigateToTab()의 popUpTo+saveState+restoreState 조합을 일부러 쓰지 않는다 — HospitalSearchList를
+ * 이전에 다른 args(예: medicalPurpose 필터)로 방문한 적이 있으면, popUpTo{saveState=true}로 저장된
+ * 백스택 청크가 destination 단위(인자 무관)로 남아있어서 restoreState=true는 물론 launchSingleTop
+ * 조합만으로도 그 이전 저장 상태(ViewModel + Compose remember 포함)가 되살아나 새로 넘긴
+ * initialSearchFocus=true가 무시될 수 있다. 순수 navigate()로 항상 완전히 새 백스택 엔트리(=새
+ * ViewModel)를 쌓아서 이 문제를 근본적으로 피한다 — 뒤로가기를 누르면 정상적으로 Home으로 돌아간다.
+ */
+internal fun NavHostController.navigateToSearchFocused(route: Route.HospitalSearchList) {
+    navigate(route)
 }
 
 /**

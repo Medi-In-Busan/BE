@@ -45,11 +45,12 @@ import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 
 @Composable
 fun NotificationSettingsScreen(
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: NotificationSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -57,7 +58,7 @@ fun NotificationSettingsScreen(
     NotificationSettingsContent(
         notificationsEnabled = uiState.notificationsEnabled,
         selectedLanguage = uiState.selectedLanguage,
-        onBack = onBack,
+        onNavigateToSettings = onNavigateToSettings,
         onToggle = viewModel::onToggleNotifications,
         onLanguageSelected = viewModel::onLanguageSelected
     )
@@ -67,21 +68,25 @@ fun NotificationSettingsScreen(
 private fun NotificationSettingsContent(
     notificationsEnabled: Boolean,
     selectedLanguage: String,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onToggle: (Boolean) -> Unit,
     onLanguageSelected: (String) -> Unit
 ) {
     val appStrings = LocalAppStrings.current
     Scaffold(
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
+            BrandTopAppBar(
+                onSettingsClick = onNavigateToSettings,
                 currentLanguageCode = selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).padding(horizontal = 20.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + BottomNavBarHeight)
+                .padding(horizontal = 20.dp)
+        ) {
             Spacer(modifier = Modifier.height(20.dp))
             Text(text = appStrings.settings.notificationTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(20.dp))
@@ -179,7 +184,7 @@ private fun NotificationSettingsContentPreview() {
         NotificationSettingsContent(
             notificationsEnabled = true,
             selectedLanguage = "ko",
-            onBack = {},
+            onNavigateToSettings = {},
             onToggle = {},
             onLanguageSelected = {}
         )
