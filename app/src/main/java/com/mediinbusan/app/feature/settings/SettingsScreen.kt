@@ -80,12 +80,12 @@ import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsSectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     onNavigateToInfoDetail: (String) -> Unit,
     onNavigateToNotificationSettings: () -> Unit,
     onNavigateToFavoriteManage: () -> Unit,
@@ -96,7 +96,6 @@ fun SettingsScreen(
 
     SettingsContent(
         uiState = uiState,
-        onBack = onBack,
         onLanguageSelected = viewModel::onLanguageSelected,
         onNavigateToInfoDetail = onNavigateToInfoDetail,
         onNavigateToNotificationSettings = onNavigateToNotificationSettings,
@@ -110,7 +109,6 @@ fun SettingsScreen(
 @Composable
 private fun SettingsContent(
     uiState: SettingsUiState,
-    onBack: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onNavigateToInfoDetail: (String) -> Unit,
     onNavigateToNotificationSettings: () -> Unit,
@@ -128,12 +126,12 @@ private fun SettingsContent(
     }
 
     Scaffold(
-        // Home과 동일한 탑바(워드마크+언어 드롭다운)를 그대로 재사용하고, 좌측 아이콘만
-        // Home의 "설정으로 이동" 햄버거 대신 뒤로가기 화살표로 바뀐다. 하단 탭바는
-        // MediInBusanApp.kt의 shouldShowBottomBar에서 Settings는 제외되어 있어 노출되지 않는다.
+        // Home과 동일한 탑바(로고+언어 드롭다운+설정 톱니)를 그대로 재사용한다. 이미 설정
+        // 화면이라 톱니는 자기 자신으로의 이동이 되므로 no-op으로 둔다. 하단 탭바는
+        // MediInBusanApp.kt의 shouldShowBottomBar에 Settings가 추가되어 노출된다.
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
+            BrandTopAppBar(
+                onSettingsClick = {},
                 currentLanguageCode = uiState.selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
@@ -142,7 +140,7 @@ private fun SettingsContent(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + BottomNavBarHeight)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
@@ -534,7 +532,6 @@ private fun SettingsContentPreview() {
     MediInBusanTheme {
         SettingsContent(
             uiState = SettingsUiState(selectedLanguage = "ko"),
-            onBack = {},
             onLanguageSelected = {},
             onNavigateToInfoDetail = {},
             onNavigateToNotificationSettings = {},

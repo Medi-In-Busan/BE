@@ -108,6 +108,12 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
             backStackEntry.toRoute<Route.MapView>().hospitalId == null
         }
         destination.hasRoute(Route.DocumentScan::class) -> true
+        // 공용 탑바(BrandTopAppBar)가 뒤로가기 없이 로고+설정 톱니만 쓰는 화면들이라, 여기서도
+        // 하단 탭바로 이동 수단을 대신 제공한다.
+        destination.hasRoute(Route.Settings::class) -> true
+        destination.hasRoute(Route.NotificationSettings::class) -> true
+        destination.hasRoute(Route.RecentlyViewed::class) -> true
+        destination.hasRoute(Route.Favorite::class) -> true
         else -> false
     }
 }

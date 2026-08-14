@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,7 +41,7 @@ import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.data.guide.GuideStep
@@ -76,11 +75,10 @@ private fun GuideContent(
     Scaffold(
         containerColor = PageBackground,
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onMenuClick,
+            BrandTopAppBar(
+                onSettingsClick = onMenuClick,
                 currentLanguageCode = uiState.languageCode,
-                onLanguageSelected = onLanguageSelected,
-                navigationIcon = Icons.Default.Menu
+                onLanguageSelected = onLanguageSelected
             )
         }
     ) { innerPadding ->

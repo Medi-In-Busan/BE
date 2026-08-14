@@ -11,21 +11,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,12 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.datastore.SupportedLanguage
@@ -48,57 +45,47 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
-import com.mediinbusan.app.core.designsystem.SkyBlue
 
 /**
- * Settings(S-10) 계열 화면(설정/알림 설정/즐겨찾기 관리/최근 본 항목) 공용 탑바.
- * Home의 탑바와 시각적으로 동일하지만(워드마크+언어 드롭다운), 좌측 아이콘이 뒤로가기라는 점만 다르다.
- * Home은 팀원의 미머지 PR이 같이 건드리고 있어 별도 로컬 사본을 두고, 이 탑바를 쓰는 화면들끼리만 공유한다.
+ * 뒤로가기 화살표가 있던 이전 버전 대신, Home 탑바와 완전히 동일한 구성(로고+언어 드롭다운+설정
+ * 톱니)으로 통일한 공용 탑바. 하위 화면 전용 "뒤로가기"라는 개념 자체를 없애고, 대신 이 탑바를 쓰는
+ * 화면들도 전부 공용 하단 탭바(BottomNavBar)를 노출해 그쪽으로 이동하게 한다
+ * (MediInBusanApp.kt의 shouldShowBottomBar 참고). Home은 팀원의 미머지 PR이 같이 건드리고 있어
+ * 별도 로컬 사본(HomeScreen.kt의 HomeTopAppBar)을 두지만, 시각적으로는 항상 같은 디자인을 유지한다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrandBackTopAppBar(
-    onBack: () -> Unit,
+fun BrandTopAppBar(
+    onSettingsClick: () -> Unit,
     currentLanguageCode: String,
-    onLanguageSelected: (String) -> Unit,
-    navigationIcon: ImageVector = Icons.AutoMirrored.Filled.ArrowBack
+    onLanguageSelected: (String) -> Unit
 ) {
-    CenterAlignedTopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(imageVector = navigationIcon, contentDescription = LocalAppStrings.current.common.backContentDescription)
-            }
+    TopAppBar(
+        title = {
+            Image(
+                painter = painterResource(id = R.drawable.home_logo),
+                contentDescription = LocalAppStrings.current.common.logoContentDescription,
+                // Home 탑바와 동일한 로고/사이즈로 통일.
+                modifier = Modifier.height(42.dp)
+            )
         },
-        title = { BrandWordmark() },
         actions = {
             BrandLanguageDropdown(
                 currentLanguageCode = currentLanguageCode,
                 onLanguageSelected = onLanguageSelected
             )
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = LocalAppStrings.current.common.settingsMenuContentDescription,
+                    tint = CoralPrimary
+                )
+            }
         },
         // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백이 답답해
         // 보여서 줄인다. 완전히 없애면(top=0) 바가 상태바에 바로 붙어버리니 일부만 뺀다.
         windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp))
     )
-}
-
-@Composable
-private fun BrandWordmark() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Image(
-            painter = painterResource(id = R.drawable.favicon),
-            contentDescription = LocalAppStrings.current.common.logoContentDescription,
-            modifier = Modifier.size(42.dp)
-        )
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) { append("MEDIN") }
-                append(" ")
-                withStyle(SpanStyle(color = SkyBlue, fontWeight = FontWeight.Bold)) { append("BUSAN") }
-            },
-            style = MaterialTheme.typography.headlineSmall
-        )
-    }
 }
 
 // HomeScreen.kt의 LanguageDropdown과 같은 톤(다른 팀원 PR과의 충돌 때문에 Home은 로컬 사본을
