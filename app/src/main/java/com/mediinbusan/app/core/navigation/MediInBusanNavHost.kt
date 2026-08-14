@@ -113,13 +113,20 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToWellness = { navController.navigate(Route.Nearby(hospitalId = "14")) },
                 // 의료목적 선택/의료기관 찾기/웰니스/검색바 4개 진입점이 전부 여기 하나로 모인다.
                 // purpose가 있으면 HospitalSearchListScreen 진입 시 해당 필터로 자동 검색된다.
-                onNavigateToSearch = { purpose -> navController.navigateToTab(Route.HospitalSearchList(purpose)) }
+                onNavigateToSearch = { purpose -> navController.navigateToTab(Route.HospitalSearchList(purpose)) },
+                // Home 검색바는 필터 결과 목록이 아니라, HospitalSearchListScreen 안에서
+                // 검색창을 직접 탭했을 때와 동일한 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 들어간다.
+                // navigateToTab이 아니라 navigateToSearchFocused를 쓴다 — 이유는 그 함수 주석 참고.
+                onNavigateToSearchFocused = {
+                    navController.navigateToSearchFocused(Route.HospitalSearchList(initialSearchFocus = true))
+                }
             )
         }
         composable<Route.HospitalSearchList> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.HospitalSearchList>()
             HospitalSearchListScreen(
                 medicalPurpose = route.medicalPurpose,
+                autoFocusSearch = route.initialSearchFocus,
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onBack = navController::popBackStack
             )

@@ -44,6 +44,10 @@ val MediInBusanTypography = Typography(
 // fontWeight는 스펙대로 Bold/Normal(Regular)/SemiBold로 맞춰져 있다.
 val HeroTitleStyle = TextStyle(fontFamily = Pretendard, fontSize = 21.sp, fontWeight = FontWeight.Bold)
 val HeroSubtitleStyle = TextStyle(fontFamily = Pretendard, fontSize = 13.sp, fontWeight = FontWeight.Normal)
+// 배너2/3 주텍스트(검정/코랄 두 줄) 전용 — 배너1의 HeroTitleStyle(21sp)보다 한 단계 크게.
+val HeroTitleLargeStyle = TextStyle(fontFamily = Pretendard, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+// 히어로 배너 CTA 버튼 전용 — CardTitleStyle(15sp)보다 한 단계 작게.
+val HeroCtaTextStyle = TextStyle(fontFamily = Pretendard, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 val SectionTitleStyle = TextStyle(fontFamily = Pretendard, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
 val CardTitleStyle = TextStyle(fontFamily = Pretendard, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
 

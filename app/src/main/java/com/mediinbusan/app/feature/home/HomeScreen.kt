@@ -55,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -79,10 +80,14 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
+import com.mediinbusan.app.core.designsystem.CoralMuted
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
+import com.mediinbusan.app.core.designsystem.HeroBodyGray
+import com.mediinbusan.app.core.designsystem.HeroCtaTextStyle
 import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
+import com.mediinbusan.app.core.designsystem.HeroTitleLargeStyle
 import com.mediinbusan.app.core.designsystem.HeroTitleStyle
 import com.mediinbusan.app.core.designsystem.InactiveIcon
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
@@ -113,6 +118,8 @@ fun HomeScreen(
     // 의료목적 선택 칩/의료기관 찾기/웰니스 퀵링크/검색바가 전부 여기로 모인다.
     // purpose가 있으면 진입한 통합 검색 화면(HospitalSearchList)이 해당 필터로 자동 검색한다.
     onNavigateToSearch: (MedicalCategory?) -> Unit = {},
+    // 배너의 검색바 전용. 결과 목록이 아니라 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 진입시킨다.
+    onNavigateToSearchFocused: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -125,6 +132,7 @@ fun HomeScreen(
         onNavigateToWellness = onNavigateToWellness,
         onNavigateToSelfDiagnosis = onNavigateToSelfDiagnosis,
         onNavigateToSearch = onNavigateToSearch,
+        onNavigateToSearchFocused = onNavigateToSearchFocused,
         onNavigateToFavorite = onNavigateToFavorite,
         onNavigateToSettings = onNavigateToSettings,
         onPurposeSelected = viewModel::onMedicalPurposeSelected,
@@ -144,6 +152,7 @@ private fun HomeContent(
     onNavigateToWellness: () -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
     onNavigateToSearch: (MedicalCategory?) -> Unit,
+    onNavigateToSearchFocused: () -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onPurposeSelected: (MedicalCategory) -> Unit,
@@ -201,7 +210,10 @@ private fun HomeContent(
                         .verticalScroll(rememberScrollState())
                         .padding(top = contentPadding.calculateTopPadding())
                 ) {
-                    HeroBannerSection(onSearchClick = { onNavigateToSearch(null) })
+                    HeroBannerSection(
+                        onSearchClick = onNavigateToSearchFocused,
+                        onWellnessClick = onNavigateToWellness
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
                     MedicalPurposeSection(
@@ -260,14 +272,25 @@ private fun HomeTopAppBar(
     onLanguageSelected: (String) -> Unit
 ) {
     val strings = LocalAppStrings.current
-    CenterAlignedTopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onMenuClick) {
-                Icon(imageVector = Icons.Default.Menu, contentDescription = strings.home.settingsMenuContentDescription)
-            }
+    // 리디자인: 파비콘+텍스트 워드마크(HomeWordmark) 대신 home_logo 이미지 한 장을 왼쪽에 둔다.
+    // CenterAlignedTopAppBar는 title을 항상 가운데로 미는데(양옆 폭이 달라도 강제로 중앙 정렬),
+    // "왼쪽에 위치"시키려면 title이 왼쪽부터 시작하는 일반 TopAppBar를 써야 한다. 햄버거 메뉴는
+    // 톱니(설정) 아이콘으로 바뀌어 오른쪽 언어선택 바로 왼쪽으로 옮겨간다 — 눌렀을 때 동작(설정
+    // 화면 이동)은 그대로다.
+    TopAppBar(
+        title = {
+            Image(
+                painter = painterResource(id = R.drawable.home_logo),
+                contentDescription = LocalAppStrings.current.common.logoContentDescription,
+                // 기존 워드마크(파비콘 42dp + 텍스트)와 세로 크기를 동일하게 맞춘다. home_logo는
+                // 가로로 긴 이미지라 높이만 고정하면 원본 비율대로 폭이 정해진다.
+                modifier = Modifier.height(42.dp)
+            )
         },
-        title = { HomeWordmark() },
         actions = {
+            IconButton(onClick = onMenuClick) {
+                Icon(imageVector = Icons.Default.Settings, contentDescription = strings.home.settingsMenuContentDescription)
+            }
             LanguageDropdown(
                 currentLanguageCode = currentLanguageCode,
                 onLanguageSelected = onLanguageSelected
@@ -277,25 +300,6 @@ private fun HomeTopAppBar(
         // (core/ui/BrandTopAppBar.kt의 BrandBackTopAppBar와 동일한 값으로 맞춤).
         windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp))
     )
-}
-
-@Composable
-private fun HomeWordmark() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Image(
-            painter = painterResource(id = R.drawable.favicon),
-            contentDescription = LocalAppStrings.current.common.logoContentDescription,
-            modifier = Modifier.size(42.dp)
-        )
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) { append("MEDIN") }
-                append(" ")
-                withStyle(SpanStyle(color = SkyBlue, fontWeight = FontWeight.Bold)) { append("BUSAN") }
-            },
-            style = MaterialTheme.typography.headlineSmall
-        )
-    }
 }
 
 // core/ui/BrandTopAppBar.kt의 BrandLanguageDropdown과 같은 톤. 닫혀있을 때 트리거는 수정 전
@@ -379,41 +383,60 @@ private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (S
 
 private val BannerImages = listOf(R.drawable.banner1, R.drawable.banner2, R.drawable.banner3)
 private const val BANNER_AUTO_SCROLL_DELAY_MS = 3500L
+// 가로 폭은 그대로 두고 배너 박스 세로만 5% 키운다 (가로 대비 세로 비율을 그만큼 낮춤).
+private const val BannerHeightBoostFactor = 1.05f
+// 실제 배너는 3장뿐이지만, 양쪽 끝(1번↔3번)에서도 반대쪽 배너가 자연스럽게 미리보기(peek)되도록
+// 아주 큰 가상 페이지 개수를 두고 실제 이미지 인덱스는 나머지 연산(% 3)으로 순환시킨다.
+private val BannerVirtualPageCount = BannerImages.size * 1000
+// 배너2/3 텍스트 블록 공용 고정 높이. 서브텍스트 줄바꿈 여부와 무관하게 두 배너의 텍스트
+// 시작 위치를 정확히 맞추기 위한 값 — 실제 콘텐츠(2줄 서브텍스트 포함)보다 여유 있게 잡는다.
+private val HeroTextBlockHeight = 130.dp
 
 @Composable
-private fun HeroBannerSection(onSearchClick: () -> Unit) {
-    val pagerState = rememberPagerState(pageCount = { BannerImages.size })
+private fun HeroBannerSection(onSearchClick: () -> Unit, onWellnessClick: () -> Unit) {
+    val initialPage = remember { (BannerVirtualPageCount / 2 / BannerImages.size) * BannerImages.size }
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { BannerVirtualPageCount })
     // 배너 박스 비율을 배너2 원본 이미지 비율에 맞춘다. 배너1/3은 그 비율에 맞게 Crop된다.
     val banner2IntrinsicSize = painterResource(id = R.drawable.banner2).intrinsicSize
     val bannerAspectRatio = if (banner2IntrinsicSize.isSpecified && banner2IntrinsicSize.height > 0f) {
         banner2IntrinsicSize.width / banner2IntrinsicSize.height
     } else {
         16f / 9f
-    }
+    } / BannerHeightBoostFactor
 
     LaunchedEffect(pagerState) {
+        // 가상 페이지가 순환되므로 끝에서 방향을 꺾을 필요 없이 계속 다음 페이지로만 넘어간다.
         while (true) {
             delay(BANNER_AUTO_SCROLL_DELAY_MS)
-            val nextPage = (pagerState.currentPage + 1) % BannerImages.size
-            pagerState.animateScrollToPage(nextPage)
+            pagerState.animateScrollToPage(pagerState.currentPage + 1)
         }
     }
 
     Column {
-        // 배너 칸 자체에 상하좌우 여백을 줘서 화면에 꽉 차지 않게 한다.
+        // 배너 칸 자체에 상하 여백을 줘서 화면에 꽉 차지 않게 한다. 좌우 여백은 아래
+        // HorizontalPager의 contentPadding으로 옮겨서, 그 여백 자리에 양옆 배너가 살짝
+        // 미리보기(peek)되며 슬라이드되게 한다 — 공식 문서가 권장하는 피킹 캐러셀 패턴.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(vertical = 12.dp)
                 .aspectRatio(bannerAspectRatio)
         ) {
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
-            ) { page ->
-                Box(modifier = Modifier.fillMaxSize()) {
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                pageSpacing = 10.dp,
+                modifier = Modifier.fillMaxSize()
+            ) { virtualPage ->
+                // 가상 페이지 인덱스를 실제 배너 인덱스(0~2)로 순환시킨다.
+                val page = virtualPage % BannerImages.size
+                // 페이저 전체가 아니라 배너 한 장 한 장에 각각 둥근 모서리를 줘야
+                // 옆으로 미리보이는 이웃 배너도 카드 형태로 보인다.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
                     Image(
                         painter = painterResource(id = BannerImages[page]),
                         contentDescription = null,
@@ -421,28 +444,86 @@ private fun HeroBannerSection(onSearchClick: () -> Unit) {
                         // 배너 박스 비율 자체가 배너2 원본 비율과 같아서 Crop해도 잘리지 않는다.
                         contentScale = ContentScale.Crop
                     )
-                    // 배너1은 텍스트 없는 사진이라 우리가 타이틀을 얹는다.
-                    // 배너2/3은 사진 안에 이미 텍스트가 들어있어 그대로 쓴다.
+                    // 배너1(사진에 텍스트 없음, 흰 글씨 사용)만 가독성을 위해 하단 그라데이션을 깐다.
+                    // 배너2/3은 밝은 사진 위에 어두운 텍스트를 얹는 구성이라 명암이 필요 없다.
                     if (page == 0) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f))))
                         )
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(horizontal = 20.dp)
-                                // 아래쪽 캐러셀 점과 겹치지 않도록 여백을 더 둔다.
-                                .padding(bottom = 50.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(text = LocalAppStrings.current.home.heroTitle, style = HeroTitleStyle, color = Color.White)
-                            Text(
-                                text = LocalAppStrings.current.home.heroSubtitle,
-                                style = HeroSubtitleStyle,
-                                color = Color.White.copy(alpha = 0.9f)
+                    }
+                    val strings = LocalAppStrings.current.home
+                    when (page) {
+                        0 -> {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(horizontal = 20.dp)
+                                    // 아래쪽 캐러셀 점과 겹치지 않도록 여백을 더 둔다.
+                                    .padding(bottom = 50.dp)
+                            ) {
+                                Text(text = strings.heroTitle, style = HeroTitleStyle, color = Color.White)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = strings.heroSubtitle,
+                                    style = HeroSubtitleStyle,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                        1 -> {
+                            // 텍스트는 세로 중앙에, 버튼은 기존 하단 위치를 그대로 유지한다.
+                            // 텍스트 블록에 배너2/3 공통 고정 높이를 줘서, 서브텍스트 줄 수가
+                            // 달라 Column 실제 높이가 달라져도(1줄 vs 2줄) BiasAlignment 계산
+                            // 기준이 같아지므로 두 배너의 텍스트 시작 위치가 정확히 일치한다.
+                            Box(
+                                modifier = Modifier
+                                    .align(BiasAlignment(-1f, -0.3f))
+                                    .padding(horizontal = 20.dp)
+                                    .height(HeroTextBlockHeight),
+                                contentAlignment = Alignment.TopStart
+                            ) {
+                                Column {
+                                    Text(text = strings.heroBanner2TitleMain, style = HeroTitleLargeStyle, color = TextPrimary)
+                                    Text(text = strings.heroBanner2TitleAccent, style = HeroTitleLargeStyle, color = CoralMuted)
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = strings.heroBanner2Subtitle,
+                                        style = HeroSubtitleStyle,
+                                        color = HeroBodyGray
+                                    )
+                                }
+                            }
+                            BannerCtaButton(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(horizontal = 20.dp)
+                                    .padding(bottom = 65.dp),
+                                text = strings.heroBanner2Cta,
+                                onClick = onWellnessClick
                             )
+                        }
+                        else -> {
+                            // 배너2와 동일한 세로 중앙 위치 + 동일한 고정 높이 블록.
+                            Box(
+                                modifier = Modifier
+                                    .align(BiasAlignment(-1f, -0.3f))
+                                    .padding(horizontal = 20.dp)
+                                    .height(HeroTextBlockHeight),
+                                contentAlignment = Alignment.TopStart
+                            ) {
+                                Column {
+                                    Text(text = strings.heroBanner3TitleMain, style = HeroTitleLargeStyle, color = TextPrimary)
+                                    Text(text = strings.heroBanner3TitleAccent, style = HeroTitleLargeStyle, color = CoralPrimary)
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                    Text(
+                                        text = strings.heroBanner3Subtitle,
+                                        style = HeroSubtitleStyle,
+                                        color = HeroBodyGray
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -454,7 +535,7 @@ private fun HeroBannerSection(onSearchClick: () -> Unit) {
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 35.dp),
                 pageCount = BannerImages.size,
-                activePage = pagerState.currentPage
+                activePage = pagerState.currentPage % BannerImages.size
             )
 
             // 검색바는 세로 중앙이 사진 아랫변에 걸치도록 절반은 사진 안, 절반은 여백으로 뺀다.
@@ -468,6 +549,20 @@ private fun HeroBannerSection(onSearchClick: () -> Unit) {
         }
         // 검색바가 배너 박스 아래로 절반(25dp) 튀어나오므로 다음 섹션과 겹치지 않게 확보한다.
         Spacer(modifier = Modifier.height(25.dp))
+    }
+}
+
+@Composable
+private fun BannerCtaButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(CoralPrimary)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = text, style = HeroCtaTextStyle, color = Color.White)
     }
 }
 
@@ -493,9 +588,9 @@ private fun SearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
             .height(50.dp)
             .clip(RoundedCornerShape(percent = 50))
             .background(Color.White)
-            .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(percent = 50))
-            // TODO: 실제 키워드 검색(쿼리 파라미터, 결과 필터링)은 범위 밖.
-            // 탭하면 검색어 없이 HospitalList로만 이동한다.
+            .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.35f), shape = RoundedCornerShape(percent = 50))
+            // 탭하면 결과 목록이 아니라, HospitalSearchListScreen의 검색 입력 모드(최근 검색어/
+            // 자동완성 패널)로 바로 진입한다 — onNavigateToSearchFocused 참고.
             .clickable(onClick = onClick)
             .padding(start = 20.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -508,13 +603,10 @@ private fun SearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(CoralPrimary),
+            modifier = Modifier.size(36.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = Icons.Default.Search, contentDescription = strings.common.searchContentDescription, tint = Color.White)
+            Icon(imageVector = Icons.Default.Search, contentDescription = strings.common.searchContentDescription, tint = CoralPrimary)
         }
     }
 }
@@ -802,6 +894,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToWellness = {},
             onNavigateToSelfDiagnosis = {},
             onNavigateToSearch = {},
+            onNavigateToSearchFocused = {},
             onNavigateToFavorite = {},
             onNavigateToSettings = {},
             onPurposeSelected = {},

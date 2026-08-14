@@ -18,6 +18,14 @@ val MediError80 = Color(0xFFFFB4AB)
 val CoralPrimary = Color(0xFFFD6677)
 val CoralPrimaryContainer = Color(0xFFFDECEC)
 
+// Home 히어로 배너(S-03) 텍스트 전용 코랄 — CoralPrimary보다 살짝 차분하되 화사함은
+// 유지한다(너무 어두운 톤은 피드백으로 제외됨).
+val CoralMuted = Color(0xFFF4707F)
+
+// Home 히어로 배너 서브텍스트 전용. TextSecondary(보라 기가 도는 회색)보다 검정을 살짝 더 섞어
+// 명암 없는 밝은 사진 위에서도 또렷하게 읽히도록 하되, 주텍스트(검정)보다는 확실히 옅게 둔다.
+val HeroBodyGray = Color(0xFF757580)
+
 // 로고 워드마크 "BUSAN" 포인트 컬러
 val SkyBlue = Color(0xFF0B84D2)
 
