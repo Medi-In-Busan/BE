@@ -18,6 +18,11 @@ val MediError80 = Color(0xFFFFB4AB)
 val CoralPrimary = Color(0xFFFD6677)
 val CoralPrimaryContainer = Color(0xFFFDECEC)
 
+// Home(S-03) 페이지 맨 뒤 배경 전용 — 흰색에 아주 가까운 옅은 코랄핑크. colorScheme.background는
+// 건드리지 않는다(위 TODO와 같은 이유 — 다른 화면 배경까지 같이 바뀌는 걸 피한다). Home의
+// Scaffold containerColor로만 직접 참조한다.
+val HomeBackgroundPink = Color(0xFFFFFAFA)
+
 // Home 히어로 배너(S-03) 텍스트 전용 코랄 — CoralPrimary보다 살짝 차분하되 화사함은
 // 유지한다(너무 어두운 톤은 피드백으로 제외됨).
 val CoralMuted = Color(0xFFF4707F)

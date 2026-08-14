@@ -128,7 +128,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 medicalPurpose = route.medicalPurpose,
                 autoFocusSearch = route.initialSearchFocus,
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
-                onBack = navController::popBackStack
+                onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
         composable<Route.HospitalDetail> { backStackEntry ->
@@ -253,12 +253,11 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             FavoriteScreen(
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
-                onBack = navController::popBackStack
+                onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
         composable<Route.Settings> {
             SettingsScreen(
-                onBack = navController::popBackStack,
                 onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) },
                 onNavigateToNotificationSettings = { navController.navigate(Route.NotificationSettings) },
                 onNavigateToFavoriteManage = { navController.navigate(Route.Favorite) },
@@ -270,13 +269,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             SettingsInfoDetailScreen(infoId = route.infoId, onBack = navController::popBackStack)
         }
         composable<Route.NotificationSettings> {
-            NotificationSettingsScreen(onBack = navController::popBackStack)
+            NotificationSettingsScreen(onNavigateToSettings = { navController.navigate(Route.Settings) })
         }
         composable<Route.RecentlyViewed> {
             RecentlyViewedScreen(
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
-                onBack = navController::popBackStack
+                onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
         composable<Route.DocumentScan> {

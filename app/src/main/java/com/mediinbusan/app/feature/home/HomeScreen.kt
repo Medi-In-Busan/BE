@@ -3,7 +3,6 @@ package com.mediinbusan.app.feature.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,11 +34,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,6 +43,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,10 +61,7 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -85,6 +80,7 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HeroBodyGray
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.HeroCtaTextStyle
 import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
 import com.mediinbusan.app.core.designsystem.HeroTitleLargeStyle
@@ -92,7 +88,6 @@ import com.mediinbusan.app.core.designsystem.HeroTitleStyle
 import com.mediinbusan.app.core.designsystem.InactiveIcon
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
-import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
@@ -164,6 +159,9 @@ private fun HomeContent(
     val isError = uiState.isError
 
     Scaffold(
+        // 기본값(colorScheme.background, 거의 흰색)보다 살짝 더 연한 코랄핑크로 — Home 페이지
+        // 맨 뒤 배경 전용 톤. 아래 HomeTopAppBar에도 같은 색을 줘서 탑바-본문 경계가 안 보이게 한다.
+        containerColor = HomeBackgroundPink,
         topBar = {
             // Home 진입 즉시 바가 나타나면 Splash(풀스크린) → Home(상단바 있음) 전환이 한
             // 프레임에 훅 줄어드는 느낌을 준다. 짧게 지연 후 페이드인해서 완화한다.
@@ -216,42 +214,30 @@ private fun HomeContent(
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    MedicalPurposeSection(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                        purposes = uiState.medicalPurposes,
+                    // 의료 목적 선택 + 바로가기의 "추천 웰니스"를 하나의 원형 아이콘 그리드로 합쳤다.
+                    // 나머지 바로가기(의료기관/가이드/지도)는 바텀바와 중복이라 뺐다.
+                    CategoryGridSection(
                         selectedPurpose = uiState.selectedPurpose,
                         // 카테고리는 "탐색 진입점"이라 로컬 상태 갱신과 통합 검색 화면 이동이 함께 일어난다.
                         onPurposeClick = { purpose ->
                             onPurposeSelected(purpose)
                             onNavigateToSearch(purpose)
-                        }
+                        },
+                        onWellnessClick = onNavigateToWellness
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
-                    QuickLinksSection(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                        quickLinks = uiState.quickLinks,
-                        onQuickLinkClick = { type ->
-                            when (type) {
-                                QuickLinkType.HOSPITAL_LIST -> onNavigateToSearch(null)
-                                QuickLinkType.GUIDE -> onNavigateToGuide()
-                                QuickLinkType.WELLNESS -> onNavigateToWellness()
-                                QuickLinkType.MAP -> onNavigateToMap()
-                                QuickLinkType.SELF_DIAGNOSIS -> onNavigateToSelfDiagnosis()
-                                QuickLinkType.FAVORITE -> onNavigateToFavorite()
-                            }
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(72.dp))
                     RecommendedHospitalSection(
-                        modifier = Modifier.padding(horizontal = 20.dp),
                         hospitals = uiState.recommendedHospitals,
                         favoriteHospitalIds = uiState.favoriteHospitalIds,
-                        onSeeAllClick = { onNavigateToSearch(null) },
                         onHospitalClick = onNavigateToHospitalDetail,
                         onFavoriteClick = onFavoriteClick
                     )
+
+                    Spacer(modifier = Modifier.height(72.dp))
+                    // TODO: 실제 코스/관광지 데이터 연동은 담당자 몫 — 디자인 감 잡기용 스텁
+                    // 카드 2개(관광지 1 + 웰니스 1)만 고정으로 둔다.
+                    RecommendedCourseSection()
 
                     Spacer(modifier = Modifier.height(24.dp))
                     // 바텀바 뒤로 밀려 들어간 만큼의 여백 — 이게 있어야 마지막 카드가 끝까지
@@ -288,17 +274,24 @@ private fun HomeTopAppBar(
             )
         },
         actions = {
-            IconButton(onClick = onMenuClick) {
-                Icon(imageVector = Icons.Default.Settings, contentDescription = strings.home.settingsMenuContentDescription)
-            }
             LanguageDropdown(
                 currentLanguageCode = currentLanguageCode,
                 onLanguageSelected = onLanguageSelected
             )
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = strings.home.settingsMenuContentDescription,
+                    // 옆 언어선택 드롭다운의 코랄핑크 톤과 맞춘다.
+                    tint = CoralPrimary
+                )
+            }
         },
         // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백만 줄인다
         // (core/ui/BrandTopAppBar.kt의 BrandBackTopAppBar와 동일한 값으로 맞춤).
-        windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp))
+        windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
+        // Scaffold의 containerColor(HomeBackgroundPink)와 맞춰 탑바-본문 경계가 안 보이게 한다.
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink)
     )
 }
 
@@ -320,7 +313,7 @@ private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (S
     )
     val pillShape = RoundedCornerShape(percent = 50)
 
-    Box(modifier = Modifier.padding(end = 12.dp)) {
+    Box(modifier = Modifier.padding(end = 0.dp)) {
         Box(
             modifier = Modifier
                 .clip(pillShape)
@@ -611,40 +604,89 @@ private fun SearchBar(modifier: Modifier = Modifier, onClick: () -> Unit) {
     }
 }
 
+// 섹션 제목(주 텍스트)은 밖에 그대로 두고, 카드/칩 콘텐츠(+그에 딸린 보조 텍스트)만 크게
+// 둥근 흰색 카드 영역으로 묶는다. 맨 뒤 페이지 배경(연분홍 그라데이션)은 그대로 비쳐 보인다.
+private val SectionCardShape = RoundedCornerShape(40.dp)
+
 @Composable
-private fun MedicalPurposeSection(
+private fun SectionCardContainer(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    // 페이지 좌우 여백(20dp)까지 흰색으로 덮도록 카드 자체는 화면 폭 끝까지 채우고, 대신 안쪽
+    // 콘텐츠에 같은 20dp를 다시 줘서 다른 요소들과 좌우 정렬은 그대로 맞춘다.
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(SectionCardShape)
+            .background(Color.White)
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        content()
+    }
+}
+
+// 의료 목적 선택(9개) + 바로가기의 "추천 웰니스"(나머지 바로가기는 바텀바와 중복이라 제외)를
+// 하나의 원형 아이콘 그리드로 합친다. 웰니스는 검색 필터가 아니라 원래 바로가기와 같은 목적지
+// (onWellnessClick)로 보내야 해서 목록 맨 끝에 두고 클릭 핸들러도 분기한다.
+private val CategoryGridOrder = listOf(
+    MedicalCategory.SKIN_BEAUTY,
+    MedicalCategory.HEALTH_CHECKUP,
+    MedicalCategory.DENTAL,
+    MedicalCategory.ORIENTAL_MEDICINE,
+    MedicalCategory.REHABILITATION,
+    MedicalCategory.PLASTIC_SURGERY,
+    MedicalCategory.OBSTETRICS_GYNECOLOGY,
+    MedicalCategory.OPHTHALMOLOGY,
+    MedicalCategory.ETC,
+    MedicalCategory.WELLNESS
+)
+private const val CategoryGridColumns = 5
+
+@Composable
+private fun CategoryGridSection(
     modifier: Modifier = Modifier,
-    purposes: List<MedicalCategory>,
     selectedPurpose: MedicalCategory?,
-    onPurposeClick: (MedicalCategory) -> Unit
+    onPurposeClick: (MedicalCategory) -> Unit,
+    onWellnessClick: () -> Unit
 ) {
-    Column(modifier = modifier) {
-        Text(text = LocalAppStrings.current.home.medicalPurposeSectionTitle, style = SectionTitleStyle, color = TextPrimary)
-        Spacer(modifier = Modifier.height(12.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            items(purposes, key = { it.name }) { item ->
-                MedicalPurposeChip(
-                    item = item,
-                    selected = item == selectedPurpose,
-                    onClick = { onPurposeClick(item) }
-                )
+    val strings = LocalAppStrings.current
+    SectionCardContainer(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            CategoryGridOrder.chunked(CategoryGridColumns).forEach { row ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    row.forEach { item ->
+                        val isWellness = item == MedicalCategory.WELLNESS
+                        CategoryCircleItem(
+                            iconRes = item.iconRes,
+                            label = if (isWellness) {
+                                quickLinkLabel(QuickLinkType.WELLNESS, strings.home)
+                            } else {
+                                item.translatedLabel(strings.language)
+                            },
+                            selected = !isWellness && item == selectedPurpose,
+                            modifier = Modifier.weight(1f),
+                            onClick = { if (isWellness) onWellnessClick() else onPurposeClick(item) }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun MedicalPurposeChip(item: MedicalCategory, selected: Boolean, onClick: () -> Unit) {
-    val label = item.translatedLabel(LocalAppStrings.current.language)
+private fun CategoryCircleItem(
+    iconRes: Int,
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Column(
-        modifier = Modifier
-            .width(76.dp)
-            .clickable(onClick = onClick),
+        modifier = modifier.clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .background(Color.White)
                 .border(
@@ -655,80 +697,19 @@ private fun MedicalPurposeChip(item: MedicalCategory, selected: Boolean, onClick
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = item.iconRes),
+                painter = painterResource(id = iconRes),
                 contentDescription = label,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(38.dp)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = if (selected) CoralPrimary else TextPrimary,
             maxLines = 1,
             textAlign = TextAlign.Center
         )
-    }
-}
-
-@Composable
-private fun QuickLinksSection(
-    modifier: Modifier = Modifier,
-    quickLinks: List<QuickLinkItem>,
-    onQuickLinkClick: (QuickLinkType) -> Unit
-) {
-    Column(modifier = modifier) {
-        Text(text = LocalAppStrings.current.home.quickLinksSectionTitle, style = SectionTitleStyle, color = TextPrimary)
-        Spacer(modifier = Modifier.height(12.dp))
-        quickLinks.chunked(3).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                row.forEach { item ->
-                    QuickLinkCard(
-                        item = item,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onQuickLinkClick(item.type) }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-    }
-}
-
-@Composable
-private fun QuickLinkCard(item: QuickLinkItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val label = quickLinkLabel(item.type, LocalAppStrings.current.home)
-    Card(
-        onClick = onClick,
-        modifier = modifier.aspectRatio(1f),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, DividerColor)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Image(
-                painter = painterResource(id = item.iconRes),
-                contentDescription = label,
-                modifier = Modifier.size(42.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = TextPrimary,
-                textAlign = TextAlign.Center,
-                maxLines = 2
-            )
-        }
     }
 }
 
@@ -747,46 +728,48 @@ private fun RecommendedHospitalSection(
     modifier: Modifier = Modifier,
     hospitals: List<Hospital>,
     favoriteHospitalIds: Set<String>,
-    onSeeAllClick: () -> Unit,
     onHospitalClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit
 ) {
     val strings = LocalAppStrings.current.home
     Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = strings.recommendedHospitalsSectionTitle, style = SectionTitleStyle, color = TextPrimary)
-            Text(
-                text = strings.viewAllLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CoralPrimary,
-                modifier = Modifier.clickable(onClick = onSeeAllClick)
-            )
-        }
+        Text(
+            text = strings.recommendedHospitalsSectionTitle,
+            style = SectionTitleStyle,
+            color = TextPrimary,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        // 카드 안 보조 텍스트(병원 주소)와 같은 스타일로 통일.
+        Text(
+            text = strings.recommendedHospitalsSubtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
         Spacer(modifier = Modifier.height(12.dp))
-        if (hospitals.isEmpty()) {
-            // F-019 전체화면 EmptyState 대신, 결정사항에 따라 섹션 내부에 텍스트만 인라인 표시
-            Text(
-                text = strings.recommendedHospitalsEmpty,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp)
-            )
-        } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(hospitals, key = { it.id }) { hospital ->
-                    RecommendedHospitalCard(
-                        hospital = hospital,
-                        isFavorite = hospital.id in favoriteHospitalIds,
-                        onClick = { onHospitalClick(hospital.id) },
-                        onFavoriteClick = { onFavoriteClick(hospital.id) }
-                    )
+        SectionCardContainer {
+            if (hospitals.isEmpty()) {
+                // F-019 전체화면 EmptyState 대신, 결정사항에 따라 섹션 내부에 텍스트만 인라인 표시
+                Text(
+                    text = strings.recommendedHospitalsEmpty,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp)
+                )
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(hospitals, key = { it.id }) { hospital ->
+                        RecommendedHospitalCard(
+                            hospital = hospital,
+                            isFavorite = hospital.id in favoriteHospitalIds,
+                            onClick = { onHospitalClick(hospital.id) },
+                            onFavoriteClick = { onFavoriteClick(hospital.id) }
+                        )
+                    }
                 }
             }
         }
@@ -848,6 +831,79 @@ private fun RecommendedHospitalCard(
                     LanguageBadge(text = lang.toLanguageBadgeLabel())
                 }
             }
+        }
+    }
+}
+
+// S-07(주변 관광·웰니스) 실제 연동 전까지, 담당자가 참고할 디자인 감을 잡도록 고정된
+// 스텁 카드 2장(관광지 1 + 웰니스 1)만 둔다. 영역 구조(제목+서브텍스트+흰 카드)는
+// RecommendedHospitalSection과 동일하게 맞춘다.
+private data class CourseStubItem(val imageRes: Int, val title: String, val place: String)
+
+@Composable
+private fun RecommendedCourseSection(modifier: Modifier = Modifier) {
+    val strings = LocalAppStrings.current.home
+    val stubItems = listOf(
+        CourseStubItem(R.drawable.banner1, strings.courseStubPlaceTitle, strings.courseStubPlaceLocation),
+        CourseStubItem(R.drawable.banner2, strings.courseStubWellnessTitle, strings.courseStubWellnessLocation)
+    )
+    Column(modifier = modifier) {
+        Text(
+            text = strings.recommendedCourseSectionTitle,
+            style = SectionTitleStyle,
+            color = TextPrimary,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = strings.recommendedCourseSubtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        SectionCardContainer {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(stubItems, key = { it.title }) { item -> CourseStubCard(item) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseStubCard(item: CourseStubItem) {
+    Column(
+        modifier = Modifier
+            .width(170.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(Color.White)
+            .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.large)
+    ) {
+        Image(
+            painter = painterResource(id = item.imageRes),
+            contentDescription = item.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(130.dp)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+        )
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = item.title,
+                style = CardTitleStyle,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = item.place,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

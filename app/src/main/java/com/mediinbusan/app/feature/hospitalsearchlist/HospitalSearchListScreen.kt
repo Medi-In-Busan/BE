@@ -82,7 +82,7 @@ import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
+import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
 import com.mediinbusan.app.core.ui.ErrorState
@@ -97,7 +97,7 @@ import com.mediinbusan.app.data.hospital.Hospital
 fun HospitalSearchListScreen(
     medicalPurpose: MedicalCategory?,
     onSelectHospital: (String) -> Unit,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     // true면 Home 검색바를 탭한 경우처럼 결과 목록 대신 검색 입력창에 바로 포커스를 준다.
     autoFocusSearch: Boolean = false,
     viewModel: HospitalSearchListViewModel = hiltViewModel()
@@ -111,7 +111,7 @@ fun HospitalSearchListScreen(
     HospitalSearchListContent(
         uiState = uiState,
         autoFocusSearch = autoFocusSearch,
-        onBack = onBack,
+        onNavigateToSettings = onNavigateToSettings,
         onLanguageSelected = viewModel::onLanguageSelected,
         onQueryChanged = viewModel::onQueryChanged,
         onSearchSubmit = viewModel::onSearchSubmit,
@@ -132,7 +132,7 @@ fun HospitalSearchListScreen(
 private fun HospitalSearchListContent(
     uiState: HospitalSearchListUiState,
     autoFocusSearch: Boolean,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -181,8 +181,8 @@ private fun HospitalSearchListContent(
     }
     Scaffold(
         topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
+            BrandTopAppBar(
+                onSettingsClick = onNavigateToSettings,
                 currentLanguageCode = uiState.selectedLanguage,
                 onLanguageSelected = onLanguageSelected
             )
@@ -674,7 +674,7 @@ private fun HospitalSearchListContentPreview() {
         HospitalSearchListContent(
             uiState = HospitalSearchListUiState(isLoading = false),
             autoFocusSearch = false,
-            onBack = {},
+            onNavigateToSettings = {},
             onLanguageSelected = {},
             onQueryChanged = {},
             onSearchSubmit = {},
