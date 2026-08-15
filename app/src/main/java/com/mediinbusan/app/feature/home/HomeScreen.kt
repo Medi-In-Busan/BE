@@ -110,9 +110,9 @@ fun HomeScreen(
     onNavigateToWellness: () -> Unit = {},
     // SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
     onNavigateToSelfDiagnosis: () -> Unit = {},
-    // 의료목적 선택 칩/의료기관 찾기/웰니스 퀵링크/검색바가 전부 여기로 모인다.
-    // purpose가 있으면 진입한 통합 검색 화면(HospitalSearchList)이 해당 필터로 자동 검색한다.
-    onNavigateToSearch: (MedicalCategory?) -> Unit = {},
+    // 의료목적 선택 칩이 여기로 모인다. 실제 필터 값은 이 콜백이 아니라 viewModel::onCategorySelected
+    // (PendingHospitalSearchFilter)가 전달하고, 이 콜백은 순수하게 "검색 화면으로 이동"만 담당한다.
+    onNavigateToSearch: () -> Unit = {},
     // 배너의 검색바 전용. 결과 목록이 아니라 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 진입시킨다.
     onNavigateToSearchFocused: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
@@ -130,7 +130,7 @@ fun HomeScreen(
         onNavigateToSearchFocused = onNavigateToSearchFocused,
         onNavigateToFavorite = onNavigateToFavorite,
         onNavigateToSettings = onNavigateToSettings,
-        onPurposeSelected = viewModel::onMedicalPurposeSelected,
+        onPurposeSelected = viewModel::onCategorySelected,
         onFavoriteClick = viewModel::onFavoriteToggleClicked,
         onRetry = viewModel::onRetryClicked,
         onLanguageSelected = viewModel::onLanguageSelected
@@ -146,7 +146,7 @@ private fun HomeContent(
     onNavigateToMap: () -> Unit,
     onNavigateToWellness: () -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
-    onNavigateToSearch: (MedicalCategory?) -> Unit,
+    onNavigateToSearch: () -> Unit,
     onNavigateToSearchFocused: () -> Unit,
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -216,12 +216,15 @@ private fun HomeContent(
                     Spacer(modifier = Modifier.height(24.dp))
                     // 의료 목적 선택 + 바로가기의 "추천 웰니스"를 하나의 원형 아이콘 그리드로 합쳤다.
                     // 나머지 바로가기(의료기관/가이드/지도)는 바텀바와 중복이라 뺐다.
+                    // 카테고리는 필터 토글이 아니라 순수 "탐색 진입점"이다 — 탭하면 바로 그 필터로
+                    // 검색 화면으로 이동하고 끝이라 Home으로 돌아왔을 때 선택 상태를 남기지 않는다
+                    // (예전엔 DataStore에 마지막 선택을 영구 저장해서 Home에 계속 남아있었음).
+                    // onPurposeSelected가 실제 필터 값을 PendingHospitalSearchFilter에 심고,
+                    // onNavigateToSearch는 순수하게 화면 이동만 한다(HomeViewModel.onCategorySelected 참고).
                     CategoryGridSection(
-                        selectedPurpose = uiState.selectedPurpose,
-                        // 카테고리는 "탐색 진입점"이라 로컬 상태 갱신과 통합 검색 화면 이동이 함께 일어난다.
                         onPurposeClick = { purpose ->
                             onPurposeSelected(purpose)
-                            onNavigateToSearch(purpose)
+                            onNavigateToSearch()
                         },
                         onWellnessClick = onNavigateToWellness
                     )
@@ -643,7 +646,6 @@ private const val CategoryGridColumns = 5
 @Composable
 private fun CategoryGridSection(
     modifier: Modifier = Modifier,
-    selectedPurpose: MedicalCategory?,
     onPurposeClick: (MedicalCategory) -> Unit,
     onWellnessClick: () -> Unit
 ) {
@@ -661,7 +663,6 @@ private fun CategoryGridSection(
                             } else {
                                 item.translatedLabel(strings.language)
                             },
-                            selected = !isWellness && item == selectedPurpose,
                             modifier = Modifier.weight(1f),
                             onClick = { if (isWellness) onWellnessClick() else onPurposeClick(item) }
                         )
@@ -676,7 +677,6 @@ private fun CategoryGridSection(
 private fun CategoryCircleItem(
     iconRes: Int,
     label: String,
-    selected: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -689,11 +689,7 @@ private fun CategoryCircleItem(
                 .size(56.dp)
                 .clip(CircleShape)
                 .background(Color.White)
-                .border(
-                    width = if (selected) 2.dp else 1.dp,
-                    color = if (selected) CoralPrimary else DividerColor,
-                    shape = CircleShape
-                ),
+                .border(width = 1.dp, color = DividerColor, shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -706,7 +702,7 @@ private fun CategoryCircleItem(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) CoralPrimary else TextPrimary,
+            color = TextPrimary,
             maxLines = 1,
             textAlign = TextAlign.Center
         )
@@ -966,7 +962,6 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
 private fun HomeContentDataPreview() {
     PreviewHomeContent(
         uiState = HomeUiState(
-            selectedPurpose = MedicalCategory.SKIN_BEAUTY,
             recommendedHospitals = PreviewHospitals,
             favoriteHospitalIds = setOf("preview-1"),
             isLoading = false,

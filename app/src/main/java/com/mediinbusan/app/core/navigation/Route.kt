@@ -1,6 +1,5 @@
 package com.mediinbusan.app.core.navigation
 
-import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.data.guide.GuidePhase
 import androidx.navigation.NavHostController
 import kotlinx.serialization.Serializable
@@ -19,11 +18,12 @@ sealed interface Route {
     @Serializable
     data object Home : Route // S-03
 
-    // S-04, 구 HospitalList + Search 통합. medicalPurpose가 있으면 진입 시 해당 필터로 자동 검색.
-    // initialSearchFocus=true면 Home 검색바를 누른 경우처럼 결과 목록 대신 검색 입력창에
-    // 바로 포커스를 줘서 최근 검색어/자동완성 패널(SearchAssistPanel)을 먼저 보여준다.
+    // S-04, 구 HospitalList + Search 통합. initialSearchFocus=true면 Home 검색바를 누른 경우처럼
+    // 결과 목록 대신 검색 입력창에 바로 포커스를 줘서 최근 검색어/자동완성 패널(SearchAssistPanel)을
+    // 먼저 보여준다. medicalPurpose 필터는 여기 args로 안 싣는다 — core/common/
+    // PendingHospitalSearchFilter 참고(Nav 백스택 저장/복원 과정에서 무시될 수 있는 문제 때문).
     @Serializable
-    data class HospitalSearchList(val medicalPurpose: MedicalCategory? = null, val initialSearchFocus: Boolean = false) : Route
+    data class HospitalSearchList(val initialSearchFocus: Boolean = false) : Route
 
     @Serializable
     data class HospitalDetail(val hospitalId: String) : Route // S-05
@@ -134,11 +134,17 @@ internal fun NavHostController.navigateToTab(route: Route) {
 /**
  * Home 검색바 → HospitalSearchList 검색 입력 모드(최근 검색어/자동완성 패널) 전용 진입점.
  * navigateToTab()의 popUpTo+saveState+restoreState 조합을 일부러 쓰지 않는다 — HospitalSearchList를
- * 이전에 다른 args(예: medicalPurpose 필터)로 방문한 적이 있으면, popUpTo{saveState=true}로 저장된
- * 백스택 청크가 destination 단위(인자 무관)로 남아있어서 restoreState=true는 물론 launchSingleTop
- * 조합만으로도 그 이전 저장 상태(ViewModel + Compose remember 포함)가 되살아나 새로 넘긴
- * initialSearchFocus=true가 무시될 수 있다. 순수 navigate()로 항상 완전히 새 백스택 엔트리(=새
- * ViewModel)를 쌓아서 이 문제를 근본적으로 피한다 — 뒤로가기를 누르면 정상적으로 Home으로 돌아간다.
+ * 이전에 다른 args(예: initialSearchFocus=false)로 방문한 적이 있으면, popUpTo{saveState=true}로
+ * 저장된 백스택 청크가 destination 단위(인자 무관)로 남아있어서 restoreState=true는 물론
+ * launchSingleTop 조합만으로도 그 이전 저장 상태(ViewModel + Compose remember 포함)가 되살아나
+ * 새로 넘긴 initialSearchFocus=true가 무시될 수 있다. 순수 navigate()로 항상 완전히 새 백스택
+ * 엔트리(=새 ViewModel)를 쌓아서 이 문제를 근본적으로 피한다 — 뒤로가기를 누르면 정상적으로 Home으로
+ * 돌아간다.
+ *
+ * 의료목적 필터 진입(Home 카테고리 칩)에는 이 함수를 쓰지 않는다 — 여기서 순수 navigate()를 쓰면
+ * 바텀바 "홈" 탭과 뒤섞여 restoreState가 소비되지 않고 쌓이는 문제가 있었다(navigateToTab 함수 주석
+ * 참고). 대신 navigateToTab을 항상 args 없는 HospitalSearchList()로 쓰고, 실제 필터 값은 Route 인자가
+ * 아니라 core/common/PendingHospitalSearchFilter를 거쳐 전달한다.
  */
 internal fun NavHostController.navigateToSearchFocused(route: Route.HospitalSearchList) {
     navigate(route)
