@@ -2,7 +2,6 @@ package com.mediinbusan.app.core.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -72,15 +70,17 @@ fun BrandTopAppBar(
             )
         },
         actions = {
-            // Home 탑바와 동일: "KO ▾" 알약 대신 지구본 아이콘이 트리거다. 설정 아이콘과의
-            // 여백을 좁히려고 기본 IconButton(48dp)보다 살짝 작게 둔다.
+            // Home 탑바와 동일: "KO ▾" 알약 대신 지구본 아이콘이 트리거다. 탑바 아이콘은 원형
+            // 배경/경계선 없이 이미지만 보여준다(Settings 안쪽 RowIconImage와는 다른 톤).
             var languageMenuExpanded by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { languageMenuExpanded = true }, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Language,
+            // 설정 톱니 쪽으로 살짝 밀어서 둘 사이 여백을 좁힌다 — 아이콘과 드롭다운을 한 Box로
+            // 같이 옮겨서 드롭다운도 이동한 아이콘 바로 아래에 뜨게 한다.
+            Box(modifier = Modifier.offset(x = 8.dp)) {
+                IconButton(onClick = { languageMenuExpanded = true }) {
+                    Image(
+                        painter = painterResource(id = R.drawable.home_languege),
                         contentDescription = LocalAppStrings.current.common.languageSelectorContentDescription,
-                        tint = CoralPrimary
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 BrandLanguageDropdown(
@@ -91,10 +91,10 @@ fun BrandTopAppBar(
                 )
             }
             IconButton(onClick = onSettingsClick) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
+                Image(
+                    painter = painterResource(id = R.drawable.home_setting),
                     contentDescription = LocalAppStrings.current.common.settingsMenuContentDescription,
-                    tint = CoralPrimary
+                    modifier = Modifier.size(26.dp)
                 )
             }
         },
