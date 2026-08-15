@@ -309,9 +309,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             navController.navigate(Route.TotalCostCoverageCheckDetail)
                         DiagnosisCtaTarget.DEPARTURE_CHECKLIST ->
                             navController.navigate(Route.AirportDeparturePreparationDetail)
-                        DiagnosisCtaTarget.WELLNESS_PLACES -> {
-                            // TODO: 팀원이 작업 중인 웰니스 전용 화면 완성 후 연결
-                        }
+                        DiagnosisCtaTarget.WELLNESS_PLACES ->
+                            // Home의 웰니스 진입점과 동일하게 MVP 기준 병원(해운대권 regNo=14)으로 연결한다.
+                            navController.navigate(Route.Nearby(hospitalId = "14"))
                     }
                 }
             )
