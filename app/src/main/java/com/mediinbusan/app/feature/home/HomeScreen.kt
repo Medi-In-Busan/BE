@@ -285,15 +285,17 @@ private fun HomeTopAppBar(
         },
         actions = {
             // 기존 "KO ▾" 알약 트리거 대신 지구본 아이콘이 트리거다. 드롭다운 메뉴 자체
-            // (LanguageDropdown)는 재사용하고 expanded 상태만 여기로 끌어올렸다.
+            // (LanguageDropdown)는 재사용하고 expanded 상태만 여기로 끌어올렸다. 탑바 아이콘은
+            // 원형 배경/경계선 없이 이미지만 보여준다(Settings 안쪽 RowIconImage와는 다른 톤).
             var languageMenuExpanded by remember { mutableStateOf(false) }
-            Box {
-                // 기본 IconButton(48dp)보다 살짝 작게 둬서 옆 설정 아이콘과의 여백을 좁힌다.
-                IconButton(onClick = { languageMenuExpanded = true }, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Language,
+            // 설정 톱니 쪽으로 살짝 밀어서 둘 사이 여백을 좁힌다 — 아이콘과 드롭다운을 한 Box로
+            // 같이 옮겨서 드롭다운도 이동한 아이콘 바로 아래에 뜨게 한다.
+            Box(modifier = Modifier.offset(x = 8.dp)) {
+                IconButton(onClick = { languageMenuExpanded = true }) {
+                    Image(
+                        painter = painterResource(id = R.drawable.home_languege),
                         contentDescription = strings.common.languageSelectorContentDescription,
-                        tint = CoralPrimary
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 LanguageDropdown(
@@ -304,11 +306,10 @@ private fun HomeTopAppBar(
                 )
             }
             IconButton(onClick = onMenuClick) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
+                Image(
+                    painter = painterResource(id = R.drawable.home_setting),
                     contentDescription = strings.home.settingsMenuContentDescription,
-                    // 옆 언어선택 아이콘의 코랄핑크 톤과 맞춘다.
-                    tint = CoralPrimary
+                    modifier = Modifier.size(26.dp)
                 )
             }
         },

@@ -254,6 +254,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.Settings> {
             SettingsScreen(
+                onBack = navController::popBackStack,
                 onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) },
                 onNavigateToNotificationSettings = { navController.navigate(Route.NotificationSettings) },
                 onNavigateToFavoriteManage = { navController.navigate(Route.Favorite) },
