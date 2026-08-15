@@ -50,6 +50,11 @@ class HospitalSearchListViewModel @Inject constructor(
 
     private var initialized = false
 
+    // 서버가 준 원본 순서(관련도순) 그대로 보관한다. uiState.results는 정렬 옵션에 따라 재배열된
+    // 값이라, RELEVANCE로 되돌아왔을 때 여기서 다시 꺼내 써야 원래 순서를 복구할 수 있다 — results를
+    // results 자기 자신으로 재정렬하면 이미 섞인 순서 위에 또 정렬하는 꼴이라 원본이 영영 사라진다.
+    private var lastServerResults: List<Hospital> = emptyList()
+
     // 자동완성 후보용 전체 병원 스냅샷. uiState.results는 검색/필터 결과로 계속 덮어써지므로
     // 자동완성은 이 별도 캐시를 대상으로 로컬 필터링한다. 화면 진입 시 1회만 채운다.
     private var allHospitalsCache: List<Hospital> = emptyList()
@@ -99,8 +104,15 @@ class HospitalSearchListViewModel @Inject constructor(
     fun initialize() {
         val pendingPurpose = pendingHospitalSearchFilter.consume()
         if (pendingPurpose != null) {
+            // 카테고리 칩 진입은 "이 카테고리 전체 결과"를 보여줘야 한다 — 예전에 남아있던 검색어까지
+            // 같이 서버로 나가면 카테고리 필터 + 옛 키워드가 함께 걸려 결과가 의도치 않게 좁아진다.
+            queryInput.value = ""
             _uiState.update { state ->
-                state.copy(filters = state.filters.map { it.copy(selected = it.label == pendingPurpose.label) })
+                state.copy(
+                    query = "",
+                    autocompleteSuggestions = emptyList(),
+                    filters = state.filters.map { it.copy(selected = it.label == pendingPurpose.label) }
+                )
             }
             loadResults()
         }
@@ -141,8 +153,11 @@ class HospitalSearchListViewModel @Inject constructor(
                     languageCode = languageCode
                 ).first { it !is Result.Loading }
             ) {
-                is Result.Success -> _uiState.update {
-                    it.copy(isLoading = false, isError = false, results = result.data.sortedByOption(it.selectedSort), errorMessage = null)
+                is Result.Success -> {
+                    lastServerResults = result.data
+                    _uiState.update {
+                        it.copy(isLoading = false, isError = false, results = result.data.sortedByOption(it.selectedSort), errorMessage = null)
+                    }
                 }
                 is Result.Error -> _uiState.update {
                     // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
@@ -209,10 +224,12 @@ class HospitalSearchListViewModel @Inject constructor(
         loadResults()
     }
 
-    // 정렬은 이미 서버에서 받아온 results를 클라이언트에서 재배열하는 것으로 처리한다
+    // 정렬은 이미 서버에서 받아온 lastServerResults를 클라이언트에서 재배열하는 것으로 처리한다
     // (재조회 불필요) — DISTANCE는 서면 기준점(DefaultSearchOrigin)으로부터의 haversine 거리.
+    // 매번 lastServerResults(원본 순서)에서 다시 정렬해야 RELEVANCE로 되돌아왔을 때 원래 순서가
+    // 복구된다 — 이미 재배열된 uiState.results를 또 정렬하면 원본이 사라진다.
     fun onSortSelected(sort: SearchSortOption) {
-        _uiState.update { it.copy(selectedSort = sort, results = it.results.sortedByOption(sort)) }
+        _uiState.update { it.copy(selectedSort = sort, results = lastServerResults.sortedByOption(sort)) }
     }
 
     private fun List<Hospital>.sortedByOption(sort: SearchSortOption): List<Hospital> = when (sort) {
