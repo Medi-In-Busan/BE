@@ -41,6 +41,7 @@ import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTransition
 import com.kakao.vectormap.label.Transition
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.designsystem.TextSecondary
 
 enum class MapPinType { HOSPITAL, TOURIST, FOOD }
@@ -57,8 +58,9 @@ data class MapPin(
  * 서면(부전동) 좌표. 시드 데이터(V2__seed_hospitals.sql)의 병원 대다수가 서면 일대에 몰려 있어
  * 좌표 하나 없이 지도를 열어야 할 때 쓰는 화면 기본 중심점으로 삼는다.
  * 사용자의 실제 위치가 아니다 — 이 앱은 위치 권한을 요청하지 않는다(CLAUDE.md §1 참고).
+ * core/common/GeoDistance.kt의 DefaultSearchOrigin과 같은 좌표(검색 결과 "가까운순" 정렬 기준점)를 가리키는 단일 소스.
  */
-val BusanDefaultCenter: LatLng = LatLng.from(35.1579, 129.0599)
+val BusanDefaultCenter: LatLng = LatLng.from(DefaultSearchOrigin.LATITUDE, DefaultSearchOrigin.LONGITUDE)
 
 /**
  * KakaoMapSdk.init() 성공 여부를 기록하는 플래그. Android Vector Map SDK v2의 공개 API에는

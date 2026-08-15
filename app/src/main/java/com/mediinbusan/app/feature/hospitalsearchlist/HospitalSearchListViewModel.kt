@@ -2,8 +2,11 @@ package com.mediinbusan.app.feature.hospitalsearchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.PendingHospitalSearchFilter
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
@@ -29,7 +32,8 @@ import javax.inject.Inject
  * 필터 칩은 누르는 즉시 재조회되지만, 키워드는 타이핑마다가 아니라 검색 버튼(돋보기 아이콘/키보드
  * 검색 액션)을 눌렀을 때만 onSearchSubmit()으로 재조회한다 — onQueryChanged는 텍스트 상태만 갱신.
  * "관광지" 칩은 백엔드에 대응 카테고리가 없어 선택해도 결과에 영향을 주지 않는다.
- * 정렬/서버 페이지네이션은 다음 이슈.
+ * 정렬(sortedByOption)은 서버에서 받아온 results를 클라이언트에서 재배열할 뿐 재조회하지 않는다.
+ * 서버 페이지네이션은 다음 이슈.
  */
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -37,7 +41,8 @@ class HospitalSearchListViewModel @Inject constructor(
     private val hospitalRepository: HospitalRepository,
     private val favoriteRepository: FavoriteRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val searchHistoryRepository: SearchHistoryRepository
+    private val searchHistoryRepository: SearchHistoryRepository,
+    private val pendingHospitalSearchFilter: PendingHospitalSearchFilter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HospitalSearchListUiState())
@@ -80,17 +85,30 @@ class HospitalSearchListViewModel @Inject constructor(
         }
     }
 
-    // Home에서 의료목적 칩/웰니스 퀵링크로 진입할 때 해당 필터 칩을 선택 상태로 반영하고,
-    // 그 목적에 맞는 결과만 서버에서 걸러 불러온다. 화면 재구성 시 중복 초기화되지 않도록 1회만 실행.
-    fun initialize(medicalPurpose: MedicalCategory?) {
+    // Home에서 의료목적 칩으로 진입할 때 해당 필터 칩을 선택 상태로 반영하고, 그 목적에 맞는
+    // 결과만 서버에서 걸러 불러온다. purpose는 Route 인자가 아니라 PendingHospitalSearchFilter를
+    // 거쳐 받는다 — 바텀바 "홈" 탭이 정상 동작하려면 이 화면 진입이 다른 탭과 동일하게 navigateToTab
+    // (popUpTo+saveState+restoreState)을 써야 하는데(navigateToTab 함수 주석 참고), 그 조합은 예전에
+    // 다른 args로 방문한 적이 있으면 restoreState가 그 예전 상태(args 포함)를 그대로 되살려 이번에
+    // 새로 넘긴 medicalPurpose가 무시될 수 있다(PendingHospitalSearchFilter 주석 참고). consume()은
+    // Nav 백스택과 무관한 순수 인메모리 값이라 이 문제에서 자유롭다.
+    // purpose가 있을 때는(=Home 칩으로 진입) initialized 여부와 무관하게 매번 필터를 다시 적용하고
+    // 재조회한다. purpose가 없을 때(=바텀바 탭 재선택)는 사용자가 직전에 만들어둔 검색/필터 상태를
+    // 그대로 두기 위해 최초 1회만 기본 목록을 로드한다. 자동완성 캐시(loadAutocompleteSource)는
+    // 어느 경우든 비용이 커서 최초 1회만 채운다.
+    fun initialize() {
+        val pendingPurpose = pendingHospitalSearchFilter.consume()
+        if (pendingPurpose != null) {
+            _uiState.update { state ->
+                state.copy(filters = state.filters.map { it.copy(selected = it.label == pendingPurpose.label) })
+            }
+            loadResults()
+        }
         if (initialized) return
         initialized = true
-        if (medicalPurpose != null) {
-            _uiState.update { state ->
-                state.copy(filters = state.filters.map { it.copy(selected = it.label == medicalPurpose.label) })
-            }
+        if (pendingPurpose == null) {
+            loadResults()
         }
-        loadResults()
         loadAutocompleteSource()
     }
 
@@ -124,7 +142,7 @@ class HospitalSearchListViewModel @Inject constructor(
                 ).first { it !is Result.Loading }
             ) {
                 is Result.Success -> _uiState.update {
-                    it.copy(isLoading = false, isError = false, results = result.data, errorMessage = null)
+                    it.copy(isLoading = false, isError = false, results = result.data.sortedByOption(it.selectedSort), errorMessage = null)
                 }
                 is Result.Error -> _uiState.update {
                     // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
@@ -191,9 +209,24 @@ class HospitalSearchListViewModel @Inject constructor(
         loadResults()
     }
 
-    // TODO: 정렬 기준 확정 후 실제 정렬 로직을 연결한다. 지금은 선택 상태만 보관.
+    // 정렬은 이미 서버에서 받아온 results를 클라이언트에서 재배열하는 것으로 처리한다
+    // (재조회 불필요) — DISTANCE는 서면 기준점(DefaultSearchOrigin)으로부터의 haversine 거리.
     fun onSortSelected(sort: SearchSortOption) {
-        _uiState.update { it.copy(selectedSort = sort) }
+        _uiState.update { it.copy(selectedSort = sort, results = it.results.sortedByOption(sort)) }
+    }
+
+    private fun List<Hospital>.sortedByOption(sort: SearchSortOption): List<Hospital> = when (sort) {
+        SearchSortOption.RELEVANCE -> this
+        SearchSortOption.NAME -> sortedBy { it.name }
+        SearchSortOption.DISTANCE -> sortedBy { hospital ->
+            val lat = hospital.latitude
+            val lng = hospital.longitude
+            if (lat == null || lng == null) {
+                Double.MAX_VALUE
+            } else {
+                haversineDistanceMeters(DefaultSearchOrigin.LATITUDE, DefaultSearchOrigin.LONGITUDE, lat, lng)
+            }
+        }
     }
 
     fun onResetSearchConditions() {

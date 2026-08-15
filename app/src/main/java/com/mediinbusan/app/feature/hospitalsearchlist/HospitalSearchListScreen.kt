@@ -66,7 +66,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.SearchStrings
@@ -95,7 +97,6 @@ import com.mediinbusan.app.data.hospital.Hospital
 
 @Composable
 fun HospitalSearchListScreen(
-    medicalPurpose: MedicalCategory?,
     onSelectHospital: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     // true면 Home 검색바를 탭한 경우처럼 결과 목록 대신 검색 입력창에 바로 포커스를 준다.
@@ -105,7 +106,7 @@ fun HospitalSearchListScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.initialize(medicalPurpose)
+        viewModel.initialize()
     }
 
     HospitalSearchListContent(
@@ -489,7 +490,6 @@ private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (St
     }
 }
 
-// TODO: 정렬 기준 미확정. 선택은 되지만 목록 순서에는 영향 없는 스텁이다.
 @Composable
 private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (SearchSortOption) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -613,6 +613,22 @@ private fun SearchResultCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            // 사용자 GPS가 아닌 Map 화면 기본 위치(DefaultSearchOrigin=서면) 기준 거리. 정렬 선택과 무관하게 항상 보여준다.
+            val hospitalLatitude = hospital.latitude
+            val hospitalLongitude = hospital.longitude
+            if (hospitalLatitude != null && hospitalLongitude != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = haversineDistanceMeters(
+                        DefaultSearchOrigin.LATITUDE,
+                        DefaultSearchOrigin.LONGITUDE,
+                        hospitalLatitude,
+                        hospitalLongitude
+                    ).toDistanceLabel(),
+                    style = SettingsDescriptionStyle,
+                    color = CoralPrimary
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 hospital.supportedLanguages.take(3).forEach { lang ->
@@ -666,6 +682,9 @@ private fun EmptySearchBanner(onReset: () -> Unit, modifier: Modifier = Modifier
         }
     }
 }
+
+private fun Double.toDistanceLabel(): String =
+    if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)
 
 @Preview(showBackground = true)
 @Composable

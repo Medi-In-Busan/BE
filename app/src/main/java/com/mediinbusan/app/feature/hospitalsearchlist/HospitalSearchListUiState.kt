@@ -37,7 +37,7 @@ data class SearchFilterChip(val label: String, val selected: Boolean = false) {
     }
 }
 
-/** TODO: 정렬 기준 미확정. 선택 상태만 보관하고 실제 정렬 로직은 다음 이슈. */
+/** DISTANCE는 서면 기준점(DefaultSearchOrigin)으로부터의 거리 — 사용자 GPS를 쓰지 않는다(CLAUDE.md §1). */
 enum class SearchSortOption(val label: String) {
     RELEVANCE("관련도순"),
     NAME("이름순"),
