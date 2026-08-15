@@ -111,23 +111,18 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
                 // 병원 검색 API가 실패해도 웰니스 UI/API를 확인할 수 있도록 MVP 확인용 기준 병원(해운대권 regNo=14)으로 바로 진입한다.
                 onNavigateToWellness = { navController.navigate(Route.Nearby(hospitalId = "14")) },
-                // 의료목적 선택 4개 진입점이 전부 여기 하나로 모인다. purpose는 Route 인자가 아니라
-                // HomeViewModel이 PendingHospitalSearchFilter에 미리 심어두고, HospitalSearchListViewModel이
-                // 진입 시 그걸 읽는다(PendingHospitalSearchFilter 주석 참고) — 그래서 여기서는 다른
-                // 바텀바 탭 화면과 동일하게 항상 args 없는 navigateToTab만 쓰면 된다.
-                onNavigateToSearch = { navController.navigateToTab(Route.HospitalSearchList()) },
-                // Home 검색바는 필터 결과 목록이 아니라, HospitalSearchListScreen 안에서
-                // 검색창을 직접 탭했을 때와 동일한 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 들어간다.
-                // navigateToTab이 아니라 navigateToSearchFocused를 쓴다 — 이유는 그 함수 주석 참고.
-                onNavigateToSearchFocused = {
-                    navController.navigateToSearchFocused(Route.HospitalSearchList(initialSearchFocus = true))
-                }
+                // 의료목적 선택/검색바 진입점이 전부 여기 하나로 모인다. purpose/포커스 요청은 Route
+                // 인자가 아니라 HomeViewModel이 PendingHospitalSearchEntry에 미리 심어두고,
+                // HospitalSearchListViewModel이 진입 시 그걸 읽는다(PendingHospitalSearchEntry 주석
+                // 참고) — 그래서 여기서는 다른 바텀바 탭 화면과 동일하게 항상 args 없는 navigateToTab만
+                // 쓰면 된다(navigateToTab 함수 주석 참고 — 예전엔 검색바만 순수 navigate()를 따로 써서
+                // 바텀바 "홈" 탭이 안 먹는 문제가 있었다).
+                onNavigateToSearch = { navController.navigateToTab(Route.HospitalSearchList) },
+                onNavigateToSearchFocused = { navController.navigateToTab(Route.HospitalSearchList) }
             )
         }
-        composable<Route.HospitalSearchList> { backStackEntry ->
-            val route = backStackEntry.toRoute<Route.HospitalSearchList>()
+        composable<Route.HospitalSearchList> {
             HospitalSearchListScreen(
-                autoFocusSearch = route.initialSearchFocus,
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
@@ -295,7 +290,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                         DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST ->
                             navController.navigate(Route.HospitalInquiryDetail)
                         DiagnosisCtaTarget.HOSPITAL_BROWSE ->
-                            navController.navigate(Route.HospitalSearchList())
+                            // 다른 진입점과 동일하게 navigateToTab으로 통일한다 — HospitalSearchList로
+                            // 가는 경로가 하나라도 순수 navigate()를 쓰면 바텀바 "홈" 탭이 못 빠져나오는
+                            // 문제가 있다(Route.kt의 navigateToTab 함수 주석 참고).
+                            navController.navigateToTab(Route.HospitalSearchList)
                         DiagnosisCtaTarget.INTERPRETATION_SUPPORT ->
                             navController.navigate(
                                 Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = reservationInquiryTitle)

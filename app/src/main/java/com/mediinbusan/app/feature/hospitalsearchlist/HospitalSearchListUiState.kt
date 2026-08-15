@@ -26,7 +26,11 @@ data class HospitalSearchListUiState(
     // 최신순, 최대 10건(SearchHistoryDao 쿼리 기준). 검색창 포커스 + 입력 비어있을 때 노출.
     val recentSearches: List<String> = emptyList(),
     // 타이핑 중 병원명 부분일치 후보. 입력이 비어있으면 항상 빈 리스트.
-    val autocompleteSuggestions: List<String> = emptyList()
+    val autocompleteSuggestions: List<String> = emptyList(),
+    // Home 검색바를 탭해 들어온 경우 true — PendingHospitalSearchEntry.consumeFocusRequest() 참고.
+    // ViewModel.initialize()가 채워주기 전(최초 컴포지션)엔 항상 false라, 화면에서 이 값을
+    // remember 초기값으로 한 번만 캡처하지 말고 LaunchedEffect로 값이 바뀌는 걸 반응형으로 봐야 한다.
+    val shouldAutoFocusSearch: Boolean = false
 )
 
 /** MedicalCategory 10종 + 관광지(백엔드 필터 대상 아님, 선택해도 결과에 영향 없음) 스텁. */
