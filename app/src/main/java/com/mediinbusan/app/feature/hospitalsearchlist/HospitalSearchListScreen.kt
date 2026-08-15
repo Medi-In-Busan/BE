@@ -75,6 +75,7 @@ import com.mediinbusan.app.core.i18n.SearchStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -99,8 +100,6 @@ import com.mediinbusan.app.data.hospital.Hospital
 fun HospitalSearchListScreen(
     onSelectHospital: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
-    // true면 Home 검색바를 탭한 경우처럼 결과 목록 대신 검색 입력창에 바로 포커스를 준다.
-    autoFocusSearch: Boolean = false,
     viewModel: HospitalSearchListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -111,7 +110,6 @@ fun HospitalSearchListScreen(
 
     HospitalSearchListContent(
         uiState = uiState,
-        autoFocusSearch = autoFocusSearch,
         onNavigateToSettings = onNavigateToSettings,
         onLanguageSelected = viewModel::onLanguageSelected,
         onQueryChanged = viewModel::onQueryChanged,
@@ -125,14 +123,14 @@ fun HospitalSearchListScreen(
         onResetSearchConditions = viewModel::onResetSearchConditions,
         onToggleFavorite = viewModel::onToggleFavorite,
         onSelectHospital = onSelectHospital,
-        onRetry = viewModel::onRetry
+        onRetry = viewModel::onRetry,
+        onAutoFocusApplied = viewModel::onAutoFocusApplied
     )
 }
 
 @Composable
 private fun HospitalSearchListContent(
     uiState: HospitalSearchListUiState,
-    autoFocusSearch: Boolean,
     onNavigateToSettings: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
@@ -146,10 +144,16 @@ private fun HospitalSearchListContent(
     onResetSearchConditions: () -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSelectHospital: (String) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onAutoFocusApplied: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
-    var isSearchFocused by remember { mutableStateOf(autoFocusSearch) }
+    // uiState.shouldAutoFocusSearch는 ViewModel.initialize()가 채워주기 전(최초 컴포지션 시점)엔
+    // 항상 false다 — PendingHospitalSearchEntry.consumeFocusRequest()가 LaunchedEffect(Unit) 안에서
+    // 비동기로 실행되기 때문. 그래서 remember 초기값으로 한 번만 캡처하면(과거엔 Route 인자라
+    // 최초 컴포지션 시점에 이미 정확한 값이었지만, 이제는 아니다) 항상 false로 굳어버린다 —
+    // 아래 LaunchedEffect로 값이 true로 바뀌는 시점을 반응형으로 잡아야 한다.
+    var isSearchFocused by remember { mutableStateOf(false) }
     // 콘텐츠 유무가 아니라 포커스 여부만으로 패널을 띄운다. 자동완성 후보 개수는 한글 조합
     // 중간 단계(예: "부산" 입력 중 "부"+미완성 글자)에서 순간적으로 0건이 될 수 있는데,
     // 콘텐츠 유무로 판단하면 그 찰나에 패널이 사라지고 뒤의 결과 리스트가 노출돼버린다.
@@ -168,19 +172,29 @@ private fun HospitalSearchListContent(
     // 안드로이드가 "아직 포커스 없음"이라는 초기 상태를 onFocusChanged(false)로 합성해서 먼저
     // 보고한다 — 이게 위에서 세팅해둔 isSearchFocused=true를 한 프레임 덮어써서 결과 목록이
     // 찰나에 보였다가 그다음 프레임(실제 requestFocus 성공 시점)에 다시 패널로 돌아오는
-    // "깜빡임"의 원인이었다. autoFocusSearch가 대기 중(hasAppliedAutoFocus==false)인 동안 오는
+    // "깜빡임"의 원인이었다. shouldAutoFocusSearch가 대기 중(hasAppliedAutoFocus==false)인 동안 오는
     // onFocusChanged 이벤트는 전부 이 합성 이벤트이므로 무시하고, 우리가 실제로 포커스를 건
     // 이후(hasAppliedAutoFocus==true)부터만 사용자의 진짜 포커스 변화를 반영한다.
+    //
+    // 포커스를 적용한 직후 onAutoFocusApplied()로 ViewModel의 uiState.shouldAutoFocusSearch도 바로
+    // false로 꺼야 한다 — 이 hasAppliedAutoFocus는 로컬 remember라 병원 상세로 넘어갔다 뒤로가기로
+    // 이 화면이 다시 조립되면 초기화되는데, ViewModel 쪽 shouldAutoFocusSearch를 안 꺼두면 그때마다
+    // "포커스 요청이 있다"고 다시 착각해서 검색 입력 패널(최근 검색어)이 또 열리고 키보드도 다시 뜬다.
     var hasAppliedAutoFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.isLoading) {
-        if (autoFocusSearch && !uiState.isLoading && !hasAppliedAutoFocus) {
+    LaunchedEffect(uiState.shouldAutoFocusSearch, uiState.isLoading) {
+        if (uiState.shouldAutoFocusSearch && !uiState.isLoading && !hasAppliedAutoFocus) {
             hasAppliedAutoFocus = true
+            isSearchFocused = true
             withFrameNanos {}
             searchFocusRequester.requestFocus()
             keyboardController?.show()
+            onAutoFocusApplied()
         }
     }
     Scaffold(
+        // Home과 같은 맨 뒤 배경(연분홍) — 기본값(테마 background)이 Home과 달라 화면 전환 시
+        // 배경색이 순간 바뀌어 보이던 것을 통일한다.
+        containerColor = HomeBackgroundPink,
         topBar = {
             BrandTopAppBar(
                 onSettingsClick = onNavigateToSettings,
@@ -215,9 +229,9 @@ private fun HospitalSearchListContent(
                     onQueryChanged = onQueryChanged,
                     onSearchSubmit = { focusManager.clearFocus(); onSearchSubmit() },
                     onFocusChanged = { focused ->
-                        // autoFocusSearch 대기 중에 오는 이벤트는 텍스트필드가 처음 붙을 때 항상
-                        // 한 번 오는 합성 초기값(false)이라 무시한다 — 위 LaunchedEffect 주석 참고.
-                        if (hasAppliedAutoFocus || !autoFocusSearch) {
+                        // shouldAutoFocusSearch 대기 중에 오는 이벤트는 텍스트필드가 처음 붙을 때
+                        // 항상 한 번 오는 합성 초기값(false)이라 무시한다 — 위 LaunchedEffect 주석 참고.
+                        if (hasAppliedAutoFocus || !uiState.shouldAutoFocusSearch) {
                             isSearchFocused = focused
                         }
                     },
@@ -251,6 +265,9 @@ private fun HospitalSearchListContent(
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
+                    // 맨 뒤 배경(Home과 같은 HomeBackgroundPink)은 그대로 비쳐 보이게 두고, 흰색+그림자는
+                    // 개별 결과 카드(SearchResultCard)에만 준다 — Home의 SectionCardContainer 같은
+                    // 큰 흰 카드로 이 영역 전체를 감싸지 않는다.
                     Box(modifier = Modifier.weight(1f)) {
                         if (uiState.results.isEmpty()) {
                             EmptySearchBanner(
@@ -580,11 +597,13 @@ private fun SearchResultCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // 옅은 분홍(HomeBackgroundPink) 배경 위라 기존 0.04 알파 그림자(다른 화면의 흰 배경
+            // 기준)로는 거의 안 보였다 — 카드가 배경과 확실히 분리돼 보이도록 더 진하게 준다.
             .shadow(
-                elevation = 3.dp,
+                elevation = 6.dp,
                 shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.04f),
-                spotColor = Color.Black.copy(alpha = 0.04f)
+                ambientColor = Color.Black.copy(alpha = 0.3f),
+                spotColor = Color.Black.copy(alpha = 0.3f)
             )
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
@@ -692,7 +711,6 @@ private fun HospitalSearchListContentPreview() {
     MediInBusanTheme {
         HospitalSearchListContent(
             uiState = HospitalSearchListUiState(isLoading = false),
-            autoFocusSearch = false,
             onNavigateToSettings = {},
             onLanguageSelected = {},
             onQueryChanged = {},
@@ -706,7 +724,8 @@ private fun HospitalSearchListContentPreview() {
             onResetSearchConditions = {},
             onToggleFavorite = {},
             onSelectHospital = {},
-            onRetry = {}
+            onRetry = {},
+            onAutoFocusApplied = {}
         )
     }
 }
