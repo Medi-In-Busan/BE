@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.common.MedicalCategory
-import com.mediinbusan.app.core.common.PendingHospitalSearchFilter
+import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
@@ -42,7 +42,7 @@ class HospitalSearchListViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val searchHistoryRepository: SearchHistoryRepository,
-    private val pendingHospitalSearchFilter: PendingHospitalSearchFilter
+    private val pendingHospitalSearchEntry: PendingHospitalSearchEntry
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HospitalSearchListUiState())
@@ -90,19 +90,23 @@ class HospitalSearchListViewModel @Inject constructor(
         }
     }
 
-    // Home에서 의료목적 칩으로 진입할 때 해당 필터 칩을 선택 상태로 반영하고, 그 목적에 맞는
-    // 결과만 서버에서 걸러 불러온다. purpose는 Route 인자가 아니라 PendingHospitalSearchFilter를
-    // 거쳐 받는다 — 바텀바 "홈" 탭이 정상 동작하려면 이 화면 진입이 다른 탭과 동일하게 navigateToTab
-    // (popUpTo+saveState+restoreState)을 써야 하는데(navigateToTab 함수 주석 참고), 그 조합은 예전에
-    // 다른 args로 방문한 적이 있으면 restoreState가 그 예전 상태(args 포함)를 그대로 되살려 이번에
-    // 새로 넘긴 medicalPurpose가 무시될 수 있다(PendingHospitalSearchFilter 주석 참고). consume()은
-    // Nav 백스택과 무관한 순수 인메모리 값이라 이 문제에서 자유롭다.
+    // Home에서 의료목적 칩/검색바로 진입할 때 각각 필터/자동 포커스를 반영한다. 둘 다 Route 인자가
+    // 아니라 PendingHospitalSearchEntry를 거쳐 받는다 — 바텀바 "홈" 탭이 정상 동작하려면 이 화면
+    // 진입이 다른 탭과 동일하게 navigateToTab(popUpTo+saveState+restoreState)을 써야 하는데
+    // (navigateToTab 함수 주석 참고), 그 조합은 예전에 다른 args로 방문한 적이 있으면 restoreState가
+    // 그 예전 상태(args 포함)를 그대로 되살려 이번에 새로 넘긴 값이 무시될 수 있다
+    // (PendingHospitalSearchEntry 주석 참고). consume*()은 Nav 백스택과 무관한 순수 인메모리 값이라
+    // 이 문제에서 자유롭다.
     // purpose가 있을 때는(=Home 칩으로 진입) initialized 여부와 무관하게 매번 필터를 다시 적용하고
     // 재조회한다. purpose가 없을 때(=바텀바 탭 재선택)는 사용자가 직전에 만들어둔 검색/필터 상태를
     // 그대로 두기 위해 최초 1회만 기본 목록을 로드한다. 자동완성 캐시(loadAutocompleteSource)는
     // 어느 경우든 비용이 커서 최초 1회만 채운다.
     fun initialize() {
-        val pendingPurpose = pendingHospitalSearchFilter.consume()
+        val pendingPurpose = pendingHospitalSearchEntry.consumePurpose()
+        val shouldAutoFocusSearch = pendingHospitalSearchEntry.consumeFocusRequest()
+        if (shouldAutoFocusSearch) {
+            _uiState.update { it.copy(shouldAutoFocusSearch = true) }
+        }
         if (pendingPurpose != null) {
             // 카테고리 칩 진입은 "이 카테고리 전체 결과"를 보여줘야 한다 — 예전에 남아있던 검색어까지
             // 같이 서버로 나가면 카테고리 필터 + 옛 키워드가 함께 걸려 결과가 의도치 않게 좁아진다.
@@ -122,6 +126,14 @@ class HospitalSearchListViewModel @Inject constructor(
             loadResults()
         }
         loadAutocompleteSource()
+    }
+
+    // 화면이 실제로 포커스+키보드를 띄운 직후 호출된다. shouldAutoFocusSearch를 여기서 바로 꺼야
+    // 한다 — 이 값을 켠 채로 두면, 병원 상세로 넘어갔다 뒤로가기로 이 화면이 다시 조립될 때(로컬
+    // Compose remember는 그때마다 초기화되지만 uiState는 같은 ViewModel에 남아있으므로) 매번 다시
+    // "포커스 요청이 있다"고 착각해서 검색 입력 패널(최근 검색어)이 또 열리고 키보드도 다시 뜬다.
+    fun onAutoFocusApplied() {
+        _uiState.update { it.copy(shouldAutoFocusSearch = false) }
     }
 
     // 자동완성 후보용 전체 병원 스냅샷을 1회 채운다. getAllHospitals가 서버 페이지를 모두 순회해

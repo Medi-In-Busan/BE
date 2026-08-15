@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,10 +72,24 @@ fun BrandTopAppBar(
             )
         },
         actions = {
-            BrandLanguageDropdown(
-                currentLanguageCode = currentLanguageCode,
-                onLanguageSelected = onLanguageSelected
-            )
+            // Home 탑바와 동일: "KO ▾" 알약 대신 지구본 아이콘이 트리거다. 설정 아이콘과의
+            // 여백을 좁히려고 기본 IconButton(48dp)보다 살짝 작게 둔다.
+            var languageMenuExpanded by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { languageMenuExpanded = true }, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = LocalAppStrings.current.common.languageSelectorContentDescription,
+                        tint = CoralPrimary
+                    )
+                }
+                BrandLanguageDropdown(
+                    expanded = languageMenuExpanded,
+                    onDismissRequest = { languageMenuExpanded = false },
+                    currentLanguageCode = currentLanguageCode,
+                    onLanguageSelected = onLanguageSelected
+                )
+            }
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -84,79 +100,69 @@ fun BrandTopAppBar(
         },
         // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백이 답답해
         // 보여서 줄인다. 완전히 없애면(top=0) 바가 상태바에 바로 붙어버리니 일부만 뺀다.
-        windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp))
+        windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
+        // 기본값(surface)이 테마 톤이 살짝 섞여 순백이 아니었다 — 본문 배경(연분홍)과 대비되는
+        // 순백 탑바를 명시한다.
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
     )
 }
 
 // HomeScreen.kt의 LanguageDropdown과 같은 톤(다른 팀원 PR과의 충돌 때문에 Home은 로컬 사본을
-// 따로 둔다). 닫혀있을 때 트리거를 코랄 색으로 칠해 "현재 활성 언어"임을 드러내고, 펼쳤을 때는
-// 목록을 1.5배 크기 + 알약(pill) 모양 선택 표시 + 체크 아이콘으로 활성화 상태를 보여준다.
-// DropdownMenuItem 대신 직접 Row를 그린다 — DropdownMenuItem은 내부적으로 최소 112dp 폭을
-// 강제해서 contentPadding/모디파이어로는 줄일 수 없었다. 직접 그리면 텍스트 크기만큼만 차지한다.
+// 따로 둔다). 펼쳤을 때 목록을 1.5배 크기 + 알약(pill) 모양 선택 표시 + 체크 아이콘으로 활성화
+// 상태를 보여준다. DropdownMenuItem 대신 직접 Row를 그린다 — DropdownMenuItem은 내부적으로 최소
+// 112dp 폭을 강제해서 contentPadding/모디파이어로는 줄일 수 없었다. 직접 그리면 텍스트 크기만큼만
+// 차지한다. 트리거는 지구본 아이콘(BrandTopAppBar)이라 expanded를 내부 remember로 안 갖고
+// 호출부에서 끌어올려 받는다.
 @Composable
-private fun BrandLanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
+private fun BrandLanguageDropdown(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    currentLanguageCode: String,
+    onLanguageSelected: (String) -> Unit
+) {
     val expandedItemTextStyle = MaterialTheme.typography.labelSmall.copy(
         fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.2f,
         lineHeight = MaterialTheme.typography.labelSmall.lineHeight * 1.2f
     )
     val pillShape = RoundedCornerShape(percent = 50)
 
-    Box(modifier = Modifier.padding(end = 12.dp)) {
-        Box(
-            modifier = Modifier
-                .clip(pillShape)
-                .border(width = 1.dp, color = CoralPrimary, shape = pillShape)
-                .background(CoralPrimaryContainer)
-                .clickable { expanded = true }
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        shape = MaterialTheme.shapes.large,
+        containerColor = Color.White
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "${currentLanguageCode.toLanguageBadgeLabel()} ▾",
-                style = MaterialTheme.typography.labelSmall,
-                color = CoralPrimary,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            shape = MaterialTheme.shapes.large,
-            containerColor = Color.White
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                SupportedLanguage.CODES.forEach { code ->
-                    val selected = code == currentLanguageCode
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(pillShape)
-                            .clickable {
-                                onLanguageSelected(code)
-                                expanded = false
-                            }
-                            .background(if (selected) CoralPrimaryContainer else Color.Transparent)
-                            .padding(horizontal = 10.dp * 1.5f, vertical = 6.dp * 1.5f)
-                    ) {
-                        Text(
-                            text = code.toLanguageBadgeLabel(),
-                            style = expandedItemTextStyle,
-                            color = if (selected) CoralPrimary else BadgeText,
-                            fontWeight = if (selected) FontWeight.Bold else null
-                        )
-                        if (selected) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = CoralPrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
+            SupportedLanguage.CODES.forEach { code ->
+                val selected = code == currentLanguageCode
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(pillShape)
+                        .clickable {
+                            onLanguageSelected(code)
+                            onDismissRequest()
                         }
+                        .background(if (selected) CoralPrimaryContainer else Color.Transparent)
+                        .padding(horizontal = 10.dp * 1.5f, vertical = 6.dp * 1.5f)
+                ) {
+                    Text(
+                        text = code.toLanguageBadgeLabel(),
+                        style = expandedItemTextStyle,
+                        color = if (selected) CoralPrimary else BadgeText,
+                        fontWeight = if (selected) FontWeight.Bold else null
+                    )
+                    if (selected) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = CoralPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }

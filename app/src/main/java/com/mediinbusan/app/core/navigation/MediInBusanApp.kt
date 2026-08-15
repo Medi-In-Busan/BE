@@ -140,7 +140,7 @@ private fun bottomNavTabs(
             icon = Icons.Outlined.LocalHospital,
             selectedIcon = Icons.Filled.LocalHospital,
             selected = currentDestination.isRouteSelected<Route.HospitalSearchList>(),
-            onClick = { navController.navigateToTab(Route.HospitalSearchList()) }
+            onClick = { navController.navigateToTab(Route.HospitalSearchList) }
         ),
         BottomNavTabUiModel(
             label = strings.bottomNavGuideLabel,

@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
@@ -56,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
@@ -111,9 +113,10 @@ fun HomeScreen(
     // SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
     onNavigateToSelfDiagnosis: () -> Unit = {},
     // 의료목적 선택 칩이 여기로 모인다. 실제 필터 값은 이 콜백이 아니라 viewModel::onCategorySelected
-    // (PendingHospitalSearchFilter)가 전달하고, 이 콜백은 순수하게 "검색 화면으로 이동"만 담당한다.
+    // (PendingHospitalSearchEntry)가 전달하고, 이 콜백은 순수하게 "검색 화면으로 이동"만 담당한다.
     onNavigateToSearch: () -> Unit = {},
-    // 배너의 검색바 전용. 결과 목록이 아니라 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 진입시킨다.
+    // 배너의 검색바 전용. 마찬가지로 실제 "포커스 요청" 값은 viewModel::onSearchBarClicked
+    // (PendingHospitalSearchEntry)가 전달하고, 이 콜백은 순수하게 "검색 화면으로 이동"만 담당한다.
     onNavigateToSearchFocused: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -131,6 +134,7 @@ fun HomeScreen(
         onNavigateToFavorite = onNavigateToFavorite,
         onNavigateToSettings = onNavigateToSettings,
         onPurposeSelected = viewModel::onCategorySelected,
+        onSearchBarClicked = viewModel::onSearchBarClicked,
         onFavoriteClick = viewModel::onFavoriteToggleClicked,
         onRetry = viewModel::onRetryClicked,
         onLanguageSelected = viewModel::onLanguageSelected
@@ -151,6 +155,7 @@ private fun HomeContent(
     onNavigateToFavorite: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onPurposeSelected: (MedicalCategory) -> Unit,
+    onSearchBarClicked: () -> Unit,
     onFavoriteClick: (String) -> Unit,
     onRetry: () -> Unit,
     onLanguageSelected: (String) -> Unit
@@ -209,7 +214,9 @@ private fun HomeContent(
                         .padding(top = contentPadding.calculateTopPadding())
                 ) {
                     HeroBannerSection(
-                        onSearchClick = onNavigateToSearchFocused,
+                        // 카테고리 칩과 같은 패턴: onSearchBarClicked가 PendingHospitalSearchEntry에
+                        // 포커스 요청을 심고, onNavigateToSearchFocused는 순수하게 화면 이동만 한다.
+                        onSearchClick = { onSearchBarClicked(); onNavigateToSearchFocused() },
                         onWellnessClick = onNavigateToWellness
                     )
 
@@ -219,7 +226,7 @@ private fun HomeContent(
                     // 카테고리는 필터 토글이 아니라 순수 "탐색 진입점"이다 — 탭하면 바로 그 필터로
                     // 검색 화면으로 이동하고 끝이라 Home으로 돌아왔을 때 선택 상태를 남기지 않는다
                     // (예전엔 DataStore에 마지막 선택을 영구 저장해서 Home에 계속 남아있었음).
-                    // onPurposeSelected가 실제 필터 값을 PendingHospitalSearchFilter에 심고,
+                    // onPurposeSelected가 실제 필터 값을 PendingHospitalSearchEntry에 심고,
                     // onNavigateToSearch는 순수하게 화면 이동만 한다(HomeViewModel.onCategorySelected 참고).
                     CategoryGridSection(
                         onPurposeClick = { purpose ->
@@ -277,15 +284,30 @@ private fun HomeTopAppBar(
             )
         },
         actions = {
-            LanguageDropdown(
-                currentLanguageCode = currentLanguageCode,
-                onLanguageSelected = onLanguageSelected
-            )
+            // 기존 "KO ▾" 알약 트리거 대신 지구본 아이콘이 트리거다. 드롭다운 메뉴 자체
+            // (LanguageDropdown)는 재사용하고 expanded 상태만 여기로 끌어올렸다.
+            var languageMenuExpanded by remember { mutableStateOf(false) }
+            Box {
+                // 기본 IconButton(48dp)보다 살짝 작게 둬서 옆 설정 아이콘과의 여백을 좁힌다.
+                IconButton(onClick = { languageMenuExpanded = true }, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = strings.common.languageSelectorContentDescription,
+                        tint = CoralPrimary
+                    )
+                }
+                LanguageDropdown(
+                    expanded = languageMenuExpanded,
+                    onDismissRequest = { languageMenuExpanded = false },
+                    currentLanguageCode = currentLanguageCode,
+                    onLanguageSelected = onLanguageSelected
+                )
+            }
             IconButton(onClick = onMenuClick) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = strings.home.settingsMenuContentDescription,
-                    // 옆 언어선택 드롭다운의 코랄핑크 톤과 맞춘다.
+                    // 옆 언어선택 아이콘의 코랄핑크 톤과 맞춘다.
                     tint = CoralPrimary
                 )
             }
@@ -298,78 +320,63 @@ private fun HomeTopAppBar(
     )
 }
 
-// core/ui/BrandTopAppBar.kt의 BrandLanguageDropdown과 같은 톤. 닫혀있을 때 트리거는 수정 전
-// 원래 디자인 그대로(회색 아웃라인)이고, 드롭다운은 DropdownMenuItem 대신 직접 Row를 그린다 —
-// DropdownMenuItem은 내부적으로 최소 112dp 폭을 강제해서 모디파이어로는 줄일 수 없었다.
-// 직접 그리면 텍스트 크기만큼만 차지한다. Home은 팀원의 미머지 PR과 충돌을 피하려고 로컬
-// 사본을 따로 두지만(파일 상단 주석 참고), 시각적으로는 항상 같은 디자인을 유지한다.
+// core/ui/BrandTopAppBar.kt의 BrandLanguageDropdown과 같은 톤. 드롭다운은 DropdownMenuItem 대신
+// 직접 Row를 그린다 — DropdownMenuItem은 내부적으로 최소 112dp 폭을 강제해서 모디파이어로는 줄일
+// 수 없었다. 직접 그리면 텍스트 크기만큼만 차지한다. Home은 팀원의 미머지 PR과 충돌을 피하려고
+// 로컬 사본을 따로 두지만(파일 상단 주석 참고), 시각적으로는 항상 같은 디자인을 유지한다.
+//
+// 트리거는 지구본 아이콘(HomeTopAppBar)이라 expanded를 내부 remember로 안 갖고 호출부에서 끌어올려 받는다.
 @Composable
-private fun LanguageDropdown(currentLanguageCode: String, onLanguageSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
-    // 닫혀있을 때 트리거는 크기(패딩/폰트/모서리)를 원래 그대로 유지한다 — 지금 표시된 코드가
-    // 곧 "현재 활성 언어"이므로 코랄 컬러로 칠해서 활성 상태임을 드러낸다(이전엔 회색이라 활성화가
-    // 안 보인다는 피드백을 받음). 펼쳐졌을 때 목록만 1.5배 크기 + 알약(pill) 모양 선택 표시로 꾸민다.
+private fun LanguageDropdown(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    currentLanguageCode: String,
+    onLanguageSelected: (String) -> Unit
+) {
+    // 펼쳐졌을 때 목록은 1.5배 크기 + 알약(pill) 모양 선택 표시로 꾸민다.
     val expandedItemTextStyle = MaterialTheme.typography.labelSmall.copy(
         fontSize = MaterialTheme.typography.labelSmall.fontSize * 1.2f,
         lineHeight = MaterialTheme.typography.labelSmall.lineHeight * 1.2f
     )
     val pillShape = RoundedCornerShape(percent = 50)
 
-    Box(modifier = Modifier.padding(end = 0.dp)) {
-        Box(
-            modifier = Modifier
-                .clip(pillShape)
-                .border(width = 1.dp, color = CoralPrimary, shape = pillShape)
-                .background(CoralPrimaryContainer)
-                .clickable { expanded = true }
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        shape = MaterialTheme.shapes.large,
+        containerColor = Color.White
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "${currentLanguageCode.toLanguageBadgeLabel()} ▾",
-                style = MaterialTheme.typography.labelSmall,
-                color = CoralPrimary,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            shape = MaterialTheme.shapes.large,
-            containerColor = Color.White
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                SupportedLanguage.CODES.forEach { code ->
-                    val selected = code == currentLanguageCode
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(pillShape)
-                            .clickable {
-                                onLanguageSelected(code)
-                                expanded = false
-                            }
-                            .background(if (selected) CoralPrimaryContainer else Color.Transparent)
-                            .padding(horizontal = 10.dp * 1.5f, vertical = 6.dp * 1.5f)
-                    ) {
-                        Text(
-                            text = code.toLanguageBadgeLabel(),
-                            style = expandedItemTextStyle,
-                            color = if (selected) CoralPrimary else BadgeText,
-                            fontWeight = if (selected) FontWeight.Bold else null
-                        )
-                        if (selected) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = CoralPrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
+            SupportedLanguage.CODES.forEach { code ->
+                val selected = code == currentLanguageCode
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(pillShape)
+                        .clickable {
+                            onLanguageSelected(code)
+                            onDismissRequest()
                         }
+                        .background(if (selected) CoralPrimaryContainer else Color.Transparent)
+                        .padding(horizontal = 10.dp * 1.5f, vertical = 6.dp * 1.5f)
+                ) {
+                    Text(
+                        text = code.toLanguageBadgeLabel(),
+                        style = expandedItemTextStyle,
+                        color = if (selected) CoralPrimary else BadgeText,
+                        fontWeight = if (selected) FontWeight.Bold else null
+                    )
+                    if (selected) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = CoralPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }
@@ -618,6 +625,13 @@ private fun SectionCardContainer(modifier: Modifier = Modifier, content: @Compos
     Box(
         modifier = modifier
             .fillMaxWidth()
+            // 큰 흰 영역이라 카드류(0.04 알파)보다 강하게 — BottomNavBar와 같은 톤의 진한 그림자.
+            .shadow(
+                elevation = 8.dp,
+                shape = SectionCardShape,
+                ambientColor = Color.Black.copy(alpha = 0.4f),
+                spotColor = Color.Black.copy(alpha = 0.4f)
+            )
             .clip(SectionCardShape)
             .background(Color.White)
             .padding(horizontal = 20.dp, vertical = 16.dp)
@@ -681,15 +695,20 @@ private fun CategoryCircleItem(
     onClick: () -> Unit
 ) {
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
+            // 기존 RoundIconButton과 동일한 순서(size → clip → background → clickable) —
+            // clip이 clickable보다 먼저라 리플이 원 밖으로 안 번지고 원 안에서만 퍼진다.
+            // clickable을 라벨 텍스트까지 포함한 바깥 Column이 아니라 이 원에만 걸어서
+            // 클릭 영역도 원 안으로 제한한다.
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
                 .background(Color.White)
-                .border(width = 1.dp, color = DividerColor, shape = CircleShape),
+                .border(width = 1.dp, color = DividerColor, shape = CircleShape)
+                .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -782,6 +801,12 @@ private fun RecommendedHospitalCard(
     Column(
         modifier = Modifier
             .width(170.dp)
+            .shadow(
+                elevation = 3.dp,
+                shape = MaterialTheme.shapes.large,
+                ambientColor = Color.Black.copy(alpha = 0.04f),
+                spotColor = Color.Black.copy(alpha = 0.04f)
+            )
             .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onClick)
             .background(Color.White)
@@ -871,6 +896,12 @@ private fun CourseStubCard(item: CourseStubItem) {
     Column(
         modifier = Modifier
             .width(170.dp)
+            .shadow(
+                elevation = 3.dp,
+                shape = MaterialTheme.shapes.large,
+                ambientColor = Color.Black.copy(alpha = 0.04f),
+                spotColor = Color.Black.copy(alpha = 0.04f)
+            )
             .clip(MaterialTheme.shapes.large)
             .background(Color.White)
             .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.large)
@@ -950,6 +981,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToFavorite = {},
             onNavigateToSettings = {},
             onPurposeSelected = {},
+            onSearchBarClicked = {},
             onFavoriteClick = {},
             onRetry = {},
             onLanguageSelected = {}

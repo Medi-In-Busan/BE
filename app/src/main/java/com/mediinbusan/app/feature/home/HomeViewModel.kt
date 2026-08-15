@@ -3,7 +3,7 @@ package com.mediinbusan.app.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
-import com.mediinbusan.app.core.common.PendingHospitalSearchFilter
+import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.Favorite
@@ -27,7 +27,7 @@ class HomeViewModel @Inject constructor(
     private val hospitalRepository: HospitalRepository,
     private val favoriteRepository: FavoriteRepository,
     private val recentRepository: RecentRepository,
-    private val pendingHospitalSearchFilter: PendingHospitalSearchFilter,
+    private val pendingHospitalSearchEntry: PendingHospitalSearchEntry,
     private val getRecommendedHospitalsUseCase: GetRecommendedHospitalsUseCase
 ) : ViewModel() {
 
@@ -86,10 +86,16 @@ class HomeViewModel @Inject constructor(
     }
 
     // 카테고리 칩 탭 직후(같은 클릭 핸들러에서) 검색 화면으로 이동하기 직전에 호출된다.
-    // PendingHospitalSearchFilter 주석 참고 — DataStore가 아니라 인메모리 싱글턴에 심어서,
+    // PendingHospitalSearchEntry 주석 참고 — DataStore가 아니라 인메모리 싱글턴에 심어서,
     // Home으로 돌아와도 아무 흔적이 남지 않고 검색 화면 진입 시 정확히 한 번만 적용된다.
     fun onCategorySelected(purpose: MedicalCategory) {
-        pendingHospitalSearchFilter.set(purpose)
+        pendingHospitalSearchEntry.setPurpose(purpose)
+    }
+
+    // 검색바 탭 직후(같은 클릭 핸들러에서) 검색 화면으로 이동하기 직전에 호출된다. 검색 화면이
+    // 결과 목록 대신 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 열리도록 요청만 남긴다.
+    fun onSearchBarClicked() {
+        pendingHospitalSearchEntry.requestFocus()
     }
 
     fun onFavoriteToggleClicked(hospitalId: String) {
