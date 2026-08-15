@@ -8,7 +8,6 @@ import com.mediinbusan.app.data.hospital.Hospital
 
 data class HomeUiState(
     val medicalPurposes: List<MedicalCategory> = MedicalCategory.entries,
-    val selectedPurpose: MedicalCategory? = null,
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val quickLinks: List<QuickLinkItem> = QuickLinkItem.DEFAULTS,
     val recommendedHospitals: List<Hospital> = emptyList(),
