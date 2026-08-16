@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,7 +61,6 @@ import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
-import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
@@ -115,17 +116,26 @@ private fun RecentlyViewedContent(
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(modifier = Modifier.height(4.dp))
-                IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = appStrings.common.backContentDescription,
-                        tint = SettingsPrimaryText
+                // 뒤로가기 아이콘과 같은 줄에, 페이지 전체 폭 기준 정중앙에 타이틀을 놓는다.
+                Box(modifier = Modifier.fillMaxWidth().height(32.dp)) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.align(Alignment.CenterStart).size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = appStrings.common.backContentDescription,
+                            tint = SettingsPrimaryText
+                        )
+                    }
+                    Text(
+                        text = appStrings.settings.recentlyViewedTitle,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = SettingsPrimaryText,
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                // 아이콘-타이틀 간격도 원래(24dp)의 절반으로 줄인다.
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = appStrings.settings.recentlyViewedTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(48.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -135,9 +145,10 @@ private fun RecentlyViewedContent(
                     if (items.isNotEmpty()) {
                         Text(
                             text = appStrings.recentlyViewed.deleteAllLabel,
-                            style = SettingsDescriptionStyle,
+                            style = SettingsDescriptionStyle.copy(fontSize = 14.sp),
                             color = SettingsPrimaryText,
                             fontWeight = FontWeight.Bold,
+                            textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable(onClick = onRemoveAll)
                         )
                     }
@@ -191,7 +202,7 @@ private fun RecentlyViewedTotalCountLabel(count: Int) {
             append(strings.totalCountSuffixFormat.format(animatedCount))
         }
     }
-    Text(text = text, style = SettingsDescriptionStyle)
+    Text(text = text, style = SettingsDescriptionStyle.copy(fontSize = 14.sp))
 }
 
 // HospitalSearchListScreen의 SearchResultCard와 완전히 같은 카드 양식(태그, 타이틀, 위치, 거리

@@ -1,6 +1,7 @@
 package com.mediinbusan.app.feature.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,7 +43,6 @@ import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
-import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 
 @Composable
 fun NotificationSettingsScreen(
@@ -76,17 +78,26 @@ private fun NotificationSettingsContent(
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(modifier = Modifier.height(4.dp))
-            IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = appStrings.common.backContentDescription,
-                    tint = SettingsPrimaryText
+            // 뒤로가기 아이콘과 같은 줄에, 페이지 전체 폭 기준 정중앙에 타이틀을 놓는다.
+            Box(modifier = Modifier.fillMaxWidth().height(32.dp)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.CenterStart).size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = appStrings.common.backContentDescription,
+                        tint = SettingsPrimaryText
+                    )
+                }
+                Text(
+                    text = appStrings.settings.notificationTitle,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = SettingsPrimaryText,
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
-            // 아이콘-타이틀 간격도 원래(24dp)의 절반으로 줄인다.
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = appStrings.settings.notificationTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             NotificationCard(enabled = notificationsEnabled, onToggle = onToggle, strings = appStrings.notificationSettings)
 
             Spacer(modifier = Modifier.height(24.dp))
