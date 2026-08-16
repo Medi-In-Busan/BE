@@ -53,7 +53,8 @@ fun DiagnosisResultContent(
     resultType: DiagnosisResultType,
     onCtaClick: (DiagnosisCtaTarget) -> Unit,
     onRestart: () -> Unit,
-    onFinishSetup: (() -> Unit)? = null,
+    onGoHome: () -> Unit,
+    goHomeButtonLabel: String,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current.selfDiagnosis
@@ -107,15 +108,13 @@ fun DiagnosisResultContent(
         }
         NoticeBanner(text = strings.commonSafetyNotice, isWarning = false)
 
-        if (onFinishSetup != null) {
-            Button(
-                onClick = onFinishSetup,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
-            ) {
-                Text(text = strings.startFromHomeButton, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
+        Button(
+            onClick = onGoHome,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = MaterialTheme.shapes.medium,
+            colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
+        ) {
+            Text(text = goHomeButtonLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

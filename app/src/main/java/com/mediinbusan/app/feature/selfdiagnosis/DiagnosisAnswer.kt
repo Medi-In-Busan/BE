@@ -16,7 +16,7 @@ sealed interface DiagnosisAnswerOption {
     }
 
     enum class ReservationStatus : DiagnosisAnswerOption {
-        SEARCHING, PLANNING_TO_INQUIRE, RESERVED, USING_AGENCY_OR_PACKAGE, UNKNOWN
+        SEARCHING, PLANNING_TO_INQUIRE, RESERVED, USING_AGENCY_OR_PACKAGE, NOT_NEEDED, UNKNOWN
     }
 
     enum class InterpretationNeed : DiagnosisAnswerOption {
@@ -46,6 +46,7 @@ fun DiagnosisAnswerOption.label(strings: DiagnosisAnswerOptionStrings): String =
     DiagnosisAnswerOption.ReservationStatus.PLANNING_TO_INQUIRE -> strings.reservationStatusPlanningToInquire
     DiagnosisAnswerOption.ReservationStatus.RESERVED -> strings.reservationStatusReserved
     DiagnosisAnswerOption.ReservationStatus.USING_AGENCY_OR_PACKAGE -> strings.reservationStatusUsingAgencyOrPackage
+    DiagnosisAnswerOption.ReservationStatus.NOT_NEEDED -> strings.reservationStatusNotNeeded
     DiagnosisAnswerOption.ReservationStatus.UNKNOWN -> strings.reservationStatusUnknown
     DiagnosisAnswerOption.InterpretationNeed.NEEDED -> strings.interpretationNeedNeeded
     DiagnosisAnswerOption.InterpretationNeed.WANT_TO_CHECK_SUPPORTED_LANGUAGE -> strings.interpretationNeedWantToCheckSupportedLanguage

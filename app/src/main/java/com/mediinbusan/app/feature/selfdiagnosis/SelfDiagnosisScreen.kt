@@ -125,11 +125,8 @@ private fun SelfDiagnosisContent(
                                 resultType = resultType,
                                 onCtaClick = { target -> onIntent(SelfDiagnosisIntent.ClickCta(target)) },
                                 onRestart = { onIntent(SelfDiagnosisIntent.Restart) },
-                                onFinishSetup = if (fromOnboarding) {
-                                    { onIntent(SelfDiagnosisIntent.FinishSetup) }
-                                } else {
-                                    null
-                                }
+                                onGoHome = { onIntent(SelfDiagnosisIntent.FinishSetup) },
+                                goHomeButtonLabel = if (fromOnboarding) strings.startFromHomeButton else strings.backToHomeButton
                             )
                         }
                     }
