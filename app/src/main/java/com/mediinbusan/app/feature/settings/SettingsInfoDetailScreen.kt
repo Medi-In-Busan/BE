@@ -86,23 +86,27 @@ fun SettingsInfoDetailScreen(infoId: String, onBack: () -> Unit) {
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(modifier = Modifier.height(4.dp))
-            IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = appStrings.common.backContentDescription,
-                    tint = SettingsPrimaryText
+            // 뒤로가기 아이콘과 같은 줄에, 페이지 전체 폭 기준 정중앙에 타이틀을 놓는다.
+            Box(modifier = Modifier.fillMaxWidth().height(32.dp)) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.CenterStart).size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = appStrings.common.backContentDescription,
+                        tint = SettingsPrimaryText
+                    )
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = SettingsPrimaryText,
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
-            // 아이콘-타이틀 간격도 원래(24dp)의 절반으로 줄인다.
-            Spacer(modifier = Modifier.height(12.dp))
-            // 아이콘/파란 안내 영역/소개 문단을 전부 빼고 타이틀(좌측 정렬)과 섹션 카드만 남긴다.
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = SettingsPrimaryText
-            )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             content.sections.forEachIndexed { index, section ->
                 InfoSectionCard(section = section)
                 if (index != content.sections.lastIndex) {
