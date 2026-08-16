@@ -31,7 +31,8 @@ data class SettingsStrings(
     val customerSupportTitle: String,
     val clearCacheRowTitle: String,
     val clearCacheRowButton: String,
-    val cacheClearedSnackbar: String
+    val cacheClearedSnackbar: String,
+    val appUpdateButton: String
 ) {
     companion object {
         val Ko = SettingsStrings(
@@ -52,7 +53,7 @@ data class SettingsStrings(
             termsTitle = "이용약관",
             termsDescription = "서비스 이용에 관한 약관을 확인하세요",
             dataSourceTitle = "데이터 출처",
-            dataSourceDescription = "한국관광공사 공공데이터를 기반으로 제공됩니다",
+            dataSourceDescription = "공공데이터포털 및 메디인부산 데이터 기반으로 제공됩니다.",
             appInfoSectionTitle = "앱 정보",
             languageChangeTitle = "언어 변경",
             languageChangeDescription = "앱이 표시되는 언어를 변경할 수 있습니다.",
@@ -65,7 +66,8 @@ data class SettingsStrings(
             customerSupportTitle = "고객센터",
             clearCacheRowTitle = "캐시 삭제",
             clearCacheRowButton = "삭제하기",
-            cacheClearedSnackbar = "캐시를 삭제했어요"
+            cacheClearedSnackbar = "캐시를 삭제했어요",
+            appUpdateButton = "업데이트"
         )
         val En = SettingsStrings(
             screenTitle = "Settings",
@@ -85,7 +87,7 @@ data class SettingsStrings(
             termsTitle = "Terms of service",
             termsDescription = "Check the terms for using this service",
             dataSourceTitle = "Data source",
-            dataSourceDescription = "Provided based on Korea Tourism Organization open data",
+            dataSourceDescription = "Provided based on data from the Public Data Portal and MediIn Busan.",
             appInfoSectionTitle = "App info",
             languageChangeTitle = "Change language",
             languageChangeDescription = "You can change the language the app is displayed in.",
@@ -98,7 +100,8 @@ data class SettingsStrings(
             customerSupportTitle = "Support",
             clearCacheRowTitle = "Clear cache",
             clearCacheRowButton = "Delete",
-            cacheClearedSnackbar = "Cache cleared"
+            cacheClearedSnackbar = "Cache cleared",
+            appUpdateButton = "Update"
         )
         val Zh = SettingsStrings(
             screenTitle = "设置",
@@ -118,7 +121,7 @@ data class SettingsStrings(
             termsTitle = "服务条款",
             termsDescription = "查看服务使用相关条款",
             dataSourceTitle = "数据来源",
-            dataSourceDescription = "基于韩国观光公社公共数据提供",
+            dataSourceDescription = "基于公共数据门户及 MediIn Busan 数据提供。",
             appInfoSectionTitle = "应用信息",
             languageChangeTitle = "更改语言",
             languageChangeDescription = "您可以更改应用显示的语言。",
@@ -131,7 +134,8 @@ data class SettingsStrings(
             customerSupportTitle = "客服中心",
             clearCacheRowTitle = "清除缓存",
             clearCacheRowButton = "删除",
-            cacheClearedSnackbar = "缓存已清除"
+            cacheClearedSnackbar = "缓存已清除",
+            appUpdateButton = "更新"
         )
         val Ja = SettingsStrings(
             screenTitle = "設定",
@@ -151,7 +155,7 @@ data class SettingsStrings(
             termsTitle = "利用規約",
             termsDescription = "サービス利用に関する規約をご確認ください",
             dataSourceTitle = "データ出典",
-            dataSourceDescription = "韓国観光公社の公共データを基に提供されます",
+            dataSourceDescription = "公共データポータルおよびメディインブサンのデータを基に提供されます。",
             appInfoSectionTitle = "アプリ情報",
             languageChangeTitle = "言語変更",
             languageChangeDescription = "アプリの表示言語を変更できます。",
@@ -164,7 +168,8 @@ data class SettingsStrings(
             customerSupportTitle = "カスタマーセンター",
             clearCacheRowTitle = "キャッシュ削除",
             clearCacheRowButton = "削除する",
-            cacheClearedSnackbar = "キャッシュを削除しました"
+            cacheClearedSnackbar = "キャッシュを削除しました",
+            appUpdateButton = "アップデート"
         )
     }
 }

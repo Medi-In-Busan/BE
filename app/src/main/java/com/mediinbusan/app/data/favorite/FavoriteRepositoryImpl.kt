@@ -24,4 +24,8 @@ class FavoriteRepositoryImpl @Inject constructor(
             favoriteDao.upsert(favorite.toEntity())
         }
     }
+
+    override suspend fun removeAll() {
+        favoriteDao.clearAll()
+    }
 }

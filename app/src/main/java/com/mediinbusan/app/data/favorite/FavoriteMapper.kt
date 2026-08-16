@@ -5,7 +5,11 @@ fun FavoriteEntity.toDomain(): Favorite = Favorite(
     itemType = FavoriteItemType.valueOf(itemType),
     name = name,
     imageUrl = imageUrl,
-    savedAt = savedAt
+    savedAt = savedAt,
+    subtitle = subtitle,
+    address = address,
+    latitude = latitude,
+    longitude = longitude
 )
 
 fun Favorite.toEntity(): FavoriteEntity = FavoriteEntity(
@@ -13,5 +17,9 @@ fun Favorite.toEntity(): FavoriteEntity = FavoriteEntity(
     itemType = itemType.name,
     name = name,
     imageUrl = imageUrl,
-    savedAt = savedAt
+    savedAt = savedAt,
+    subtitle = subtitle,
+    address = address,
+    latitude = latitude,
+    longitude = longitude
 )

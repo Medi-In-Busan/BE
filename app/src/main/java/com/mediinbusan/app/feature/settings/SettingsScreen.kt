@@ -51,7 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -130,12 +132,14 @@ private fun SettingsContent(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
+                // 상태바 인셋을 원래의 절반만 먹여서 뒤로가기 아이콘을 원래 위치에서 절반 정도 위로 당긴다.
+                .padding(
+                    top = innerPadding.calculateTopPadding() * 0.5f,
+                    bottom = innerPadding.calculateBottomPadding()
+                )
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            // 뒤로가기만 위로 바짝 붙이고, "설정" 타이틀 이하 위치는 그대로 유지한다 —
-            // 아이콘 위 여백을 줄인 만큼 아이콘-타이틀 사이 간격을 늘려서 타이틀 시작 지점을 보존.
             Spacer(modifier = Modifier.height(4.dp))
             IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                 Icon(
@@ -144,7 +148,8 @@ private fun SettingsContent(
                     tint = SettingsPrimaryText
                 )
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            // 아이콘-타이틀 간격도 원래(24dp)의 절반으로 줄인다.
+            Spacer(modifier = Modifier.height(12.dp))
             Text(text = strings.screenTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
@@ -339,7 +344,14 @@ private fun SettingsRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(3.dp))
-            Text(text = description, style = SettingsDescriptionStyle, color = SettingsSecondaryText)
+            // 데이터출처 설명이 길어도 줄바꿈 없이 한 줄로 잘리게(ellipsis) — 다른 행은 원래 짧아 영향 없다.
+            Text(
+                text = description,
+                style = SettingsDescriptionStyle,
+                color = SettingsSecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         if (onClick != null) {
             Spacer(modifier = Modifier.width(8.dp))
@@ -440,12 +452,17 @@ private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> U
                     color = SettingsSecondaryText
                 )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = SettingsSecondaryText,
-                modifier = Modifier.size(16.dp)
-            )
+            // 분기용 화살표(">") 대신 캐시삭제 버튼과 같은 양식의 "업데이트" 버튼. 배포 전이라
+            // 아직 실제 업데이트 라우팅은 걸지 않는다(onClick 비워둠).
+            Button(
+                onClick = {},
+                modifier = Modifier.height(34.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
+            ) {
+                Text(text = strings.appUpdateButton, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            }
         }
         HorizontalDivider(color = SettingsDivider, modifier = Modifier.padding(horizontal = 20.dp))
         Row(
@@ -474,15 +491,14 @@ private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> U
             RowIconImage(imageRes = R.drawable.setting_delete)
             Spacer(modifier = Modifier.width(16.dp))
             Text(text = strings.clearCacheRowTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText, modifier = Modifier.weight(1f))
-            OutlinedButton(
+            Button(
                 onClick = { showClearCacheDialog = true },
                 modifier = Modifier.height(34.dp),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CoralPrimary),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = CoralPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
             ) {
-                Text(text = strings.clearCacheRowButton, style = MaterialTheme.typography.labelMedium)
+                Text(text = strings.clearCacheRowButton, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
