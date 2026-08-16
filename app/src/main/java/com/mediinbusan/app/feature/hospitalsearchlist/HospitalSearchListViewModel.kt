@@ -8,9 +8,6 @@ import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.data.favorite.Favorite
-import com.mediinbusan.app.data.favorite.FavoriteItemType
-import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.searchhistory.SearchHistoryRepository
@@ -39,7 +36,6 @@ import javax.inject.Inject
 @HiltViewModel
 class HospitalSearchListViewModel @Inject constructor(
     private val hospitalRepository: HospitalRepository,
-    private val favoriteRepository: FavoriteRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val searchHistoryRepository: SearchHistoryRepository,
     private val pendingHospitalSearchEntry: PendingHospitalSearchEntry
@@ -50,9 +46,9 @@ class HospitalSearchListViewModel @Inject constructor(
 
     private var initialized = false
 
-    // 서버가 준 원본 순서(관련도순) 그대로 보관한다. uiState.results는 정렬 옵션에 따라 재배열된
-    // 값이라, RELEVANCE로 되돌아왔을 때 여기서 다시 꺼내 써야 원래 순서를 복구할 수 있다 — results를
-    // results 자기 자신으로 재정렬하면 이미 섞인 순서 위에 또 정렬하는 꼴이라 원본이 영영 사라진다.
+    // 서버가 준 원본 목록을 보관한다. uiState.results는 정렬 옵션에 따라 재배열된 값이라, 정렬을
+    // 다시 고를 때마다 여기서 다시 정렬해야 한다 — results를 results 자기 자신으로 재정렬하면
+    // 이미 섞인 순서 위에 또 정렬하는 꼴이라 원본이 영영 사라진다.
     private var lastServerResults: List<Hospital> = emptyList()
 
     // 자동완성 후보용 전체 병원 스냅샷. uiState.results는 검색/필터 결과로 계속 덮어써지므로
@@ -69,15 +65,6 @@ class HospitalSearchListViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.userPreferences.collect { preferences ->
                 _uiState.update { it.copy(selectedLanguage = preferences.languageCode) }
-            }
-        }
-        viewModelScope.launch {
-            favoriteRepository.observeFavorites().collect { favorites ->
-                val hospitalIds = favorites
-                    .filter { it.itemType == FavoriteItemType.HOSPITAL }
-                    .map { it.itemId }
-                    .toSet()
-                _uiState.update { it.copy(favoriteHospitalIds = hospitalIds) }
             }
         }
         viewModelScope.launch {
@@ -238,14 +225,13 @@ class HospitalSearchListViewModel @Inject constructor(
 
     // 정렬은 이미 서버에서 받아온 lastServerResults를 클라이언트에서 재배열하는 것으로 처리한다
     // (재조회 불필요) — DISTANCE는 서면 기준점(DefaultSearchOrigin)으로부터의 haversine 거리.
-    // 매번 lastServerResults(원본 순서)에서 다시 정렬해야 RELEVANCE로 되돌아왔을 때 원래 순서가
-    // 복구된다 — 이미 재배열된 uiState.results를 또 정렬하면 원본이 사라진다.
+    // 매번 lastServerResults(원본 순서)에서 다시 정렬해야 이미 재배열된 uiState.results를
+    // 또 정렬해서 원본이 사라지는 일이 없다.
     fun onSortSelected(sort: SearchSortOption) {
         _uiState.update { it.copy(selectedSort = sort, results = lastServerResults.sortedByOption(sort)) }
     }
 
     private fun List<Hospital>.sortedByOption(sort: SearchSortOption): List<Hospital> = when (sort) {
-        SearchSortOption.RELEVANCE -> this
         SearchSortOption.NAME -> sortedBy { it.name }
         SearchSortOption.DISTANCE -> sortedBy { hospital ->
             val lat = hospital.latitude
@@ -269,21 +255,6 @@ class HospitalSearchListViewModel @Inject constructor(
     // TODO: 페이지네이션 백엔드 연동 전까지는 항상 마지막 페이지로 취급하는 스텁이다.
     fun onLoadMore() {
         _uiState.update { it.copy(hasReachedEnd = true) }
-    }
-
-    fun onToggleFavorite(hospitalId: String) {
-        val hospital = _uiState.value.results.firstOrNull { it.id == hospitalId } ?: return
-        viewModelScope.launch {
-            favoriteRepository.toggleFavorite(
-                Favorite(
-                    itemId = hospital.id,
-                    itemType = FavoriteItemType.HOSPITAL,
-                    name = hospital.name,
-                    imageUrl = hospital.imageUrl,
-                    savedAt = System.currentTimeMillis()
-                )
-            )
-        }
     }
 
     fun onLanguageSelected(languageCode: String) {

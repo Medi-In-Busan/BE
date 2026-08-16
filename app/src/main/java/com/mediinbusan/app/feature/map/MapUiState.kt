@@ -20,13 +20,23 @@ data class MapUiState(
     val selectedMarkerId: String? = null,
     val favoriteHospitalIds: Set<String> = emptySet(),
     // "이 위치에서 검색" 버튼 눌러서 allHospitals를 갱신하는 중일 때만 true. isLoading과 달리 지도/마커를 가리지 않는다.
-    val isSearchingArea: Boolean = false
+    val isSearchingArea: Boolean = false,
+    // MedicalCategory.label(한국어) 값의 집합 — HospitalSearchListUiState의 SearchFilterChip과 같은
+    // 식별자 규칙을 따른다. 비어있으면 진료과목으로 거르지 않는다(필터 미적용).
+    val selectedSpecialties: Set<String> = emptySet()
 ) {
     val visibleHospitals: List<Hospital>
-        get() = if (searchQuery.isBlank()) {
-            allHospitals
-        } else {
-            allHospitals.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        get() {
+            val byQuery = if (searchQuery.isBlank()) {
+                allHospitals
+            } else {
+                allHospitals.filter { it.name.contains(searchQuery, ignoreCase = true) }
+            }
+            return if (selectedSpecialties.isEmpty()) {
+                byQuery
+            } else {
+                byQuery.filter { hospital -> hospital.specialties.any { it in selectedSpecialties } }
+            }
         }
 
     val visiblePlaces: List<Place>

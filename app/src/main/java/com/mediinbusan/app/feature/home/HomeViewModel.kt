@@ -107,7 +107,11 @@ class HomeViewModel @Inject constructor(
                     itemType = FavoriteItemType.HOSPITAL,
                     name = hospital.name,
                     imageUrl = hospital.imageUrl,
-                    savedAt = System.currentTimeMillis()
+                    savedAt = System.currentTimeMillis(),
+                    subtitle = hospital.specialties.joinToString(", "),
+                    address = hospital.address,
+                    latitude = hospital.latitude,
+                    longitude = hospital.longitude
                 )
             )
         }

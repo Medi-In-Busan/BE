@@ -8,6 +8,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,10 +30,14 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,7 +50,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +61,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -75,6 +85,7 @@ import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
+import com.mediinbusan.app.core.designsystem.StatusOpenGreen
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.DocumentScanStrings
@@ -240,43 +251,80 @@ private fun DocumentScanIntro(
     onCaptureClick: () -> Unit,
     onGalleryClick: () -> Unit
 ) {
-    Spacer(modifier = Modifier.height(40.dp))
-    Box(
-        modifier = Modifier.size(88.dp).clip(CircleShape).background(CoralPrimaryContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Description,
-            contentDescription = null,
-            tint = CoralPrimary,
-            modifier = Modifier.size(40.dp)
-        )
-    }
     Spacer(modifier = Modifier.height(24.dp))
-    Text(text = strings.introTitle, style = SectionTitleStyle, color = TextPrimary, textAlign = TextAlign.Center)
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(text = strings.introSubtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
-    Spacer(modifier = Modifier.height(32.dp))
-    Button(
-        onClick = onCaptureClick,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary)
+    // 아이콘·문구·버튼을 배경에 바로 흩뿌리는 대신 살짝 뜬 흰 카드 하나에 담아, 유틸리티
+    // 화면치고 밋밋했던 인트로에 시선이 머무는 지점을 만든다(soft-ui 스타일: 옅은 코랄 톤 섀도우).
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(28.dp),
+                ambientColor = CoralPrimary.copy(alpha = 0.12f),
+                spotColor = CoralPrimary.copy(alpha = 0.12f)
+            )
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.White)
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = strings.captureButton, fontWeight = FontWeight.Bold)
-    }
-    Spacer(modifier = Modifier.height(12.dp))
-    OutlinedButton(
-        onClick = onGalleryClick,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Text(text = strings.galleryButton)
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .background(
+                    brush = Brush.radialGradient(listOf(CoralPrimaryContainer, Color.White)),
+                    shape = CircleShape
+                )
+                .border(width = 1.5.dp, color = CoralPrimary.copy(alpha = 0.18f), shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Description,
+                contentDescription = null,
+                tint = CoralPrimary,
+                modifier = Modifier.size(42.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(text = strings.introTitle, style = SectionTitleStyle, color = TextPrimary, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = strings.introSubtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(28.dp))
+        Button(
+            onClick = onCaptureClick,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp)
+        ) {
+            Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = strings.captureButton, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onGalleryClick,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = strings.galleryButton)
+        }
     }
     Spacer(modifier = Modifier.height(20.dp))
-    Text(text = strings.privacyNote, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(Color.White)
+            .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(percent = 50))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = strings.privacyNote, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
+    }
 }
 
 @Composable
@@ -299,18 +347,33 @@ private fun DocumentScanPreview(
 
     if (!hasStartedAnalysis) {
         // Crop으로 320dp 박스를 꽉 채우면 문서 가장자리가 잘려서 원본을 못 보게 되니, 여기서만
-        // Fit으로 전체 사진이 다 보이게 하고 남는 여백은 옅은 배경으로 채운다.
-        AsyncImageBox(
-            model = imageUri,
-            contentDescription = strings.previewImageContentDescription,
-            contentScale = ContentScale.Fit,
+        // Fit으로 전체 사진이 다 보이게 하고 남는 여백은 옅은 배경으로 채운다. 스캐너 앱 특유의
+        // 모서리 브래킷(ScanFrameCorners)을 얹어 "문서를 인식했다"는 느낌을 준다.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(320.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(DividerColor)
-                .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(16.dp))
-        )
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(20.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.08f),
+                    spotColor = Color.Black.copy(alpha = 0.08f)
+                )
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White)
+        ) {
+            AsyncImageBox(
+                model = imageUri,
+                contentDescription = strings.previewImageContentDescription,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DividerColor)
+            )
+            ScanFrameCorners(modifier = Modifier.fillMaxSize().padding(10.dp))
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
@@ -332,20 +395,38 @@ private fun DocumentScanPreview(
         Spacer(modifier = Modifier.height(20.dp))
     } else {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            AsyncImageBox(
-                model = imageUri,
-                contentDescription = strings.previewImageContentDescription,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(12.dp))
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            if (isAnalysisError) {
-                TextButton(onClick = onAnalyze, enabled = !isAnalyzing) {
-                    Text(text = strings.analyzeButton)
+            Box {
+                AsyncImageBox(
+                    model = imageUri,
+                    contentDescription = strings.previewImageContentDescription,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .shadow(
+                            elevation = 3.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            ambientColor = Color.Black.copy(alpha = 0.1f),
+                            spotColor = Color.Black.copy(alpha = 0.1f)
+                        )
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(12.dp))
+                )
+                // 분석 성공을 썸네일 위 작은 체크 배지로도 알려준다 — 재시도 버튼은 에러 카드
+                // 쪽으로 옮겼으니(DocumentScanPreview의 isAnalysisError 분기 참고) 여긴 성공 신호만 남는다.
+                if (extractedText != null && !isAnalysisError) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = StatusOpenGreen,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 4.dp, y = 4.dp)
+                            .size(18.dp)
+                            .background(Color.White, CircleShape)
+                            .padding(1.dp)
+                    )
                 }
             }
+            Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onRetake, enabled = !isAnalyzing) {
                 Icon(imageVector = Icons.Default.Refresh, contentDescription = strings.retakeButton, tint = TextSecondary)
             }
@@ -356,7 +437,13 @@ private fun DocumentScanPreview(
         isAnalyzing -> Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
+                .shadow(
+                    elevation = 2.dp,
+                    shape = RoundedCornerShape(20.dp),
+                    ambientColor = CoralPrimary.copy(alpha = 0.15f),
+                    spotColor = CoralPrimary.copy(alpha = 0.15f)
+                )
+                .clip(RoundedCornerShape(20.dp))
                 .background(CoralPrimaryContainer)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -365,25 +452,46 @@ private fun DocumentScanPreview(
             Spacer(modifier = Modifier.width(12.dp))
             Text(text = strings.analyzingMessage, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
         }
-        isAnalysisError -> Row(
+        // 에러 메시지 바로 아래 재시도 버튼을 둬서(위 썸네일 줄에 흩어져 있던 것과 달리) 문제와
+        // 해결 행동이 한 카드 안에 붙어 있게 한다.
+        isAnalysisError -> Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .shadow(
+                    elevation = 2.dp,
+                    shape = MaterialTheme.shapes.large,
+                    ambientColor = Color.Black.copy(alpha = 0.06f),
+                    spotColor = Color.Black.copy(alpha = 0.06f)
+                )
                 .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.errorContainer)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = analysisError ?: strings.analysisErrorFallback,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = analysisError ?: strings.analysisErrorFallback,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onAnalyze,
+                enabled = !isAnalyzing,
+                modifier = Modifier.align(Alignment.End),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onErrorContainer)
+            ) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = strings.analyzeButton)
+            }
         }
         extractedText != null -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // 번역 결과가 있으면(=앱 언어가 한국어가 아니고 Papago 호출이 성공했으면) 번역문을
@@ -392,6 +500,8 @@ private fun DocumentScanPreview(
                 DocumentScanTextResultCard(
                     title = strings.translatedResultTitle,
                     text = translatedText,
+                    icon = Icons.Default.Translate,
+                    accentColor = CoralPrimary,
                     copyContentDescription = strings.copyButtonContentDescription,
                     onCopyClick = { onCopyClick(translatedText) }
                 )
@@ -399,9 +509,41 @@ private fun DocumentScanPreview(
             DocumentScanTextResultCard(
                 title = strings.resultTitle,
                 text = extractedText,
+                icon = Icons.Default.Description,
+                accentColor = TextSecondary,
                 copyContentDescription = strings.copyButtonContentDescription,
                 onCopyClick = { onCopyClick(extractedText) }
             )
+        }
+    }
+}
+
+// 스캐너 앱 특유의 모서리 브래킷 오버레이 — 순수 장식이라 접근성 트리에 노출하지 않는다
+// (Canvas는 기본적으로 시맨틱을 갖지 않는다). 이미 SelectionContainer로 보여주는 본문 텍스트와
+// 중복되는 정보가 없어 contentDescription이 필요 없다.
+@Composable
+private fun ScanFrameCorners(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val cornerLength = 22.dp.toPx()
+        val strokeWidth = 3.dp.toPx()
+        val w = size.width
+        val h = size.height
+        val corners = listOf(
+            // 좌상단
+            Offset(0f, cornerLength) to Offset(0f, 0f),
+            Offset(0f, 0f) to Offset(cornerLength, 0f),
+            // 우상단
+            Offset(w - cornerLength, 0f) to Offset(w, 0f),
+            Offset(w, 0f) to Offset(w, cornerLength),
+            // 좌하단
+            Offset(0f, h - cornerLength) to Offset(0f, h),
+            Offset(0f, h) to Offset(cornerLength, h),
+            // 우하단
+            Offset(w - cornerLength, h) to Offset(w, h),
+            Offset(w, h) to Offset(w, h - cornerLength)
+        )
+        corners.forEach { (start, end) ->
+            drawLine(color = CoralPrimary, start = start, end = end, strokeWidth = strokeWidth, cap = StrokeCap.Round)
         }
     }
 }
@@ -410,20 +552,35 @@ private fun DocumentScanPreview(
 private fun DocumentScanTextResultCard(
     title: String,
     text: String,
+    icon: ImageVector,
+    accentColor: Color,
     copyContentDescription: String,
     onCopyClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = 3.dp,
+                shape = MaterialTheme.shapes.large,
+                ambientColor = Color.Black.copy(alpha = 0.06f),
+                spotColor = Color.Black.copy(alpha = 0.06f)
+            )
             .clip(MaterialTheme.shapes.large)
             .background(Color.White)
             .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.large)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier.size(28.dp).clip(CircleShape).background(accentColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(15.dp))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,

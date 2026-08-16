@@ -95,6 +95,7 @@ fun KakaoMapView(
     pins: List<MapPin>,
     modifier: Modifier = Modifier,
     onPinClick: (String) -> Unit = {},
+    onMapClick: () -> Unit = {},
     recenterRequestId: Int = 0,
     searchAreaRequestId: Int = 0,
     onSearchArea: (latitude: Double, longitude: Double) -> Unit = { _, _ -> },
@@ -163,6 +164,13 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap, pins) {
         val map = kakaoMap ?: return@LaunchedEffect
         renderPins(context, map, pins, onPinClick, fitCameraToPins, trackedLabels)
+    }
+
+    // 마커가 아닌 빈 지도를 눌렀을 때의 신호 — BrowseMap이 이걸로 선택을 해제한다
+    // (setOnLabelClickListener는 마커를 눌렀을 때만 불리고, 빈 곳을 누르면 이쪽만 불린다).
+    LaunchedEffect(kakaoMap, onMapClick) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        map.setOnMapClickListener { _, _, _, _ -> onMapClick() }
     }
 
     LaunchedEffect(kakaoMap, recenterRequestId) {

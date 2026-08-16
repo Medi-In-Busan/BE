@@ -5,5 +5,16 @@ import kotlinx.coroutines.flow.Flow
 
 interface RecentRepository {
     fun observeRecentlyViewed(): Flow<List<RecentlyViewed>>
-    suspend fun recordView(itemId: String, itemName: String, itemType: FavoriteItemType, imageUrl: String?)
+    suspend fun recordView(
+        itemId: String,
+        itemName: String,
+        itemType: FavoriteItemType,
+        imageUrl: String?,
+        subtitle: String = "",
+        address: String = "",
+        latitude: Double? = null,
+        longitude: Double? = null
+    )
+    suspend fun removeItem(itemId: String)
+    suspend fun removeAll()
 }

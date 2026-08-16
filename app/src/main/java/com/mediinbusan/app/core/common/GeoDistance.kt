@@ -27,3 +27,7 @@ fun haversineDistanceMeters(lat1: Double, lng1: Double, lat2: Double, lng2: Doub
     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return EARTH_RADIUS_METERS * c
 }
+
+/** 1km 미만은 "123m", 그 이상은 "1.2km"로 — 의료기관 리스트/즐겨찾기/최근 본 항목 카드가 공용으로 쓴다. */
+fun Double.toDistanceLabel(): String =
+    if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)

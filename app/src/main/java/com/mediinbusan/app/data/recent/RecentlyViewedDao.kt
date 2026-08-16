@@ -13,4 +13,10 @@ interface RecentlyViewedDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: RecentlyViewedEntity)
+
+    @Query("DELETE FROM recently_viewed WHERE itemId = :itemId")
+    suspend fun deleteByItemId(itemId: String)
+
+    @Query("DELETE FROM recently_viewed")
+    suspend fun clearAll()
 }

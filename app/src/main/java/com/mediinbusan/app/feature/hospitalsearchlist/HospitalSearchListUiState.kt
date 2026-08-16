@@ -13,9 +13,8 @@ data class HospitalSearchListUiState(
     val isLoading: Boolean = true,
     val query: String = "",
     val results: List<Hospital> = emptyList(),
-    val favoriteHospitalIds: Set<String> = emptySet(),
     val filters: List<SearchFilterChip> = SearchFilterChip.DEFAULTS,
-    val selectedSort: SearchSortOption = SearchSortOption.RELEVANCE,
+    val selectedSort: SearchSortOption = SearchSortOption.DISTANCE,
     val selectedLanguage: String = SupportedLanguage.DEFAULT.code,
     // 로드 실패 여부와 서버 메시지를 분리한다. errorMessage가 null이어도 isError가 true면
     // 화면에서 LocalAppStrings 기준 폴백 문구를 그려, 에러 표시 중 언어를 바꿔도 즉시 반영된다.
@@ -43,7 +42,6 @@ data class SearchFilterChip(val label: String, val selected: Boolean = false) {
 
 /** DISTANCE는 서면 기준점(DefaultSearchOrigin)으로부터의 거리 — 사용자 GPS를 쓰지 않는다(CLAUDE.md §1). */
 enum class SearchSortOption(val label: String) {
-    RELEVANCE("관련도순"),
-    NAME("이름순"),
-    DISTANCE("가까운순")
+    DISTANCE("가까운순"),
+    NAME("이름순")
 }

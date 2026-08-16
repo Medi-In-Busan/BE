@@ -249,7 +249,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             FavoriteScreen(
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
-                onNavigateToSettings = { navController.navigate(Route.Settings) }
+                onBack = navController::popBackStack
             )
         }
         composable<Route.Settings> {
@@ -266,13 +266,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             SettingsInfoDetailScreen(infoId = route.infoId, onBack = navController::popBackStack)
         }
         composable<Route.NotificationSettings> {
-            NotificationSettingsScreen(onNavigateToSettings = { navController.navigate(Route.Settings) })
+            NotificationSettingsScreen(onBack = navController::popBackStack)
         }
         composable<Route.RecentlyViewed> {
             RecentlyViewedScreen(
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
-                onNavigateToSettings = { navController.navigate(Route.Settings) }
+                onBack = navController::popBackStack
             )
         }
         composable<Route.DocumentScan> {
