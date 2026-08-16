@@ -13,15 +13,36 @@ class RecentRepositoryImpl @Inject constructor(
     override fun observeRecentlyViewed(): Flow<List<RecentlyViewed>> =
         recentlyViewedDao.observeRecentlyViewed().map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun recordView(itemId: String, itemName: String, itemType: FavoriteItemType, imageUrl: String?) {
+    override suspend fun recordView(
+        itemId: String,
+        itemName: String,
+        itemType: FavoriteItemType,
+        imageUrl: String?,
+        subtitle: String,
+        address: String,
+        latitude: Double?,
+        longitude: Double?
+    ) {
         recentlyViewedDao.upsert(
             RecentlyViewedEntity(
                 itemId = itemId,
                 itemName = itemName,
                 itemType = itemType.name,
                 imageUrl = imageUrl,
-                viewedAt = System.currentTimeMillis()
+                viewedAt = System.currentTimeMillis(),
+                subtitle = subtitle,
+                address = address,
+                latitude = latitude,
+                longitude = longitude
             )
         )
+    }
+
+    override suspend fun removeItem(itemId: String) {
+        recentlyViewedDao.deleteByItemId(itemId)
+    }
+
+    override suspend fun removeAll() {
+        recentlyViewedDao.clearAll()
     }
 }

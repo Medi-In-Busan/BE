@@ -108,11 +108,8 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
             backStackEntry.toRoute<Route.MapView>().hospitalId == null
         }
         destination.hasRoute(Route.DocumentScan::class) -> true
-        // Settings는 이제 자체 뒤로가기 버튼이 있는 일반 push 화면이라 하단 탭바를 안 보여준다
-        // (SettingsScreen.kt 참고). 나머지 공용 탑바 화면들은 여전히 하단 탭바로 이동 수단을 제공한다.
-        destination.hasRoute(Route.NotificationSettings::class) -> true
-        destination.hasRoute(Route.RecentlyViewed::class) -> true
-        destination.hasRoute(Route.Favorite::class) -> true
+        // Settings/알림설정/즐겨찾기/최근본항목/정보 상세는 전부 공용 탑바 없이 자체 뒤로가기
+        // 버튼이 있는 일반 push 화면이라 하단 탭바를 안 보여준다(SettingsScreen.kt 참고).
         else -> false
     }
 }

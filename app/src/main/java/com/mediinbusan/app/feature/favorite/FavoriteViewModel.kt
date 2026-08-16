@@ -42,12 +42,10 @@ class FavoriteViewModel @Inject constructor(
         }
     }
 
-    fun onFilterSelected(filter: FavoriteTypeFilter) {
-        _uiState.update { it.copy(selectedFilter = filter) }
-    }
-
-    fun onSortSelected(sort: FavoriteSortOption) {
-        _uiState.update { it.copy(selectedSort = sort) }
+    fun onRemoveAll() {
+        viewModelScope.launch {
+            favoriteRepository.removeAll()
+        }
     }
 
     fun onLanguageSelected(languageCode: String) {

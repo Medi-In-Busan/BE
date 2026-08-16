@@ -6,7 +6,9 @@ import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceRepository
+import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.data.recent.RecentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +35,7 @@ class PlaceDetailViewModel @Inject constructor(
                     when (result) {
                         is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
                         is Result.Success -> {
-                            recordView(result.data.id, result.data.name, result.data.imageUrl)
+                            recordView(result.data)
                             state.copy(isLoading = false, place = result.data, errorMessage = null)
                         }
                         is Result.Error -> state.copy(isLoading = false, errorMessage = result.message ?: "오류가 발생했습니다.")
@@ -48,8 +50,19 @@ class PlaceDetailViewModel @Inject constructor(
         }
     }
 
-    private fun recordView(id: String, name: String, imageUrl: String?) {
-        viewModelScope.launch { recentRepository.recordView(id, name, FavoriteItemType.PLACE, imageUrl) }
+    private fun recordView(place: Place) {
+        viewModelScope.launch {
+            recentRepository.recordView(
+                itemId = place.id,
+                itemName = place.name,
+                itemType = FavoriteItemType.PLACE,
+                imageUrl = place.imageUrl,
+                subtitle = place.type.label,
+                address = place.address,
+                latitude = place.latitude,
+                longitude = place.longitude
+            )
+        }
     }
 
     fun onToggleFavorite() {
@@ -61,9 +74,26 @@ class PlaceDetailViewModel @Inject constructor(
                     itemType = FavoriteItemType.PLACE,
                     name = place.name,
                     imageUrl = place.imageUrl,
-                    savedAt = System.currentTimeMillis()
+                    savedAt = System.currentTimeMillis(),
+                    subtitle = place.type.label,
+                    address = place.address,
+                    latitude = place.latitude,
+                    longitude = place.longitude
                 )
             )
         }
     }
 }
+
+// 즐겨찾기/최근 본 항목 카드의 태그 자리에 쓰는 장소 종류 한글 라벨. PlaceDetailScreen의 같은 이름
+// private 확장과 동일한 매핑이다(ViewModel에는 Composable LocalAppStrings가 없어 별도로 둔다).
+private val PlaceType.label: String
+    get() = when (this) {
+        PlaceType.TOURIST_ATTRACTION -> "관광지"
+        PlaceType.RESTAURANT -> "카페·맛집"
+        PlaceType.SHOPPING -> "쇼핑"
+        PlaceType.LODGING -> "숙소"
+        PlaceType.SPA -> "스파"
+        PlaceType.WALK -> "산책"
+        PlaceType.OTHER -> "기타"
+    }

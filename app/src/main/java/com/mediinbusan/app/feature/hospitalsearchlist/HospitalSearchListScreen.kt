@@ -1,5 +1,6 @@
 package com.mediinbusan.app.feature.hospitalsearchlist
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +28,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.History
@@ -54,8 +58,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -65,10 +72,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.haversineDistanceMeters
+import com.mediinbusan.app.core.common.toDistanceLabel
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.SearchStrings
@@ -87,11 +96,15 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
-import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
 import com.mediinbusan.app.core.ui.ErrorState
-import com.mediinbusan.app.core.ui.FavoriteHeartButton
+import com.mediinbusan.app.core.ui.fallbackBannerImageFor
 import com.mediinbusan.app.core.ui.FilterChipPill
+import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.ShimmerSkeleton
+import com.mediinbusan.app.core.ui.rememberCardRevealProgress
+import com.mediinbusan.app.core.ui.rememberCountUpValue
+import com.mediinbusan.app.core.ui.rememberRevealedCount
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.data.hospital.Hospital
@@ -121,7 +134,6 @@ fun HospitalSearchListScreen(
         onSortSelected = viewModel::onSortSelected,
         onLoadMore = viewModel::onLoadMore,
         onResetSearchConditions = viewModel::onResetSearchConditions,
-        onToggleFavorite = viewModel::onToggleFavorite,
         onSelectHospital = onSelectHospital,
         onRetry = viewModel::onRetry,
         onAutoFocusApplied = viewModel::onAutoFocusApplied
@@ -142,7 +154,6 @@ private fun HospitalSearchListContent(
     onSortSelected: (SearchSortOption) -> Unit,
     onLoadMore: () -> Unit,
     onResetSearchConditions: () -> Unit,
-    onToggleFavorite: (String) -> Unit,
     onSelectHospital: (String) -> Unit,
     onRetry: () -> Unit,
     onAutoFocusApplied: () -> Unit
@@ -277,11 +288,10 @@ private fun HospitalSearchListContent(
                         } else {
                             SearchResultList(
                                 results = uiState.results,
-                                favoriteHospitalIds = uiState.favoriteHospitalIds,
                                 hasReachedEnd = uiState.hasReachedEnd,
+                                selectedSort = uiState.selectedSort,
                                 onLoadMore = onLoadMore,
                                 onSelectHospital = onSelectHospital,
-                                onToggleFavorite = onToggleFavorite,
                                 bottomContentPadding = contentPadding.calculateBottomPadding()
                             )
                         }
@@ -293,9 +303,12 @@ private fun HospitalSearchListContent(
 }
 
 // 검색어가 있으면 "'피부과' 검색결과"까지 굵은 검정으로, 건수는 브랜드 코랄 컬러로 강조한다.
+// 건수는 0에서 실제 값까지 카운트업 애니메이션으로 올라간다 — count 자체가 바뀔 때만(새 검색/필터
+// 결과가 도착했을 때만) 재생되고, 정렬만 바꿔 순서만 바뀌는 경우(count 불변)는 재생되지 않는다.
 @Composable
 private fun SearchResultCountLabel(query: String, count: Int) {
     val strings = LocalAppStrings.current.search
+    val animatedCount = rememberCountUpValue(count)
     val text = buildAnnotatedString {
         withStyle(SpanStyle(color = SettingsPrimaryText, fontWeight = FontWeight.Bold)) {
             if (query.isNotBlank()) {
@@ -305,7 +318,7 @@ private fun SearchResultCountLabel(query: String, count: Int) {
             }
         }
         withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) {
-            append(strings.resultCountSuffixFormat.format(count))
+            append(strings.resultCountSuffixFormat.format(animatedCount))
         }
     }
     Text(text = text, style = SettingsDescriptionStyle)
@@ -484,7 +497,6 @@ private fun displayLabelForFilterChip(chipLabel: String, language: SupportedLang
         ?: strings.tourismFilterLabel
 
 private fun displayLabelForSortOption(option: SearchSortOption, strings: SearchStrings): String = when (option) {
-    SearchSortOption.RELEVANCE -> strings.sortRelevance
     SearchSortOption.NAME -> strings.sortName
     SearchSortOption.DISTANCE -> strings.sortDistance
 }
@@ -507,6 +519,10 @@ private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (St
     }
 }
 
+// 트리거는 원래대로 회색 "정렬 ▾" 텍스트 그대로 두고, 펼쳤을 때 옵션 목록만 탑바 언어
+// 드롭다운(BrandTopAppBar의 BrandLanguageDropdown)과 같은 톤으로 바꾼다 — 항목 전체가 아니라
+// 텍스트 크기만큼만 알약(pill) 모양으로 잡히고, 선택된 옵션은 코랄 배경+굵은 코랄 텍스트+체크
+// 아이콘으로 활성화 표시한다.
 @Composable
 private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (SearchSortOption) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -526,15 +542,40 @@ private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (Sear
             )
         }
         BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            SearchSortOption.entries.forEach { option ->
-                BrandDropdownMenuItem(
-                    label = displayLabelForSortOption(option, strings),
-                    selected = option == selected,
-                    onClick = {
-                        onSortSelected(option)
-                        expanded = false
+            Column(
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SearchSortOption.entries.forEach { option ->
+                    val isSelected = option == selected
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(percent = 50))
+                            .clickable {
+                                onSortSelected(option)
+                                expanded = false
+                            }
+                            .background(if (isSelected) CoralPrimaryContainer else Color.Transparent)
+                            .padding(horizontal = 15.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            text = displayLabelForSortOption(option, strings),
+                            style = SettingsItemTitleStyle,
+                            color = if (isSelected) CoralPrimary else SettingsPrimaryText,
+                            fontWeight = if (isSelected) FontWeight.Bold else null
+                        )
+                        if (isSelected) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = CoralPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }
@@ -543,14 +584,22 @@ private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (Sear
 @Composable
 private fun SearchResultList(
     results: List<Hospital>,
-    favoriteHospitalIds: Set<String>,
     hasReachedEnd: Boolean,
+    selectedSort: SearchSortOption,
     onLoadMore: () -> Unit,
     onSelectHospital: (String) -> Unit,
-    onToggleFavorite: (String) -> Unit,
     bottomContentPadding: Dp
 ) {
     val listState = rememberLazyListState()
+
+    // 정렬을 바꿨을 때 결과는 바로 재배열되지만, 이미 아래로 스크롤한 상태면 화면엔 안 보여서
+    // 위로 직접 스크롤해야 하는 불편함이 있었다 — 애니메이션 없이 즉시 맨 위로 리프레시한다.
+    LaunchedEffect(selectedSort) {
+        listState.scrollToItem(0)
+    }
+
+    // results가 새 리스트로 바뀔 때마다(새 검색/필터 결과 도착) 0부터 다시 순차 공개한다.
+    val revealedCount = rememberRevealedCount(itemsKey = results, itemCount = results.size)
 
     // 무한스크롤 UI 훅: 실제 페이지네이션은 백엔드 연동 후 onLoadMore 내부에서 채운다.
     LaunchedEffect(listState, hasReachedEnd) {
@@ -572,12 +621,12 @@ private fun SearchResultList(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 0.dp)
     ) {
-        items(results, key = { it.id }) { hospital ->
+        itemsIndexed(results, key = { _, hospital -> hospital.id }) { index, hospital ->
             SearchResultCard(
                 hospital = hospital,
-                isFavorite = hospital.id in favoriteHospitalIds,
                 onClick = { onSelectHospital(hospital.id) },
-                onFavoriteClick = { onToggleFavorite(hospital.id) }
+                isRevealAnimated = index < InitialCardRevealCount,
+                isRevealed = index < revealedCount
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -590,33 +639,73 @@ private fun SearchResultList(
 @Composable
 private fun SearchResultCard(
     hospital: Hospital,
-    isFavorite: Boolean,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit
+    isRevealAnimated: Boolean,
+    isRevealed: Boolean
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // 옅은 분홍(HomeBackgroundPink) 배경 위라 기존 0.04 알파 그림자(다른 화면의 흰 배경
-            // 기준)로는 거의 안 보였다 — 카드가 배경과 확실히 분리돼 보이도록 더 진하게 준다.
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.3f),
-                spotColor = Color.Black.copy(alpha = 0.3f)
+    val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                // 등장 전엔 살짝 아래에서 흐릿하게(투명도 0) 시작해 위로 올라오며 선명해진다.
+                .graphicsLayer {
+                    alpha = revealProgress
+                    translationY = (1f - revealProgress) * 10.dp.toPx()
+                }
+                // 옅은 분홍(HomeBackgroundPink) 배경 위라 기존 0.04 알파 그림자(다른 화면의 흰 배경
+                // 기준)로는 거의 안 보였다 — 카드가 배경과 확실히 분리돼 보이도록 더 진하게 준다.
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.3f),
+                    spotColor = Color.Black.copy(alpha = 0.3f)
+                )
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White)
+                .clickable(onClick = onClick)
+                // 좌우 여백(14dp)만 카드 자체에 준다 — 상하 여백은 사진/텍스트가 각자 따로 갖는다(아래 참고).
+                .padding(horizontal = 14.dp)
+        ) {
+        // 즐겨찾기 버튼을 빼서(상세 화면에 이미 있어 중복) 생긴 여유를 사진 쪽으로 좀 더 준다.
+        // 사진 위아래 여백을 좌우 여백(14dp)과 같은 값으로 맞춰서, 기존 20dp 여백일 때보다
+        // 위아래로 6dp씩(총 12dp) 더 늘어나 보이게 한다 — 카드 전체 크기·텍스트 위치는 그대로.
+        // 실제 사진(imageUrl)이 없으면 빈 자리 대신 Home 배너 이미지 중 하나로 채운다 — 병원 ID
+        // 기준으로 고정 배정해서 같은 병원은 스크롤/재조회해도 항상 같은 배너를 보여준다.
+        if (hospital.imageUrl != null) {
+            AsyncImageBox(
+                model = hospital.imageUrl,
+                contentDescription = hospital.name,
+                modifier = Modifier
+                    .padding(vertical = 14.dp)
+                    .width(96.dp)
+                    .height(112.dp)
+                    .clip(RoundedCornerShape(12.dp))
             )
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .clickable(onClick = onClick)
-            .padding(14.dp)
-    ) {
-        AsyncImageBox(
-            model = hospital.imageUrl,
-            contentDescription = hospital.name,
-            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp))
-        )
+        } else {
+            Image(
+                painter = painterResource(id = fallbackBannerImageFor(hospital.id)),
+                contentDescription = hospital.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .padding(vertical = 14.dp)
+                    .width(96.dp)
+                    .height(112.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        }
         Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(vertical = 20.dp)) {
+            // 의료태그를 타이틀 자리로, 병원명을 태그 자리로 — 서로 위치를 바꿨다.
+            Text(
+                text = hospital.specialties.joinToString(", "),
+                style = SettingsDescriptionStyle,
+                color = SettingsSecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = hospital.name,
                 style = SettingsItemTitleStyle,
@@ -624,19 +713,30 @@ private fun SearchResultCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = hospital.specialties.joinToString(", ").ifEmpty { hospital.address },
-                style = SettingsDescriptionStyle,
-                color = SettingsSecondaryText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // 병원 상세(HospitalDetailScreen)와 같은 위치 아이콘 — 텍스트 크기는 타이틀(14sp)과
+            // 태그(12sp) 중간인 13sp. 주소가 길면 말줄임(...) 처리.
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = SettingsSecondaryText,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = hospital.address,
+                    style = SettingsDescriptionStyle.copy(fontSize = 13.sp),
+                    color = SettingsSecondaryText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             // 사용자 GPS가 아닌 Map 화면 기본 위치(DefaultSearchOrigin=서면) 기준 거리. 정렬 선택과 무관하게 항상 보여준다.
             val hospitalLatitude = hospital.latitude
             val hospitalLongitude = hospital.longitude
             if (hospitalLatitude != null && hospitalLongitude != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = haversineDistanceMeters(
                         DefaultSearchOrigin.LATITUDE,
@@ -648,15 +748,23 @@ private fun SearchResultCard(
                     color = CoralPrimary
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 hospital.supportedLanguages.take(3).forEach { lang ->
                     LanguageBadge(text = lang.toLanguageBadgeLabel())
                 }
             }
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        FavoriteHeartButton(isFavorite = isFavorite, onClick = onFavoriteClick)
+        }
+        // 등장 전(revealProgress<1)에만 카드 위에 반짝이는 스켈레톤을 덮어, 콘텐츠가 서서히
+        // 드러나는 동안 로딩 중인 듯한 느낌을 준다. 진행도가 반비례로 사라지게(1-progress) 해서
+        // 카드 본문이 선명해지는 타이밍과 자연스럽게 맞물린다.
+        if (isRevealAnimated && revealProgress < 1f) {
+            ShimmerSkeleton(
+                alpha = 1f - revealProgress,
+                modifier = Modifier.matchParentSize()
+            )
+        }
     }
 }
 
@@ -702,9 +810,6 @@ private fun EmptySearchBanner(onReset: () -> Unit, modifier: Modifier = Modifier
     }
 }
 
-private fun Double.toDistanceLabel(): String =
-    if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)
-
 @Preview(showBackground = true)
 @Composable
 private fun HospitalSearchListContentPreview() {
@@ -722,7 +827,6 @@ private fun HospitalSearchListContentPreview() {
             onSortSelected = {},
             onLoadMore = {},
             onResetSearchConditions = {},
-            onToggleFavorite = {},
             onSelectHospital = {},
             onRetry = {},
             onAutoFocusApplied = {}

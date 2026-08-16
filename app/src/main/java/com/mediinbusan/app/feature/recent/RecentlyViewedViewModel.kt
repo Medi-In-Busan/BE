@@ -14,7 +14,7 @@ import javax.inject.Inject
 /** F-016 최근 본 항목 목록. */
 @HiltViewModel
 class RecentlyViewedViewModel @Inject constructor(
-    recentRepository: RecentRepository,
+    private val recentRepository: RecentRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -37,6 +37,18 @@ class RecentlyViewedViewModel @Inject constructor(
     fun onLanguageSelected(languageCode: String) {
         viewModelScope.launch {
             userPreferencesRepository.setLanguageCode(languageCode)
+        }
+    }
+
+    fun onRemove(itemId: String) {
+        viewModelScope.launch {
+            recentRepository.removeItem(itemId)
+        }
+    }
+
+    fun onRemoveAll() {
+        viewModelScope.launch {
+            recentRepository.removeAll()
         }
     }
 }
