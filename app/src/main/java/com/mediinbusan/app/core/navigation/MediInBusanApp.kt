@@ -58,6 +58,10 @@ private fun MediInBusanAppContent() {
     // BottomNavBar가 실시간으로 흐리게 비춰 보여줄 실제 화면 콘텐츠를 여기서 hazeSource로 표시하고,
     // 같은 상태를 BottomNavBar에 넘겨 그 위에서 hazeEffect로 블러를 그린다.
     val hazeState = rememberHazeState()
+    // 지도(S-08)에서 마커/카드를 선택하면 하단 탭바 대신 선택 카드가 그 자리를 차지한다 —
+    // feature/map은 이 core/navigation 패키지를 모르므로 BottomBarVisibilityController(순수 Kotlin
+    // object 싱글턴)를 통해서만 신호를 받는다.
+    val mapSelectionActive by BottomBarVisibilityController.mapSelectionActive.collectAsState()
 
     Scaffold(
         // 기본값(systemBars)을 그대로 두면 상태바/제스처 인셋만큼 여백이 자동으로 생겨
@@ -71,7 +75,7 @@ private fun MediInBusanAppContent() {
             // delayMillis로 콘텐츠가 먼저 자리 잡은 다음 바가 나타나게 해서, Splash(풀스크린) →
             // Home(상하단 바 있음) 전환이 한 프레임에 훅 줄어드는 느낌을 완화한다.
             AnimatedVisibility(
-                visible = shouldShowBottomBar(backStackEntry),
+                visible = shouldShowBottomBar(backStackEntry, mapSelectionActive),
                 enter = fadeIn(tween(durationMillis = 300, delayMillis = 150)),
                 exit = fadeOut(tween(150))
             ) {
@@ -95,7 +99,7 @@ private fun MediInBusanAppContent() {
     }
 }
 
-private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
+private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?, mapSelectionActive: Boolean): Boolean {
     val destination = backStackEntry?.destination ?: return false
     return when {
         destination.hasRoute(Route.Home::class) -> true
@@ -105,7 +109,9 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?): Boolean {
             // TODO: MapView 하나가 "전역 지도"/"병원 상세 지도" 두 의미를 겸하고 있어
             // route 타입만으로는 노출 여부를 못 정하고 argument까지 봐야 한다.
             // 향후 MapOverview / MapDetail(hospitalId)로 route 자체를 분리하는 걸 고려한다.
-            backStackEntry.toRoute<Route.MapView>().hospitalId == null
+            // 전역 지도 모드라도 마커/카드가 선택돼 있으면(mapSelectionActive) 하단 탭바 자리를
+            // 선택 카드가 대신 차지하므로 숨긴다 — feature/map/MapScreen.kt의 BrowseMap 참고.
+            backStackEntry.toRoute<Route.MapView>().hospitalId == null && !mapSelectionActive
         }
         destination.hasRoute(Route.DocumentScan::class) -> true
         // Settings/알림설정/즐겨찾기/최근본항목/정보 상세는 전부 공용 탑바 없이 자체 뒤로가기
