@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.navigation.BottomBarVisibilityController
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -13,7 +14,9 @@ import com.mediinbusan.app.data.place.PlaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,6 +47,21 @@ class MapViewModel @Inject constructor(
                 _uiState.update { it.copy(favoriteHospitalIds = hospitalIds) }
             }
         }
+        // selectedMarkerId를 건드리는 지점(onMarkerSelected/onCategorySelected/searchThisArea/
+        // loadHospitalFocused)마다 컨트롤러를 따로 호출하는 대신, 상태 하나를 계속 관찰해서 신호를
+        // 보낸다 — 어느 경로로 선택이 바뀌든(카테고리 전환으로 선택이 풀리는 경우 포함) 놓치지 않는다.
+        viewModelScope.launch {
+            _uiState.map { it.selectedMarkerId != null }.distinctUntilChanged().collect { active ->
+                BottomBarVisibilityController.setMapSelectionActive(active)
+            }
+        }
+    }
+
+    // 이 화면을 완전히 떠날 때(뒤로가기 등으로 NavBackStackEntry가 정리될 때) 선택 상태가 하단
+    // 탭바를 계속 숨긴 채로 남아있지 않게 확실히 되돌린다.
+    override fun onCleared() {
+        super.onCleared()
+        BottomBarVisibilityController.setMapSelectionActive(false)
     }
 
     fun load(hospitalId: String?) {
@@ -130,6 +148,23 @@ class MapViewModel @Inject constructor(
 
     fun onSearchQueryChanged(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    // HospitalSearchListViewModel의 onFilterToggled와 달리 서버에 다시 요청하지 않는다 — 지도는
+    // 이미 받아둔 allHospitals를 MapUiState.visibleHospitals에서 클라이언트 필터링만 한다.
+    fun onSpecialtyFilterToggled(specialty: String) {
+        _uiState.update { state ->
+            val updated = if (specialty in state.selectedSpecialties) {
+                state.selectedSpecialties - specialty
+            } else {
+                state.selectedSpecialties + specialty
+            }
+            state.copy(selectedSpecialties = updated)
+        }
+    }
+
+    fun onSpecialtyFiltersCleared() {
+        _uiState.update { it.copy(selectedSpecialties = emptySet()) }
     }
 
     fun onMarkerSelected(hospitalId: String?) {
