@@ -82,3 +82,4 @@ val GuideCardLavenderBackground = Color(0xFFEDEAFB)
 
 // 이용 가이드(S-06) STEP05 카드 배지 톤.
 val GuideBadgeOrangeBackground = Color(0xFFFDF0DD)
+

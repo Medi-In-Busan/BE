@@ -23,6 +23,18 @@ fun GuidePhase.toIconResId(): Int = when (this) {
     GuidePhase.AFTERCARE_RETURN_CHECK -> R.drawable.ic_guide_aftercare_return_check
 }
 
+// STEP 목록(S-06) 캐러셀 카드 안에 들어가는 3D 일러스트 아이콘 6종(투명 배경) — 상세 화면
+// 아이콘(toIconResId)과는 별개 리소스다. 카드 전면 사진이 아니라 카드 내부에 얹는 일러스트다.
+@DrawableRes
+fun GuidePhase.toCardPhotoResId(): Int = when (this) {
+    GuidePhase.ENTRY_PREPARATION -> R.drawable.guide_pre_arrival
+    GuidePhase.RESERVATION_INQUIRY -> R.drawable.guide_reservation
+    GuidePhase.HOSPITAL_CHECKIN -> R.drawable.guide_hospital_visit
+    GuidePhase.TREATMENT_EXAMINATION -> R.drawable.guide_examination
+    GuidePhase.PAYMENT_RECEIPT -> R.drawable.guide_payment
+    GuidePhase.AFTERCARE_RETURN_CHECK -> R.drawable.guide_recovery_return
+}
+
 fun GuidePhase.toStepNumberLabel(): String = when (this) {
     GuidePhase.ENTRY_PREPARATION -> "01"
     GuidePhase.RESERVATION_INQUIRY -> "02"
@@ -49,6 +61,25 @@ fun GuidePhase.toStepSummary(strings: GuideStrings): String = when (this) {
     GuidePhase.TREATMENT_EXAMINATION -> strings.stepTreatmentExaminationSummary
     GuidePhase.PAYMENT_RECEIPT -> strings.stepPaymentReceiptSummary
     GuidePhase.AFTERCARE_RETURN_CHECK -> strings.stepAftercareReturnCheckSummary
+}
+
+// 캐러셀 카드의 마스코트 말풍선(2줄: 일반 텍스트 + 강조 텍스트) 문구.
+fun GuidePhase.toTipLead(strings: GuideStrings): String = when (this) {
+    GuidePhase.ENTRY_PREPARATION -> strings.stepEntryPreparationTipLead
+    GuidePhase.RESERVATION_INQUIRY -> strings.stepReservationInquiryTipLead
+    GuidePhase.HOSPITAL_CHECKIN -> strings.stepHospitalCheckinTipLead
+    GuidePhase.TREATMENT_EXAMINATION -> strings.stepTreatmentExaminationTipLead
+    GuidePhase.PAYMENT_RECEIPT -> strings.stepPaymentReceiptTipLead
+    GuidePhase.AFTERCARE_RETURN_CHECK -> strings.stepAftercareReturnCheckTipLead
+}
+
+fun GuidePhase.toTipHighlight(strings: GuideStrings): String = when (this) {
+    GuidePhase.ENTRY_PREPARATION -> strings.stepEntryPreparationTipHighlight
+    GuidePhase.RESERVATION_INQUIRY -> strings.stepReservationInquiryTipHighlight
+    GuidePhase.HOSPITAL_CHECKIN -> strings.stepHospitalCheckinTipHighlight
+    GuidePhase.TREATMENT_EXAMINATION -> strings.stepTreatmentExaminationTipHighlight
+    GuidePhase.PAYMENT_RECEIPT -> strings.stepPaymentReceiptTipHighlight
+    GuidePhase.AFTERCARE_RETURN_CHECK -> strings.stepAftercareReturnCheckTipHighlight
 }
 
 // 카드 번호 강조색.
