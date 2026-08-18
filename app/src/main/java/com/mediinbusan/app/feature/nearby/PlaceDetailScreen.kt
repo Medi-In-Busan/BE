@@ -140,6 +140,9 @@ private fun PlaceDetailLoaded(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         PlaceHeroCard(place = place)
+        if (place.isOfficialWellness) {
+            OfficialWellnessInfoCard()
+        }
         PlaceInfoCard(place = place)
         RecoveryNoticeCard(place = place)
         FavoriteActionButton(isFavorite = isFavorite, onToggleFavorite = onToggleFavorite)
@@ -182,7 +185,7 @@ private fun PlaceHeroCard(place: Place) {
                 ) {
                     Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = Color.White)
                     Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                    place.description?.takeUnless { it.startsWith("http") }?.let {
+                    place.displayDescription?.let {
                         Text(text = it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
                     }
                 }
@@ -200,10 +203,32 @@ private fun PlaceHeroCard(place: Place) {
                     }
                 Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = place.type.tint)
                 Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
-                place.description?.takeUnless { it.startsWith("http") }?.let {
+                place.displayDescription?.let {
                     Text(text = it, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun OfficialWellnessInfoCard() {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = Color(0xFFEAF7FF),
+        border = BorderStroke(1.dp, DividerColor),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = "공식 웰니스 관광지", style = CardTitleStyle, color = TextPrimary)
+            Text(
+                text = "한국관광공사 웰니스관광정보에 등록된 장소입니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
         }
     }
 }
@@ -312,3 +337,9 @@ private val PlaceType.tint: Color
 
 private fun Double.toDistanceLabel(): String =
     if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)
+
+private val Place.isOfficialWellness: Boolean
+    get() = id.startsWith("wellness-")
+
+private val Place.displayDescription: String?
+    get() = description?.takeUnless { it.startsWith("http") || it.matches(Regex("EX\\d+")) }

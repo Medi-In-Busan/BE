@@ -29,7 +29,6 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 @Service
 public class WellnessIngestionService {
 
-    private static final String BUSAN_AREA_CODE = "6";
     private static final DateTimeFormatter TOUR_API_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final WellnessPlaceRepository wellnessPlaceRepository;
@@ -56,12 +55,16 @@ public class WellnessIngestionService {
         List<WellnessPlaceCandidate> tourCandidates = properties.hasTourApiKey()
             ? fetchTourApiCandidates()
             : List.of();
+        List<WellnessPlaceCandidate> wellnessTourismCandidates = properties.hasTourApiKey()
+            ? fetchWellnessTourismCandidates()
+            : List.of();
         List<WellnessPlaceCandidate> kakaoCandidates = properties.hasKakaoKey()
             ? fetchKakaoCandidates()
             : List.of();
 
         Map<String, WellnessPlaceCandidate> candidatesById = new LinkedHashMap<>();
         tourCandidates.forEach(candidate -> candidatesById.put(candidate.contentId(), candidate));
+        wellnessTourismCandidates.forEach(candidate -> candidatesById.put(candidate.contentId(), candidate));
         kakaoCandidates.forEach(candidate -> candidatesById.putIfAbsent(candidate.contentId(), candidate));
 
         int inserted = 0;
@@ -105,6 +108,7 @@ public class WellnessIngestionService {
 
         return new WellnessIngestionResponse(
             tourCandidates.size(),
+            wellnessTourismCandidates.size(),
             kakaoCandidates.size(),
             inserted,
             updated,
@@ -122,6 +126,26 @@ public class WellnessIngestionService {
         return candidates;
     }
 
+    private List<WellnessPlaceCandidate> fetchWellnessTourismCandidates() {
+        URI uri = UriComponentsBuilder
+            .fromUriString(properties.wellnessTourismBaseUrl())
+            .path("/areaBasedList")
+            .queryParam("serviceKey", properties.tourApiServiceKey())
+            .queryParam("MobileOS", "ETC")
+            .queryParam("MobileApp", "MediInBusan")
+            .queryParam("_type", "json")
+            .queryParam("langDivCd", "KOR")
+            .queryParam("lDongRegnCd", BusanTourismCodes.LDONG_REGN_CD)
+            .queryParam("numOfRows", properties.tourApiRowsPerType())
+            .queryParam("pageNo", 1)
+            .build(true)
+            .toUri();
+
+        return asArray(readJson(uri, null).at("/response/body/items/item")).stream()
+            .map(this::toWellnessTourismCandidate)
+            .toList();
+    }
+
     private void fetchTourApiList(String contentTypeId, WellnessPlaceType placeType, List<WellnessPlaceCandidate> candidates) {
         URI uri = UriComponentsBuilder
             .fromUriString(properties.tourApiBaseUrl())
@@ -130,7 +154,8 @@ public class WellnessIngestionService {
             .queryParam("MobileOS", "ETC")
             .queryParam("MobileApp", "MediInBusan")
             .queryParam("_type", "json")
-            .queryParam("areaCode", BUSAN_AREA_CODE)
+            // 2026-01 이후 일반 TourAPI 권장 지역 필터는 areaCode가 아닌 법정동 코드다.
+            .queryParam("lDongRegnCd", BusanTourismCodes.LDONG_REGN_CD)
             .queryParam("contentTypeId", contentTypeId)
             .queryParam("numOfRows", properties.tourApiRowsPerType())
             .queryParam("pageNo", 1)
@@ -154,6 +179,31 @@ public class WellnessIngestionService {
             text(item, "tel"),
             parseTourApiDate(text(item, "modifiedtime"))
         );
+    }
+
+    private WellnessPlaceCandidate toWellnessTourismCandidate(JsonNode item) {
+        String contentTypeId = text(item, "contentTypeId");
+        return new WellnessPlaceCandidate(
+            "wellness-" + text(item, "contentId"),
+            text(item, "title"),
+            tourismPlaceType(contentTypeId),
+            firstNonBlank(text(item, "baseAddr"), text(item, "detailAddr")),
+            coordinates(doubleValue(item, "mapY"), doubleValue(item, "mapX")),
+            firstNonBlank(text(item, "firstimage"), text(item, "firstimage2")),
+            firstNonBlank(text(item, "wellnessThemaCd"), "한국관광공사 웰니스 관광지"),
+            text(item, "tel"),
+            parseTourApiDate(text(item, "mdfcnDt"))
+        );
+    }
+
+    private WellnessPlaceType tourismPlaceType(String contentTypeId) {
+        return switch (contentTypeId) {
+            case "12", "14", "28", "25" -> WellnessPlaceType.TOURIST_ATTRACTION;
+            case "39" -> WellnessPlaceType.RESTAURANT;
+            case "32" -> WellnessPlaceType.LODGING;
+            case "38" -> WellnessPlaceType.SHOPPING;
+            default -> WellnessPlaceType.OTHER;
+        };
     }
 
     private List<WellnessPlaceCandidate> fetchKakaoCandidates() {

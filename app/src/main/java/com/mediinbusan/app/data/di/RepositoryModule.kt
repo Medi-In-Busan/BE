@@ -8,6 +8,8 @@ import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.hospital.HospitalRepositoryImpl
 import com.mediinbusan.app.data.place.PlaceRepository
 import com.mediinbusan.app.data.place.PlaceRepositoryImpl
+import com.mediinbusan.app.data.place.WellnessTourismRepository
+import com.mediinbusan.app.data.place.WellnessTourismRepositoryImpl
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.recent.RecentRepositoryImpl
 import com.mediinbusan.app.data.searchhistory.SearchHistoryRepository
@@ -25,6 +27,9 @@ interface RepositoryModule {
 
     @Binds
     fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
+
+    @Binds
+    fun bindWellnessTourismRepository(impl: WellnessTourismRepositoryImpl): WellnessTourismRepository
 
     @Binds
     fun bindGuideRepository(impl: GuideRepositoryImpl): GuideRepository

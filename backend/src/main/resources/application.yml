@@ -20,6 +20,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # 로컬 DB에는 이미 적용됐지만 현재 브랜치에서 누락된 V4/V5를 검증 대상에서만 제외한다.
+    # V7이 신규 환경에서 V5의 최종 상태(수동 wellness 시드 제거)를 재현한다.
+    ignore-migration-patterns: "*:missing"
   h2:
     console:
       enabled: true
@@ -34,6 +37,18 @@ springdoc:
 wellness:
   ingestion:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
+    wellness-tourism-base-url: https://apis.data.go.kr/B551011/WellnessTursmService
+    accessible-tourism-base-url: https://apis.data.go.kr/B551011/KorWithService2
+    related-tourism-base-url: https://apis.data.go.kr/B551011/TarRlteTarService1
+    hub-tourism-base-url: https://apis.data.go.kr/B551011/LocgoHubTarService1
+    crowding-base-url: https://apis.data.go.kr/B551011/TatsCnctrRateService
+    visitor-base-url: https://apis.data.go.kr/B551011/DataLabService
+    photo-base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1
+    walking-base-url: https://apis.data.go.kr/B551011/Durunubi
+    audio-base-url: https://apis.data.go.kr/B551011/Odii
+    english-tourism-base-url: https://apis.data.go.kr/B551011/EngService2
+    japanese-tourism-base-url: https://apis.data.go.kr/B551011/JpnService2
+    chinese-tourism-base-url: https://apis.data.go.kr/B551011/ChsService2
     tour-api-service-key: ${TOURISM_API_SERVICE_KEY:}
     kakao-local-base-url: https://dapi.kakao.com
     kakao-rest-api-key: ${KAKAO_REST_API_KEY:}

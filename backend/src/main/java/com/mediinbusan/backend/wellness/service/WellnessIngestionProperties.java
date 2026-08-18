@@ -7,6 +7,18 @@ import java.util.List;
 @ConfigurationProperties(prefix = "wellness.ingestion")
 public record WellnessIngestionProperties(
     String tourApiBaseUrl,
+    String wellnessTourismBaseUrl,
+    String accessibleTourismBaseUrl,
+    String relatedTourismBaseUrl,
+    String hubTourismBaseUrl,
+    String crowdingBaseUrl,
+    String visitorBaseUrl,
+    String photoBaseUrl,
+    String walkingBaseUrl,
+    String audioBaseUrl,
+    String englishTourismBaseUrl,
+    String japaneseTourismBaseUrl,
+    String chineseTourismBaseUrl,
     String tourApiServiceKey,
     String kakaoLocalBaseUrl,
     String kakaoRestApiKey,

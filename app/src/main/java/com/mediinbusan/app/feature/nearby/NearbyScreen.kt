@@ -35,6 +35,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -71,6 +72,7 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.data.place.WellnessWalkingCourse
 import com.mediinbusan.app.domain.course.WellnessCourse
 
 @Composable
@@ -154,8 +156,11 @@ private fun NearbyLoadedContent(
     modifier: Modifier = Modifier
 ) {
     var selectedType by remember { mutableStateOf<PlaceType?>(null) }
+    var selectedFocus by remember { mutableStateOf(WellnessFocus.ALL) }
     val types = uiState.places.map { it.type }.distinct()
-    val filteredPlaces = selectedType?.let { selected -> uiState.places.filter { it.type == selected } } ?: uiState.places
+    val officialWellnessPlaces = uiState.places.filter { it.isOfficialWellness }
+    val typeFilteredPlaces = selectedType?.let { selected -> uiState.places.filter { it.type == selected } } ?: uiState.places
+    val filteredPlaces = selectedFocus.filter(typeFilteredPlaces)
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -173,22 +178,67 @@ private fun NearbyLoadedContent(
             )
         }
 
-        if (uiState.courses.isNotEmpty()) {
-            item {
-                WellnessCourseSection(courses = uiState.courses, onSelectPlace = onSelectPlace)
-            }
+        item {
+            WellnessFocusSection(
+                selectedFocus = selectedFocus,
+                onFocusSelected = {
+                    selectedFocus = it
+                    selectedType = null
+                }
+            )
         }
 
         item {
             PlaceFilterSection(
                 types = types,
                 selectedType = selectedType,
-                onTypeSelected = { selectedType = it }
+                onTypeSelected = {
+                    selectedType = it
+                    selectedFocus = WellnessFocus.ALL
+                }
             )
         }
 
-        items(filteredPlaces, key = { it.id }) { place ->
-            PlaceRecommendationCard(place = place, onClick = { onSelectPlace(place.id) })
+        item {
+            Text(
+                text = "${filteredPlaces.size}곳 둘러보기",
+                style = SectionTitleStyle,
+                color = TextPrimary
+            )
+        }
+
+        if (filteredPlaces.isEmpty()) {
+            item {
+                EmptyPlaceFilter(onReset = {
+                    selectedFocus = WellnessFocus.ALL
+                    selectedType = null
+                })
+            }
+        } else {
+            items(filteredPlaces, key = { it.id }) { place ->
+                PlaceRecommendationCard(place = place, onClick = { onSelectPlace(place.id) })
+            }
+        }
+
+        if (uiState.courses.isNotEmpty()) {
+            item {
+                WellnessCourseSection(courses = uiState.courses, onSelectPlace = onSelectPlace)
+            }
+        }
+
+        if (officialWellnessPlaces.isNotEmpty()) {
+            item {
+                OfficialWellnessSection(
+                    places = officialWellnessPlaces,
+                    onSelectPlace = onSelectPlace
+                )
+            }
+        }
+
+        if (uiState.walkingCourses.isNotEmpty()) {
+            item {
+                WalkingCourseSection(courses = uiState.walkingCourses)
+            }
         }
     }
 }
@@ -255,6 +305,169 @@ private fun WellnessCourseSection(courses: List<WellnessCourse>, onSelectPlace: 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(courses, key = { it.id }) { course ->
                 WellnessCourseCard(course = course, onSelectPlace = onSelectPlace)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfficialWellnessSection(places: List<Place>, onSelectPlace: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(text = "공식 웰니스 관광지", style = SectionTitleStyle, color = TextPrimary)
+            Text(
+                text = "한국관광공사 웰니스관광정보 기반",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(places, key = { it.id }) { place ->
+                OfficialWellnessCard(place = place, onClick = { onSelectPlace(place.id) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfficialWellnessCard(place: Place, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(244.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            PlaceThumbnail(
+                place = place,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(128.dp)
+            )
+            Column(
+                modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    text = place.name,
+                    style = CardTitleStyle,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = place.type.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = place.type.tint
+                )
+                Text(
+                    text = place.address,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WalkingCourseSection(courses: List<WellnessWalkingCourse>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(text = "부산 걷기 여행", style = SectionTitleStyle, color = TextPrimary)
+            Text(
+                text = "두루누비 걷기여행길 중 부산 코스",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(courses, key = { it.id }) { course ->
+                WalkingCourseCard(course = course)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WalkingCourseCard(course: WellnessWalkingCourse) {
+    Card(
+        modifier = Modifier.width(280.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = course.name,
+                style = CardTitleStyle,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = course.district,
+                style = MaterialTheme.typography.labelMedium,
+                color = SkyBlue
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                course.distanceKm?.let { InfoPill(text = "${it.formatDistance()}km") }
+                course.durationMinutes?.let { InfoPill(text = "${it / 60}시간 ${it % 60}분") }
+                course.difficulty?.let { InfoPill(text = "난이도 $it") }
+            }
+            course.summary?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyPlaceFilter(onReset: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(text = "선택한 조건의 장소가 없습니다.", style = CardTitleStyle, color = TextPrimary)
+            OutlinedButton(onClick = onReset) {
+                Text(text = "전체 장소 보기")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WellnessFocusSection(selectedFocus: WellnessFocus, onFocusSelected: (WellnessFocus) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(text = "오늘의 목적", style = SectionTitleStyle, color = TextPrimary)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(WellnessFocus.entries, key = { it.name }) { focus ->
+                FilterChip(
+                    selected = selectedFocus == focus,
+                    onClick = { onFocusSelected(focus) },
+                    label = { Text(text = focus.label) },
+                    colors = nearbyFilterChipColors()
+                )
             }
         }
     }
@@ -433,9 +646,9 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PlaceThumbnail(place: Place) {
+private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(width = 104.dp, height = 112.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(
@@ -516,6 +729,25 @@ private fun nearbyFilterChipColors() = FilterChipDefaults.filterChipColors(
     containerColor = Color.White
 )
 
+private enum class WellnessFocus(val label: String) {
+    ALL("전체"),
+    REST("휴식"),
+    WALK("산책"),
+    FOOD("식사"),
+    STAY("숙소") ;
+
+    fun filter(places: List<Place>): List<Place> = when (this) {
+        ALL -> places
+        REST -> places.filter { it.type in setOf(PlaceType.SPA, PlaceType.TOURIST_ATTRACTION) }
+        WALK -> places.filter { it.type == PlaceType.WALK }
+        FOOD -> places.filter { it.type == PlaceType.RESTAURANT }
+        STAY -> places.filter { it.type == PlaceType.LODGING }
+    }
+}
+
+private val Place.isOfficialWellness: Boolean
+    get() = id.startsWith("wellness-")
+
 private val PlaceType.label: String
     get() = when (this) {
         PlaceType.TOURIST_ATTRACTION -> "관광지"
@@ -551,5 +783,8 @@ private val PlaceType.tint: Color
 
 private fun Double.toDistanceLabel(): String =
     if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)
+
+private fun Double.formatDistance(): String =
+    if (this % 1.0 == 0.0) toInt().toString() else String.format("%.1f", this)
 
 private val WellnessCanvas = Color(0xFFFFFAFF)
