@@ -21,25 +21,32 @@ fun visaEntryCheckContent(strings: GuideStrings): GuideStepDetailContent {
         checklistItems = listOf(
             GuideDetailItem(
                 id = "k_eta_official_site",
-                iconResId = R.drawable.ic_k_eta_official_site,
+                iconResId = R.drawable.guide_global_guide,
                 title = s.item1Title,
                 description = s.item1Description,
                 url = "https://www.k-eta.go.kr"
             ),
             GuideDetailItem(
                 id = "korea_visa_portal",
-                iconResId = R.drawable.ic_korea_visa_portal,
+                iconResId = R.drawable.guide_visa_document,
                 title = s.item2Title,
                 description = s.item2Description,
                 url = "https://www.visa.go.kr"
             ),
             GuideDetailItem(
                 id = "hikorea_residence_guide",
-                iconResId = R.drawable.ic_hikorea_residence_guide,
+                iconResId = R.drawable.guide_passport_document,
                 title = s.item3Title,
                 description = s.item3Description,
                 url = "https://www.hikorea.go.kr"
             )
+        ),
+        orderStepsTitle = s.orderStepsTitle,
+        orderSteps = listOf(
+            GuideOrderStep(title = s.order1Title, description = s.order1Description),
+            GuideOrderStep(title = s.order2Title, description = s.order2Description),
+            GuideOrderStep(title = s.order3Title, description = s.order3Description),
+            GuideOrderStep(title = s.order4Title, description = s.order4Description)
         ),
         noticeIconResId = R.drawable.ic_visa_guide_information,
         noticeText = s.noticeText
@@ -61,25 +68,30 @@ fun insuranceDocumentsContent(strings: GuideStrings): GuideStepDetailContent {
                 id = "passport_copy",
                 iconResId = R.drawable.ic_passport_copy,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_passport_copy
             ),
             GuideDetailItem(
                 id = "appointment_confirmation",
                 iconResId = R.drawable.ic_appointment_confirmation,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_appointment_calendar
             ),
             GuideDetailItem(
                 id = "medical_report_document",
                 iconResId = R.drawable.ic_medical_report_document,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_medical_document
             ),
             GuideDetailItem(
                 id = "medical_receipt",
                 iconResId = R.drawable.ic_medical_receipt,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_medical_receipt,
+                memoBackgroundResId = R.drawable.guide_memo5
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,
@@ -102,25 +114,29 @@ fun hospitalInquiryContent(strings: GuideStrings): GuideStepDetailContent {
                 id = "passport_validity_check",
                 iconResId = R.drawable.ic_passport_validity_check,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_passport_copy
             ),
             GuideDetailItem(
                 id = "stay_duration_visit_purpose",
                 iconResId = R.drawable.ic_stay_duration_visit_purpose,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_visa_document
             ),
             GuideDetailItem(
                 id = "contact_accommodation_info",
                 iconResId = R.drawable.ic_contact_accommodation_info,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_contact_accommodation_preparation
             ),
             GuideDetailItem(
                 id = "hospital_info_schedule",
                 iconResId = R.drawable.ic_hospital_info_schedule,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_hospital_schedule_preparation
             )
         ),
         noticeIconResId = R.drawable.ic_entry_preparation_tip,
@@ -143,37 +159,33 @@ fun preInquiryInformationContent(strings: GuideStrings): GuideStepDetailContent 
                 id = "desired_treatment_checklist",
                 iconResId = R.drawable.ic_desired_treatment_checklist,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_preferred_treatment_exam,
+                memoBackgroundResId = R.drawable.guide_memo7
             ),
             GuideDetailItem(
                 id = "symptoms_medical_records",
                 iconResId = R.drawable.ic_symptoms_medical_records,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_symptom_diagnosis_info,
+                memoBackgroundResId = R.drawable.guide_memo8
             ),
             GuideDetailItem(
                 id = "preferred_visit_schedule",
                 iconResId = R.drawable.ic_preferred_visit_schedule,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_preferred_medical_schedule,
+                memoBackgroundResId = R.drawable.guide_memo6
             ),
             GuideDetailItem(
-                id = "basic_personal_information",
-                iconResId = R.drawable.ic_basic_personal_information,
+                id = "interpreter_language_support",
+                iconResId = R.drawable.ic_interpretation_language_support,
                 title = s.item4Title,
-                description = s.item4Description
-            ),
-            GuideDetailItem(
-                id = "estimated_cost_inquiry",
-                iconResId = R.drawable.ic_estimated_cost_inquiry,
-                title = s.item5Title,
-                description = s.item5Description
-            ),
-            GuideDetailItem(
-                id = "english_document_requirement",
-                iconResId = R.drawable.ic_english_document_requirement,
-                title = s.item6Title,
-                description = s.item6Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_interpreter_language_support,
+                memoBackgroundResId = R.drawable.guide_memo4
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,

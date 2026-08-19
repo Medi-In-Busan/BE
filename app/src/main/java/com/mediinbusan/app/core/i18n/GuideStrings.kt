@@ -35,6 +35,10 @@ data class GuideStrings(
     val stepAftercareReturnCheckTipLead: String,
     val stepAftercareReturnCheckTipHighlight: String,
     val comingSoonNoticeText: String,
+    // STEP 상세(리디자인) 공용 문구: 공식 사이트 링크 카드 배지/버튼, 하단 MEDIN TIP 배너 라벨.
+    val officialSiteBadgeLabel: String,
+    val visitSiteButtonLabel: String,
+    val medinTipLabel: String,
     val entryPreparation: EntryPreparationStrings,
     val reservationInquiry: ReservationInquiryStrings,
     val hospitalCheckin: HospitalCheckinStrings,
@@ -87,6 +91,9 @@ data class GuideStrings(
             stepAftercareReturnCheckTipLead = "약과 서류만 잘 챙기면",
             stepAftercareReturnCheckTipHighlight = "귀국이 편해져요",
             comingSoonNoticeText = "이 단계의 상세 안내는 준비 중입니다.",
+            officialSiteBadgeLabel = "공식 사이트",
+            visitSiteButtonLabel = "바로가기",
+            medinTipLabel = "메디인 팁",
             entryPreparation = EntryPreparationStrings.Ko,
             reservationInquiry = ReservationInquiryStrings.Ko,
             hospitalCheckin = HospitalCheckinStrings.Ko,
@@ -138,6 +145,9 @@ data class GuideStrings(
             stepAftercareReturnCheckTipLead = "Pack your meds and documents",
             stepAftercareReturnCheckTipHighlight = "for an easy departure",
             comingSoonNoticeText = "Detailed guidance for this step is coming soon.",
+            officialSiteBadgeLabel = "Official Site",
+            visitSiteButtonLabel = "Visit Site",
+            medinTipLabel = "MEDIN TIP",
             entryPreparation = EntryPreparationStrings.En,
             reservationInquiry = ReservationInquiryStrings.En,
             hospitalCheckin = HospitalCheckinStrings.En,
@@ -189,6 +199,9 @@ data class GuideStrings(
             stepAftercareReturnCheckTipLead = "备好药物和文件",
             stepAftercareReturnCheckTipHighlight = "回国更轻松",
             comingSoonNoticeText = "该阶段的详细说明正在准备中。",
+            officialSiteBadgeLabel = "官方网站",
+            visitSiteButtonLabel = "立即前往",
+            medinTipLabel = "MEDIN 小提示",
             entryPreparation = EntryPreparationStrings.Zh,
             reservationInquiry = ReservationInquiryStrings.Zh,
             hospitalCheckin = HospitalCheckinStrings.Zh,
@@ -240,6 +253,9 @@ data class GuideStrings(
             stepAftercareReturnCheckTipLead = "薬と書類を準備すれば",
             stepAftercareReturnCheckTipHighlight = "帰国もスムーズ",
             comingSoonNoticeText = "このステップの詳細案内は準備中です。",
+            officialSiteBadgeLabel = "公式サイト",
+            visitSiteButtonLabel = "サイトへ",
+            medinTipLabel = "メディンTIP",
             entryPreparation = EntryPreparationStrings.Ja,
             reservationInquiry = ReservationInquiryStrings.Ja,
             hospitalCheckin = HospitalCheckinStrings.Ja,
@@ -362,9 +378,9 @@ data class ReservationInquiryStrings(
     companion object {
         val Ko = ReservationInquiryStrings(
             bannerSubtitle = "병원에 문의하기 전 필요한 정보를 정리하고 언어 지원과 문의 채널을 확인해요.",
-            item1Title = "병원 공식 문의 채널 확인",
+            item1Title = "병원 공식 문의 채널",
             item1Description = "메디투어부산에서 부산 의료기관의 공식 문의 채널을 확인하세요.",
-            item2Title = "상담 가능한 언어로 병원 찾기",
+            item2Title = "통역 지원 병원",
             item2Description = "Medical Korea 등록병원 목록에서 상담 가능한 언어를 확인하세요.",
             item3Title = "문의 전 전달할 정보 정리",
             item3Description = "증상, 희망 진료, 방문 시기 등 전달할 정보를 미리 정리하세요.",
@@ -377,9 +393,9 @@ data class ReservationInquiryStrings(
         )
         val En = ReservationInquiryStrings(
             bannerSubtitle = "Organize the information you need before contacting a hospital, and check language support and inquiry channels.",
-            item1Title = "Check Official Hospital Inquiry Channels",
+            item1Title = "Official Hospital Inquiry Channels",
             item1Description = "Check official inquiry channels for Busan medical institutions on Meditour Busan.",
-            item2Title = "Find a Hospital by Supported Language",
+            item2Title = "Hospitals with Language & Interpretation Support",
             item2Description = "Check available consultation languages in the Medical Korea registered hospital list.",
             item3Title = "Organize Info to Share Before Inquiring",
             item3Description = "Organize the information you'll share, such as symptoms, desired treatment, and visit timing.",
@@ -392,9 +408,9 @@ data class ReservationInquiryStrings(
         )
         val Zh = ReservationInquiryStrings(
             bannerSubtitle = "在联系医院前整理所需信息，并确认语言支持与咨询渠道。",
-            item1Title = "确认医院官方咨询渠道",
+            item1Title = "医院官方咨询渠道",
             item1Description = "请在Meditour Busan确认釜山医疗机构的官方咨询渠道。",
-            item2Title = "按可咨询语言查找医院",
+            item2Title = "可咨询语言/口译支持医院",
             item2Description = "请在Medical Korea注册医院名单中确认可提供咨询的语言。",
             item3Title = "整理咨询前要传达的信息",
             item3Description = "请提前整理症状、期望诊疗、访问时间等要传达的信息。",
@@ -407,9 +423,9 @@ data class ReservationInquiryStrings(
         )
         val Ja = ReservationInquiryStrings(
             bannerSubtitle = "病院に問い合わせる前に必要な情報を整理し、対応言語と問い合わせチャネルを確認しましょう。",
-            item1Title = "病院公式問い合わせチャネルの確認",
+            item1Title = "病院公式問い合わせチャネル",
             item1Description = "メディツアー釜山で釜山の医療機関の公式問い合わせチャネルを確認してください。",
-            item2Title = "対応言語で病院を探す",
+            item2Title = "相談可能言語・通訳対応病院",
             item2Description = "Medical Korea登録病院リストで相談可能な言語を確認してください。",
             item3Title = "問い合わせ前に伝える情報の整理",
             item3Description = "症状、希望する診療、訪問時期など伝える情報を事前に整理してください。",
@@ -754,6 +770,15 @@ data class VisaEntryCheckStrings(
     val item2Description: String,
     val item3Title: String,
     val item3Description: String,
+    val orderStepsTitle: String,
+    val order1Title: String,
+    val order1Description: String,
+    val order2Title: String,
+    val order2Description: String,
+    val order3Title: String,
+    val order3Description: String,
+    val order4Title: String,
+    val order4Description: String,
     val noticeText: String
 ) {
     companion object {
@@ -766,6 +791,15 @@ data class VisaEntryCheckStrings(
             item2Description = "체류 목적별 비자 종류와 신청 절차를 확인할 수 있어요.",
             item3Title = "HiKorea 체류 안내",
             item3Description = "입국 후 체류 자격, 외국인등록 등 안내를 확인할 수 있어요.",
+            orderStepsTitle = "확인 순서",
+            order1Title = "체류기간 확인",
+            order1Description = "90일 이하인지, 91일 이상인지 먼저 확인해요.",
+            order2Title = "방문 목적 확인",
+            order2Description = "치료/요양, 단기 진료, 관광 목적 등 구체적으로 확인해요.",
+            order3Title = "비자 또는 K-ETA 필요 여부 확인",
+            order3Description = "국적별 입국 조건을 공식 사이트에서 확인해요.",
+            order4Title = "필요 시 비자 신청 또는 K-ETA 신청",
+            order4Description = "필요 서류와 처리 기간을 확인하고 미리 준비해요.",
             noticeText = "본 안내는 비자 발급을 보장하지 않습니다. 정확한 자격 요건은 각 공식 사이트에서 반드시 확인해 주세요."
         )
         val En = VisaEntryCheckStrings(
@@ -777,6 +811,15 @@ data class VisaEntryCheckStrings(
             item2Description = "Check visa types and application procedures by purpose of stay.",
             item3Title = "HiKorea Residence Guide",
             item3Description = "Check guidance on residence status and foreigner registration after entry.",
+            orderStepsTitle = "Steps to Check",
+            order1Title = "Check Your Length of Stay",
+            order1Description = "First check whether it's 90 days or fewer, or 91 days or more.",
+            order2Title = "Check Your Purpose of Visit",
+            order2Description = "Confirm specifically whether it's treatment/recovery, short-term care, tourism, etc.",
+            order3Title = "Check Whether You Need a Visa or K-ETA",
+            order3Description = "Check entry requirements for your nationality on the official site.",
+            order4Title = "Apply for a Visa or K-ETA if Needed",
+            order4Description = "Check the required documents and processing time, and prepare in advance.",
             noticeText = "This guidance does not guarantee visa issuance. Please verify exact requirements on each official site."
         )
         val Zh = VisaEntryCheckStrings(
@@ -788,6 +831,15 @@ data class VisaEntryCheckStrings(
             item2Description = "可查询各停留目的对应的签证种类及申请流程。",
             item3Title = "HiKorea停留指南",
             item3Description = "可查询入境后的停留资格、外国人登记等相关说明。",
+            orderStepsTitle = "确认顺序",
+            order1Title = "确认停留期限",
+            order1Description = "先确认是90天以内还是91天以上。",
+            order2Title = "确认访问目的",
+            order2Description = "具体确认是治疗/疗养、短期诊疗、观光等目的。",
+            order3Title = "确认是否需要签证或K-ETA",
+            order3Description = "请在官方网站确认各国籍的入境条件。",
+            order4Title = "如有需要，申请签证或K-ETA",
+            order4Description = "确认所需文件及办理期限，并提前准备。",
             noticeText = "本指南不保证签证发放，请务必在各官方网站确认准确的资格要求。"
         )
         val Ja = VisaEntryCheckStrings(
@@ -799,6 +851,15 @@ data class VisaEntryCheckStrings(
             item2Description = "滞在目的別のビザの種類と申請手続きを確認できます。",
             item3Title = "HiKorea在留案内",
             item3Description = "入国後の在留資格、外国人登録などの案内を確認できます。",
+            orderStepsTitle = "確認の順序",
+            order1Title = "滞在期間の確認",
+            order1Description = "90日以内か、91日以上かをまず確認します。",
+            order2Title = "訪問目的の確認",
+            order2Description = "治療・療養、短期診療、観光目的など具体的に確認します。",
+            order3Title = "ビザまたはK-ETAの要否確認",
+            order3Description = "国籍別の入国条件を公式サイトで確認します。",
+            order4Title = "必要な場合はビザまたはK-ETA申請",
+            order4Description = "必要書類と処理期間を確認し、事前に準備します。",
             noticeText = "本案内はビザ発給を保証するものではありません。正確な要件は必ず各公式サイトでご確認ください。"
         )
     }
@@ -827,9 +888,9 @@ data class InsuranceDocumentsStrings(
             item1Description = "출입국 심사와 병원 접수 시 필요할 수 있어요.",
             item2Title = "진료 예약 확인서",
             item2Description = "예약한 병원의 예약 확인서나 문자를 준비해 두세요.",
-            item3Title = "진단서 또는 소견서",
+            item3Title = "진단서·의료기록",
             item3Description = "기존에 받은 진단서나 소견서가 있다면 함께 준비하세요.",
-            item4Title = "진료비 영수증",
+            item4Title = "보험·지불 증빙",
             item4Description = "보험 청구나 세금 환급에 필요할 수 있어 보관해 두세요.",
             noticeText = "본 안내는 보험 보장 범위를 보장하지 않습니다. 정확한 보장 내용은 가입한 보험사에 확인해 주세요."
         )
@@ -841,9 +902,9 @@ data class InsuranceDocumentsStrings(
             item1Description = "May be needed for immigration checks and hospital check-in.",
             item2Title = "Appointment Confirmation",
             item2Description = "Prepare the confirmation or text message from your hospital reservation.",
-            item3Title = "Medical Certificate or Opinion",
+            item3Title = "Medical Certificate & Records",
             item3Description = "If you have an existing medical certificate or opinion, bring it along.",
-            item4Title = "Medical Receipt",
+            item4Title = "Insurance & Payment Proof",
             item4Description = "Keep this, as it may be needed for insurance claims or tax refunds.",
             noticeText = "This guidance does not guarantee your insurance coverage. Please confirm exact coverage with your insurer."
         )
@@ -855,9 +916,9 @@ data class InsuranceDocumentsStrings(
             item1Description = "出入境审查及医院挂号时可能需要。",
             item2Title = "诊疗预约确认单",
             item2Description = "请准备好预约医院的确认单或短信。",
-            item3Title = "诊断书或意见书",
+            item3Title = "诊断书·医疗记录",
             item3Description = "如有既往诊断书或意见书，请一并准备。",
-            item4Title = "诊疗费收据",
+            item4Title = "保险·支付凭证",
             item4Description = "可能用于保险理赔或退税，请妥善保管。",
             noticeText = "本指南不保证保险保障范围，请向所投保的保险公司确认准确的保障内容。"
         )
@@ -869,9 +930,9 @@ data class InsuranceDocumentsStrings(
             item1Description = "出入国審査や病院受付の際に必要になる場合があります。",
             item2Title = "診療予約確認書",
             item2Description = "予約した病院の予約確認書やメッセージを準備してください。",
-            item3Title = "診断書または所見書",
+            item3Title = "診断書・医療記録",
             item3Description = "既に受け取った診断書や所見書があれば一緒に準備してください。",
-            item4Title = "診療費領収書",
+            item4Title = "保険・支払い証憑",
             item4Description = "保険請求や税還付に必要になる場合があるため保管しておいてください。",
             noticeText = "本案内は保険の補償範囲を保証するものではありません。正確な補償内容は加入している保険会社にご確認ください。"
         )
@@ -894,58 +955,58 @@ data class HospitalInquiryStrings(
 ) {
     companion object {
         val Ko = HospitalInquiryStrings(
-            bannerTitle = "병원 문의 전 정보 정리",
+            bannerTitle = "입국·체류 정보 정리",
             bannerSubtitle = "여권, 체류기간, 방문 목적, 연락처 등 기본 정보를 미리 정리하면 입국과 병원 방문이 편리해요.",
             checklistTitle = "정보 정리 체크리스트",
             item1Title = "여권 유효기간 확인",
             item1Description = "입국일 기준 여권 유효기간이 충분한지 확인하세요.",
-            item2Title = "체류기간 및 방문 목적 정리",
+            item2Title = "체류 목적·기간",
             item2Description = "예상 체류기간과 방문 목적을 정리해두면 문의가 수월해요.",
-            item3Title = "연락처 및 숙소 정보 준비",
+            item3Title = "숙소·연락처",
             item3Description = "현지 연락처와 숙소 정보를 미리 준비해두세요.",
-            item4Title = "병원 정보 및 일정 정리",
+            item4Title = "입출국·진료 일정",
             item4Description = "문의할 병원명과 희망 일정을 정리해두세요.",
             noticeText = "문의 전 정보를 미리 정리해두면 병원과의 소통이 더 원활해져요."
         )
         val En = HospitalInquiryStrings(
-            bannerTitle = "Organize Info Before Contacting a Hospital",
+            bannerTitle = "Organize Entry & Stay Info",
             bannerSubtitle = "Organizing basics like your passport, stay duration, visit purpose, and contact info in advance makes entry and hospital visits easier.",
             checklistTitle = "Info Checklist",
             item1Title = "Check Passport Validity",
             item1Description = "Check that your passport is valid long enough as of your entry date.",
-            item2Title = "Organize Stay Duration & Purpose",
+            item2Title = "Stay Purpose & Duration",
             item2Description = "Organizing your expected stay and visit purpose makes inquiries easier.",
-            item3Title = "Prepare Contact & Accommodation Info",
+            item3Title = "Accommodation & Contact",
             item3Description = "Prepare your local contact number and accommodation details in advance.",
-            item4Title = "Organize Hospital Info & Schedule",
+            item4Title = "Entry/Exit & Treatment Schedule",
             item4Description = "Organize the hospital name you'll contact and your preferred schedule.",
             noticeText = "Organizing information beforehand makes communication with the hospital smoother."
         )
         val Zh = HospitalInquiryStrings(
-            bannerTitle = "整理病院咨询前的信息",
+            bannerTitle = "整理入境与停留信息",
             bannerSubtitle = "提前整理护照、停留时间、访问目的、联系方式等基本信息，可让入境和就诊更加顺利。",
             checklistTitle = "信息整理清单",
             item1Title = "确认护照有效期",
             item1Description = "请确认以入境日为准，护照有效期是否充足。",
-            item2Title = "整理停留期限及访问目的",
+            item2Title = "停留目的·期限",
             item2Description = "提前整理预计停留时间及访问目的，可让咨询更顺利。",
-            item3Title = "准备联系方式及住宿信息",
+            item3Title = "住宿·联系方式",
             item3Description = "请提前准备好当地联系方式及住宿信息。",
-            item4Title = "整理医院信息及日程",
+            item4Title = "入出境·诊疗日程",
             item4Description = "请整理好要咨询的医院名称及期望日程。",
             noticeText = "提前整理好信息，可让与医院的沟通更加顺畅。"
         )
         val Ja = HospitalInquiryStrings(
-            bannerTitle = "病院への問い合わせ前の情報整理",
+            bannerTitle = "入国・滞在情報の整理",
             bannerSubtitle = "パスポート、滞在期間、訪問目的、連絡先など基本情報を事前に整理しておくと、入国や病院訪問がスムーズになります。",
             checklistTitle = "情報整理チェックリスト",
             item1Title = "パスポート有効期限の確認",
             item1Description = "入国日を基準にパスポートの有効期限が十分か確認してください。",
-            item2Title = "滞在期間・訪問目的の整理",
+            item2Title = "滞在目的・期間",
             item2Description = "予想される滞在期間と訪問目的を整理しておくと問い合わせがスムーズになります。",
-            item3Title = "連絡先・宿泊先情報の準備",
+            item3Title = "宿泊先・連絡先",
             item3Description = "現地の連絡先と宿泊先情報を事前に準備してください。",
-            item4Title = "病院情報・日程の整理",
+            item4Title = "入出国・診療日程",
             item4Description = "問い合わせる病院名と希望日程を整理しておいてください。",
             noticeText = "問い合わせ前に情報を整理しておくと、病院とのやり取りがよりスムーズになります。"
         )
@@ -964,10 +1025,6 @@ data class PreInquiryInformationStrings(
     val item3Description: String,
     val item4Title: String,
     val item4Description: String,
-    val item5Title: String,
-    val item5Description: String,
-    val item6Title: String,
-    val item6Description: String,
     val noticeText: String
 ) {
     companion object {
@@ -977,16 +1034,12 @@ data class PreInquiryInformationStrings(
             checklistTitle = "전달 정보 체크리스트",
             item1Title = "희망 진료·검사 내용",
             item1Description = "받고 싶은 진료나 검사 항목을 구체적으로 정리하세요.",
-            item2Title = "현재 증상과 기존 자료",
+            item2Title = "현재 증상·진단 정보",
             item2Description = "현재 증상과 기존 진단서·검사 결과가 있다면 함께 정리하세요.",
-            item3Title = "방문 희망 시기",
+            item3Title = "희망 진료 일정",
             item3Description = "방문을 원하는 대략적인 날짜나 기간을 정리하세요.",
-            item4Title = "기본 인적 정보",
-            item4Description = "이름, 생년월일, 국적 등 기본 정보를 준비하세요.",
-            item5Title = "예상 비용 문의 여부",
-            item5Description = "예상 비용을 함께 문의할지 미리 정리해두세요.",
-            item6Title = "영문 서류 필요 여부",
-            item6Description = "귀국 후 필요한 영문 서류가 있는지 미리 확인하세요.",
+            item4Title = "통역·언어 지원",
+            item4Description = "필요한 통역 언어와 지원 여부를 미리 확인하세요.",
             noticeText = "정리한 정보는 병원 문의 시 그대로 전달하면 상담이 더 빠르고 정확해져요."
         )
         val En = PreInquiryInformationStrings(
@@ -995,16 +1048,12 @@ data class PreInquiryInformationStrings(
             checklistTitle = "Info to Share Checklist",
             item1Title = "Desired Treatment/Exam",
             item1Description = "Specify the treatment or exam you'd like to receive.",
-            item2Title = "Current Symptoms & Existing Records",
+            item2Title = "Current Symptoms & Diagnosis Info",
             item2Description = "Organize your current symptoms along with any existing medical certificates or test results.",
-            item3Title = "Preferred Visit Timing",
+            item3Title = "Preferred Treatment Schedule",
             item3Description = "Organize the approximate date or period you'd like to visit.",
-            item4Title = "Basic Personal Info",
-            item4Description = "Prepare basics such as your name, date of birth, and nationality.",
-            item5Title = "Whether to Ask About Estimated Cost",
-            item5Description = "Decide in advance whether you'll also ask about estimated costs.",
-            item6Title = "Whether English Documents Are Needed",
-            item6Description = "Check in advance whether you'll need English-language documents after returning home.",
+            item4Title = "Interpretation & Language Support",
+            item4Description = "Check in advance which languages you'll need interpretation or support for.",
             noticeText = "Sharing this organized information directly with the hospital makes consultations faster and more accurate."
         )
         val Zh = PreInquiryInformationStrings(
@@ -1013,16 +1062,12 @@ data class PreInquiryInformationStrings(
             checklistTitle = "传达信息清单",
             item1Title = "期望诊疗·检查内容",
             item1Description = "请具体整理希望接受的诊疗或检查项目。",
-            item2Title = "现有症状与既往资料",
+            item2Title = "现有症状·诊断信息",
             item2Description = "请一并整理现有症状及既往诊断书、检查结果（如有）。",
-            item3Title = "期望访问时间",
+            item3Title = "希望诊疗日程",
             item3Description = "请整理希望访问的大致日期或期间。",
-            item4Title = "基本个人信息",
-            item4Description = "请准备姓名、出生日期、国籍等基本信息。",
-            item5Title = "是否咨询预估费用",
-            item5Description = "请提前想好是否要一并询问预估费用。",
-            item6Title = "是否需要英文文件",
-            item6Description = "请提前确认回国后是否需要英文文件。",
+            item4Title = "口译·语言支持",
+            item4Description = "请提前确认所需的翻译语言及支持情况。",
             noticeText = "将整理好的信息直接告知医院，可让咨询更快速、更准确。"
         )
         val Ja = PreInquiryInformationStrings(
@@ -1031,16 +1076,12 @@ data class PreInquiryInformationStrings(
             checklistTitle = "伝達情報チェックリスト",
             item1Title = "希望する診療・検査内容",
             item1Description = "受けたい診療や検査項目を具体的に整理してください。",
-            item2Title = "現在の症状と既往資料",
+            item2Title = "現在の症状・診断情報",
             item2Description = "現在の症状と、既往の診断書・検査結果があれば一緒に整理してください。",
-            item3Title = "訪問希望時期",
+            item3Title = "希望診療スケジュール",
             item3Description = "訪問を希望するおおよその日付や期間を整理してください。",
-            item4Title = "基本個人情報",
-            item4Description = "氏名、生年月日、国籍などの基本情報を準備してください。",
-            item5Title = "概算費用の問い合わせ有無",
-            item5Description = "概算費用も一緒に問い合わせるか事前に整理しておいてください。",
-            item6Title = "英文書類の要否確認",
-            item6Description = "帰国後に必要な英文書類があるか事前に確認してください。",
+            item4Title = "通訳・言語サポート",
+            item4Description = "必要な通訳言語やサポートの有無を事前に確認してください。",
             noticeText = "整理した情報をそのまま病院に伝えると、相談がより早く正確になります。"
         )
     }

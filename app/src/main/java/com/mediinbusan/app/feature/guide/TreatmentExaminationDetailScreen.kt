@@ -1,7 +1,5 @@
 package com.mediinbusan.app.feature.guide
 
-import android.content.Intent
-import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -19,7 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
@@ -34,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,7 +45,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -60,14 +57,12 @@ import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.PageBackground
-import com.mediinbusan.app.core.designsystem.SkyBlue
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.TreatmentBriefingDefaultsStrings
 import com.mediinbusan.app.core.i18n.TreatmentExaminationStrings
-import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.TreatmentBriefing
 import com.mediinbusan.app.data.guide.TreatmentBriefingField
 
@@ -94,16 +89,23 @@ private fun briefingFields(s: TreatmentExaminationStrings, defaults: TreatmentBr
     BriefingField(R.drawable.ic_memo_note, s.briefingLabelMemo, TreatmentBriefingField.MEMO, { it.memo }, defaults.memo)
 )
 
-private data class TodayChecklistItem(
-    @param:DrawableRes val iconResId: Int,
-    val title: String,
-    val description: String
+// 다른 STEP의 메모지 카드 섹션과 동일하게 GuideMemoRow로 그린다 — 아이콘은 위치 기반으로
+// GuideMemoRow가 자체 배정하므로 여기서는 사용되지 않는다(placeholder만 채움).
+private fun todayChecklistItems(s: TreatmentExaminationStrings): List<GuideDetailItem> = listOf(
+    GuideDetailItem(id = "today_1", iconResId = R.drawable.guide_medical_document, title = s.todayItem1Title, description = s.todayItem1Description),
+    GuideDetailItem(id = "today_2", iconResId = R.drawable.guide_medical_document, title = s.todayItem2Title, description = s.todayItem2Description),
+    GuideDetailItem(id = "today_3", iconResId = R.drawable.guide_medical_document, title = s.todayItem3Title, description = s.todayItem3Description)
 )
 
-private fun todayChecklist(s: TreatmentExaminationStrings): List<TodayChecklistItem> = listOf(
-    TodayChecklistItem(iconResId = R.drawable.ic_examination_name_clipboard, title = s.todayItem1Title, description = s.todayItem1Description),
-    TodayChecklistItem(iconResId = R.drawable.ic_caution_warning, title = s.todayItem2Title, description = s.todayItem2Description),
-    TodayChecklistItem(iconResId = R.drawable.ic_results_document, title = s.todayItem3Title, description = s.todayItem3Description)
+private fun inquiryItems(s: TreatmentExaminationStrings): List<GuideDetailItem> = listOf(
+    GuideDetailItem(id = "inquiry_1", iconResId = R.drawable.guide_medical_document, title = s.inquiry1Title, description = s.inquiry1Description),
+    GuideDetailItem(
+        id = "inquiry_2",
+        iconResId = R.drawable.guide_medical_document,
+        title = s.inquiry2Title,
+        description = s.inquiry2Description,
+        url = "https://www.medicalkorea.or.kr/"
+    )
 )
 
 // S-06 하위 STEP04 상세 (진료 및 검사). 브리핑 카드 섹션 형태가 STEP01~03과 달라 공용 GuideStepDetailScreen을 쓰지 않고 전용 화면으로 구현.
@@ -113,30 +115,35 @@ fun TreatmentExaminationDetailScreen(
     onBack: () -> Unit,
     viewModel: TreatmentExaminationViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
     val briefing by viewModel.briefing.collectAsStateWithLifecycle()
     var editingIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val appStrings = LocalAppStrings.current
     val guideStrings = appStrings.guide
     val s = guideStrings.treatmentExamination
     val fields = briefingFields(s, guideStrings.treatmentBriefingDefaults)
-    val checklist = todayChecklist(s)
+    val checklist = todayChecklistItems(s)
+    val inquiries = inquiryItems(s)
 
     Scaffold(
-        containerColor = PageBackground,
+        containerColor = HomeBackgroundPink,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = appStrings.common.backContentDescription)
                     }
                 },
                 title = {
-                    Text(
-                        text = "04 ${guideStrings.stepTreatmentExaminationTitle}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "04", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CoralPrimary)
+                        Text(
+                            text = " ${guideStrings.stepTreatmentExaminationTitle}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
                 }
             )
         }
@@ -147,21 +154,18 @@ fun TreatmentExaminationDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            GuideDetailBanner(
-                backgroundResId = R.drawable.img_examination_test_banner,
-                aspectRatio = 1448f / 1086f,
-                title = guideStrings.stepTreatmentExaminationTitle,
-                subtitle = s.bannerSubtitle,
-                stepLabel = "STEP 04",
-                modifier = Modifier.padding(top = 20.dp)
+            GuideStepHero(
+                heroResId = R.drawable.guide_step04_treatment_examination_banner,
+                language = appStrings.language,
+                stepNumberLabel = "04",
+                stepTitle = guideStrings.stepTreatmentExaminationTitle,
+                modifier = Modifier.padding(top = 16.dp)
             )
 
             Column(modifier = Modifier.padding(top = 28.dp)) {
-                GuideDetailSectionTitle(title = s.briefingSectionTitle, iconResId = R.drawable.ic_briefing_card_header)
+                GuideStepSectionHeader(title = s.briefingSectionTitle, modifier = Modifier.padding(bottom = 14.dp))
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 14.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, BorderColor),
@@ -189,44 +193,20 @@ fun TreatmentExaminationDetailScreen(
             }
 
             Column(modifier = Modifier.padding(top = 28.dp)) {
-                GuideDetailSectionTitle(title = s.todayChecklistTitle, iconResId = R.drawable.ic_check_section_header)
-                Column(
-                    modifier = Modifier.padding(top = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    checklist.forEach { item ->
-                        GuideDetailItemCard(iconResId = item.iconResId, title = item.title, description = item.description)
-                    }
-                }
+                GuideStepSectionHeader(title = s.todayChecklistTitle, modifier = Modifier.padding(bottom = 16.dp))
+                GuideMemoRow(items = checklist, onNavigableClick = {})
             }
 
             Column(modifier = Modifier.padding(top = 28.dp)) {
-                GuideDetailSectionTitle(title = s.inquirySectionTitle, iconResId = R.drawable.ic_inquiry_channel_headset)
-                Column(
-                    modifier = Modifier.padding(top = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    GuideDetailItemCard(
-                        iconResId = R.drawable.ic_hospital_inquiry_building,
-                        title = s.inquiry1Title,
-                        description = s.inquiry1Description
-                    )
-                    GuideDetailItemCard(
-                        iconResId = R.drawable.ic_medical_korea_logo_badge,
-                        title = s.inquiry2Title,
-                        description = s.inquiry2Description,
-                        trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                        trailingIconTint = SkyBlue,
-                        badgeLabel = s.inquiry2BadgeLabel,
-                        onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.medicalkorea.or.kr/"))) }
-                    )
-                }
+                GuideStepSectionHeader(title = s.inquirySectionTitle, modifier = Modifier.padding(bottom = 16.dp))
+                GuideMemoRow(items = inquiries, onNavigableClick = {})
             }
 
-            GuideDetailNoticeBanner(
-                iconResId = R.drawable.ic_guide_information,
-                text = s.noticeText,
-                modifier = Modifier.padding(top = 28.dp, bottom = 24.dp)
+            GuideStepTipBanner(
+                label = guideStrings.medinTipLabel,
+                tipLead = guideStrings.stepTreatmentExaminationTipLead,
+                tipHighlight = guideStrings.stepTreatmentExaminationTipHighlight,
+                modifier = Modifier.padding(top = 28.dp, bottom = 28.dp)
             )
         }
     }

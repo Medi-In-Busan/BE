@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.BorderColor
+import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
 import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
@@ -298,7 +299,7 @@ fun GuideQuestionCard(number: Int, question: String, modifier: Modifier = Modifi
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(SkyBlue),
+                    .background(CoralPrimary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -315,6 +316,55 @@ fun GuideQuestionCard(number: Int, question: String, modifier: Modifier = Modifi
                 color = TextPrimary,
                 modifier = Modifier.padding(start = 14.dp)
             )
+        }
+    }
+}
+
+// 번호 매긴 확인 순서 카드 (제목 + 설명, "확인 순서" 등에서 사용). 원 안 숫자는 GuideQuestionCard와
+// 동일한 CoralPrimary 스타일을 공유해 같은 "핑크색 번호원" 톤을 유지한다.
+@Composable
+fun GuideOrderStepCard(number: Int, title: String, description: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, BorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(CoralPrimary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = number.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Column(modifier = Modifier.padding(start = 14.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
     }
 }
@@ -378,6 +428,21 @@ fun GuideDetailTemplateScreen(
                     layout = content.situationalLayout,
                     onItemClick = onItemClick
                 )
+            }
+            if (content.orderSteps.isNotEmpty()) {
+                Column(modifier = Modifier.padding(top = 28.dp)) {
+                    if (content.orderStepsTitle.isNotBlank()) {
+                        GuideDetailSectionTitle(title = content.orderStepsTitle)
+                    }
+                    Column(
+                        modifier = Modifier.padding(top = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        content.orderSteps.forEachIndexed { index, step ->
+                            GuideOrderStepCard(number = index + 1, title = step.title, description = step.description)
+                        }
+                    }
+                }
             }
             if (content.questions.isNotEmpty()) {
                 Column(modifier = Modifier.padding(top = 28.dp)) {
