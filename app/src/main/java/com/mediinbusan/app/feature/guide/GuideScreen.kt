@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -107,19 +108,35 @@ private fun GuideContent(
     ) { innerPadding ->
         val errorMessage = uiState.errorMessage
 
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             when {
-                uiState.isLoading -> LoadingState(modifier = Modifier.padding(bottom = BottomNavBarHeight))
+                uiState.isLoading -> {
+                    LoadingState(
+                        modifier = Modifier.padding(
+                            bottom = BottomNavBarHeight
+                        )
+                    )
+                }
 
-                errorMessage != null -> ErrorState(
-                    message = errorMessage,
-                    modifier = Modifier.padding(bottom = BottomNavBarHeight)
-                )
+                errorMessage != null -> {
+                    ErrorState(
+                        message = errorMessage,
+                        modifier = Modifier.padding(
+                            bottom = BottomNavBarHeight
+                        )
+                    )
+                }
 
-                else -> GuideStepCarousel(
-                    steps = uiState.steps,
-                    onStepClick = onStepClick
-                )
+                else -> {
+                    GuideStepCarousel(
+                        steps = uiState.steps,
+                        onStepClick = onStepClick
+                    )
+                }
             }
         }
     }
@@ -157,13 +174,41 @@ private fun GuideStepCarousel(
 ) {
     val strings = LocalAppStrings.current.guide
     val density = LocalDensity.current
-    val pagerState = rememberPagerState(pageCount = { steps.size })
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    val pagerState = rememberPagerState(
+        pageCount = { steps.size }
+    )
+
+    /*
+     * 현재 선택된 카드의 실제 높이입니다.
+     *
+     * 캐릭터와 말풍선은 HorizontalPager 밖에 있기 때문에
+     * 현재 카드 높이를 알아야 기존과 동일한 Y 위치에 배치할 수 있습니다.
+     */
+    var focusedCardHeight by remember {
+        mutableStateOf(0.dp)
+    }
+
+    /*
+     * 현재 페이지에 해당하는 Step입니다.
+     *
+     * 캐릭터 자체는 움직이지 않고,
+     * 말풍선/영수증 등의 콘텐츠만 이 Step을 기준으로 변경합니다.
+     */
+    val activeStep = steps.getOrNull(
+        pagerState.currentPage
+    )
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
-                .padding(top = 16.dp, bottom = 2.dp)
+                .padding(
+                    top = 16.dp,
+                    bottom = 2.dp
+                )
         ) {
             Text(
                 text = strings.screenTitle,
@@ -179,39 +224,72 @@ private fun GuideStepCarousel(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
 
         GuideCarouselProgress(
-            modifier = Modifier.padding(horizontal = 20.dp),
+            modifier = Modifier.padding(
+                horizontal = 20.dp
+            ),
             pageCount = steps.size,
             activePage = pagerState.currentPage
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(
+            modifier = Modifier.height(18.dp)
+        )
 
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            val availableWidth = with(density) { constraints.maxWidth.toDp() }
-            val availableHeight = with(density) { constraints.maxHeight.toDp() }
+            val availableWidth = with(density) {
+                constraints.maxWidth.toDp()
+            }
 
-            val cardWidth = availableWidth * CardWidthFraction
-            val sidePadding = (availableWidth - cardWidth) / 2f
-            val illustrationSize = cardWidth * IllustrationWidthFraction
-            val mascotWidth = cardWidth * MascotWidthFraction
-            val bubbleMaxWidth = cardWidth * BubbleMaxWidthFraction
-            val pagerHeight = (cardWidth * CarouselItemHeightFraction).coerceAtMost(availableHeight)
+            val availableHeight = with(density) {
+                constraints.maxHeight.toDp()
+            }
 
+            val cardWidth =
+                availableWidth * CardWidthFraction
+
+            val sidePadding =
+                (availableWidth - cardWidth) / 2f
+
+            val illustrationSize =
+                cardWidth * IllustrationWidthFraction
+
+            val mascotWidth =
+                cardWidth * MascotWidthFraction
+
+            val bubbleMaxWidth =
+                cardWidth * BubbleMaxWidthFraction
+
+            val pagerHeight =
+                (cardWidth * CarouselItemHeightFraction)
+                    .coerceAtMost(availableHeight)
+
+            /*
+             * ---------------------------------------------------------
+             * 1. 뒤쪽 카드 영역
+             * ---------------------------------------------------------
+             *
+             * 여기만 스와이프됩니다.
+             */
             HorizontalPager(
                 state = pagerState,
-                contentPadding = PaddingValues(horizontal = sidePadding),
+                contentPadding = PaddingValues(
+                    horizontal = sidePadding
+                ),
                 pageSpacing = 0.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(pagerHeight)
                     .align(Alignment.TopCenter)
+                    .zIndex(1f)
             ) { page ->
                 val step = steps[page]
 
@@ -224,14 +302,90 @@ private fun GuideStepCarousel(
                     pageOffset = pageOffset,
                     cardWidth = cardWidth,
                     illustrationSize = illustrationSize,
-                    mascotWidth = mascotWidth,
-                    bubbleMaxWidth = bubbleMaxWidth,
-                    onClick = { onStepClick(step) }
+                    isCurrentPage = page == pagerState.currentPage,
+                    onCardHeightChanged = { height ->
+                        focusedCardHeight = height
+                    },
+                    onClick = {
+                        onStepClick(step)
+                    }
+                )
+            }
+
+            /*
+             * ---------------------------------------------------------
+             * 2. 앞쪽 캐릭터
+             * ---------------------------------------------------------
+             *
+             * HorizontalPager 바깥에 있기 때문에
+             * 스와이프해도 위치가 변하지 않습니다.
+             *
+             * Pager에 의한 clipping도 발생하지 않습니다.
+             */
+            if (
+                activeStep != null &&
+                focusedCardHeight > 0.dp
+            ) {
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.common_medin_busan_mascot
+                    ),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .zIndex(10f)
+                        .offset(
+                            x = sidePadding +
+                                    (
+                                            cardWidth *
+                                                    MascotOffsetXFraction
+                                            ),
+                            y = focusedCardHeight *
+                                    MascotOffsetYFraction
+                        )
+                        .width(mascotWidth)
+                        .aspectRatio(
+                            MascotAspectRatio
+                        )
+                )
+
+                /*
+                 * -----------------------------------------------------
+                 * 3. 앞쪽 말풍선
+                 * -----------------------------------------------------
+                 *
+                 * 위치는 고정되어 있지만
+                 * 내용은 pagerState.currentPage에 따라 변경됩니다.
+                 */
+                GuideMascotSpeechBubble(
+                    lead = activeStep.phase.toTipLead(
+                        strings
+                    ),
+                    highlight = activeStep.phase
+                        .toTipHighlight(strings),
+                    maxWidth = bubbleMaxWidth,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .zIndex(11f)
+                        .offset(
+                            x = sidePadding +
+                                    (
+                                            cardWidth *
+                                                    BubbleOffsetXFraction
+                                            ),
+                            y = focusedCardHeight *
+                                    BubbleOffsetYFraction
+                        )
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(BottomNavBarHeight))
+        Spacer(
+            modifier = Modifier.height(
+                BottomNavBarHeight
+            )
+        )
     }
 }
 
@@ -246,27 +400,45 @@ private fun GuideCarouselProgress(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            horizontalArrangement =
+                Arrangement.spacedBy(6.dp)
+        ) {
             repeat(pageCount) { index ->
-                val isActive = index == activePage
+                val isActive =
+                    index == activePage
 
                 Box(
                     modifier = Modifier
                         .height(4.dp)
-                        .width(if (isActive) 22.dp else 18.dp)
-                        .clip(RoundedCornerShape(percent = 50))
+                        .width(
+                            if (isActive) {
+                                22.dp
+                            } else {
+                                18.dp
+                            }
+                        )
+                        .clip(
+                            RoundedCornerShape(
+                                percent = 50
+                            )
+                        )
                         .background(
                             if (isActive) {
                                 CoralPrimary
                             } else {
-                                InactiveIcon.copy(alpha = 0.55f)
+                                InactiveIcon.copy(
+                                    alpha = 0.55f
+                                )
                             }
                         )
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(
+            modifier = Modifier.width(14.dp)
+        )
 
         Text(
             text = "${activePage + 1} / $pageCount",
@@ -283,81 +455,181 @@ private fun GuideStepCarouselCard(
     pageOffset: Float,
     cardWidth: Dp,
     illustrationSize: Dp,
-    mascotWidth: Dp,
-    bubbleMaxWidth: Dp,
+    isCurrentPage: Boolean,
+    onCardHeightChanged: (Dp) -> Unit,
     onClick: () -> Unit
 ) {
-    val strings = LocalAppStrings.current.guide
     val density = LocalDensity.current
-    val interactionSource = remember { MutableInteractionSource() }
 
-    var cardHeight by remember { mutableStateOf(0.dp) }
-
-    val normalizedOffset = pageOffset.absoluteValue.coerceIn(0f, 1f)
-    val focus = 1f - normalizedOffset
-
-    val scale = lerp(GuideCardMinScale, GuideCardFocusScale, focus)
-    val contentScale = lerp(GuideCardMinContentScale, 1f, focus)
-    val cardAlpha = lerp(GuideCardMinAlpha, 1f, focus)
-    val saturation = lerp(GuideCardMinSaturation, 1f, focus)
-
-    val badgeBackground = lerpColor(CoralPrimaryContainer, CoralPrimary, focus)
-    val badgeTextColor = lerpColor(CoralPrimary, Color.White, focus)
-    val titleColor = lerpColor(TextSecondary, TextPrimary, focus)
-    val bodyColor = lerpColor(InactiveIcon, TextSecondary, focus)
-
-    val illustrationColorFilter = remember(saturation) {
-        ColorFilter.colorMatrix(
-            ColorMatrix().apply {
-                setToSaturation(saturation)
-            }
-        )
+    val interactionSource = remember {
+        MutableInteractionSource()
     }
 
-    val isFocused = focus > 0.75f
-    val sideCardYOffsetPx = with(density) { GuideSideCardYOffset.toPx() }
-    val sideCardPullInPx = with(density) { GuideSideCardPullIn.toPx() }
+    val normalizedOffset =
+        pageOffset
+            .absoluteValue
+            .coerceIn(0f, 1f)
+
+    val focus =
+        1f - normalizedOffset
+
+    val scale = lerp(
+        GuideCardMinScale,
+        GuideCardFocusScale,
+        focus
+    )
+
+    val contentScale = lerp(
+        GuideCardMinContentScale,
+        1f,
+        focus
+    )
+
+    val cardAlpha = lerp(
+        GuideCardMinAlpha,
+        1f,
+        focus
+    )
+
+    val saturation = lerp(
+        GuideCardMinSaturation,
+        1f,
+        focus
+    )
+
+    val badgeBackground =
+        lerpColor(
+            CoralPrimaryContainer,
+            CoralPrimary,
+            focus
+        )
+
+    val badgeTextColor =
+        lerpColor(
+            CoralPrimary,
+            Color.White,
+            focus
+        )
+
+    val titleColor =
+        lerpColor(
+            TextSecondary,
+            TextPrimary,
+            focus
+        )
+
+    val bodyColor =
+        lerpColor(
+            InactiveIcon,
+            TextSecondary,
+            focus
+        )
+
+    val illustrationColorFilter =
+        remember(saturation) {
+            ColorFilter.colorMatrix(
+                ColorMatrix().apply {
+                    setToSaturation(
+                        saturation
+                    )
+                }
+            )
+        }
+
+    val isFocused =
+        focus > 0.75f
+
+    val sideCardYOffsetPx =
+        with(density) {
+            GuideSideCardYOffset.toPx()
+        }
+
+    val sideCardPullInPx =
+        with(density) {
+            GuideSideCardPullIn.toPx()
+        }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(focus)
             .graphicsLayer {
-                transformOrigin = TransformOrigin(0.5f, 0f)
+                transformOrigin =
+                    TransformOrigin(
+                        0.5f,
+                        0f
+                    )
 
                 scaleX = scale
                 scaleY = scale
+
                 alpha = cardAlpha
 
-                translationY = sideCardYOffsetPx * (1f - focus)
+                translationY =
+                    sideCardYOffsetPx *
+                            (1f - focus)
 
                 translationX =
                     when {
-                        pageOffset > 0f -> sideCardPullInPx * normalizedOffset
-                        pageOffset < 0f -> -sideCardPullInPx * normalizedOffset
-                        else -> 0f
+                        pageOffset > 0f -> {
+                            sideCardPullInPx *
+                                    normalizedOffset
+                        }
+
+                        pageOffset < 0f -> {
+                            -sideCardPullInPx *
+                                    normalizedOffset
+                        }
+
+                        else -> {
+                            0f
+                        }
                     }
             }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopCenter)
+                .align(
+                    Alignment.TopCenter
+                )
                 .shadow(
-                    elevation = if (isFocused) 24.dp else 2.dp,
+                    elevation =
+                        if (isFocused) {
+                            24.dp
+                        } else {
+                            2.dp
+                        },
                     shape = GuideCardShape,
                     clip = false,
-                    ambientColor = Color.Black.copy(
-                        alpha = if (isFocused) 0.18f else 0.025f
-                    ),
-                    spotColor = Color.Black.copy(
-                        alpha = if (isFocused) 0.24f else 0.025f
-                    )
+                    ambientColor =
+                        Color.Black.copy(
+                            alpha =
+                                if (isFocused) {
+                                    0.18f
+                                } else {
+                                    0.025f
+                                }
+                        ),
+                    spotColor =
+                        Color.Black.copy(
+                            alpha =
+                                if (isFocused) {
+                                    0.24f
+                                } else {
+                                    0.025f
+                                }
+                        )
                 )
-                .clip(GuideCardShape)
-                .background(Color.White)
+                .clip(
+                    GuideCardShape
+                )
+                .background(
+                    Color.White
+                )
                 .clickable(
-                    interactionSource = interactionSource,
+                    interactionSource =
+                        interactionSource,
                     indication = null,
                     onClick = onClick
                 )
@@ -368,123 +640,187 @@ private fun GuideStepCarouselCard(
                     bottom = 24.dp
                 )
                 .onGloballyPositioned { coordinates ->
-                    cardHeight = with(density) { coordinates.size.height.toDp() }
+                    /*
+                     * 현재 선택된 카드의 높이만 부모에게 전달합니다.
+                     *
+                     * 옆 카드의 높이가 캐릭터/말풍선 위치를
+                     * 덮어쓰지 않도록 합니다.
+                     */
+                    if (isCurrentPage) {
+                        onCardHeightChanged(
+                            with(density) {
+                                coordinates
+                                    .size
+                                    .height
+                                    .toDp()
+                            }
+                        )
+                    }
                 },
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
             Column(
-                modifier = Modifier.graphicsLayer {
-                    scaleX = contentScale
-                    scaleY = contentScale
-                },
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier =
+                    Modifier.graphicsLayer {
+                        scaleX =
+                            contentScale
+
+                        scaleY =
+                            contentScale
+                    },
+                horizontalAlignment =
+                    Alignment.CenterHorizontally
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(badgeBackground)
-                        .padding(horizontal = 14.dp, vertical = 5.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                percent = 50
+                            )
+                        )
+                        .background(
+                            badgeBackground
+                        )
+                        .padding(
+                            horizontal = 14.dp,
+                            vertical = 5.dp
+                        )
                 ) {
                     Text(
-                        text = "STEP ${step.phase.toStepNumberLabel()}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeTextColor
+                        text =
+                            "STEP ${step.phase.toStepNumberLabel()}",
+                        style =
+                            MaterialTheme
+                                .typography
+                                .labelMedium,
+                        fontWeight =
+                            FontWeight.Bold,
+                        color =
+                            badgeTextColor
                     )
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
+                )
 
                 Text(
                     text = step.title,
-                    style = if (step.title.length >= 8) {
-                        HeroTitleLargeStyle.copy(
-                            fontSize = 24.sp,
-                            lineHeight = 30.sp
-                        )
-                    } else {
-                        HeroTitleLargeStyle
-                    },
-                    fontWeight = FontWeight.Bold,
-                    color = titleColor,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1
+                    style =
+                        if (
+                            step.title.length >= 8
+                        ) {
+                            HeroTitleLargeStyle.copy(
+                                fontSize =
+                                    24.sp,
+                                lineHeight =
+                                    30.sp
+                            )
+                        } else {
+                            HeroTitleLargeStyle
+                        },
+                    fontWeight =
+                        FontWeight.Bold,
+                    color =
+                        titleColor,
+                    textAlign =
+                        TextAlign.Center,
+                    maxLines = 2,
+                    overflow =
+                        TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            8.dp
+                        )
+                )
 
                 Text(
-                    text = step.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = bodyColor,
-                    textAlign = TextAlign.Center
+                    text =
+                        step.content,
+                    style =
+                        MaterialTheme
+                            .typography
+                            .bodyMedium,
+                    color =
+                        bodyColor,
+                    textAlign =
+                        TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            18.dp
+                        )
+                )
 
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    contentAlignment =
+                        Alignment.Center
+                ) {
                     Box(
-                        modifier = Modifier
-                            .size(illustrationSize * 0.94f)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        CoralPrimary.copy(
-                                            alpha = 0.12f * focus.coerceIn(0.2f, 1f)
+                        modifier =
+                            Modifier
+                                .size(
+                                    illustrationSize *
+                                            0.94f
+                                )
+                                .background(
+                                    brush =
+                                        Brush.radialGradient(
+                                            colors =
+                                                listOf(
+                                                    CoralPrimary.copy(
+                                                        alpha =
+                                                            0.12f *
+                                                                    focus.coerceIn(
+                                                                        0.2f,
+                                                                        1f
+                                                                    )
+                                                    ),
+                                                    Color.Transparent
+                                                )
                                         ),
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = CircleShape
-                            )
+                                    shape =
+                                        CircleShape
+                                )
                     )
 
                     Image(
-                        painter = painterResource(id = step.phase.toCardPhotoResId()),
-                        contentDescription = step.title,
-                        contentScale = ContentScale.Fit,
-                        colorFilter = illustrationColorFilter,
-                        modifier = Modifier.size(illustrationSize)
+                        painter =
+                            painterResource(
+                                id =
+                                    step.phase
+                                        .toCardPhotoResId()
+                            ),
+                        contentDescription =
+                            step.title,
+                        contentScale =
+                            ContentScale.Fit,
+                        colorFilter =
+                            illustrationColorFilter,
+                        modifier =
+                            Modifier.size(
+                                illustrationSize
+                            )
                     )
                 }
 
-                Spacer(modifier = Modifier.height(cardWidth * FooterSpacerFraction))
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            cardWidth *
+                                    FooterSpacerFraction
+                        )
+                )
             }
-        }
-
-        if (isFocused && cardHeight > 0.dp) {
-            Image(
-                painter = painterResource(id = R.drawable.common_medin_busan_mascot),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .zIndex(4f)
-                    .offset(
-                        x = cardWidth * MascotOffsetXFraction,
-                        y = cardHeight * MascotOffsetYFraction
-                    )
-                    .shadow(
-                        elevation = 10.dp,
-                        shape = RoundedCornerShape(32.dp),
-                        clip = false,
-                        ambientColor = Color.Black.copy(alpha = 0.10f),
-                        spotColor = Color.Black.copy(alpha = 0.14f)
-                    )
-                    .width(mascotWidth)
-                    .aspectRatio(MascotAspectRatio)
-            )
-
-            GuideMascotSpeechBubble(
-                lead = step.phase.toTipLead(strings),
-                highlight = step.phase.toTipHighlight(strings),
-                maxWidth = bubbleMaxWidth,
-                modifier = Modifier
-                    .zIndex(5f)
-                    .offset(
-                        x = cardWidth * BubbleOffsetXFraction,
-                        y = cardHeight * BubbleOffsetYFraction
-                    )
-            )
         }
     }
 }
@@ -496,21 +832,46 @@ private fun GuideMascotSpeechBubble(
     maxWidth: Dp,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.width(maxWidth)) {
+    Box(
+        modifier =
+            modifier.width(
+                maxWidth
+            )
+    ) {
         Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = (-5).dp, y = (-10).dp)
-                .size(18.dp)
-                .graphicsLayer { rotationZ = 45f }
+                .align(
+                    Alignment.BottomStart
+                )
+                .offset(
+                    x = (-5).dp,
+                    y = (-10).dp
+                )
+                .size(
+                    18.dp
+                )
+                .graphicsLayer {
+                    rotationZ = 45f
+                }
                 .shadow(
                     elevation = 5.dp,
-                    shape = RoundedCornerShape(3.dp),
+                    shape =
+                        RoundedCornerShape(
+                            3.dp
+                        ),
                     clip = false,
-                    ambientColor = Color.Black.copy(alpha = 0.10f),
-                    spotColor = Color.Black.copy(alpha = 0.14f)
+                    ambientColor =
+                        Color.Black.copy(
+                            alpha = 0.10f
+                        ),
+                    spotColor =
+                        Color.Black.copy(
+                            alpha = 0.14f
+                        )
                 )
-                .background(Color.White)
+                .background(
+                    Color.White
+                )
         )
 
         Column(
@@ -518,32 +879,70 @@ private fun GuideMascotSpeechBubble(
                 .fillMaxWidth()
                 .shadow(
                     elevation = 22.dp,
-                    shape = RoundedCornerShape(24.dp),
-                    ambientColor = Color.Black.copy(alpha = 0.22f),
-                    spotColor = Color.Black.copy(alpha = 0.30f)
+                    shape =
+                        RoundedCornerShape(
+                            24.dp
+                        ),
+                    ambientColor =
+                        Color.Black.copy(
+                            alpha = 0.22f
+                        ),
+                    spotColor =
+                        Color.Black.copy(
+                            alpha = 0.30f
+                        )
                 )
-                .clip(RoundedCornerShape(24.dp))
-                .background(Color.White)
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .clip(
+                    RoundedCornerShape(
+                        24.dp
+                    )
+                )
+                .background(
+                    Color.White
+                )
+                .padding(
+                    horizontal = 18.dp,
+                    vertical = 14.dp
+                ),
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
             Text(
                 text = lead,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodySmall,
+                color =
+                    TextPrimary,
+                textAlign =
+                    TextAlign.Center,
+                modifier =
+                    Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        2.dp
+                    )
+            )
 
             Text(
-                text = highlight,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = CoralPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                text =
+                    highlight,
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyMedium,
+                fontWeight =
+                    FontWeight.Bold,
+                color =
+                    CoralPrimary,
+                textAlign =
+                    TextAlign.Center,
+                modifier =
+                    Modifier.fillMaxWidth()
             )
         }
     }

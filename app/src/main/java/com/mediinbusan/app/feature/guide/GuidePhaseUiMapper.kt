@@ -63,6 +63,16 @@ fun GuidePhase.toStepSummary(strings: GuideStrings): String = when (this) {
     GuidePhase.AFTERCARE_RETURN_CHECK -> strings.stepAftercareReturnCheckSummary
 }
 
+// STEP 상세 배너(GuideStepHero)의 부제 문구.
+fun GuidePhase.toHeroSubtitle(strings: GuideStrings): String = when (this) {
+    GuidePhase.ENTRY_PREPARATION -> strings.stepEntryPreparationHeroSubtitle
+    GuidePhase.RESERVATION_INQUIRY -> strings.stepReservationInquiryHeroSubtitle
+    GuidePhase.HOSPITAL_CHECKIN -> strings.stepHospitalCheckinHeroSubtitle
+    GuidePhase.TREATMENT_EXAMINATION -> strings.stepTreatmentExaminationHeroSubtitle
+    GuidePhase.PAYMENT_RECEIPT -> strings.stepPaymentReceiptHeroSubtitle
+    GuidePhase.AFTERCARE_RETURN_CHECK -> strings.stepAftercareReturnCheckHeroSubtitle
+}
+
 // 캐러셀 카드의 마스코트 말풍선(2줄: 일반 텍스트 + 강조 텍스트) 문구.
 fun GuidePhase.toTipLead(strings: GuideStrings): String = when (this) {
     GuidePhase.ENTRY_PREPARATION -> strings.stepEntryPreparationTipLead
