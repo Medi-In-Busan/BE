@@ -21,7 +21,6 @@ import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
 import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
-import com.mediinbusan.app.feature.guide.HospitalLocationCheckinDetailScreen
 import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
 import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
 import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
@@ -163,7 +162,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
                             GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
                             GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
-                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.HospitalLocationCheckinDetail)
+                            // "병원 정보 확인하기" 카드는 이제 STEP03 합본 페이지에 접수 절차가 직접
+                            // 포함돼 있어 중간 화면 없이 바로 지도로 이동한다.
+                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.MapView(hospitalId = null))
                             GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
                             GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
                             GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
@@ -193,12 +194,6 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.MedicalRecordsTestResultsDetail> {
             MedicalRecordsTestResultsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.HospitalLocationCheckinDetail> {
-            HospitalLocationCheckinDetailScreen(
-                onBack = navController::popBackStack,
-                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) }
-            )
         }
         composable<Route.TotalCostCoverageCheckDetail> {
             TotalCostCoverageCheckDetailScreen(onBack = navController::popBackStack)

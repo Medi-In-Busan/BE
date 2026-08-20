@@ -23,7 +23,10 @@ data class GuideDetailItem(
     @param:DrawableRes val memoIllustrationResId: Int? = null,
     @param:DrawableRes val memoBackgroundResId: Int? = null,
     // GuideOfficialLinkRow(공식 사이트 카드) 전용 강조색 오버라이드. null이면 위치 기반 기본값(첫 카드만 코랄, 나머지는 스카이블루)을 쓴다.
-    val accentColor: Color? = null
+    val accentColor: Color? = null,
+    // description의 선행 부분을 강조색으로 렌더링하고 싶을 때 그 부분만 넣는다(반드시 description의 접두사여야
+    // 한다). null이면 description 전체를 단일 색으로 그린다 — GuideDetailItemCard의 INFO 카드 등에서 사용.
+    val descriptionHighlightPrefix: String? = null
 )
 
 // 번호 매긴 확인 순서 카드 한 줄 (제목 + 설명). GuideOrderStepCard가 렌더링한다.

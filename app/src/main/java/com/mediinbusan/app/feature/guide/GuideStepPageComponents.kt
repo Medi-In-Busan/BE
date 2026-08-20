@@ -63,12 +63,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.mediinbusan.app.R
-import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
+import com.mediinbusan.app.core.designsystem.MedinTipCardBackground
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
+import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -97,79 +98,60 @@ private val MemoIconIds = listOf(
 
 private val MemoRotations = listOf(-2f, 1.5f, -1f, 2f)
 
+// 배너 이미지 자체에 이미 "STEP XX" 라벨이 박혀 있으므로(제목·부제목만 언어별로 다시 그려야 해서
+// 없앤 것과 달리, STEP 배지는 이미지에 남아있다) 배지를 따로 그리지 않는다 — 겹쳐 보이는 문제 방지.
+// STEP01~06 전부 이 하나의 컴포저블을 공유한다(GuideStepDetailScreen이 STEP01/02/03/05/06,
+// TreatmentExaminationDetailScreen이 STEP04를 각각 호출) — 특정 STEP만 따로 그리지 않는다.
 @Composable
 fun GuideStepHero(
     @DrawableRes heroResId: Int,
-    language: SupportedLanguage,
-    stepNumberLabel: String,
     stepTitle: String,
+    stepSubtitle: String,
     modifier: Modifier = Modifier
 ) {
-    val stepLabel = "STEP $stepNumberLabel"
-
-    if (language == SupportedLanguage.KO) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1672f / 941f)
+            .clip(RoundedCornerShape(20.dp))
+            .background(HomeBackgroundPink)
+    ) {
         Image(
             painter = painterResource(id = heroResId),
-            contentDescription = "$stepLabel $stepTitle",
-            contentScale = ContentScale.FillWidth,
-            modifier = modifier
-                .fillMaxWidth()
-                .aspectRatio(1672f / 941f)
-                .clip(RoundedCornerShape(20.dp))
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.CenterEnd,
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.CenterEnd)
         )
-    } else {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .aspectRatio(1672f / 941f)
-                .clip(RoundedCornerShape(20.dp))
-                .background(HomeBackgroundPink)
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth(0.70f)
+                .padding(start = 30.dp, end = 8.dp, top = 80.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            Image(
-                painter = painterResource(id = heroResId),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.CenterEnd,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .align(Alignment.CenterEnd)
+            Text(
+                text = stepTitle,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .fillMaxWidth(0.45f)
-                    .padding(start = 20.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White)
-                        .border(
-                            border = BorderStroke(1.dp, CoralPrimary),
-                            shape = RoundedCornerShape(50)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = stepLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CoralPrimary
-                    )
-                }
+            Spacer(modifier = Modifier.height(5.dp))
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = stepTitle,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = stepSubtitle,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = TextSecondary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -219,7 +201,7 @@ fun GuideStepTipBanner(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFFFF8F8))
+            .background(MedinTipCardBackground)
             .border(
                 border = BorderStroke(
                     width = 1.dp,
@@ -449,31 +431,35 @@ private fun GuideOfficialLinkCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Box(
-                modifier = Modifier
-                    .padding(top = 14.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(50))
-                    .border(
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = accent
+            // 실제 외부 링크(url)가 있는 카드에만 "바로가기" 버튼을 붙인다 — 링크가 없는 순수 정보
+            // 카드(예: STEP04 "방문 병원에 문의")도 같은 카드 디자인을 재사용할 수 있게 한다.
+            if (item.url != null) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 14.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(50))
+                        .border(
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = accent
+                            ),
+                            shape = RoundedCornerShape(50)
+                        )
+                        .padding(
+                            horizontal = 16.dp,
+                            vertical = 7.dp
                         ),
-                        shape = RoundedCornerShape(50)
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = visitSiteLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = accent,
+                        maxLines = 1
                     )
-                    .padding(
-                        horizontal = 16.dp,
-                        vertical = 7.dp
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = visitSiteLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = accent,
-                    maxLines = 1
-                )
+                }
             }
         }
     }
@@ -565,7 +551,9 @@ private fun GuideMemoCard(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
                     textAlign = TextAlign.Center,
-                    maxLines = 2,
+                    // 영어 등 한국어보다 긴 번역 문구도 잘리지 않도록 여유 있게 4줄까지 허용한다
+                    // (카드 세로 공간에 여유가 있어 4줄까지는 메모지 영역을 벗어나지 않는다).
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 8.dp)
                 )

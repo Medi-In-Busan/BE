@@ -261,25 +261,33 @@ fun medicalRecordsTestResultsContent(strings: GuideStrings): GuideStepDetailCont
                 id = "medical_report_or_opinion",
                 iconResId = R.drawable.ic_medical_report_or_opinion,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_diagnosis_report,
+                memoBackgroundResId = R.drawable.guide_memo5
             ),
             GuideDetailItem(
                 id = "xray_test_result",
                 iconResId = R.drawable.ic_xray_test_result,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_test_imaging_results,
+                memoBackgroundResId = R.drawable.guide_memo4
             ),
             GuideDetailItem(
                 id = "current_medication_info",
                 iconResId = R.drawable.ic_current_medication_info,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_current_medications,
+                memoBackgroundResId = R.drawable.guide_memo1
             ),
             GuideDetailItem(
                 id = "allergy_or_underlying_condition",
                 iconResId = R.drawable.ic_allergy_or_underlying_condition,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_allergy_medical_history,
+                memoBackgroundResId = R.drawable.guide_memo4
             )
         ),
         situationalTitle = s.situationalTitle,
@@ -322,25 +330,33 @@ fun totalCostCoverageCheckContent(strings: GuideStrings): GuideStepDetailContent
                 id = "cost_examination_clipboard",
                 iconResId = R.drawable.ic_examination_name_clipboard,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_medical_treatment_fee,
+                memoBackgroundResId = R.drawable.guide_memo1
             ),
             GuideDetailItem(
                 id = "cost_current_medication_info",
                 iconResId = R.drawable.ic_current_medication_info,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_medication_material_included,
+                memoBackgroundResId = R.drawable.guide_memo4
             ),
             GuideDetailItem(
                 id = "cost_caution_warning",
                 iconResId = R.drawable.ic_caution_warning,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_additional_cost_items,
+                memoBackgroundResId = R.drawable.guide_memo6
             ),
             GuideDetailItem(
                 id = "cost_medical_documents_folder",
                 iconResId = R.drawable.ic_medical_documents_folder,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_deposit_prepayment,
+                memoBackgroundResId = R.drawable.guide_memo7
             )
         ),
         questionsTitle = s.questionsTitle,
@@ -362,43 +378,44 @@ fun paymentMethodCheckContent(strings: GuideStrings): GuideStepDetailContent {
         checklistTitle = s.checklistTitle,
         checklistItems = listOf(
             GuideDetailItem(
-                id = "payment_krw_basis",
+                id = "payment_currency",
                 iconResId = R.drawable.ic_estimated_cost_inquiry,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_payment_currency,
+                memoBackgroundResId = R.drawable.guide_memo5
             ),
             GuideDetailItem(
-                id = "payment_overseas_card",
+                id = "payment_available_methods",
                 iconResId = R.drawable.ic_payment_method_check,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_available_payment_methods,
+                memoBackgroundResId = R.drawable.guide_memo8
             ),
             GuideDetailItem(
-                id = "payment_cash_transfer",
-                iconResId = R.drawable.ic_medical_documents_folder,
-                title = s.item3Title,
-                description = s.item3Description
-            ),
-            GuideDetailItem(
-                id = "payment_deposit_method",
-                iconResId = R.drawable.ic_medical_receipt,
-                title = s.item4Title,
-                description = s.item4Description
-            )
-        ),
-        situationalTitle = s.situationalTitle,
-        situationalItems = listOf(
-            GuideDetailItem(
-                id = "payment_card_limit_block",
+                id = "payment_card_limit_overseas_setting",
                 iconResId = R.drawable.ic_insurance_document_check,
-                title = s.situational1Title,
-                description = s.situational1Description
+                title = s.item3Title,
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_card_limit_overseas_payment,
+                memoBackgroundResId = R.drawable.guide_memo4
             ),
             GuideDetailItem(
-                id = "payment_onsite_location",
+                id = "payment_insurance_direct_billing_gop",
+                iconResId = R.drawable.ic_guide_payment_receipt,
+                title = s.item4Title,
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_insurance_direct_billing_gop,
+                memoBackgroundResId = R.drawable.guide_memo3
+            ),
+            GuideDetailItem(
+                id = "payment_location",
                 iconResId = R.drawable.ic_hospital_location_map,
-                title = s.situational2Title,
-                description = s.situational2Description
+                title = s.item5Title,
+                description = s.item5Description,
+                memoIllustrationResId = R.drawable.guide_payment_location,
+                memoBackgroundResId = R.drawable.guide_memo2
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,
@@ -423,25 +440,25 @@ fun receiptInsuranceDocumentsContent(strings: GuideStrings): GuideStepDetailCont
                 id = "receipt_basic",
                 iconResId = R.drawable.ic_medical_receipt,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_medical_receipt,
+                memoBackgroundResId = R.drawable.guide_memo5
             ),
             GuideDetailItem(
                 id = "receipt_detailed_statement",
                 iconResId = R.drawable.ic_results_document,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_medical_bill_details,
+                memoBackgroundResId = R.drawable.guide_memo1
             ),
             GuideDetailItem(
                 id = "receipt_insurance_claim_document",
                 iconResId = R.drawable.ic_examination_name_clipboard,
                 title = s.item3Title,
-                description = s.item3Description
-            ),
-            GuideDetailItem(
-                id = "receipt_english_document_availability",
-                iconResId = R.drawable.ic_english_documents_availability,
-                title = s.item4Title,
-                description = s.item4Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_insurance_claim_documents,
+                memoBackgroundResId = R.drawable.guide_memo4
             )
         ),
         situationalTitle = s.situationalTitle,
@@ -478,28 +495,44 @@ fun medicationScheduleContent(strings: GuideStrings): GuideStepDetailContent {
         checklistTitle = s.checklistTitle,
         checklistItems = listOf(
             GuideDetailItem(
-                id = "medication_name_check",
+                id = "medication_name_purpose",
                 iconResId = R.drawable.ic_current_medication_info,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_medication_name_purpose,
+                memoBackgroundResId = R.drawable.guide_memo1
+            ),
+            GuideDetailItem(
+                id = "medication_dosage_frequency",
+                iconResId = R.drawable.ic_current_medication_info,
+                title = s.item2Title,
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_medication_dosage_frequency,
+                memoBackgroundResId = R.drawable.guide_memo4
             ),
             GuideDetailItem(
                 id = "medication_timing_check",
                 iconResId = R.drawable.ic_expected_arrival_time,
-                title = s.item2Title,
-                description = s.item2Description
-            ),
-            GuideDetailItem(
-                id = "medication_duration_check",
-                iconResId = R.drawable.ic_return_date_calendar,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_medication_timing,
+                memoBackgroundResId = R.drawable.guide_memo3
             ),
             GuideDetailItem(
-                id = "medication_storage_caution",
-                iconResId = R.drawable.ic_caution_warning,
+                id = "medication_duration_storage",
+                iconResId = R.drawable.ic_return_date_calendar,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_medication_duration_storage,
+                memoBackgroundResId = R.drawable.guide_memo2
+            ),
+            GuideDetailItem(
+                id = "medication_missed_side_effects",
+                iconResId = R.drawable.ic_caution_warning,
+                title = s.item5Title,
+                description = s.item5Description,
+                memoIllustrationResId = R.drawable.guide_medication_missed_side_effects,
+                memoBackgroundResId = R.drawable.guide_memo5
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,
@@ -519,28 +552,44 @@ fun postTreatmentPrecautionsContent(strings: GuideStrings): GuideStepDetailConte
         checklistTitle = s.checklistTitle,
         checklistItems = listOf(
             GuideDetailItem(
-                id = "precaution_meal_time",
+                id = "precaution_daily_activity",
                 iconResId = R.drawable.ic_meal_shower_exercise_time,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_recovery_daily_activity,
+                memoBackgroundResId = R.drawable.guide_memo8
             ),
             GuideDetailItem(
                 id = "precaution_restricted_activities",
                 iconResId = R.drawable.ic_restricted_activities,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_activities_to_avoid,
+                memoBackgroundResId = R.drawable.guide_memo4
             ),
             GuideDetailItem(
                 id = "precaution_warning_symptoms",
                 iconResId = R.drawable.ic_warning_symptoms,
                 title = s.item3Title,
-                description = s.item3Description
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_emergency_warning_signs,
+                memoBackgroundResId = R.drawable.guide_memo3
             ),
             GuideDetailItem(
-                id = "precaution_followup_visit",
+                id = "precaution_followup_schedule",
                 iconResId = R.drawable.ic_followup_visit_needed,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_followup_schedule,
+                memoBackgroundResId = R.drawable.guide_memo7
+            ),
+            GuideDetailItem(
+                id = "precaution_flight_travel",
+                iconResId = R.drawable.ic_long_flight_seat,
+                title = s.item5Title,
+                description = s.item5Description,
+                memoIllustrationResId = R.drawable.guide_flight_travel_precautions,
+                memoBackgroundResId = R.drawable.guide_memo5
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,
@@ -563,37 +612,41 @@ fun englishDocumentsResultsContent(strings: GuideStrings): GuideStepDetailConten
                 id = "doc_english_medical_certificate",
                 iconResId = R.drawable.ic_english_medical_certificate,
                 title = s.item1Title,
-                description = s.item1Description
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_english_medical_certificate,
+                memoBackgroundResId = R.drawable.guide_memo1
             ),
             GuideDetailItem(
                 id = "doc_test_results_imaging_files",
                 iconResId = R.drawable.ic_test_results_imaging_files,
                 title = s.item2Title,
-                description = s.item2Description
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_test_imaging_results,
+                memoBackgroundResId = R.drawable.guide_memo4
+            ),
+            GuideDetailItem(
+                id = "doc_prescription_discharge_summary",
+                iconResId = R.drawable.ic_current_medication_info,
+                title = s.item3Title,
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_prescription_discharge_summary,
+                memoBackgroundResId = R.drawable.guide_memo3
             ),
             GuideDetailItem(
                 id = "doc_issuance_time_fee",
                 iconResId = R.drawable.ic_issuance_time_fee,
-                title = s.item3Title,
-                description = s.item3Description
-            ),
-            GuideDetailItem(
-                id = "doc_original_copy_check",
-                iconResId = R.drawable.ic_original_copy_document_check,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_document_issue_time_cost,
+                memoBackgroundResId = R.drawable.guide_memo7
             ),
             GuideDetailItem(
-                id = "doc_airport_pickup_complete",
-                iconResId = R.drawable.ic_airport_departure_pickup_complete,
-                title = s.item5Title,
-                description = s.item5Description
-            ),
-            GuideDetailItem(
-                id = "doc_email_file_receipt",
+                id = "doc_email_digital_receipt",
                 iconResId = R.drawable.ic_email_file_receipt_available,
-                title = s.item6Title,
-                description = s.item6Description
+                title = s.item5Title,
+                description = s.item5Description,
+                memoIllustrationResId = R.drawable.guide_digital_document_delivery,
+                memoBackgroundResId = R.drawable.guide_memo5
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,
@@ -601,7 +654,7 @@ fun englishDocumentsResultsContent(strings: GuideStrings): GuideStepDetailConten
     )
 }
 
-// S-06 STEP06 하위 "귀국 전 반입·공항 준비"
+// S-06 STEP06 하위 "귀국·공항 준비"
 fun airportDeparturePreparationContent(strings: GuideStrings): GuideStepDetailContent {
     val s = strings.airportDeparturePreparation
     return GuideStepDetailContent(
@@ -613,40 +666,44 @@ fun airportDeparturePreparationContent(strings: GuideStrings): GuideStepDetailCo
         checklistTitle = s.checklistTitle,
         checklistItems = listOf(
             GuideDetailItem(
-                id = "departure_carry_on_documents",
-                iconResId = R.drawable.ic_carry_on_medical_documents,
-                title = s.item1Title,
-                description = s.item1Description
-            ),
-            GuideDetailItem(
-                id = "departure_liquid_medicine",
-                iconResId = R.drawable.ic_liquid_medicine_medical_supplies,
-                title = s.item2Title,
-                description = s.item2Description
-            ),
-            GuideDetailItem(
-                id = "departure_security_screening",
-                iconResId = R.drawable.ic_airport_security_screening_preparation,
-                title = s.item3Title,
-                description = s.item3Description
-            ),
-            GuideDetailItem(
-                id = "departure_restricted_medicine",
+                id = "departure_medication_entry_rules",
                 iconResId = R.drawable.ic_restricted_medicine_check,
+                title = s.item1Title,
+                description = s.item1Description,
+                memoIllustrationResId = R.drawable.guide_medication_entry_rules,
+                memoBackgroundResId = R.drawable.guide_memo8
+            ),
+            GuideDetailItem(
+                id = "departure_carry_medical_documents",
+                iconResId = R.drawable.ic_carry_on_medical_documents,
+                title = s.item2Title,
+                description = s.item2Description,
+                memoIllustrationResId = R.drawable.guide_carry_medical_documents,
+                memoBackgroundResId = R.drawable.guide_memo4
+            ),
+            GuideDetailItem(
+                id = "departure_carryon_medical_supplies",
+                iconResId = R.drawable.ic_liquid_medicine_medical_supplies,
+                title = s.item3Title,
+                description = s.item3Description,
+                memoIllustrationResId = R.drawable.guide_carryon_medical_supplies,
+                memoBackgroundResId = R.drawable.guide_memo3
+            ),
+            GuideDetailItem(
+                id = "departure_storage_transport",
+                iconResId = R.drawable.ic_caution_warning,
                 title = s.item4Title,
-                description = s.item4Description
+                description = s.item4Description,
+                memoIllustrationResId = R.drawable.guide_medication_storage_transport,
+                memoBackgroundResId = R.drawable.guide_memo2
             ),
             GuideDetailItem(
-                id = "departure_passport_validity",
-                iconResId = R.drawable.ic_passport_validity_check,
+                id = "departure_timezone_medication_schedule",
+                iconResId = R.drawable.ic_medication_schedule,
                 title = s.item5Title,
-                description = s.item5Description
-            ),
-            GuideDetailItem(
-                id = "departure_flight_baggage",
-                iconResId = R.drawable.ic_long_flight_seat,
-                title = s.item6Title,
-                description = s.item6Description
+                description = s.item5Description,
+                memoIllustrationResId = R.drawable.guide_timezone_medication_schedule,
+                memoBackgroundResId = R.drawable.guide_memo5
             )
         ),
         noticeIconResId = R.drawable.ic_guide_information,

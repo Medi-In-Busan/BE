@@ -27,6 +27,7 @@ private fun GuidePhase.toBasePageContent(
     heroResId = heroResId,
     stepNumberLabel = toStepNumberLabel(),
     stepTitle = toStepTitle(strings),
+    stepSubtitle = toHeroSubtitle(strings),
     sections = sections,
     tipLead = toTipLead(strings),
     tipHighlight = toTipHighlight(strings)
@@ -71,19 +72,42 @@ private fun reservationInquiryPageContent(strings: GuideStrings): GuideStepPageC
 }
 
 private fun hospitalCheckinPageContent(strings: GuideStrings): GuideStepPageContent {
-    val overview = hospitalCheckinContent(strings)
-    val passportReservationInfo = passportReservationInfoContent(strings)
     val medicalRecordsTestResults = medicalRecordsTestResultsContent(strings)
-    val hospitalLocationCheckinItem = overview.checklistItems.first { it.id == GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE }
+    val hospitalLocationCheckin = strings.hospitalLocationCheckin
     return GuidePhase.HOSPITAL_CHECKIN.toBasePageContent(
         strings = strings,
         heroResId = R.drawable.guide_step03_hospital_visit_registration_banner,
         sections = listOf(
-            GuideStepPageSection(title = passportReservationInfo.bannerTitle, cardStyle = GuideStepCardStyle.MEMO, rowItems = passportReservationInfo.checklistItems),
-            GuideStepPageSection(title = medicalRecordsTestResults.bannerTitle, cardStyle = GuideStepCardStyle.MEMO, rowItems = medicalRecordsTestResults.checklistItems),
-            // 병원 위치·접수 절차 확인은 지도 이동 등 별도 화면 로직이 있어 카드 하나로 유지하고
+            // 병원 정보(위치·교통·주차) 확인은 지도로 바로 이동하는 안내 카드 한 장으로 유지하고,
             // 기존 onItemClick(HOSPITAL_LOCATION_CHECKIN_GUIDE) 내비게이션을 그대로 재사용한다.
-            GuideStepPageSection(title = hospitalLocationCheckinItem.title, cardStyle = GuideStepCardStyle.MEMO, rowItems = listOf(hospitalLocationCheckinItem))
+            GuideStepPageSection(
+                title = "",
+                cardStyle = GuideStepCardStyle.INFO,
+                rowItems = listOf(
+                    GuideDetailItem(
+                        id = GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE,
+                        iconResId = R.drawable.guide_hospital_location_map,
+                        title = hospitalLocationCheckin.itemCardTitle,
+                        description = hospitalLocationCheckin.itemCardDescription,
+                        navigable = true,
+                        descriptionHighlightPrefix = hospitalLocationCheckin.itemCardDescriptionHighlight
+                    )
+                )
+            ),
+            // 접수 절차(확인 순서)는 예전 03-03 화면의 4단계를 그대로 가져와 메모 카드 아래에 배치한다.
+            GuideStepPageSection(
+                title = strings.visitReceptionPreparation.sectionTitle,
+                cardStyle = GuideStepCardStyle.MEMO,
+                rowItems = visitReceptionPreparationItems(strings),
+                orderStepsTitle = hospitalLocationCheckin.sectionTitle,
+                orderSteps = listOf(
+                    GuideOrderStep(title = hospitalLocationCheckin.step1Title, description = hospitalLocationCheckin.step1Description),
+                    GuideOrderStep(title = hospitalLocationCheckin.step2Title, description = hospitalLocationCheckin.step2Description),
+                    GuideOrderStep(title = hospitalLocationCheckin.step3Title, description = hospitalLocationCheckin.step3Description),
+                    GuideOrderStep(title = hospitalLocationCheckin.step4Title, description = hospitalLocationCheckin.step4Description)
+                )
+            ),
+            GuideStepPageSection(title = strings.medicalMaterialsPreparationTitle, cardStyle = GuideStepCardStyle.MEMO, rowItems = medicalRecordsTestResults.checklistItems)
         )
     )
 }

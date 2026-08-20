@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
+import com.mediinbusan.app.core.designsystem.MedinTipCardBackground
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.data.guide.GuidePhase
@@ -73,10 +74,9 @@ fun GuideStepDetailScreen(
             item {
                 GuideStepHero(
                     heroResId = content.heroResId,
-                    language = appStrings.language,
-                    stepNumberLabel = content.stepNumberLabel,
                     stepTitle = content.stepTitle,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 20.dp)
+                    stepSubtitle = content.stepSubtitle,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 20.dp)
                 )
             }
             itemsIndexed(content.sections) { index, section ->
@@ -118,6 +118,20 @@ private fun GuideStepSectionBlock(
                 onNavigableClick = onItemClick
             )
             GuideStepCardStyle.MEMO -> GuideMemoRow(items = section.rowItems, onNavigableClick = onItemClick)
+            GuideStepCardStyle.INFO -> section.rowItems.firstOrNull()?.let { item ->
+                GuideDetailItemCard(
+                    iconResId = item.iconResId,
+                    title = item.title,
+                    description = item.description,
+                    onClick = { onItemClick(item) },
+                    containerColor = MedinTipCardBackground,
+                    borderColor = CoralPrimary.copy(alpha = 0.28f),
+                    titleColor = TextPrimary,
+                    descriptionColor = TextPrimary,
+                    descriptionHighlightPrefix = item.descriptionHighlightPrefix,
+                    descriptionHighlightColor = CoralPrimary
+                )
+            }
         }
         if (section.orderSteps.isNotEmpty()) {
             Column(modifier = Modifier.padding(top = 18.dp)) {

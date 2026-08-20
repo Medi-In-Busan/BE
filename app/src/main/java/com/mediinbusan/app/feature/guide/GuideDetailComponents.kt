@@ -44,8 +44,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
@@ -166,13 +169,20 @@ fun GuideDetailItemCard(
     trailingIconTint: Color = TextSecondary,
     onClick: (() -> Unit)? = null,
     containerColor: Color = Color.White,
+    borderColor: Color = BorderColor,
+    titleColor: Color = TextPrimary,
+    descriptionColor: Color = TextSecondary,
+    // description 앞부분만 다른 색으로 강조하고 싶을 때 그 접두사를 넣는다(description은 반드시 이 값으로
+    // 시작해야 한다). null이거나 접두사가 아니면 description 전체를 descriptionColor로 그린다.
+    descriptionHighlightPrefix: String? = null,
+    descriptionHighlightColor: Color = CoralPrimary,
     badgeLabel: String? = null,
     badgeBackgroundColor: Color = InfoBackgroundBlue,
     badgeTextColor: Color = SkyBlue
 ) {
     val shape = RoundedCornerShape(20.dp)
     val colors = CardDefaults.cardColors(containerColor = containerColor)
-    val border = BorderStroke(1.dp, BorderColor)
+    val border = BorderStroke(1.dp, borderColor)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     val content: @Composable () -> Unit = {
         Row(
@@ -192,7 +202,7 @@ fun GuideDetailItemCard(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = titleColor,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (badgeLabel != null) {
@@ -208,9 +218,18 @@ fun GuideDetailItemCard(
                     }
                 }
                 Text(
-                    text = description,
+                    text = if (descriptionHighlightPrefix != null && description.startsWith(descriptionHighlightPrefix)) {
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = descriptionHighlightColor)) {
+                                append(descriptionHighlightPrefix)
+                            }
+                            append(description.removePrefix(descriptionHighlightPrefix))
+                        }
+                    } else {
+                        buildAnnotatedString { append(description) }
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = descriptionColor,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }

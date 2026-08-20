@@ -1,15 +1,11 @@
 package com.mediinbusan.app.feature.guide
 
 import com.mediinbusan.app.R
-import com.mediinbusan.app.core.designsystem.GuideBadgeGreenBackground
-import com.mediinbusan.app.core.designsystem.GuideBadgePurpleBackground
-import com.mediinbusan.app.core.designsystem.GuideStepGreen
-import com.mediinbusan.app.core.designsystem.GuideStepPurple
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.i18n.GuideStrings
 
 // STEP02/STEP03 개요 콘텐츠. GuideStepPageContentMapper(합본 페이지)가 필요한 조각만 가져다 쓴다
-// (STEP02의 공식 링크 필터링, STEP03의 "병원 위치와 접수 절차 확인" 항목). STEP01/04/05/06 개요
+// (STEP02의 공식 링크 필터링, STEP03의 "방문·접수 준비" 메모 카드 항목). STEP01/04/05/06 개요
 // 함수는 합본 페이지 리디자인 이후 더 이상 쓰이지 않아 제거했다 — leaf 단독 화면들은 각자
 // GuideItemDetailContentMapper의 함수를 직접 쓰므로 영향 없다.
 internal fun reservationInquiryContent(strings: GuideStrings): GuideStepDetailContent {
@@ -64,61 +60,42 @@ internal fun reservationInquiryContent(strings: GuideStrings): GuideStepDetailCo
     )
 }
 
-internal fun hospitalCheckinContent(strings: GuideStrings): GuideStepDetailContent {
-    val s = strings.hospitalCheckin
-    return GuideStepDetailContent(
-        bannerResId = R.drawable.img_hospital_visit_checkin_banner,
-        bannerAspectRatio = 1536f / 1024f,
-        bannerStepLabel = "STEP 03",
-        bannerTitle = strings.stepHospitalCheckinTitle,
-        bannerSubtitle = s.bannerSubtitle,
-        checklistTitle = s.checklistTitle,
-        checklistItems = listOf(
-            GuideDetailItem(
-                id = GuideDetailItemId.PASSPORT_RESERVATION_INFO,
-                iconResId = R.drawable.ic_passport_reservation_info,
-                title = s.item1Title,
-                description = s.item1Description,
-                navigable = true,
-                badgeLabel = s.item1BadgeLabel
-            ),
-            GuideDetailItem(
-                id = GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS,
-                iconResId = R.drawable.ic_medical_records_test_results,
-                title = s.item2Title,
-                description = s.item2Description,
-                navigable = true,
-                badgeLabel = s.item2BadgeLabel,
-                badgeBackgroundColor = GuideBadgeGreenBackground,
-                badgeTextColor = GuideStepGreen
-            ),
-            GuideDetailItem(
-                id = GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE,
-                iconResId = R.drawable.ic_hospital_location_checkin_guide,
-                title = s.item3Title,
-                description = s.item3Description,
-                navigable = true,
-                badgeLabel = s.item3BadgeLabel,
-                badgeBackgroundColor = GuideBadgePurpleBackground,
-                badgeTextColor = GuideStepPurple
-            )
+// STEP03 합본 페이지 "방문·접수 준비" 메모 카드 4개. 리프 단독 화면이 없어 다른 STEP02/03 개요
+// 함수와 달리 GuideStepDetailContent 전체를 감싸지 않고 항목 리스트만 반환한다.
+internal fun visitReceptionPreparationItems(strings: GuideStrings): List<GuideDetailItem> {
+    val s = strings.visitReceptionPreparation
+    return listOf(
+        GuideDetailItem(
+            id = "visit_passport_id",
+            iconResId = R.drawable.ic_passport_identity_verification,
+            title = s.item1Title,
+            description = s.item1Description,
+            memoIllustrationResId = R.drawable.guide_passport_id,
+            memoBackgroundResId = R.drawable.guide_memo5
         ),
-        situationalTitle = s.situationalTitle,
-        situationalItems = listOf(
-            GuideDetailItem(
-                id = "interpretation_language_support",
-                iconResId = R.drawable.ic_interpretation_language_support,
-                title = s.situational1Title,
-                description = s.situational1Description
-            ),
-            GuideDetailItem(
-                id = "payment_method_check",
-                iconResId = R.drawable.ic_payment_method_check,
-                title = s.situational2Title,
-                description = s.situational2Description
-            )
+        GuideDetailItem(
+            id = "visit_reservation_info",
+            iconResId = R.drawable.ic_appointment_confirmation,
+            title = s.item2Title,
+            description = s.item2Description,
+            memoIllustrationResId = R.drawable.guide_appointment_info,
+            memoBackgroundResId = R.drawable.guide_memo3
         ),
-        noticeIconResId = R.drawable.ic_guide_information,
-        noticeText = s.noticeText
+        GuideDetailItem(
+            id = "visit_reception_location",
+            iconResId = R.drawable.ic_reception_direction_sign,
+            title = s.item3Title,
+            description = s.item3Description,
+            memoIllustrationResId = R.drawable.guide_reception_location,
+            memoBackgroundResId = R.drawable.guide_memo1
+        ),
+        GuideDetailItem(
+            id = "visit_arrival_time",
+            iconResId = R.drawable.ic_expected_arrival_time,
+            title = s.item4Title,
+            description = s.item4Description,
+            memoIllustrationResId = R.drawable.guide_arrival_time,
+            memoBackgroundResId = R.drawable.guide_memo4
+        )
     )
 }
