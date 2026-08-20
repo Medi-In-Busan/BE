@@ -1,6 +1,7 @@
 package com.mediinbusan.app.feature.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
@@ -58,9 +59,10 @@ import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -351,11 +353,26 @@ private fun LanguageDropdown(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            SupportedLanguage.CODES.forEach { code ->
+            SupportedLanguage.CODES.forEachIndexed { index, code ->
                 val selected = code == currentLanguageCode
+                // 항목이 위에서부터 순서대로 살짝 옆으로 미끄러지며 나타나는 진입 애니메이션.
+                // 펼쳐질 때만 인덱스만큼 지연시켜 순차 등장시키고, 닫힐 때는 바로 리셋한다.
+                val itemReveal = remember(code) { Animatable(0f) }
+                LaunchedEffect(expanded, code) {
+                    if (expanded) {
+                        delay(index * 55L)
+                        itemReveal.animateTo(1f, animationSpec = tween(durationMillis = 160))
+                    } else {
+                        itemReveal.snapTo(0f)
+                    }
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .graphicsLayer {
+                            alpha = itemReveal.value
+                            translationX = (1f - itemReveal.value) * -10.dp.toPx()
+                        }
                         .clip(pillShape)
                         .clickable {
                             onLanguageSelected(code)
@@ -394,7 +411,9 @@ private const val BannerHeightBoostFactor = 1.05f
 private val BannerVirtualPageCount = BannerImages.size * 1000
 // 배너2/3 텍스트 블록 공용 고정 높이. 서브텍스트 줄바꿈 여부와 무관하게 두 배너의 텍스트
 // 시작 위치를 정확히 맞추기 위한 값 — 실제 콘텐츠(2줄 서브텍스트 포함)보다 여유 있게 잡는다.
-private val HeroTextBlockHeight = 130.dp
+// 번역 언어에서 서브텍스트가 2줄로 늘어나면 기존 130dp로는 배너 카드의 clip 경계에 걸려
+// 둘째 줄이 잘렸어서 여유를 더 뒀다.
+private val HeroTextBlockHeight = 160.dp
 
 @Composable
 private fun HeroBannerSection(onSearchClick: () -> Unit, onWellnessClick: () -> Unit) {
@@ -448,32 +467,39 @@ private fun HeroBannerSection(onSearchClick: () -> Unit, onWellnessClick: () -> 
                         // 배너 박스 비율 자체가 배너2 원본 비율과 같아서 Crop해도 잘리지 않는다.
                         contentScale = ContentScale.Crop
                     )
-                    // 배너1(사진에 텍스트 없음, 흰 글씨 사용)만 가독성을 위해 하단 그라데이션을 깐다.
-                    // 배너2/3은 밝은 사진 위에 어두운 텍스트를 얹는 구성이라 명암이 필요 없다.
+                    // 배너1(사진에 텍스트 없음, 흰 글씨 사용)만 가독성을 위해 텍스트가 놓이는
+                    // 상단 쪽에 옅은 그라데이션을 깐다. 사진 자체가 밝아 흰 글씨가 묻히던 문제를
+                    // 완화하는 정도로만 — 사진 톤을 크게 죽이지 않도록 이전(0.45)보다 옅게 둔다.
                     if (page == 0) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f))))
+                                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent)))
                         )
                     }
                     val strings = LocalAppStrings.current.home
                     when (page) {
                         0 -> {
-                            Column(
+                            // 배너2/3과 정확히 같은 텍스트 시작 지점을 맞추려면 BiasAlignment 계산
+                            // 기준이 되는 요소 자체의 높이도 같아야 한다 — Column만 그대로 정렬하면
+                            // 실제 콘텐츠 높이(제목 2줄보다 짧음)가 달라 위치가 어긋난다. 배너2/3과
+                            // 동일한 고정 높이 Box로 감싸서 기준 높이를 맞춘다.
+                            Box(
                                 modifier = Modifier
-                                    .align(Alignment.BottomStart)
+                                    .align(BiasAlignment(-1f, -0.3f))
                                     .padding(horizontal = 20.dp)
-                                    // 아래쪽 캐러셀 점과 겹치지 않도록 여백을 더 둔다.
-                                    .padding(bottom = 50.dp)
+                                    .height(HeroTextBlockHeight),
+                                contentAlignment = Alignment.TopStart
                             ) {
-                                Text(text = strings.heroTitle, style = HeroTitleStyle, color = Color.White)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = strings.heroSubtitle,
-                                    style = HeroSubtitleStyle,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                )
+                                Column {
+                                    Text(text = strings.heroTitle, style = HeroTitleStyle, color = Color.White)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = strings.heroSubtitle,
+                                        style = HeroSubtitleStyle,
+                                        color = Color.White.copy(alpha = 0.9f)
+                                    )
+                                }
                             }
                         }
                         1 -> {
@@ -503,7 +529,9 @@ private fun HeroBannerSection(onSearchClick: () -> Unit, onWellnessClick: () -> 
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
                                     .padding(horizontal = 20.dp)
-                                    .padding(bottom = 65.dp),
+                                    // 번역 언어에서 서브텍스트가 2줄로 늘어나도 겹치지 않도록
+                                    // 텍스트 블록과의 간격을 좀 더 확보한다.
+                                    .padding(bottom = 50.dp),
                                 text = strings.heroBanner2Cta,
                                 onClick = onWellnessClick
                             )

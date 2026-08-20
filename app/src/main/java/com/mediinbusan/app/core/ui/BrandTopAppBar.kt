@@ -1,5 +1,7 @@
 package com.mediinbusan.app.core.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,6 +49,7 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
+import kotlinx.coroutines.delay
 
 /**
  * 뒤로가기 화살표가 있던 이전 버전 대신, Home 탑바와 완전히 동일한 구성(로고+언어 드롭다운+설정
@@ -136,11 +141,26 @@ private fun BrandLanguageDropdown(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            SupportedLanguage.CODES.forEach { code ->
+            SupportedLanguage.CODES.forEachIndexed { index, code ->
                 val selected = code == currentLanguageCode
+                // 항목이 위에서부터 순서대로 살짝 옆으로 미끄러지며 나타나는 진입 애니메이션.
+                // 펼쳐질 때만 인덱스만큼 지연시켜 순차 등장시키고, 닫힐 때는 바로 리셋한다.
+                val itemReveal = remember(code) { Animatable(0f) }
+                LaunchedEffect(expanded, code) {
+                    if (expanded) {
+                        delay(index * 55L)
+                        itemReveal.animateTo(1f, animationSpec = tween(durationMillis = 160))
+                    } else {
+                        itemReveal.snapTo(0f)
+                    }
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .graphicsLayer {
+                            alpha = itemReveal.value
+                            translationX = (1f - itemReveal.value) * -10.dp.toPx()
+                        }
                         .clip(pillShape)
                         .clickable {
                             onLanguageSelected(code)

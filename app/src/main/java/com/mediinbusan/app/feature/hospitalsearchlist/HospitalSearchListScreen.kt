@@ -1,5 +1,11 @@
 package com.mediinbusan.app.feature.hospitalsearchlist
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -202,6 +209,28 @@ private fun HospitalSearchListContent(
             onAutoFocusApplied()
         }
     }
+
+    // 결과 리스트를 아래로 스크롤하면 필터칩+정렬 줄을 접어 리스트가 보이는 영역을 넓혀주고,
+    // 위로 스크롤하거나(또는 맨 위 근처면) 다시 펼친다. listState는 SearchResultList의
+    // LazyColumn과 공유해야 스크롤 방향을 감지할 수 있어 여기서 끌어올린다.
+    val resultListState = rememberLazyListState()
+    var isFilterBarCollapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(resultListState) {
+        var previousIndex = resultListState.firstVisibleItemIndex
+        var previousOffset = resultListState.firstVisibleItemScrollOffset
+        snapshotFlow { resultListState.firstVisibleItemIndex to resultListState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                val scrollDelta = (index - previousIndex) * 1000 + (offset - previousOffset)
+                when {
+                    index == 0 && offset <= 4 -> isFilterBarCollapsed = false
+                    scrollDelta > 6 -> isFilterBarCollapsed = true
+                    scrollDelta < -6 -> isFilterBarCollapsed = false
+                }
+                previousIndex = index
+                previousOffset = offset
+            }
+    }
+
     Scaffold(
         // Home과 같은 맨 뒤 배경(연분홍) — 기본값(테마 background)이 Home과 달라 화면 전환 시
         // 배경색이 순간 바뀌어 보이던 것을 통일한다.
@@ -263,16 +292,27 @@ private fun HospitalSearchListContent(
                     )
                 } else {
                     Spacer(modifier = Modifier.height(14.dp))
-                    FilterChipsRow(filters = uiState.filters, onFilterToggled = onFilterToggled)
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // 리스트를 아래로 스크롤하면 접히고, 위로 스크롤하거나 맨 위 근처면 다시 펼쳐진다.
+                    AnimatedVisibility(
+                        visible = !isFilterBarCollapsed,
+                        enter = expandVertically(animationSpec = tween(durationMillis = 420)) +
+                            fadeIn(animationSpec = tween(durationMillis = 340, delayMillis = 50)),
+                        exit = shrinkVertically(animationSpec = tween(durationMillis = 380)) +
+                            fadeOut(animationSpec = tween(durationMillis = 280))
                     ) {
-                        SearchResultCountLabel(query = uiState.query, count = uiState.results.size)
-                        SortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected)
+                        Column {
+                            FilterChipsRow(filters = uiState.filters, onFilterToggled = onFilterToggled)
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                SearchResultCountLabel(query = uiState.query, count = uiState.results.size)
+                                SortDropdownButton(selected = uiState.selectedSort, onSortSelected = onSortSelected)
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -287,6 +327,7 @@ private fun HospitalSearchListContent(
                             )
                         } else {
                             SearchResultList(
+                                listState = resultListState,
                                 results = uiState.results,
                                 hasReachedEnd = uiState.hasReachedEnd,
                                 selectedSort = uiState.selectedSort,
@@ -583,6 +624,7 @@ private fun SortDropdownButton(selected: SearchSortOption, onSortSelected: (Sear
 
 @Composable
 private fun SearchResultList(
+    listState: LazyListState,
     results: List<Hospital>,
     hasReachedEnd: Boolean,
     selectedSort: SearchSortOption,
@@ -590,8 +632,6 @@ private fun SearchResultList(
     onSelectHospital: (String) -> Unit,
     bottomContentPadding: Dp
 ) {
-    val listState = rememberLazyListState()
-
     // 정렬을 바꿨을 때 결과는 바로 재배열되지만, 이미 아래로 스크롤한 상태면 화면엔 안 보여서
     // 위로 직접 스크롤해야 하는 불편함이 있었다 — 애니메이션 없이 즉시 맨 위로 리프레시한다.
     LaunchedEffect(selectedSort) {
