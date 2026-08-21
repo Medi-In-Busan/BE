@@ -3,15 +3,19 @@ package com.mediinbusan.app.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.HospitalRepository
+import com.mediinbusan.app.data.recent.RecentRepository
+import com.mediinbusan.app.domain.recommendation.GetRecommendedHospitalsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,7 +25,10 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val hospitalRepository: HospitalRepository,
-    private val favoriteRepository: FavoriteRepository
+    private val favoriteRepository: FavoriteRepository,
+    private val recentRepository: RecentRepository,
+    private val pendingHospitalSearchEntry: PendingHospitalSearchEntry,
+    private val getRecommendedHospitalsUseCase: GetRecommendedHospitalsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -30,44 +37,65 @@ class HomeViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             userPreferencesRepository.userPreferences.collect { preferences ->
-                _uiState.update {
-                    it.copy(selectedPurpose = preferences.medicalPurpose, languageCode = preferences.languageCode)
-                }
-            }
-        }
-        viewModelScope.launch {
-            favoriteRepository.observeFavorites().collect { favorites ->
-                val hospitalIds = favorites
-                    .filter { it.itemType == FavoriteItemType.HOSPITAL }
-                    .map { it.itemId }
-                    .toSet()
-                _uiState.update { it.copy(favoriteHospitalIds = hospitalIds) }
+                _uiState.update { it.copy(languageCode = preferences.languageCode) }
             }
         }
         loadRecommendedHospitals()
     }
 
+    // "이런 의료기관은 어떠세요?" 섹션 — GetRecommendedHospitalsUseCase 참고. 즐겨찾기·최근 본
+    // 항목·전체 병원 목록 세 Flow를 combine해서, 즐겨찾기 토글이나 최근 본 항목 갱신이 생기면
+    // 재조회 없이 바로 다시 점수를 매겨 갱신된다.
     private fun loadRecommendedHospitals() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true, isError = false, error = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
-            // 추천 의료기관 섹션은 선택된 의료 목적과 무관하게 전체 추천 목록을 보여준다.
-            when (val result = hospitalRepository.getHospitals(languageCode = languageCode).first { it !is Result.Loading }) {
-                is Result.Success -> _uiState.update {
-                    it.copy(isLoading = false, recommendedHospitals = result.data, error = null)
+            combine(
+                favoriteRepository.observeFavorites(),
+                hospitalRepository.getAllHospitals(languageCode),
+                recentRepository.observeRecentlyViewed()
+            ) { favorites, result, recentlyViewed -> Triple(favorites, result, recentlyViewed) }
+                .collect { (favorites, result, recentlyViewed) ->
+                    val favoriteHospitalIds = favorites
+                        .filter { it.itemType == FavoriteItemType.HOSPITAL }
+                        .map { it.itemId }
+                        .toSet()
+                    when (result) {
+                        is Result.Success -> _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isError = false,
+                                favoriteHospitalIds = favoriteHospitalIds,
+                                recommendedHospitals = getRecommendedHospitalsUseCase(
+                                    allHospitals = result.data,
+                                    favorites = favorites,
+                                    recentlyViewed = recentlyViewed
+                                ),
+                                error = null
+                            )
+                        }
+                        is Result.Error -> _uiState.update {
+                            // 서버 메시지가 없을 때 보여줄 폴백 문구는 여기서 언어를 고정해 넣지 않고,
+                            // 화면(HomeScreen)이 LocalAppStrings로 매 리컴포지션마다 새로 읽게 한다.
+                            it.copy(isLoading = false, isError = true, error = result.message, favoriteHospitalIds = favoriteHospitalIds)
+                        }
+                        Result.Loading -> Unit
+                    }
                 }
-                is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, error = result.message ?: "추천 의료기관을 불러오지 못했습니다.")
-                }
-                Result.Loading -> Unit
-            }
         }
     }
 
-    fun onMedicalPurposeSelected(purpose: MedicalCategory) {
-        viewModelScope.launch {
-            userPreferencesRepository.setMedicalPurpose(purpose)
-        }
+    // 카테고리 칩 탭 직후(같은 클릭 핸들러에서) 검색 화면으로 이동하기 직전에 호출된다.
+    // PendingHospitalSearchEntry 주석 참고 — DataStore가 아니라 인메모리 싱글턴에 심어서,
+    // Home으로 돌아와도 아무 흔적이 남지 않고 검색 화면 진입 시 정확히 한 번만 적용된다.
+    fun onCategorySelected(purpose: MedicalCategory) {
+        pendingHospitalSearchEntry.setPurpose(purpose)
+    }
+
+    // 검색바 탭 직후(같은 클릭 핸들러에서) 검색 화면으로 이동하기 직전에 호출된다. 검색 화면이
+    // 결과 목록 대신 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 열리도록 요청만 남긴다.
+    fun onSearchBarClicked() {
+        pendingHospitalSearchEntry.requestFocus()
     }
 
     fun onFavoriteToggleClicked(hospitalId: String) {
@@ -79,7 +107,11 @@ class HomeViewModel @Inject constructor(
                     itemType = FavoriteItemType.HOSPITAL,
                     name = hospital.name,
                     imageUrl = hospital.imageUrl,
-                    savedAt = System.currentTimeMillis()
+                    savedAt = System.currentTimeMillis(),
+                    subtitle = hospital.specialties.joinToString(", "),
+                    address = hospital.address,
+                    latitude = hospital.latitude,
+                    longitude = hospital.longitude
                 )
             )
         }

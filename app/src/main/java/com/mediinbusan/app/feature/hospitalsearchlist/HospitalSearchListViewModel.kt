@@ -2,12 +2,12 @@ package com.mediinbusan.app.feature.hospitalsearchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.data.favorite.Favorite
-import com.mediinbusan.app.data.favorite.FavoriteItemType
-import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.searchhistory.SearchHistoryRepository
@@ -29,21 +29,27 @@ import javax.inject.Inject
  * 필터 칩은 누르는 즉시 재조회되지만, 키워드는 타이핑마다가 아니라 검색 버튼(돋보기 아이콘/키보드
  * 검색 액션)을 눌렀을 때만 onSearchSubmit()으로 재조회한다 — onQueryChanged는 텍스트 상태만 갱신.
  * "관광지" 칩은 백엔드에 대응 카테고리가 없어 선택해도 결과에 영향을 주지 않는다.
- * 정렬/서버 페이지네이션은 다음 이슈.
+ * 정렬(sortedByOption)은 서버에서 받아온 results를 클라이언트에서 재배열할 뿐 재조회하지 않는다.
+ * 서버 페이지네이션은 다음 이슈.
  */
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class HospitalSearchListViewModel @Inject constructor(
     private val hospitalRepository: HospitalRepository,
-    private val favoriteRepository: FavoriteRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val searchHistoryRepository: SearchHistoryRepository
+    private val searchHistoryRepository: SearchHistoryRepository,
+    private val pendingHospitalSearchEntry: PendingHospitalSearchEntry
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HospitalSearchListUiState())
     val uiState: StateFlow<HospitalSearchListUiState> = _uiState
 
     private var initialized = false
+
+    // 서버가 준 원본 목록을 보관한다. uiState.results는 정렬 옵션에 따라 재배열된 값이라, 정렬을
+    // 다시 고를 때마다 여기서 다시 정렬해야 한다 — results를 results 자기 자신으로 재정렬하면
+    // 이미 섞인 순서 위에 또 정렬하는 꼴이라 원본이 영영 사라진다.
+    private var lastServerResults: List<Hospital> = emptyList()
 
     // 자동완성 후보용 전체 병원 스냅샷. uiState.results는 검색/필터 결과로 계속 덮어써지므로
     // 자동완성은 이 별도 캐시를 대상으로 로컬 필터링한다. 화면 진입 시 1회만 채운다.
@@ -62,15 +68,6 @@ class HospitalSearchListViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            favoriteRepository.observeFavorites().collect { favorites ->
-                val hospitalIds = favorites
-                    .filter { it.itemType == FavoriteItemType.HOSPITAL }
-                    .map { it.itemId }
-                    .toSet()
-                _uiState.update { it.copy(favoriteHospitalIds = hospitalIds) }
-            }
-        }
-        viewModelScope.launch {
             searchHistoryRepository.observeSearchHistory().collect { history ->
                 _uiState.update { it.copy(recentSearches = history.map { item -> item.keyword }) }
             }
@@ -80,18 +77,50 @@ class HospitalSearchListViewModel @Inject constructor(
         }
     }
 
-    // Home에서 의료목적 칩/웰니스 퀵링크로 진입할 때 해당 필터 칩을 선택 상태로 반영하고,
-    // 그 목적에 맞는 결과만 서버에서 걸러 불러온다. 화면 재구성 시 중복 초기화되지 않도록 1회만 실행.
-    fun initialize(medicalPurpose: MedicalCategory?) {
+    // Home에서 의료목적 칩/검색바로 진입할 때 각각 필터/자동 포커스를 반영한다. 둘 다 Route 인자가
+    // 아니라 PendingHospitalSearchEntry를 거쳐 받는다 — 바텀바 "홈" 탭이 정상 동작하려면 이 화면
+    // 진입이 다른 탭과 동일하게 navigateToTab(popUpTo+saveState+restoreState)을 써야 하는데
+    // (navigateToTab 함수 주석 참고), 그 조합은 예전에 다른 args로 방문한 적이 있으면 restoreState가
+    // 그 예전 상태(args 포함)를 그대로 되살려 이번에 새로 넘긴 값이 무시될 수 있다
+    // (PendingHospitalSearchEntry 주석 참고). consume*()은 Nav 백스택과 무관한 순수 인메모리 값이라
+    // 이 문제에서 자유롭다.
+    // purpose가 있을 때는(=Home 칩으로 진입) initialized 여부와 무관하게 매번 필터를 다시 적용하고
+    // 재조회한다. purpose가 없을 때(=바텀바 탭 재선택)는 사용자가 직전에 만들어둔 검색/필터 상태를
+    // 그대로 두기 위해 최초 1회만 기본 목록을 로드한다. 자동완성 캐시(loadAutocompleteSource)는
+    // 어느 경우든 비용이 커서 최초 1회만 채운다.
+    fun initialize() {
+        val pendingPurpose = pendingHospitalSearchEntry.consumePurpose()
+        val shouldAutoFocusSearch = pendingHospitalSearchEntry.consumeFocusRequest()
+        if (shouldAutoFocusSearch) {
+            _uiState.update { it.copy(shouldAutoFocusSearch = true) }
+        }
+        if (pendingPurpose != null) {
+            // 카테고리 칩 진입은 "이 카테고리 전체 결과"를 보여줘야 한다 — 예전에 남아있던 검색어까지
+            // 같이 서버로 나가면 카테고리 필터 + 옛 키워드가 함께 걸려 결과가 의도치 않게 좁아진다.
+            queryInput.value = ""
+            _uiState.update { state ->
+                state.copy(
+                    query = "",
+                    autocompleteSuggestions = emptyList(),
+                    filters = state.filters.map { it.copy(selected = it.label == pendingPurpose.label) }
+                )
+            }
+            loadResults()
+        }
         if (initialized) return
         initialized = true
-        if (medicalPurpose != null) {
-            _uiState.update { state ->
-                state.copy(filters = state.filters.map { it.copy(selected = it.label == medicalPurpose.label) })
-            }
+        if (pendingPurpose == null) {
+            loadResults()
         }
-        loadResults()
         loadAutocompleteSource()
+    }
+
+    // 화면이 실제로 포커스+키보드를 띄운 직후 호출된다. shouldAutoFocusSearch를 여기서 바로 꺼야
+    // 한다 — 이 값을 켠 채로 두면, 병원 상세로 넘어갔다 뒤로가기로 이 화면이 다시 조립될 때(로컬
+    // Compose remember는 그때마다 초기화되지만 uiState는 같은 ViewModel에 남아있으므로) 매번 다시
+    // "포커스 요청이 있다"고 착각해서 검색 입력 패널(최근 검색어)이 또 열리고 키보드도 다시 뜬다.
+    fun onAutoFocusApplied() {
+        _uiState.update { it.copy(shouldAutoFocusSearch = false) }
     }
 
     // 자동완성 후보용 전체 병원 스냅샷을 1회 채운다. getAllHospitals가 서버 페이지를 모두 순회해
@@ -110,7 +139,7 @@ class HospitalSearchListViewModel @Inject constructor(
 
     private fun loadResults() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, isError = false, errorMessage = null) }
             val languageCode = userPreferencesRepository.userPreferences.first().languageCode
             val selectedSpecialties = _uiState.value.filters
                 .filter { it.selected }
@@ -123,11 +152,15 @@ class HospitalSearchListViewModel @Inject constructor(
                     languageCode = languageCode
                 ).first { it !is Result.Loading }
             ) {
-                is Result.Success -> _uiState.update {
-                    it.copy(isLoading = false, results = result.data, errorMessage = null)
+                is Result.Success -> {
+                    lastServerResults = result.data
+                    _uiState.update {
+                        it.copy(isLoading = false, isError = false, results = result.data.sortedByOption(it.selectedSort), errorMessage = null)
+                    }
                 }
                 is Result.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "검색 결과를 불러오지 못했습니다.")
+                    // 폴백 문구는 여기서 언어를 고정하지 않고 화면이 LocalAppStrings로 매번 새로 읽는다.
+                    it.copy(isLoading = false, isError = true, errorMessage = result.message)
                 }
                 Result.Loading -> Unit
             }
@@ -190,9 +223,25 @@ class HospitalSearchListViewModel @Inject constructor(
         loadResults()
     }
 
-    // TODO: 정렬 기준 확정 후 실제 정렬 로직을 연결한다. 지금은 선택 상태만 보관.
+    // 정렬은 이미 서버에서 받아온 lastServerResults를 클라이언트에서 재배열하는 것으로 처리한다
+    // (재조회 불필요) — DISTANCE는 서면 기준점(DefaultSearchOrigin)으로부터의 haversine 거리.
+    // 매번 lastServerResults(원본 순서)에서 다시 정렬해야 이미 재배열된 uiState.results를
+    // 또 정렬해서 원본이 사라지는 일이 없다.
     fun onSortSelected(sort: SearchSortOption) {
-        _uiState.update { it.copy(selectedSort = sort) }
+        _uiState.update { it.copy(selectedSort = sort, results = lastServerResults.sortedByOption(sort)) }
+    }
+
+    private fun List<Hospital>.sortedByOption(sort: SearchSortOption): List<Hospital> = when (sort) {
+        SearchSortOption.NAME -> sortedBy { it.name }
+        SearchSortOption.DISTANCE -> sortedBy { hospital ->
+            val lat = hospital.latitude
+            val lng = hospital.longitude
+            if (lat == null || lng == null) {
+                Double.MAX_VALUE
+            } else {
+                haversineDistanceMeters(DefaultSearchOrigin.LATITUDE, DefaultSearchOrigin.LONGITUDE, lat, lng)
+            }
+        }
     }
 
     fun onResetSearchConditions() {
@@ -206,21 +255,6 @@ class HospitalSearchListViewModel @Inject constructor(
     // TODO: 페이지네이션 백엔드 연동 전까지는 항상 마지막 페이지로 취급하는 스텁이다.
     fun onLoadMore() {
         _uiState.update { it.copy(hasReachedEnd = true) }
-    }
-
-    fun onToggleFavorite(hospitalId: String) {
-        val hospital = _uiState.value.results.firstOrNull { it.id == hospitalId } ?: return
-        viewModelScope.launch {
-            favoriteRepository.toggleFavorite(
-                Favorite(
-                    itemId = hospital.id,
-                    itemType = FavoriteItemType.HOSPITAL,
-                    name = hospital.name,
-                    imageUrl = hospital.imageUrl,
-                    savedAt = System.currentTimeMillis()
-                )
-            )
-        }
     }
 
     fun onLanguageSelected(languageCode: String) {

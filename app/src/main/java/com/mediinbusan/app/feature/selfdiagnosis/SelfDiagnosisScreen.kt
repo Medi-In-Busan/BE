@@ -58,6 +58,8 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.SelfDiagnosisStrings
 
 /**
  * S-XX 준비 유형 진단(인트로 → 5문항 → 준비 유형).
@@ -98,14 +100,15 @@ private fun SelfDiagnosisContent(
     fromOnboarding: Boolean,
     onIntent: (SelfDiagnosisIntent) -> Unit
 ) {
+    val strings = LocalAppStrings.current.selfDiagnosis
     Scaffold(
         containerColor = PageBackground,
         topBar = {
             TopAppBar(
-                title = { Text(text = "준비 유형 진단") },
+                title = { Text(text = strings.topBarTitle) },
                 navigationIcon = {
                     IconButton(onClick = { onIntent(SelfDiagnosisIntent.ClickBack) }) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.backContentDescription)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PageBackground)
@@ -122,17 +125,15 @@ private fun SelfDiagnosisContent(
                                 resultType = resultType,
                                 onCtaClick = { target -> onIntent(SelfDiagnosisIntent.ClickCta(target)) },
                                 onRestart = { onIntent(SelfDiagnosisIntent.Restart) },
-                                onFinishSetup = if (fromOnboarding) {
-                                    { onIntent(SelfDiagnosisIntent.FinishSetup) }
-                                } else {
-                                    null
-                                }
+                                onGoHome = { onIntent(SelfDiagnosisIntent.FinishSetup) },
+                                goHomeButtonLabel = if (fromOnboarding) strings.startFromHomeButton else strings.backToHomeButton
                             )
                         }
                     }
                 }
                 uiState.isIntroVisible -> {
                     IntroContent(
+                        strings = strings,
                         onStart = { onIntent(SelfDiagnosisIntent.StartDiagnosis) },
                         onSkip = if (fromOnboarding) {
                             { onIntent(SelfDiagnosisIntent.FinishSetup) }
@@ -142,7 +143,7 @@ private fun SelfDiagnosisContent(
                     )
                 }
                 else -> {
-                    QuestionContent(uiState = uiState, onIntent = onIntent)
+                    QuestionContent(uiState = uiState, strings = strings, onIntent = onIntent)
                 }
             }
         }
@@ -150,7 +151,7 @@ private fun SelfDiagnosisContent(
 }
 
 @Composable
-private fun IntroContent(onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
+private fun IntroContent(strings: SelfDiagnosisStrings, onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -170,7 +171,7 @@ private fun IntroContent(onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "나에게 맞는 준비 유형 진단",
+            text = strings.introTitle,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
@@ -178,20 +179,20 @@ private fun IntroContent(onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "5개의 질문에 답하면 나에게 맞는 의료관광 준비 유형을 확인할 수 있어요.",
+            text = strings.introDescription,
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "약 1분이면 충분해요",
+            text = strings.introDuration,
             style = MaterialTheme.typography.labelMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(32.dp))
-        NoticeBanner(text = DiagnosisResultType.COMMON_SAFETY_NOTICE, isWarning = false)
+        NoticeBanner(text = strings.commonSafetyNotice, isWarning = false)
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onStart,
@@ -199,12 +200,12 @@ private fun IntroContent(onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
             shape = MaterialTheme.shapes.medium,
             colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
         ) {
-            Text(text = "진단 시작하기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(text = strings.introStartButton, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
         if (onSkip != null) {
             Spacer(modifier = Modifier.height(12.dp))
             TextButton(onClick = onSkip) {
-                Text(text = "건너뛰고 홈으로", color = TextSecondary)
+                Text(text = strings.introSkipButton, color = TextSecondary)
             }
         }
     }
@@ -213,9 +214,11 @@ private fun IntroContent(onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
 @Composable
 private fun QuestionContent(
     uiState: SelfDiagnosisUiState,
+    strings: SelfDiagnosisStrings,
     onIntent: (SelfDiagnosisIntent) -> Unit
 ) {
-    val question = uiState.currentQuestion
+    val questions = diagnosisQuestions(strings.questions)
+    val question = questions[uiState.currentQuestionIndex]
     val selectedOptions = uiState.selectedAnswers[question.id].orEmpty()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -232,7 +235,7 @@ private fun QuestionContent(
         ) {
             item {
                 Text(
-                    text = "${uiState.currentQuestionIndex + 1} / ${uiState.questions.size}",
+                    text = strings.questionProgressFormat.format(uiState.currentQuestionIndex + 1, questions.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = TextSecondary
                 )
@@ -254,7 +257,7 @@ private fun QuestionContent(
             }
             items(question.options) { option ->
                 AnswerOptionCard(
-                    option = option,
+                    label = option.label(strings.options),
                     isMultiSelect = question.isMultiSelect,
                     isSelected = option in selectedOptions,
                     onClick = { onIntent(SelfDiagnosisIntent.SelectAnswer(question.id, option)) }
@@ -272,7 +275,7 @@ private fun QuestionContent(
                     colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
                 ) {
                     Text(
-                        text = if (uiState.isLastQuestion) "결과 보기" else "다음",
+                        text = if (uiState.isLastQuestion) strings.viewResultButton else strings.nextButton,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -284,7 +287,7 @@ private fun QuestionContent(
 
 @Composable
 private fun AnswerOptionCard(
-    option: DiagnosisAnswerOption,
+    label: String,
     isMultiSelect: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -312,7 +315,7 @@ private fun AnswerOptionCard(
                 )
             }
             Text(
-                text = option.label,
+                text = label,
                 style = MaterialTheme.typography.bodyLarge,
                 color = TextPrimary,
                 modifier = Modifier.padding(start = 8.dp)

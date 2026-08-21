@@ -22,23 +22,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Headset
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.PrivacyTip
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -57,17 +50,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.BuildConfig
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.SettingsStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
+import com.mediinbusan.app.core.designsystem.DividerColor
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsBorder
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
@@ -78,7 +76,6 @@ import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SettingsSectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
-import com.mediinbusan.app.core.ui.BrandBackTopAppBar
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
 
 @Composable
@@ -116,38 +113,47 @@ private fun SettingsContent(
     onNavigateToRecentlyViewed: () -> Unit,
     onClearCacheConfirmed: () -> Unit
 ) {
+    val strings = LocalAppStrings.current.settings
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.cacheClearedEventId) {
         if (uiState.cacheClearedEventId > 0) {
-            snackbarHostState.showSnackbar("캐시를 삭제했어요")
+            snackbarHostState.showSnackbar(strings.cacheClearedSnackbar)
         }
     }
 
     Scaffold(
-        // Home과 동일한 탑바(워드마크+언어 드롭다운)를 그대로 재사용하고, 좌측 아이콘만
-        // Home의 "설정으로 이동" 햄버거 대신 뒤로가기 화살표로 바뀐다. 하단 탭바는
-        // MediInBusanApp.kt의 shouldShowBottomBar에서 Settings는 제외되어 있어 노출되지 않는다.
-        topBar = {
-            BrandBackTopAppBar(
-                onBack = onBack,
-                currentLanguageCode = uiState.selectedLanguage,
-                onLanguageSelected = onLanguageSelected
-            )
-        },
+        // 탑바(로고+언어+설정 톱니)와 하단 탭바를 없애고 일반 push 화면(뒤로가기 버튼)으로 바꿨다 —
+        // 탑바가 사라진 만큼 "설정" 타이틀이 상태바 바로 아래까지 올라와 윗여백을 채운다. 하단 탭바도
+        // 안 보이므로(MediInBusanApp.kt shouldShowBottomBar에서 Settings 제거) BottomNavBarHeight
+        // 보정도 더는 필요 없다.
+        containerColor = HomeBackgroundPink,
         snackbarHost = { BrandSnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
+                // 상태바 인셋을 원래의 절반만 먹여서 뒤로가기 아이콘을 원래 위치에서 절반 정도 위로 당긴다.
+                .padding(
+                    top = innerPadding.calculateTopPadding() * 0.5f,
+                    bottom = innerPadding.calculateBottomPadding()
+                )
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
-            Text(text = "설정", style = SettingsTitleStyle, color = SettingsPrimaryText)
+            Spacer(modifier = Modifier.height(4.dp))
+            IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = LocalAppStrings.current.common.backContentDescription,
+                    tint = SettingsPrimaryText
+                )
+            }
+            // 아이콘-타이틀 간격도 원래(24dp)의 절반으로 줄인다.
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = strings.screenTitle, style = SettingsTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "앱 사용 환경을 설정하고 관리하세요.",
+                text = strings.screenSubtitle,
                 style = SettingsDescriptionStyle,
                 color = SettingsSecondaryText
             )
@@ -160,27 +166,27 @@ private fun SettingsContent(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "앱 설정", style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
+            Text(text = strings.appSettingsSectionTitle, style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(12.dp))
             SettingsCard {
                 SettingsRows(
                     listOf(
                         SettingsRowItem(
-                            Icons.Outlined.Notifications,
-                            "알림 설정",
-                            "새로운 소식과 이벤트 알림을 받아보세요",
+                            R.drawable.setting_notification,
+                            strings.notificationTitle,
+                            strings.notificationDescription,
                             onClick = onNavigateToNotificationSettings
                         ),
                         SettingsRowItem(
-                            Icons.Outlined.Favorite,
-                            "즐겨찾기 관리",
-                            "저장한 병원과 장소를 확인하고 정리하세요",
+                            R.drawable.setting_favorite,
+                            strings.favoriteManageTitle,
+                            strings.favoriteManageDescription,
                             onClick = onNavigateToFavoriteManage
                         ),
                         SettingsRowItem(
-                            Icons.Outlined.History,
-                            "최근 본 항목",
-                            "최근에 확인한 병원과 정보를 다시 볼 수 있어요",
+                            R.drawable.setting_recently,
+                            strings.recentlyViewedTitle,
+                            strings.recentlyViewedDescription,
                             onClick = onNavigateToRecentlyViewed
                         )
                     )
@@ -188,34 +194,34 @@ private fun SettingsContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "정보", style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
+            Text(text = strings.infoSectionTitle, style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(12.dp))
             SettingsCard {
                 SettingsRows(
                     listOf(
                         SettingsRowItem(
-                            Icons.Outlined.Info,
-                            "이용 안내",
-                            "메디인부산 이용 방법을 안내해 드려요",
+                            R.drawable.setting_guide,
+                            strings.usageGuideTitle,
+                            strings.usageGuideDescription,
                             onClick = { onNavigateToInfoDetail(SettingsInfoType.USAGE_GUIDE.infoId) }
                         ),
                         SettingsRowItem(
-                            Icons.Outlined.PrivacyTip,
-                            "개인정보 처리방침",
-                            "개인정보 수집 및 이용에 대한 안내입니다",
+                            R.drawable.setting_privacy,
+                            strings.privacyPolicyTitle,
+                            strings.privacyPolicyDescription,
                             onClick = { onNavigateToInfoDetail(SettingsInfoType.PRIVACY_POLICY.infoId) }
                         ),
                         SettingsRowItem(
-                            Icons.Outlined.Description,
-                            "이용약관",
-                            "서비스 이용에 관한 약관을 확인하세요",
+                            R.drawable.setting_condition,
+                            strings.termsTitle,
+                            strings.termsDescription,
                             onClick = { onNavigateToInfoDetail(SettingsInfoType.TERMS_OF_SERVICE.infoId) }
                         ),
                         // 데이터출처는 아직 별도 페이지 없이 설명 텍스트로만 두고, 분기가 없으니 화살표도 뺀다.
                         SettingsRowItem(
-                            Icons.Outlined.Public,
-                            "데이터 출처",
-                            "한국관광공사 공공데이터를 기반으로 제공됩니다",
+                            R.drawable.setting_datainfo,
+                            strings.dataSourceTitle,
+                            strings.dataSourceDescription,
                             onClick = null
                         )
                     )
@@ -223,9 +229,9 @@ private fun SettingsContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "앱 정보", style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
+            Text(text = strings.appInfoSectionTitle, style = SettingsSectionTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(12.dp))
-            AppInfoCard(onClearCacheConfirmed = onClearCacheConfirmed)
+            AppInfoCard(strings = strings, onClearCacheConfirmed = onClearCacheConfirmed)
 
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -245,13 +251,14 @@ private fun LanguageSettingCard(
     SettingsCard {
         Column(modifier = Modifier.fillMaxWidth().padding(22.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RowIcon(icon = Icons.Outlined.Language)
+                RowIconImage(imageRes = R.drawable.home_languege)
                 Spacer(modifier = Modifier.width(16.dp))
+                val strings = LocalAppStrings.current.settings
                 Column {
-                    Text(text = "언어 변경", style = SettingsItemTitleStyle, color = SettingsPrimaryText)
+                    Text(text = strings.languageChangeTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "앱이 표시되는 언어를 변경할 수 있습니다.",
+                        text = strings.languageChangeDescription,
                         style = SettingsDescriptionStyle,
                         color = SettingsSecondaryText
                     )
@@ -301,7 +308,7 @@ private fun LanguageSegmentButton(label: String, selected: Boolean, onClick: () 
 // SECTION 2/3: 카드 안에 여러 Row + Divider. onClick이 null이면 분기 페이지가 없다는 뜻으로,
 // 행을 클릭 불가능하게 두고 우측 화살표(chevron)도 표시하지 않는다(데이터 출처 등).
 private data class SettingsRowItem(
-    val icon: ImageVector,
+    val iconRes: Int,
     val title: String,
     val description: String,
     val onClick: (() -> Unit)? = {}
@@ -310,7 +317,7 @@ private data class SettingsRowItem(
 @Composable
 private fun SettingsRows(items: List<SettingsRowItem>) {
     items.forEachIndexed { index, item ->
-        SettingsRow(icon = item.icon, title = item.title, description = item.description, onClick = item.onClick)
+        SettingsRow(iconRes = item.iconRes, title = item.title, description = item.description, onClick = item.onClick)
         if (index != items.lastIndex) {
             HorizontalDivider(color = SettingsDivider, modifier = Modifier.padding(horizontal = 20.dp))
         }
@@ -319,7 +326,7 @@ private fun SettingsRows(items: List<SettingsRowItem>) {
 
 @Composable
 private fun SettingsRow(
-    icon: ImageVector,
+    iconRes: Int,
     title: String,
     description: String,
     onClick: (() -> Unit)? = {}
@@ -332,12 +339,19 @@ private fun SettingsRow(
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RowIcon(icon = icon)
+        RowIconImage(imageRes = iconRes)
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
             Spacer(modifier = Modifier.height(3.dp))
-            Text(text = description, style = SettingsDescriptionStyle, color = SettingsSecondaryText)
+            // 데이터출처 설명이 길어도 줄바꿈 없이 한 줄로 잘리게(ellipsis) — 다른 행은 원래 짧아 영향 없다.
+            Text(
+                text = description,
+                style = SettingsDescriptionStyle,
+                color = SettingsSecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         if (onClick != null) {
             Spacer(modifier = Modifier.width(8.dp))
@@ -352,7 +366,7 @@ private fun SettingsRow(
 }
 
 @Composable
-private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
+private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> Unit) {
     var showClearCacheDialog by remember { mutableStateOf(false) }
 
     if (showClearCacheDialog) {
@@ -370,7 +384,7 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
             },
             title = {
                 Text(
-                    text = "캐시를 삭제할까요?",
+                    text = strings.clearCacheDialogTitle,
                     style = SettingsItemTitleStyle.copy(fontSize = 17.sp),
                     color = SettingsPrimaryText,
                     textAlign = TextAlign.Center,
@@ -379,7 +393,7 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
             },
             text = {
                 Text(
-                    text = "저장된 이미지 캐시가 삭제됩니다. 즐겨찾기와 설정은 그대로 유지돼요.",
+                    text = strings.clearCacheDialogBody,
                     style = SettingsDescriptionStyle,
                     color = SettingsSecondaryText,
                     textAlign = TextAlign.Center,
@@ -400,7 +414,7 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = "삭제하기")
+                        Text(text = strings.deleteButton)
                     }
                     OutlinedButton(
                         onClick = { showClearCacheDialog = false },
@@ -409,7 +423,7 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = SettingsSecondaryText),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = "취소")
+                        Text(text = strings.cancelButton)
                     }
                 }
             }
@@ -425,21 +439,30 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
         ) {
             Image(
                 painter = painterResource(id = R.drawable.favicon),
-                contentDescription = "메디인부산 로고",
+                contentDescription = LocalAppStrings.current.common.logoContentDescription,
                 modifier = Modifier.size(40.dp).clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "MEDIN BUSAN", style = SettingsItemTitleStyle, color = SettingsPrimaryText)
+                Text(text = strings.appName, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(3.dp))
-                Text(text = "Version ${BuildConfig.VERSION_NAME}", style = SettingsDescriptionStyle, color = SettingsSecondaryText)
+                Text(
+                    text = strings.versionLabelFormat.format(BuildConfig.VERSION_NAME),
+                    style = SettingsDescriptionStyle,
+                    color = SettingsSecondaryText
+                )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = SettingsSecondaryText,
-                modifier = Modifier.size(16.dp)
-            )
+            // 분기용 화살표(">") 대신 캐시삭제 버튼과 같은 양식의 "업데이트" 버튼. 배포 전이라
+            // 아직 실제 업데이트 라우팅은 걸지 않는다(onClick 비워둠).
+            Button(
+                onClick = {},
+                modifier = Modifier.height(34.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
+            ) {
+                Text(text = strings.appUpdateButton, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            }
         }
         HorizontalDivider(color = SettingsDivider, modifier = Modifier.padding(horizontal = 20.dp))
         Row(
@@ -449,10 +472,10 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RowIcon(icon = Icons.Outlined.Headset)
+            RowIconImage(imageRes = R.drawable.setting_qa)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "고객센터", style = SettingsItemTitleStyle, color = SettingsPrimaryText)
+                Text(text = strings.customerSupportTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(text = "support@medinbusan.kr", style = SettingsDescriptionStyle, color = SkyBlue)
             }
@@ -465,30 +488,35 @@ private fun AppInfoCard(onClearCacheConfirmed: () -> Unit) {
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RowIcon(icon = Icons.Outlined.Delete)
+            RowIconImage(imageRes = R.drawable.setting_delete)
             Spacer(modifier = Modifier.width(16.dp))
-            Text(text = "캐시 삭제", style = SettingsItemTitleStyle, color = SettingsPrimaryText, modifier = Modifier.weight(1f))
-            OutlinedButton(
+            Text(text = strings.clearCacheRowTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText, modifier = Modifier.weight(1f))
+            Button(
                 onClick = { showClearCacheDialog = true },
                 modifier = Modifier.height(34.dp),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CoralPrimary),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = CoralPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
             ) {
-                Text(text = "삭제하기", style = MaterialTheme.typography.labelMedium)
+                Text(text = strings.clearCacheRowButton, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
+// Home 카테고리 원(CategoryCircleItem)과 같은 톤 — 흰 배경 + 경계선 원 안에 이미지.
+// 크기(40dp 원)는 기존에 쓰던 코랄톤 원형 아이콘과 동일하게 유지한다.
 @Composable
-private fun RowIcon(icon: ImageVector) {
+private fun RowIconImage(imageRes: Int) {
     Box(
-        modifier = Modifier.size(40.dp).clip(CircleShape).background(CoralPrimaryContainer),
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.White)
+            .border(width = 1.dp, color = DividerColor, shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(22.dp))
+        Image(painter = painterResource(id = imageRes), contentDescription = null, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -497,11 +525,13 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // 의료기관 리스트 유닛 카드(SearchResultCard)와 같은 톤 — 옅은 분홍 배경 위에서도
+            // 카드 경계가 확실히 보이도록 진하게 준다.
             .shadow(
-                elevation = 3.dp,
+                elevation = 6.dp,
                 shape = RoundedCornerShape(20.dp),
-                ambientColor = Color.Black.copy(alpha = 0.04f),
-                spotColor = Color.Black.copy(alpha = 0.04f)
+                ambientColor = Color.Black.copy(alpha = 0.3f),
+                spotColor = Color.Black.copy(alpha = 0.3f)
             )
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White),

@@ -1,6 +1,5 @@
 package com.mediinbusan.app.core.navigation
 
-import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.data.guide.GuidePhase
 import androidx.navigation.NavHostController
 import kotlinx.serialization.Serializable
@@ -19,8 +18,12 @@ sealed interface Route {
     @Serializable
     data object Home : Route // S-03
 
+    // S-04, 구 HospitalList + Search 통합. 인자를 일부러 안 둔다 — medicalPurpose 필터도,
+    // "검색바를 눌러 검색 입력창에 바로 포커스" 요청도 전부 core/common/PendingHospitalSearchEntry를
+    // 거쳐 전달한다(Nav 백스택 저장/복원 과정에서 Route 인자가 무시될 수 있는 문제 때문 — 그 파일
+    // 주석과 navigateToTab 함수 주석 참고).
     @Serializable
-    data class HospitalSearchList(val medicalPurpose: MedicalCategory? = null) : Route // S-04, 구 HospitalList + Search 통합. medicalPurpose가 있으면 진입 시 해당 필터로 자동 검색
+    data object HospitalSearchList : Route
 
     @Serializable
     data class HospitalDetail(val hospitalId: String) : Route // S-05
@@ -48,9 +51,6 @@ sealed interface Route {
 
     @Serializable
     data object MedicalRecordsTestResultsDetail : Route // S-06 STEP 03 하위 "기존 진단서·검사결과 준비" 상세
-
-    @Serializable
-    data object HospitalLocationCheckinDetail : Route // S-06 STEP 03 하위 "병원 위치와 접수 절차 확인" 상세
 
     @Serializable
     data object TotalCostCoverageCheckDetail : Route // S-06 STEP 05 하위 "총 비용과 포함 항목 확인" 상세
@@ -107,6 +107,11 @@ sealed interface Route {
     // 최초 실행 흐름(Splash -> 언어선택 -> 진단 -> Home) 중에는 true.
     @Serializable
     data class SelfDiagnosis(val fromOnboarding: Boolean = false) : Route
+
+    // 진단서·처방전 OCR 번역(문서 스캔). 바텀바 5번째 탭. OCR/번역 백엔드 연동 전, 이미지
+    // 촬영·선택까지만 우선 배선한다 — 관련 이슈 참고.
+    @Serializable
+    data object DocumentScan : Route
 }
 
 /**
@@ -116,10 +121,13 @@ sealed interface Route {
  * 없다. 탭 내비게이션의 실질적인 루트인 Route.Home을 직접 지정한다.
  *
  * 바텀바가 항상 보이는 화면(Home/HospitalSearchList/Guide/MapView) 사이의 이동은 하단 탭 클릭이든
- * Home 카드 진입(의료목적 선택/의료기관 찾기/웰니스/가이드/지도)이든 전부 이 함수를 통해야 한다.
- * 한쪽만 이 옵션(popUpTo+saveState+launchSingleTop+restoreState)을 쓰고 다른 쪽은 순수 navigate()를
- * 쓰면, 같은 route에 대해 저장된 상태가 restoreState로 소비되지 않고 계속 쌓여 바텀바의 "홈" 탭이
- * Home으로 돌아가지 못하는 문제가 있었다.
+ * Home 카드 진입(의료목적 선택/의료기관 찾기/웰니스/가이드/지도/검색바)이든 전부 이 함수를 통해야
+ * 한다. 한쪽만 이 옵션(popUpTo+saveState+launchSingleTop+restoreState)을 쓰고 다른 쪽은 순수
+ * navigate()를 쓰면, 같은 route에 대해 저장된 상태가 restoreState로 소비되지 않고 계속 쌓여 바텀바의
+ * "홈" 탭이 Home으로 돌아가지 못하는 문제가 있었다 — HospitalSearchList의 검색바 전용 진입점이
+ * 한동안 순수 navigate()를 따로 썼다가(그 경로만 Route 인자를 정확히 넘겨야 한다는 이유로) 정확히
+ * 이 문제를 다시 겪었다. 그래서 HospitalSearchList는 이제 인자 자체를 아예 안 두고(core/common/
+ * PendingHospitalSearchEntry 참고) 모든 진입 경로가 예외 없이 이 함수 하나로 통일되어 있다.
  */
 internal fun NavHostController.navigateToTab(route: Route) {
     navigate(route) {

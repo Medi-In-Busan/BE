@@ -1,49 +1,60 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
+import com.mediinbusan.app.core.i18n.DiagnosisAnswerOptionStrings
+
 /** 5개 진단 질문의 선택지. 질문별로 sealed 하위 enum을 둬 매퍼(DiagnosisTypeMapper)에서
- *  exhaustive when으로 타입 안전하게 분기할 수 있게 한다. */
+ *  exhaustive when으로 타입 안전하게 분기할 수 있게 한다. 표시 라벨은 언어에 따라 바뀌므로
+ *  enum 자체에는 담지 않고 [label] 함수로 DiagnosisAnswerOptionStrings에서 조회한다. */
 sealed interface DiagnosisAnswerOption {
-    val label: String
 
-    enum class VisitPurpose(override val label: String) : DiagnosisAnswerOption {
-        SKIN_BEAUTY("피부·미용"),
-        HEALTH_CHECKUP("건강검진"),
-        DENTAL("치과"),
-        ORIENTAL_RECOVERY("한방·회복 관리"),
-        REHABILITATION("재활"),
-        WELLNESS_REST("웰니스·휴식"),
-        UNKNOWN("아직 모름")
+    enum class VisitPurpose : DiagnosisAnswerOption {
+        SKIN_BEAUTY, HEALTH_CHECKUP, DENTAL, ORIENTAL_RECOVERY, REHABILITATION, WELLNESS_REST, UNKNOWN
     }
 
-    enum class StayDuration(override val label: String) : DiagnosisAnswerOption {
-        SAME_DAY("당일"),
-        DAYS_1_3("1~3일"),
-        DAYS_4_7("4~7일"),
-        DAYS_8_30("8~30일"),
-        DAYS_31_PLUS_OR_UNDECIDED("31일 이상 또는 미정"),
-        UNKNOWN("아직 모름")
+    enum class StayDuration : DiagnosisAnswerOption {
+        SAME_DAY, DAYS_1_3, DAYS_4_7, DAYS_8_30, DAYS_31_PLUS_OR_UNDECIDED, UNKNOWN
     }
 
-    enum class ReservationStatus(override val label: String) : DiagnosisAnswerOption {
-        SEARCHING("아직 병원을 찾는 중"),
-        PLANNING_TO_INQUIRE("병원에 직접 문의 예정"),
-        RESERVED("병원 예약 완료"),
-        USING_AGENCY_OR_PACKAGE("등록 유치기관 또는 패키지 이용 중"),
-        UNKNOWN("아직 모름")
+    enum class ReservationStatus : DiagnosisAnswerOption {
+        SEARCHING, PLANNING_TO_INQUIRE, RESERVED, USING_AGENCY_OR_PACKAGE, NOT_NEEDED, UNKNOWN
     }
 
-    enum class InterpretationNeed(override val label: String) : DiagnosisAnswerOption {
-        NEEDED("필요함"),
-        WANT_TO_CHECK_SUPPORTED_LANGUAGE("병원 지원 언어를 확인하고 싶음"),
-        NOT_NEEDED("필요 없음"),
-        UNKNOWN("아직 모름")
+    enum class InterpretationNeed : DiagnosisAnswerOption {
+        NEEDED, WANT_TO_CHECK_SUPPORTED_LANGUAGE, NOT_NEEDED, UNKNOWN
     }
 
-    enum class EntryStayCondition(override val label: String) : DiagnosisAnswerOption {
-        SHORT_VISIT_NO_VISA("비자 없이 단기 방문 예정"),
-        LONG_TERM_TREATMENT_OVER_91_DAYS("치료·요양이 91일 이상 걸릴 수 있음"),
-        ACCOMPANIED_BY_FAMILY("동반 가족 또는 보호자가 함께 올 예정"),
-        INVITATION_DOCUMENT_MAY_BE_NEEDED("병원 또는 등록 유치기관의 초청 서류가 필요할 수 있음"),
-        UNKNOWN("잘 모르겠음")
+    enum class EntryStayCondition : DiagnosisAnswerOption {
+        SHORT_VISIT_NO_VISA, LONG_TERM_TREATMENT_OVER_91_DAYS, ACCOMPANIED_BY_FAMILY, INVITATION_DOCUMENT_MAY_BE_NEEDED, UNKNOWN
     }
+}
+
+fun DiagnosisAnswerOption.label(strings: DiagnosisAnswerOptionStrings): String = when (this) {
+    DiagnosisAnswerOption.VisitPurpose.SKIN_BEAUTY -> strings.visitPurposeSkinBeauty
+    DiagnosisAnswerOption.VisitPurpose.HEALTH_CHECKUP -> strings.visitPurposeHealthCheckup
+    DiagnosisAnswerOption.VisitPurpose.DENTAL -> strings.visitPurposeDental
+    DiagnosisAnswerOption.VisitPurpose.ORIENTAL_RECOVERY -> strings.visitPurposeOrientalRecovery
+    DiagnosisAnswerOption.VisitPurpose.REHABILITATION -> strings.visitPurposeRehabilitation
+    DiagnosisAnswerOption.VisitPurpose.WELLNESS_REST -> strings.visitPurposeWellnessRest
+    DiagnosisAnswerOption.VisitPurpose.UNKNOWN -> strings.visitPurposeUnknown
+    DiagnosisAnswerOption.StayDuration.SAME_DAY -> strings.stayDurationSameDay
+    DiagnosisAnswerOption.StayDuration.DAYS_1_3 -> strings.stayDuration1To3Days
+    DiagnosisAnswerOption.StayDuration.DAYS_4_7 -> strings.stayDuration4To7Days
+    DiagnosisAnswerOption.StayDuration.DAYS_8_30 -> strings.stayDuration8To30Days
+    DiagnosisAnswerOption.StayDuration.DAYS_31_PLUS_OR_UNDECIDED -> strings.stayDuration31PlusOrUndecided
+    DiagnosisAnswerOption.StayDuration.UNKNOWN -> strings.stayDurationUnknown
+    DiagnosisAnswerOption.ReservationStatus.SEARCHING -> strings.reservationStatusSearching
+    DiagnosisAnswerOption.ReservationStatus.PLANNING_TO_INQUIRE -> strings.reservationStatusPlanningToInquire
+    DiagnosisAnswerOption.ReservationStatus.RESERVED -> strings.reservationStatusReserved
+    DiagnosisAnswerOption.ReservationStatus.USING_AGENCY_OR_PACKAGE -> strings.reservationStatusUsingAgencyOrPackage
+    DiagnosisAnswerOption.ReservationStatus.NOT_NEEDED -> strings.reservationStatusNotNeeded
+    DiagnosisAnswerOption.ReservationStatus.UNKNOWN -> strings.reservationStatusUnknown
+    DiagnosisAnswerOption.InterpretationNeed.NEEDED -> strings.interpretationNeedNeeded
+    DiagnosisAnswerOption.InterpretationNeed.WANT_TO_CHECK_SUPPORTED_LANGUAGE -> strings.interpretationNeedWantToCheckSupportedLanguage
+    DiagnosisAnswerOption.InterpretationNeed.NOT_NEEDED -> strings.interpretationNeedNotNeeded
+    DiagnosisAnswerOption.InterpretationNeed.UNKNOWN -> strings.interpretationNeedUnknown
+    DiagnosisAnswerOption.EntryStayCondition.SHORT_VISIT_NO_VISA -> strings.entryStayConditionShortVisitNoVisa
+    DiagnosisAnswerOption.EntryStayCondition.LONG_TERM_TREATMENT_OVER_91_DAYS -> strings.entryStayConditionLongTermTreatmentOver91Days
+    DiagnosisAnswerOption.EntryStayCondition.ACCOMPANIED_BY_FAMILY -> strings.entryStayConditionAccompaniedByFamily
+    DiagnosisAnswerOption.EntryStayCondition.INVITATION_DOCUMENT_MAY_BE_NEEDED -> strings.entryStayConditionInvitationDocumentMayBeNeeded
+    DiagnosisAnswerOption.EntryStayCondition.UNKNOWN -> strings.entryStayConditionUnknown
 }

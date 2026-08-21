@@ -24,6 +24,22 @@ fun HospitalListItemDto.toDomain(): Hospital = Hospital(
     lastModified = null
 )
 
+fun HospitalNearbyDto.toDomain(): Hospital = Hospital(
+    id = regNo,
+    name = name,
+    specialties = specialties.toSpecialtyLabels(),
+    address = address,
+    latitude = latitude,
+    longitude = longitude,
+    phoneNumber = phone,
+    homepageUrl = null,
+    supportedLanguages = emptyList(),
+    description = null,
+    imageUrl = null,
+    lastModified = null,
+    distanceMeters = distanceMeters
+)
+
 // targetCountries는 언어 코드(ko/en/zh/ja)와 한글 국가명이 섞여 있어서, 그중 실제 언어 코드로 인식되는
 // 것만 골라 배지 표시에 쓴다. 나머지(국가명)는 지금 도메인 모델에 대응 필드가 없어 버려진다.
 fun HospitalDetailDto.toDomain(): Hospital = Hospital(
@@ -36,7 +52,7 @@ fun HospitalDetailDto.toDomain(): Hospital = Hospital(
     phoneNumber = phone,
     homepageUrl = website,
     supportedLanguages = targetCountries.filter { it in SupportedLanguage.CODES },
-    description = descriptionKo,
+    description = description,
     imageUrl = null,
     lastModified = null,
     openingHours = businessHours

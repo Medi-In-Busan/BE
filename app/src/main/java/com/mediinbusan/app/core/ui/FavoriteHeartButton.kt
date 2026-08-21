@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,8 +27,11 @@ fun FavoriteHeartButton(
     modifier: Modifier = Modifier,
     size: Dp = 36.dp
 ) {
+    // 기본값 36dp는 최소 권장 터치 영역(48dp)보다 작다 — RoundIconButton과 같은 이유로
+    // minimumInteractiveComponentSize()를 붙여 보이는 원은 그대로 두고 터치 영역만 넓힌다.
     Box(
         modifier = modifier
+            .minimumInteractiveComponentSize()
             .size(size)
             .clip(CircleShape)
             .background(Color.White)

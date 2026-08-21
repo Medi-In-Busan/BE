@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
@@ -20,7 +21,6 @@ import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
 import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
-import com.mediinbusan.app.feature.guide.HospitalLocationCheckinDetailScreen
 import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
 import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
 import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
@@ -46,6 +46,7 @@ import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
+import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
 import com.mediinbusan.app.feature.tourism.TourismHubScreen
 
@@ -111,17 +112,20 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
                 // 병원 검색 API가 실패해도 웰니스 UI/API를 확인할 수 있도록 MVP 확인용 기준 병원(해운대권 regNo=14)으로 바로 진입한다.
                 onNavigateToWellness = { navController.navigate(Route.Nearby(hospitalId = "14")) },
-                // 의료목적 선택/의료기관 찾기/웰니스/검색바 4개 진입점이 전부 여기 하나로 모인다.
-                // purpose가 있으면 HospitalSearchListScreen 진입 시 해당 필터로 자동 검색된다.
-                onNavigateToSearch = { purpose -> navController.navigateToTab(Route.HospitalSearchList(purpose)) }
+                // 의료목적 선택/검색바 진입점이 전부 여기 하나로 모인다. purpose/포커스 요청은 Route
+                // 인자가 아니라 HomeViewModel이 PendingHospitalSearchEntry에 미리 심어두고,
+                // HospitalSearchListViewModel이 진입 시 그걸 읽는다(PendingHospitalSearchEntry 주석
+                // 참고) — 그래서 여기서는 다른 바텀바 탭 화면과 동일하게 항상 args 없는 navigateToTab만
+                // 쓰면 된다(navigateToTab 함수 주석 참고 — 예전엔 검색바만 순수 navigate()를 따로 써서
+                // 바텀바 "홈" 탭이 안 먹는 문제가 있었다).
+                onNavigateToSearch = { navController.navigateToTab(Route.HospitalSearchList) },
+                onNavigateToSearchFocused = { navController.navigateToTab(Route.HospitalSearchList) }
             )
         }
-        composable<Route.HospitalSearchList> { backStackEntry ->
-            val route = backStackEntry.toRoute<Route.HospitalSearchList>()
+        composable<Route.HospitalSearchList> {
             HospitalSearchListScreen(
-                medicalPurpose = route.medicalPurpose,
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
-                onBack = navController::popBackStack
+                onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
         composable<Route.HospitalDetail> { backStackEntry ->
@@ -151,7 +155,6 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             } else {
                 GuideStepDetailScreen(
                     phase = phase,
-                    title = route.title,
                     onBack = navController::popBackStack,
                     onItemClick = { item ->
                         when (item.id) {
@@ -161,7 +164,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
                             GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
                             GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
-                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.HospitalLocationCheckinDetail)
+                            // "병원 정보 확인하기" 카드는 이제 STEP03 합본 페이지에 접수 절차가 직접
+                            // 포함돼 있어 중간 화면 없이 바로 지도로 이동한다.
+                            GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.MapView(hospitalId = null))
                             GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
                             GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
                             GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
@@ -191,12 +196,6 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable<Route.MedicalRecordsTestResultsDetail> {
             MedicalRecordsTestResultsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.HospitalLocationCheckinDetail> {
-            HospitalLocationCheckinDetailScreen(
-                onBack = navController::popBackStack,
-                onNavigateToMap = { navController.navigate(Route.MapView(hospitalId = null)) }
-            )
         }
         composable<Route.TotalCostCoverageCheckDetail> {
             TotalCostCoverageCheckDetailScreen(onBack = navController::popBackStack)
@@ -287,9 +286,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onBack = navController::popBackStack
             )
         }
+        composable<Route.DocumentScan> {
+            DocumentScanScreen(onMenuClick = { navController.navigate(Route.Settings) })
+        }
         composable<Route.SelfDiagnosis> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.SelfDiagnosis>()
             val context = LocalContext.current
+            val reservationInquiryTitle = LocalAppStrings.current.guide.stepReservationInquiryTitle
             SelfDiagnosisScreen(
                 fromOnboarding = route.fromOnboarding,
                 onBack = navController::popBackStack,
@@ -299,10 +302,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                         DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST ->
                             navController.navigate(Route.HospitalInquiryDetail)
                         DiagnosisCtaTarget.HOSPITAL_BROWSE ->
-                            navController.navigate(Route.HospitalSearchList())
+                            // 다른 진입점과 동일하게 navigateToTab으로 통일한다 — HospitalSearchList로
+                            // 가는 경로가 하나라도 순수 navigate()를 쓰면 바텀바 "홈" 탭이 못 빠져나오는
+                            // 문제가 있다(Route.kt의 navigateToTab 함수 주석 참고).
+                            navController.navigateToTab(Route.HospitalSearchList)
                         DiagnosisCtaTarget.INTERPRETATION_SUPPORT ->
                             navController.navigate(
-                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = "예약 및 문의")
+                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = reservationInquiryTitle)
                             )
                         DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST ->
                             context.launchIntentSafely(
@@ -314,9 +320,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             navController.navigate(Route.TotalCostCoverageCheckDetail)
                         DiagnosisCtaTarget.DEPARTURE_CHECKLIST ->
                             navController.navigate(Route.AirportDeparturePreparationDetail)
-                        DiagnosisCtaTarget.WELLNESS_PLACES -> {
-                            // TODO: 팀원이 작업 중인 웰니스 전용 화면 완성 후 연결
-                        }
+                        DiagnosisCtaTarget.WELLNESS_PLACES ->
+                            // Home의 웰니스 진입점과 동일하게 MVP 기준 병원(해운대권 regNo=14)으로 연결한다.
+                            navController.navigate(Route.Nearby(hospitalId = "14"))
                     }
                 }
             )

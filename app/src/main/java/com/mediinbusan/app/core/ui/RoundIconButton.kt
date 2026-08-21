@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +30,12 @@ fun RoundIconButton(
     tint: Color = TextPrimary,
     shape: Shape = CircleShape
 ) {
+    // 지도/병원 상세의 뒤로가기·공유 버튼처럼 시각적으로 36dp로 줄여 쓰는 곳이 있어, 실제 터치
+    // 영역은 안드로이드 최소 권장치(48dp) 밑으로 안 내려가게 minimumInteractiveComponentSize()로
+    // 보이지 않는 여백을 더한다 — 원 자체가 커지진 않는다.
     Box(
         modifier = modifier
+            .minimumInteractiveComponentSize()
             .size(size)
             .clip(shape)
             .background(background)

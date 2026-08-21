@@ -34,9 +34,13 @@ datastorePreferences = "1.1.2"
 
 # Images
 coil = "3.1.0"
+exifinterface = "1.4.2"
 
 # Map
 kakaoMapSdk = "2.13.5"
+
+# UI effects (glassmorphism/backdrop blur). 2.x는 아직 alpha라 stable인 1.7.2 고정.
+haze = "1.7.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -79,8 +83,13 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 kakao-map-sdk = { group = "com.kakao.maps.open", name = "android", version.ref = "kakaoMapSdk" }
+
+haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
+haze-materials = { group = "dev.chrisbanes.haze", name = "haze-materials", version.ref = "haze" }
+androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

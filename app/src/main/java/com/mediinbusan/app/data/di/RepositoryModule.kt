@@ -1,5 +1,7 @@
 package com.mediinbusan.app.data.di
 
+import com.mediinbusan.app.data.document.DocumentOcrRepository
+import com.mediinbusan.app.data.document.DocumentOcrRepositoryImpl
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.favorite.FavoriteRepositoryImpl
 import com.mediinbusan.app.data.guide.GuideRepository
@@ -52,4 +54,7 @@ interface RepositoryModule {
 
     @Binds
     fun bindSearchHistoryRepository(impl: SearchHistoryRepositoryImpl): SearchHistoryRepository
+
+    @Binds
+    fun bindDocumentOcrRepository(impl: DocumentOcrRepositoryImpl): DocumentOcrRepository
 }
