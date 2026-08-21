@@ -6,12 +6,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
@@ -40,7 +42,9 @@ public class TourismExternalClient {
             .queryParam("_type", "json");
         queryParameters.forEach((key, value) -> {
             if (value != null) {
-                builder.queryParam(key, value);
+                // serviceKey는 공공데이터포털에서 제공한 인코딩 값을 유지하고,
+                // 검색어 같은 일반 파라미터만 UTF-8로 인코딩한다.
+                builder.queryParam(key, UriUtils.encodeQueryParam(value.toString(), StandardCharsets.UTF_8));
             }
         });
 

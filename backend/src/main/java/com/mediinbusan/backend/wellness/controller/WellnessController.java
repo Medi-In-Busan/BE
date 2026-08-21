@@ -5,12 +5,15 @@ import com.mediinbusan.backend.wellness.dto.WellnessPlaceResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessSnapshotIngestionResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessWalkingCourseResponse;
 import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
+import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
+import com.mediinbusan.backend.wellness.domain.TourismCatalogCategory;
 import com.mediinbusan.backend.wellness.service.BusanTourismCodes;
 import com.mediinbusan.backend.wellness.service.WellnessIngestionService;
 import com.mediinbusan.backend.wellness.service.WellnessService;
 import com.mediinbusan.backend.wellness.service.WellnessSnapshotIngestionService;
 import com.mediinbusan.backend.wellness.service.WellnessTourismGatewayService;
 import com.mediinbusan.backend.wellness.service.WellnessWalkingCourseService;
+import com.mediinbusan.backend.wellness.service.TourismCatalogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,19 +36,22 @@ public class WellnessController {
     private final WellnessTourismGatewayService tourismGatewayService;
     private final WellnessSnapshotIngestionService snapshotIngestionService;
     private final WellnessWalkingCourseService walkingCourseService;
+    private final TourismCatalogService tourismCatalogService;
 
     public WellnessController(
         WellnessService wellnessService,
         WellnessIngestionService wellnessIngestionService,
         WellnessTourismGatewayService tourismGatewayService,
         WellnessSnapshotIngestionService snapshotIngestionService,
-        WellnessWalkingCourseService walkingCourseService
+        WellnessWalkingCourseService walkingCourseService,
+        TourismCatalogService tourismCatalogService
     ) {
         this.wellnessService = wellnessService;
         this.wellnessIngestionService = wellnessIngestionService;
         this.tourismGatewayService = tourismGatewayService;
         this.snapshotIngestionService = snapshotIngestionService;
         this.walkingCourseService = walkingCourseService;
+        this.tourismCatalogService = tourismCatalogService;
     }
 
     @Operation(summary = "병원 주변 웰니스 장소 조회", description = "병원 좌표 기준 반경 내 웰니스 장소를 거리순으로 반환한다.")
@@ -75,13 +81,21 @@ public class WellnessController {
         return walkingCourseService.getBusanCourses();
     }
 
+    @Operation(summary = "관광 데이터 카테고리 조회", description = "관광공사 서비스별 응답을 앱 공통 카드 모델로 정규화해 반환한다.")
+    @GetMapping("/tourism/catalog/{category}")
+    public TourismCatalogResponse getTourismCatalog(
+        @PathVariable TourismCatalogCategory category,
+        @RequestParam(required = false) BusanTourismCodes.District district,
+        @RequestParam(required = false) String baseYm
+    ) {
+        return tourismCatalogService.getCatalog(category, district, baseYm);
+    }
+
     @PostMapping("/ingest/snapshots")
     public WellnessSnapshotIngestionResponse ingestSnapshots(
-        @RequestParam String baseYm,
-        @RequestParam String startYmd,
-        @RequestParam String endYmd
+        @RequestParam String baseYm
     ) {
-        return snapshotIngestionService.sync(baseYm, startYmd, endYmd);
+        return snapshotIngestionService.sync(baseYm);
     }
 
     @Operation(summary = "다국어 부산 관광지 목록", description = "Kor/Eng/Jpn/Chs TourAPI를 법정동 부산 코드로 조회한다.")
@@ -92,11 +106,6 @@ public class WellnessController {
         @RequestParam(required = false) String contentTypeId
     ) {
         return tourismGatewayService.places(language, district, contentTypeId);
-    }
-
-    @GetMapping("/external/wellness")
-    public TourismExternalResponse wellness(@RequestParam(required = false) BusanTourismCodes.District district) {
-        return tourismGatewayService.wellness(district);
     }
 
     @GetMapping("/external/accessibility")
@@ -123,11 +132,6 @@ public class WellnessController {
     @GetMapping("/external/crowding")
     public TourismExternalResponse crowding(@RequestParam BusanTourismCodes.District district) {
         return tourismGatewayService.crowding(district);
-    }
-
-    @GetMapping("/external/visitors")
-    public TourismExternalResponse visitors(@RequestParam String startYmd, @RequestParam String endYmd) {
-        return tourismGatewayService.visitors(startYmd, endYmd);
     }
 
     @GetMapping("/external/photos")

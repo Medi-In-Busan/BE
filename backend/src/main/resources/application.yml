@@ -37,12 +37,10 @@ springdoc:
 wellness:
   ingestion:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
-    wellness-tourism-base-url: https://apis.data.go.kr/B551011/WellnessTursmService
     accessible-tourism-base-url: https://apis.data.go.kr/B551011/KorWithService2
     related-tourism-base-url: https://apis.data.go.kr/B551011/TarRlteTarService1
     hub-tourism-base-url: https://apis.data.go.kr/B551011/LocgoHubTarService1
     crowding-base-url: https://apis.data.go.kr/B551011/TatsCnctrRateService
-    visitor-base-url: https://apis.data.go.kr/B551011/DataLabService
     photo-base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1
     walking-base-url: https://apis.data.go.kr/B551011/Durunubi
     audio-base-url: https://apis.data.go.kr/B551011/Odii

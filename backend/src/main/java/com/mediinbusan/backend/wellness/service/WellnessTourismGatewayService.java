@@ -26,12 +26,6 @@ public class WellnessTourismGatewayService {
         return request("tourism-" + language.name().toLowerCase(), language.baseUrl(properties), "areaBasedList2", params);
     }
 
-    public TourismExternalResponse wellness(BusanTourismCodes.District district) {
-        Map<String, Object> params = tourismParams(district);
-        params.put("langDivCd", "KOR");
-        return request("wellness-tourism", properties.wellnessTourismBaseUrl(), "areaBasedList", params);
-    }
-
     public TourismExternalResponse accessibility(BusanTourismCodes.District district) {
         return request("accessible-tourism", properties.accessibleTourismBaseUrl(), "areaBasedList2", tourismParams(district));
     }
@@ -46,13 +40,6 @@ public class WellnessTourismGatewayService {
 
     public TourismExternalResponse crowding(BusanTourismCodes.District district) {
         return request("crowding-forecast", properties.crowdingBaseUrl(), "tatsCnctrRatedList", bigdataParams(district, null));
-    }
-
-    public TourismExternalResponse visitors(String startYmd, String endYmd) {
-        Map<String, Object> params = pageParams();
-        params.put("startYmd", startYmd);
-        params.put("endYmd", endYmd);
-        return request("regional-visitors", properties.visitorBaseUrl(), "metcoRegnVisitrDDList", params);
     }
 
     public TourismExternalResponse photos(String keyword) {

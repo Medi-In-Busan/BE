@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -80,6 +81,7 @@ fun NearbyScreen(
     hospitalId: String,
     onSelectPlace: (String) -> Unit,
     onNavigateToMap: () -> Unit,
+    onExploreTourism: () -> Unit,
     onBack: () -> Unit,
     viewModel: NearbyViewModel = hiltViewModel()
 ) {
@@ -93,6 +95,7 @@ fun NearbyScreen(
         uiState = uiState,
         onSelectPlace = onSelectPlace,
         onNavigateToMap = onNavigateToMap,
+        onExploreTourism = onExploreTourism,
         onBack = onBack,
         onRetry = { viewModel.load(hospitalId) }
     )
@@ -104,6 +107,7 @@ private fun NearbyContent(
     uiState: NearbyUiState,
     onSelectPlace: (String) -> Unit,
     onNavigateToMap: () -> Unit,
+    onExploreTourism: () -> Unit,
     onBack: () -> Unit,
     onRetry: () -> Unit
 ) {
@@ -119,6 +123,9 @@ private fun NearbyContent(
                 },
                 title = { Text(text = "관광·웰니스") },
                 actions = {
+                    IconButton(onClick = onExploreTourism) {
+                        Icon(imageVector = Icons.Default.Explore, contentDescription = "부산 관광 데이터")
+                    }
                     IconButton(onClick = onNavigateToMap) {
                         Icon(imageVector = Icons.Default.Map, contentDescription = "지도에서 보기")
                     }
@@ -142,6 +149,7 @@ private fun NearbyContent(
                 uiState = uiState,
                 onSelectPlace = onSelectPlace,
                 onNavigateToMap = onNavigateToMap,
+                onExploreTourism = onExploreTourism,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -153,12 +161,12 @@ private fun NearbyLoadedContent(
     uiState: NearbyUiState,
     onSelectPlace: (String) -> Unit,
     onNavigateToMap: () -> Unit,
+    onExploreTourism: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedType by remember { mutableStateOf<PlaceType?>(null) }
     var selectedFocus by remember { mutableStateOf(WellnessFocus.ALL) }
     val types = uiState.places.map { it.type }.distinct()
-    val officialWellnessPlaces = uiState.places.filter { it.isOfficialWellness }
     val typeFilteredPlaces = selectedType?.let { selected -> uiState.places.filter { it.type == selected } } ?: uiState.places
     val filteredPlaces = selectedFocus.filter(typeFilteredPlaces)
 
@@ -174,7 +182,8 @@ private fun NearbyLoadedContent(
                     ?.takeIf { it != Double.MAX_VALUE }
                     ?.toDistanceLabel()
                     ?: "거리 정보 없음",
-                onNavigateToMap = onNavigateToMap
+                onNavigateToMap = onNavigateToMap,
+                onExploreTourism = onExploreTourism
             )
         }
 
@@ -226,15 +235,6 @@ private fun NearbyLoadedContent(
             }
         }
 
-        if (officialWellnessPlaces.isNotEmpty()) {
-            item {
-                OfficialWellnessSection(
-                    places = officialWellnessPlaces,
-                    onSelectPlace = onSelectPlace
-                )
-            }
-        }
-
         if (uiState.walkingCourses.isNotEmpty()) {
             item {
                 WalkingCourseSection(courses = uiState.walkingCourses)
@@ -247,7 +247,8 @@ private fun NearbyLoadedContent(
 private fun NearbySummaryCard(
     placeCount: Int,
     nearestDistanceLabel: String,
-    onNavigateToMap: () -> Unit
+    onNavigateToMap: () -> Unit,
+    onExploreTourism: () -> Unit
 ) {
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -293,6 +294,9 @@ private fun NearbySummaryCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "지도에서 동선 보기")
                 }
+                OutlinedButton(onClick = onExploreTourism, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "부산 관광 데이터 둘러보기")
+                }
             }
         }
     }
@@ -305,69 +309,6 @@ private fun WellnessCourseSection(courses: List<WellnessCourse>, onSelectPlace: 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(courses, key = { it.id }) { course ->
                 WellnessCourseCard(course = course, onSelectPlace = onSelectPlace)
-            }
-        }
-    }
-}
-
-@Composable
-private fun OfficialWellnessSection(places: List<Place>, onSelectPlace: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(text = "공식 웰니스 관광지", style = SectionTitleStyle, color = TextPrimary)
-            Text(
-                text = "한국관광공사 웰니스관광정보 기반",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(places, key = { it.id }) { place ->
-                OfficialWellnessCard(place = place, onClick = { onSelectPlace(place.id) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun OfficialWellnessCard(place: Place, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.width(244.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, DividerColor)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PlaceThumbnail(
-                place = place,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(128.dp)
-            )
-            Column(
-                modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                Text(
-                    text = place.name,
-                    style = CardTitleStyle,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = place.type.label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = place.type.tint
-                )
-                Text(
-                    text = place.address,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         }
     }
@@ -744,9 +685,6 @@ private enum class WellnessFocus(val label: String) {
         STAY -> places.filter { it.type == PlaceType.LODGING }
     }
 }
-
-private val Place.isOfficialWellness: Boolean
-    get() = id.startsWith("wellness-")
 
 private val PlaceType.label: String
     get() = when (this) {

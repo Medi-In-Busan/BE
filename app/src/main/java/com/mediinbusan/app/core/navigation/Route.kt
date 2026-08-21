@@ -80,6 +80,12 @@ sealed interface Route {
     data class PlaceDetail(val placeId: String) : Route // S-07 상세
 
     @Serializable
+    data object TourismHub : Route // S-07 관광 공공데이터 허브
+
+    @Serializable
+    data class TourismCatalog(val category: String) : Route // S-07 관광 공공데이터 카테고리 목록
+
+    @Serializable
     data class MapView(val hospitalId: String? = null) : Route // S-08, hospitalId=null이면 전체 병원 지도 모드
 
     @Serializable

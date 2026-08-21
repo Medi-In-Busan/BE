@@ -27,10 +27,9 @@ public class WellnessSnapshotIngestionService {
     }
 
     @Transactional
-    public WellnessSnapshotIngestionResponse sync(String baseYm, String startYmd, String endYmd) {
+    public WellnessSnapshotIngestionResponse sync(String baseYm) {
         Counter counter = new Counter();
         List<String> failures = new ArrayList<>();
-        syncSafely("wellness", "BUSAN", baseYm, () -> gateway.wellness(null), counter, failures);
         syncSafely("accessibility", "BUSAN", baseYm, () -> gateway.accessibility(null), counter, failures);
         for (WellnessTourismGatewayService.Language language : WellnessTourismGatewayService.Language.values()) {
             syncSafely("places-" + language.name().toLowerCase(), "BUSAN", baseYm, () -> gateway.places(language, null, null), counter, failures);
@@ -38,7 +37,6 @@ public class WellnessSnapshotIngestionService {
         syncSafely("photos", "BUSAN", baseYm, () -> gateway.photos("부산"), counter, failures);
         syncSafely("walking", "BUSAN", baseYm, gateway::walkingCourses, counter, failures);
         syncSafely("audio", "BUSAN", baseYm, () -> gateway.audio(35.1796, 129.0756), counter, failures);
-        syncSafely("visitors", "BUSAN", startYmd + "-" + endYmd, () -> gateway.visitors(startYmd, endYmd), counter, failures);
         for (BusanTourismCodes.District district : BusanTourismCodes.districts()) {
             String scope = district.name();
             syncSafely("related", scope, baseYm, () -> gateway.related(district, baseYm), counter, failures);

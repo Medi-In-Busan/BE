@@ -46,6 +46,8 @@ import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
+import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
+import com.mediinbusan.app.feature.tourism.TourismHubScreen
 
 /** 10개 화면(S-01~S-10)을 잇는 단일 NavHost. feature 패키지는 서로를 직접 참조하지 않고 이 파일을 통해서만 연결된다. */
 @Composable
@@ -223,6 +225,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 hospitalId = route.hospitalId,
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
                 onNavigateToMap = { navController.navigate(Route.MapView(route.hospitalId)) },
+                onExploreTourism = { navController.navigate(Route.TourismHub) },
                 onBack = navController::popBackStack
             )
         }
@@ -230,6 +233,19 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.PlaceDetail>()
             PlaceDetailScreen(
                 placeId = route.placeId,
+                onBack = navController::popBackStack
+            )
+        }
+        composable<Route.TourismHub> {
+            TourismHubScreen(
+                onSelectCategory = { category -> navController.navigate(Route.TourismCatalog(category.name)) },
+                onBack = navController::popBackStack
+            )
+        }
+        composable<Route.TourismCatalog> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.TourismCatalog>()
+            TourismCatalogScreen(
+                categoryName = route.category,
                 onBack = navController::popBackStack
             )
         }
