@@ -44,10 +44,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.BorderColor
+import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
 import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
@@ -165,13 +169,20 @@ fun GuideDetailItemCard(
     trailingIconTint: Color = TextSecondary,
     onClick: (() -> Unit)? = null,
     containerColor: Color = Color.White,
+    borderColor: Color = BorderColor,
+    titleColor: Color = TextPrimary,
+    descriptionColor: Color = TextSecondary,
+    // description 앞부분만 다른 색으로 강조하고 싶을 때 그 접두사를 넣는다(description은 반드시 이 값으로
+    // 시작해야 한다). null이거나 접두사가 아니면 description 전체를 descriptionColor로 그린다.
+    descriptionHighlightPrefix: String? = null,
+    descriptionHighlightColor: Color = CoralPrimary,
     badgeLabel: String? = null,
     badgeBackgroundColor: Color = InfoBackgroundBlue,
     badgeTextColor: Color = SkyBlue
 ) {
     val shape = RoundedCornerShape(20.dp)
     val colors = CardDefaults.cardColors(containerColor = containerColor)
-    val border = BorderStroke(1.dp, BorderColor)
+    val border = BorderStroke(1.dp, borderColor)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     val content: @Composable () -> Unit = {
         Row(
@@ -191,7 +202,7 @@ fun GuideDetailItemCard(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = titleColor,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (badgeLabel != null) {
@@ -207,9 +218,18 @@ fun GuideDetailItemCard(
                     }
                 }
                 Text(
-                    text = description,
+                    text = if (descriptionHighlightPrefix != null && description.startsWith(descriptionHighlightPrefix)) {
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = descriptionHighlightColor)) {
+                                append(descriptionHighlightPrefix)
+                            }
+                            append(description.removePrefix(descriptionHighlightPrefix))
+                        }
+                    } else {
+                        buildAnnotatedString { append(description) }
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = descriptionColor,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -298,7 +318,7 @@ fun GuideQuestionCard(number: Int, question: String, modifier: Modifier = Modifi
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(SkyBlue),
+                    .background(CoralPrimary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -315,6 +335,55 @@ fun GuideQuestionCard(number: Int, question: String, modifier: Modifier = Modifi
                 color = TextPrimary,
                 modifier = Modifier.padding(start = 14.dp)
             )
+        }
+    }
+}
+
+// 번호 매긴 확인 순서 카드 (제목 + 설명, "확인 순서" 등에서 사용). 원 안 숫자는 GuideQuestionCard와
+// 동일한 CoralPrimary 스타일을 공유해 같은 "핑크색 번호원" 톤을 유지한다.
+@Composable
+fun GuideOrderStepCard(number: Int, title: String, description: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, BorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(CoralPrimary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = number.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Column(modifier = Modifier.padding(start = 14.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
     }
 }
@@ -378,6 +447,21 @@ fun GuideDetailTemplateScreen(
                     layout = content.situationalLayout,
                     onItemClick = onItemClick
                 )
+            }
+            if (content.orderSteps.isNotEmpty()) {
+                Column(modifier = Modifier.padding(top = 28.dp)) {
+                    if (content.orderStepsTitle.isNotBlank()) {
+                        GuideDetailSectionTitle(title = content.orderStepsTitle)
+                    }
+                    Column(
+                        modifier = Modifier.padding(top = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        content.orderSteps.forEachIndexed { index, step ->
+                            GuideOrderStepCard(number = index + 1, title = step.title, description = step.description)
+                        }
+                    }
+                }
             }
             if (content.questions.isNotEmpty()) {
                 Column(modifier = Modifier.padding(top = 28.dp)) {

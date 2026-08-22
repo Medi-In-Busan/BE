@@ -18,6 +18,10 @@ val MediError80 = Color(0xFFFFB4AB)
 val CoralPrimary = Color(0xFFFD6677)
 val CoralPrimaryContainer = Color(0xFFFDECEC)
 
+// S-06 가이드 STEP 상세의 "메디인 팁" 배너 배경 — 옅은 코랄톤 카드(안내 카드 등)와 배경을
+// 통일할 때도 재사용한다.
+val MedinTipCardBackground = Color(0xFFFFF8F8)
+
 // Home(S-03) 페이지 맨 뒤 배경 전용 — 흰색에 아주 가까운 옅은 코랄핑크. colorScheme.background는
 // 건드리지 않는다(위 TODO와 같은 이유 — 다른 화면 배경까지 같이 바뀌는 걸 피한다). Home의
 // Scaffold containerColor로만 직접 참조한다.

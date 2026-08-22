@@ -17,13 +17,14 @@ import javax.inject.Inject
 data class TreatmentBriefing(
     val visitPurpose: String = "",
     val symptoms: String = "",
-    val allergyMedication: String = "",
+    val allergy: String = "",
+    val medication: String = "",
     val returnDate: String = "",
     val memo: String = ""
 )
 
 enum class TreatmentBriefingField {
-    VISIT_PURPOSE, SYMPTOMS, ALLERGY_MEDICATION, RETURN_DATE, MEMO
+    VISIT_PURPOSE, SYMPTOMS, ALLERGY, MEDICATION, RETURN_DATE, MEMO
 }
 
 interface TreatmentBriefingRepository {
@@ -34,14 +35,16 @@ interface TreatmentBriefingRepository {
 private object TreatmentBriefingKeys {
     val VISIT_PURPOSE = stringPreferencesKey("visit_purpose")
     val SYMPTOMS = stringPreferencesKey("symptoms")
-    val ALLERGY_MEDICATION = stringPreferencesKey("allergy_medication")
+    val ALLERGY = stringPreferencesKey("allergy")
+    val MEDICATION = stringPreferencesKey("medication")
     val RETURN_DATE = stringPreferencesKey("return_date")
     val MEMO = stringPreferencesKey("memo")
 
     fun keyFor(field: TreatmentBriefingField): Preferences.Key<String> = when (field) {
         TreatmentBriefingField.VISIT_PURPOSE -> VISIT_PURPOSE
         TreatmentBriefingField.SYMPTOMS -> SYMPTOMS
-        TreatmentBriefingField.ALLERGY_MEDICATION -> ALLERGY_MEDICATION
+        TreatmentBriefingField.ALLERGY -> ALLERGY
+        TreatmentBriefingField.MEDICATION -> MEDICATION
         TreatmentBriefingField.RETURN_DATE -> RETURN_DATE
         TreatmentBriefingField.MEMO -> MEMO
     }
@@ -61,7 +64,8 @@ class TreatmentBriefingRepositoryImpl @Inject constructor(
             TreatmentBriefing(
                 visitPurpose = prefs[TreatmentBriefingKeys.VISIT_PURPOSE] ?: defaults.visitPurpose,
                 symptoms = prefs[TreatmentBriefingKeys.SYMPTOMS] ?: defaults.symptoms,
-                allergyMedication = prefs[TreatmentBriefingKeys.ALLERGY_MEDICATION] ?: defaults.allergyMedication,
+                allergy = prefs[TreatmentBriefingKeys.ALLERGY] ?: defaults.allergy,
+                medication = prefs[TreatmentBriefingKeys.MEDICATION] ?: defaults.medication,
                 returnDate = prefs[TreatmentBriefingKeys.RETURN_DATE] ?: defaults.returnDate,
                 memo = prefs[TreatmentBriefingKeys.MEMO] ?: defaults.memo
             )
