@@ -49,6 +49,7 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import kotlinx.coroutines.delay
 
 /**
@@ -106,9 +107,9 @@ fun BrandTopAppBar(
         // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백이 답답해
         // 보여서 줄인다. 완전히 없애면(top=0) 바가 상태바에 바로 붙어버리니 일부만 뺀다.
         windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
-        // 기본값(surface)이 테마 톤이 살짝 섞여 순백이 아니었다 — 본문 배경(연분홍)과 대비되는
-        // 순백 탑바를 명시한다.
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        // Home 탑바(HomeScreen.kt의 HomeTopAppBar)와 동일하게 본문 배경(HomeBackgroundPink)과
+        // 맞춰서 탑바-본문 경계가 안 보이게 한다.
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink)
     )
 }
 
