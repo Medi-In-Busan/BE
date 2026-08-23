@@ -17,7 +17,9 @@ val localProperties = Properties().apply {
     }
 }
 
-fun secret(key: String): String = localProperties.getProperty(key).orEmpty()
+fun secret(key: String): String = localProperties.getProperty(key)
+    ?: System.getenv(key)
+    ?: ""
 
 android {
     namespace = "com.mediinbusan.app"
