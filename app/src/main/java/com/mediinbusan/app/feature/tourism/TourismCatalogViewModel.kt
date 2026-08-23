@@ -14,6 +14,9 @@ import com.mediinbusan.app.domain.tourism.RecommendTourismCatalogUseCase
 import com.mediinbusan.app.domain.tourism.TourismCatalog
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.TourismRecommendationContext
+import com.mediinbusan.app.domain.tourism.TourismReferenceLocation
+import com.mediinbusan.app.domain.tourism.inferTourismRecoveryStage
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -118,13 +121,40 @@ class TourismCatalogViewModel @Inject constructor(
 
     private suspend fun applyRecommendation(catalog: TourismCatalog, lastSelectedItemId: String? = null) {
         val profile = interactionRepository.profile.first()
+        val preferences = userPreferencesRepository.userPreferences.first()
         val favoriteNames = favoriteRepository.observeFavorites().first()
             .filter { it.itemType == FavoriteItemType.PLACE }
             .map { it.name }
-        val recentNames = recentRepository.observeRecentlyViewed().first()
+        val recentItems = recentRepository.observeRecentlyViewed().first()
+        val recentNames = recentItems
             .filter { it.itemType == FavoriteItemType.PLACE }
             .map { it.itemName }
-        val recommendation = recommendTourismCatalog(catalog, profile, favoriteNames, recentNames)
+        val recentHospital = recentItems.firstOrNull {
+            it.itemType == FavoriteItemType.HOSPITAL && it.latitude != null && it.longitude != null
+        }
+        val now = System.currentTimeMillis()
+        val context = TourismRecommendationContext(
+            medicalPurpose = preferences.medicalPurpose,
+            referenceLocation = recentHospital?.let {
+                TourismReferenceLocation(
+                    latitude = requireNotNull(it.latitude),
+                    longitude = requireNotNull(it.longitude)
+                )
+            },
+            recoveryStage = inferTourismRecoveryStage(
+                medicalPurpose = preferences.medicalPurpose,
+                lastHospitalViewedAt = recentHospital?.viewedAt,
+                nowEpochMillis = now
+            ),
+            nowEpochMillis = now
+        )
+        val recommendation = recommendTourismCatalog(
+            catalog = catalog,
+            profile = profile,
+            favoritePlaceNames = favoriteNames,
+            recentPlaceNames = recentNames,
+            context = context
+        )
         _uiState.update { state ->
             state.copy(
                 category = catalog.category,

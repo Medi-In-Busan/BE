@@ -1,5 +1,6 @@
 package com.mediinbusan.app.core.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -51,6 +52,7 @@ fun MediInBusanApp(languageViewModel: AppLanguageViewModel = hiltViewModel()) {
 }
 
 @Composable
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 private fun MediInBusanAppContent() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
