@@ -83,7 +83,7 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
-import com.mediinbusan.app.core.designsystem.PageBackground
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.StatusOpenGreen
 import com.mediinbusan.app.core.designsystem.TextPrimary
@@ -195,7 +195,7 @@ private fun DocumentScanContent(
     }
 
     Scaffold(
-        containerColor = PageBackground,
+        containerColor = HomeBackgroundPink,
         topBar = {
             BrandTopAppBar(
                 onSettingsClick = onMenuClick,

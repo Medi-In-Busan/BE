@@ -29,7 +29,6 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 @Service
 public class WellnessIngestionService {
 
-    private static final String BUSAN_AREA_CODE = "6";
     private static final DateTimeFormatter TOUR_API_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final WellnessPlaceRepository wellnessPlaceRepository;
@@ -130,7 +129,8 @@ public class WellnessIngestionService {
             .queryParam("MobileOS", "ETC")
             .queryParam("MobileApp", "MediInBusan")
             .queryParam("_type", "json")
-            .queryParam("areaCode", BUSAN_AREA_CODE)
+            // 2026-01 이후 일반 TourAPI 권장 지역 필터는 areaCode가 아닌 법정동 코드다.
+            .queryParam("lDongRegnCd", BusanTourismCodes.LDONG_REGN_CD)
             .queryParam("contentTypeId", contentTypeId)
             .queryParam("numOfRows", properties.tourApiRowsPerType())
             .queryParam("pageNo", 1)

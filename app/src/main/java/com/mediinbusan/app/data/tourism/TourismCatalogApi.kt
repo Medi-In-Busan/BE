@@ -1,0 +1,13 @@
+package com.mediinbusan.app.data.tourism
+
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+interface TourismCatalogApi {
+    @GET("api/wellness/tourism/catalog/{category}")
+    suspend fun getCatalog(
+        @Path("category") category: String,
+        @Query("district") district: String? = null
+    ): TourismCatalogDto
+}

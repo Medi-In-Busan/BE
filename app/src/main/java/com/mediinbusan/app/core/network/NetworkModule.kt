@@ -5,6 +5,7 @@ import com.mediinbusan.app.BuildConfig
 import com.mediinbusan.app.data.document.DocumentOcrApi
 import com.mediinbusan.app.data.hospital.HospitalApi
 import com.mediinbusan.app.data.place.TourismApi
+import com.mediinbusan.app.data.tourism.TourismCatalogApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -82,6 +83,16 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(TourismApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTourismCatalogApi(okHttpClient: OkHttpClient, json: Json): TourismCatalogApi =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.MEDIINBUSAN_API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(TourismCatalogApi::class.java)
 
     // DocumentOcrApi도 자체 백엔드(backend/document)를 바라본다.
     @Provides

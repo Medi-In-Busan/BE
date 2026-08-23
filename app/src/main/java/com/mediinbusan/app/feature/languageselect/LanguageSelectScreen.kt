@@ -13,7 +13,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,9 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -47,24 +44,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.mediinbusan.app.R
-import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.core.designsystem.BodyRegularStyle
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.DisplayTitleStyle
-import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
-import com.mediinbusan.app.core.designsystem.InfoBackgroundBlue
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
-import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 
@@ -98,59 +89,46 @@ private fun LanguageSelectContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(HomeBackgroundPink)
             .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            LogoLockup()
-        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(88.dp))
+            Text(text = strings.title, style = DisplayTitleStyle, color = TextPrimary)
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = strings.subtitle, style = BodyRegularStyle, color = TextSecondary)
 
-        Spacer(modifier = Modifier.height(32.dp))
-        Text(text = strings.title, style = DisplayTitleStyle, color = TextPrimary)
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = strings.subtitle, style = BodyRegularStyle, color = TextSecondary)
-
-        Spacer(modifier = Modifier.height(24.dp))
-        uiState.options.forEachIndexed { index, option ->
-            LanguageCard(
-                option = option,
-                selected = option.code == uiState.selectedCode,
-                onClick = { onLanguageSelected(option.code) }
-            )
-            if (index != uiState.options.lastIndex) {
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            uiState.options.forEachIndexed { index, option ->
+                LanguageCard(
+                    option = option,
+                    selected = option.code == uiState.selectedCode,
+                    onClick = { onLanguageSelected(option.code) }
+                )
+                if (index != uiState.options.lastIndex) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        InfoCard(text = strings.infoNote)
-
-        Spacer(modifier = Modifier.height(24.dp))
-        PrimaryButton(text = strings.nextButton, onClick = onNextClick)
-
-        Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun LogoLockup() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Image(
-            painter = painterResource(id = R.drawable.favicon),
-            contentDescription = LocalAppStrings.current.common.logoContentDescription,
-            modifier = Modifier.size(32.dp)
-        )
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) { append("MEDIN") }
-                append(" ")
-                withStyle(SpanStyle(color = SkyBlue, fontWeight = FontWeight.Bold)) { append("BUSAN") }
-            },
-            style = MaterialTheme.typography.titleLarge
-        )
+        // 아래 바텀 네비게이션 바(core/ui/BottomNavBar.kt)와 같은 높이대에 버튼을 앉혀 다음 화면들과
+        // 시각적 위치를 맞춘다 — 이 화면엔 실제 바텀 바가 없다.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 84.dp)
+                .height(BottomNavBarHeight)
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            PrimaryButton(text = strings.nextButton, onClick = onNextClick)
+        }
     }
 }
 
@@ -161,7 +139,6 @@ private fun LanguageCard(option: LanguageOption, selected: Boolean, onClick: () 
         animationSpec = tween(durationMillis = 150),
         label = "language_card_scale"
     )
-    val glowColor = if (selected) CoralPrimary else Color.Black
 
     Box(
         modifier = Modifier
@@ -169,10 +146,10 @@ private fun LanguageCard(option: LanguageOption, selected: Boolean, onClick: () 
             .height(88.dp)
             .scale(scale)
             .shadow(
-                elevation = if (selected) 12.dp else 8.dp,
+                elevation = 8.dp,
                 shape = RoundedCornerShape(20.dp),
-                ambientColor = glowColor.copy(alpha = 0.08f),
-                spotColor = glowColor.copy(alpha = 0.08f)
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f)
             )
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White)
@@ -234,39 +211,6 @@ private fun SelectionIndicator(selected: Boolean) {
         ) {
             Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
         }
-    }
-}
-
-@Composable
-private fun InfoCard(text: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(InfoBackgroundBlue)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(SkyBlue),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(14.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            style = HeroSubtitleStyle,
-            color = TextSecondary
-        )
     }
 }
 

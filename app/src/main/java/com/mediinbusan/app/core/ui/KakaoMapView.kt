@@ -69,6 +69,9 @@ val BusanDefaultCenter: LatLng = LatLng.from(DefaultSearchOrigin.LATITUDE, Defau
 object KakaoMapAvailability {
     @Volatile
     var isAvailable: Boolean = false
+
+    @Volatile
+    var unavailableReason: String = "이 기기에서는 지도를 표시할 수 없습니다"
 }
 
 /**
@@ -194,7 +197,7 @@ private fun MapUnavailableFallback(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "이 기기에서는 지도를 표시할 수 없습니다",
+            text = KakaoMapAvailability.unavailableReason,
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center
