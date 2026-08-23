@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.hospital.HospitalRepository
+import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.place.PlaceRepository
 import com.mediinbusan.app.data.tourism.TourismInteractionRepository
 import com.mediinbusan.app.data.route.DrivingRoute
@@ -12,6 +14,7 @@ import com.mediinbusan.app.data.route.DrivingRoutePoint
 import com.mediinbusan.app.data.route.DrivingRouteRepository
 import com.mediinbusan.app.data.route.TravelMode
 import com.mediinbusan.app.domain.course.BuildHospitalWellnessRouteUseCase
+import com.mediinbusan.app.domain.course.BuildHospitalWellnessPersonalizationUseCase
 import com.mediinbusan.app.domain.course.HospitalWellnessRoute
 import com.mediinbusan.app.domain.course.HospitalWellnessRoutePoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,6 +32,9 @@ class WellnessCourseMapViewModel @Inject constructor(
     private val placeRepository: PlaceRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val interactionRepository: TourismInteractionRepository,
+    private val favoriteRepository: FavoriteRepository,
+    private val recentRepository: RecentRepository,
+    private val buildPersonalization: BuildHospitalWellnessPersonalizationUseCase,
     private val buildRoute: BuildHospitalWellnessRouteUseCase,
     private val drivingRouteRepository: DrivingRouteRepository
 ) : ViewModel() {
@@ -59,13 +65,16 @@ class WellnessCourseMapViewModel @Inject constructor(
             }
 
             val profile = interactionRepository.profile.first()
-            val interestKeywords = profile.interestKeywords +
-                profile.itemInteractions.take(20).flatMap { it.keywords }
+            val personalization = buildPersonalization(
+                medicalPurpose = preferences.medicalPurpose,
+                profile = profile,
+                favorites = favoriteRepository.observeFavorites().first(),
+                recentItems = recentRepository.observeRecentlyViewed().first()
+            )
             val recommendation = buildRoute(
                 hospital = hospital,
                 places = places,
-                medicalPurpose = preferences.medicalPurpose,
-                interestKeywords = interestKeywords
+                personalization = personalization
             )
             if (recommendation == null) {
                 _uiState.value = WellnessCourseMapUiState(

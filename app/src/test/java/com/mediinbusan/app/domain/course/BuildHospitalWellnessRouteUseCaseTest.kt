@@ -64,6 +64,32 @@ class BuildHospitalWellnessRouteUseCaseTest {
         )
     }
 
+    @Test
+    fun `같은 병원도 사용자의 즐겨찾기 행동에 따라 추천 장소가 달라진다`() {
+        val candidates = listOf(
+            place("spa", PlaceType.SPA, 1),
+            place("walk", PlaceType.WALK, 2),
+            place("park", PlaceType.TOURIST_ATTRACTION, 3),
+            place("food", PlaceType.RESTAURANT, 4),
+            place("shop", PlaceType.SHOPPING, 5),
+            place("personal-favorite", PlaceType.OTHER, 8)
+        )
+        val defaultRoute = requireNotNull(useCase(hospital(), candidates, medicalPurpose = null))
+        val personalizedRoute = requireNotNull(
+            useCase(
+                hospital = hospital(),
+                places = candidates,
+                personalization = HospitalWellnessPersonalization(
+                    favoritePlaceIds = setOf("personal-favorite")
+                )
+            )
+        )
+
+        assertTrue("personal-favorite" !in defaultRoute.stops.map { it.place.id })
+        assertTrue("personal-favorite" in personalizedRoute.stops.map { it.place.id })
+        assertTrue(defaultRoute.stops.map { it.place.id }.toSet() != personalizedRoute.stops.map { it.place.id }.toSet())
+    }
+
     private fun hospital() = Hospital(
         id = "hospital",
         name = "테스트 병원",

@@ -32,6 +32,14 @@ data class HospitalWellnessStop(
     val transferMinutes: Int
 )
 
+data class HospitalWellnessPersonalization(
+    val medicalPurpose: MedicalCategory? = null,
+    val keywordWeights: Map<String, Double> = emptyMap(),
+    val typeWeights: Map<PlaceType, Double> = emptyMap(),
+    val favoritePlaceIds: Set<String> = emptySet(),
+    val recentPlaceWeights: Map<String, Double> = emptyMap()
+)
+
 /** 병원을 출발점으로 회복 친화도·개인 관심·거리·유형 다양성을 반영한 4~5개 장소 코스를 만든다. */
 class BuildHospitalWellnessRouteUseCase @Inject constructor() {
     operator fun invoke(
@@ -39,6 +47,21 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
         places: List<Place>,
         medicalPurpose: MedicalCategory?,
         interestKeywords: Set<String> = emptySet()
+    ): HospitalWellnessRoute? {
+        return invoke(
+            hospital = hospital,
+            places = places,
+            personalization = HospitalWellnessPersonalization(
+                medicalPurpose = medicalPurpose,
+                keywordWeights = interestKeywords.associateWith { INTEREST_KEYWORD_SCORE }
+            )
+        )
+    }
+
+    operator fun invoke(
+        hospital: Hospital,
+        places: List<Place>,
+        personalization: HospitalWellnessPersonalization
     ): HospitalWellnessRoute? {
         val hospitalLatitude = hospital.latitude ?: return null
         val hospitalLongitude = hospital.longitude ?: return null
@@ -56,8 +79,7 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
                     place = place,
                     hospitalLatitude = hospitalLatitude,
                     hospitalLongitude = hospitalLongitude,
-                    medicalPurpose = medicalPurpose,
-                    interestKeywords = interestKeywords
+                    personalization = personalization
                 ) - selected.count { it.type == place.type } * SAME_TYPE_PENALTY
             }
             selected += next
@@ -110,8 +132,7 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
         place: Place,
         hospitalLatitude: Double,
         hospitalLongitude: Double,
-        medicalPurpose: MedicalCategory?,
-        interestKeywords: Set<String>
+        personalization: HospitalWellnessPersonalization
     ): Double {
         val distanceKm = place.distanceFromHospitalMeters?.div(1_000.0) ?: distanceKm(
             hospitalLatitude,
@@ -128,7 +149,7 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
             PlaceType.OTHER -> 4.0
             PlaceType.LODGING -> -20.0
         }
-        val purposeScore = when (medicalPurpose) {
+        val purposeScore = when (personalization.medicalPurpose) {
             MedicalCategory.WELLNESS, MedicalCategory.ORIENTAL_MEDICINE -> when (place.type) {
                 PlaceType.SPA, PlaceType.WALK -> 12.0
                 else -> 0.0
@@ -145,9 +166,14 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
             else -> 0.0
         }
         val searchable = tokenize(listOfNotNull(place.name, place.description, place.address).joinToString(" "))
-        val interestScore = interestKeywords.count { keyword -> keyword.lowercase() in searchable } * INTEREST_KEYWORD_SCORE
+        val interestScore = personalization.keywordWeights.entries.sumOf { (keyword, weight) ->
+            if (keyword.lowercase() in searchable) weight else 0.0
+        }
+        val behaviorScore = (personalization.typeWeights[place.type] ?: 0.0) * TYPE_AFFINITY_SCORE +
+            if (place.id in personalization.favoritePlaceIds) FAVORITE_PLACE_SCORE else 0.0
+        val recentScore = (personalization.recentPlaceWeights[place.id] ?: 0.0) * RECENT_PLACE_SCORE
         val distanceScore = MAX_DISTANCE_SCORE / (1.0 + distanceKm / DISTANCE_DECAY_KM)
-        return typeScore + purposeScore + interestScore + distanceScore
+        return typeScore + purposeScore + interestScore + behaviorScore + recentScore + distanceScore
     }
 
     private fun tokenize(value: String): Set<String> = value
@@ -177,6 +203,9 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
         const val DISTANCE_DECAY_KM = 2.0
         const val SAME_TYPE_PENALTY = 16.0
         const val INTEREST_KEYWORD_SCORE = 6.0
+        const val TYPE_AFFINITY_SCORE = 7.0
+        const val FAVORITE_PLACE_SCORE = 45.0
+        const val RECENT_PLACE_SCORE = 24.0
         const val ASSUMED_CITY_SPEED_KMH = 24.0
         const val MIN_TRANSFER_MINUTES = 3
         const val VISIT_MINUTES_PER_STOP = 45
