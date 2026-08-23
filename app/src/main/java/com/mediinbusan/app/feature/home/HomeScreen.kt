@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.resolveHospitalThumbnailRes
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.HomeStrings
 import com.mediinbusan.app.core.i18n.LocalAppStrings
@@ -97,7 +98,6 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.ErrorState
-import com.mediinbusan.app.core.ui.FavoriteHeartButton
 import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
@@ -137,7 +137,6 @@ fun HomeScreen(
         onNavigateToSettings = onNavigateToSettings,
         onPurposeSelected = viewModel::onCategorySelected,
         onSearchBarClicked = viewModel::onSearchBarClicked,
-        onFavoriteClick = viewModel::onFavoriteToggleClicked,
         onRetry = viewModel::onRetryClicked,
         onLanguageSelected = viewModel::onLanguageSelected
     )
@@ -158,7 +157,6 @@ private fun HomeContent(
     onNavigateToSettings: () -> Unit,
     onPurposeSelected: (MedicalCategory) -> Unit,
     onSearchBarClicked: () -> Unit,
-    onFavoriteClick: (String) -> Unit,
     onRetry: () -> Unit,
     onLanguageSelected: (String) -> Unit
 ) {
@@ -241,9 +239,7 @@ private fun HomeContent(
                     Spacer(modifier = Modifier.height(72.dp))
                     RecommendedHospitalSection(
                         hospitals = uiState.recommendedHospitals,
-                        favoriteHospitalIds = uiState.favoriteHospitalIds,
-                        onHospitalClick = onNavigateToHospitalDetail,
-                        onFavoriteClick = onFavoriteClick
+                        onHospitalClick = onNavigateToHospitalDetail
                     )
 
                     Spacer(modifier = Modifier.height(72.dp))
@@ -771,9 +767,7 @@ private fun quickLinkLabel(type: QuickLinkType, strings: HomeStrings): String =
 private fun RecommendedHospitalSection(
     modifier: Modifier = Modifier,
     hospitals: List<Hospital>,
-    favoriteHospitalIds: Set<String>,
-    onHospitalClick: (String) -> Unit,
-    onFavoriteClick: (String) -> Unit
+    onHospitalClick: (String) -> Unit
 ) {
     val strings = LocalAppStrings.current.home
     Column(modifier = modifier) {
@@ -809,9 +803,7 @@ private fun RecommendedHospitalSection(
                     items(hospitals, key = { it.id }) { hospital ->
                         RecommendedHospitalCard(
                             hospital = hospital,
-                            isFavorite = hospital.id in favoriteHospitalIds,
-                            onClick = { onHospitalClick(hospital.id) },
-                            onFavoriteClick = { onFavoriteClick(hospital.id) }
+                            onClick = { onHospitalClick(hospital.id) }
                         )
                     }
                 }
@@ -823,9 +815,7 @@ private fun RecommendedHospitalSection(
 @Composable
 private fun RecommendedHospitalCard(
     hospital: Hospital,
-    isFavorite: Boolean,
-    onClick: () -> Unit,
-    onFavoriteClick: () -> Unit
+    onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -846,18 +836,26 @@ private fun RecommendedHospitalCard(
                 .fillMaxWidth()
                 .height(130.dp)
         ) {
-            AsyncImageBox(
-                model = hospital.imageUrl,
-                contentDescription = hospital.name,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            )
-            FavoriteHeartButton(
-                isFavorite = isFavorite,
-                onClick = onFavoriteClick,
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
-            )
+            if (hospital.imageUrl != null) {
+                AsyncImageBox(
+                    model = hospital.imageUrl,
+                    contentDescription = hospital.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                )
+            } else {
+                Image(
+                    painter = painterResource(
+                        id = resolveHospitalThumbnailRes(hospital.name, hospital.specialties)
+                    ),
+                    contentDescription = hospital.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                )
+            }
         }
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
@@ -1011,7 +1009,6 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToSettings = {},
             onPurposeSelected = {},
             onSearchBarClicked = {},
-            onFavoriteClick = {},
             onRetry = {},
             onLanguageSelected = {}
         )
@@ -1024,7 +1021,6 @@ private fun HomeContentDataPreview() {
     PreviewHomeContent(
         uiState = HomeUiState(
             recommendedHospitals = PreviewHospitals,
-            favoriteHospitalIds = setOf("preview-1"),
             isLoading = false,
             error = null
         )
