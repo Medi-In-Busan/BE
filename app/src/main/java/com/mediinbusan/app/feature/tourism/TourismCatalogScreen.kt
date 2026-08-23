@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -60,6 +61,7 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 @Composable
 fun TourismCatalogScreen(
     categoryName: String,
+    onNavigateToCourse: (category: String, district: String?) -> Unit,
     onBack: () -> Unit,
     viewModel: TourismCatalogViewModel = hiltViewModel()
 ) {
@@ -71,6 +73,11 @@ fun TourismCatalogScreen(
         onDistrictSelected = viewModel::selectDistrict,
         onItemSelected = viewModel::selectItem,
         onRetry = viewModel::retry,
+        onNavigateToCourse = {
+            uiState.category?.let { category ->
+                onNavigateToCourse(category.name, uiState.selectedDistrict?.name)
+            }
+        },
         onBack = onBack
     )
 }
@@ -82,6 +89,7 @@ private fun TourismCatalogContent(
     onDistrictSelected: (BusanDistrict) -> Unit,
     onItemSelected: (TourismCatalogItem) -> Unit,
     onRetry: () -> Unit,
+    onNavigateToCourse: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -94,7 +102,15 @@ private fun TourismCatalogContent(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
                     }
                 },
-                title = { Text(uiState.category?.label ?: "관광 데이터") }
+                title = { Text(uiState.category?.label ?: "관광 데이터") },
+                actions = {
+                    val canBuildCourse = uiState.catalog?.items?.count {
+                        it.latitude != null && it.longitude != null
+                    }?.let { it >= 3 } == true
+                    IconButton(onClick = onNavigateToCourse, enabled = canBuildCourse) {
+                        Icon(Icons.Default.Map, contentDescription = "추천 장소 동선 보기")
+                    }
+                }
             )
         }
     ) { innerPadding ->

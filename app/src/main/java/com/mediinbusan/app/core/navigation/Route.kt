@@ -77,6 +77,9 @@ sealed interface Route {
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable
+    data class WellnessCourseMap(val hospitalId: String) : Route // S-07 병원 출발 추천 관광·웰니스 코스
+
+    @Serializable
     data class PlaceDetail(val placeId: String) : Route // S-07 상세
 
     @Serializable
@@ -84,6 +87,12 @@ sealed interface Route {
 
     @Serializable
     data class TourismCatalog(val category: String) : Route // S-07 관광 공공데이터 카테고리 목록
+
+    @Serializable
+    data class RecommendedTourismCourse(
+        val category: String,
+        val district: String? = null
+    ) : Route // S-07 개인화 추천 관광지 3~5개 코스 지도
 
     @Serializable
     data class MapView(val hospitalId: String? = null) : Route // S-08, hospitalId=null이면 전체 병원 지도 모드

@@ -13,8 +13,7 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismInteractionProfile
 import com.mediinbusan.app.domain.tourism.TourismRecoveryStage
 import com.mediinbusan.app.domain.tourism.inferTourismRecoveryStage
-import com.mediinbusan.app.domain.tourism.isLanguageVariant
-import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
+import com.mediinbusan.app.domain.tourism.tourismHubCategories
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,10 +44,8 @@ class TourismHubViewModel @Inject constructor(
             ) { preferences, profile, favorites, recent ->
                 val language = SupportedLanguage.entries.find { it.code == preferences.languageCode }
                     ?: SupportedLanguage.DEFAULT
-                val languageCategory = tourismCategoryForLanguage(language.code)
-                val categories = TourismCatalogCategory.entries.filter { category ->
-                    !category.isLanguageVariant || category == languageCategory
-                }
+                val categories = tourismHubCategories(language.code)
+                val languageCategory = categories.first()
                 val hasPlaceHistory = favorites.any { it.itemType == FavoriteItemType.PLACE } ||
                     recent.any { it.itemType == FavoriteItemType.PLACE }
                 val now = System.currentTimeMillis()
@@ -59,22 +56,25 @@ class TourismHubViewModel @Inject constructor(
                     }?.viewedAt,
                     nowEpochMillis = now
                 )
+                val ranked = categories.drop(1).sortedByDescending {
+                    recommendationScore(
+                        category = it,
+                        profile = profile,
+                        hasPlaceHistory = hasPlaceHistory,
+                        medicalPurpose = preferences.medicalPurpose,
+                        recoveryStage = recoveryStage,
+                        nowEpochMillis = now
+                    )
+                }
                 TourismHubUiState(
                     language = language,
-                    categories = categories,
-                    recommendedCategories = categories
-                        .sortedByDescending {
-                            recommendationScore(
-                                category = it,
-                                profile = profile,
-                                languageCategory = languageCategory,
-                                hasPlaceHistory = hasPlaceHistory,
-                                medicalPurpose = preferences.medicalPurpose,
-                                recoveryStage = recoveryStage,
-                                nowEpochMillis = now
-                            )
-                        }
-                        .take(3)
+                    featuredCategory = languageCategory,
+                    recoveryCategories = ranked.filter {
+                        it == TourismCatalogCategory.ACCESSIBLE || it == TourismCatalogCategory.WALKING
+                    },
+                    planningCategories = ranked.filter {
+                        it == TourismCatalogCategory.RELATED || it == TourismCatalogCategory.CROWDING
+                    }
                 )
             }.collect { _uiState.value = it }
         }
@@ -83,7 +83,6 @@ class TourismHubViewModel @Inject constructor(
     private fun recommendationScore(
         category: TourismCatalogCategory,
         profile: TourismInteractionProfile,
-        languageCategory: TourismCatalogCategory,
         hasPlaceHistory: Boolean,
         medicalPurpose: MedicalCategory?,
         recoveryStage: TourismRecoveryStage,
@@ -97,10 +96,9 @@ class TourismHubViewModel @Inject constructor(
         val affinity = profile.categoryAffinityScores[category]
             ?: (profile.categoryViews[category] ?: 0) * LEGACY_VIEW_WEIGHT
         var score = affinity * 10.0 * viewDecay
-        if (category == languageCategory) score += 8
         if (category == TourismCatalogCategory.ACCESSIBLE) score += 5
         if (category == TourismCatalogCategory.WALKING) score += 4
-        if (hasPlaceHistory && category in setOf(languageCategory, TourismCatalogCategory.RELATED, TourismCatalogCategory.PHOTOS)) {
+        if (hasPlaceHistory && category == TourismCatalogCategory.RELATED) {
             score += 6
         }
         if (medicalPurpose == MedicalCategory.WELLNESS && category == TourismCatalogCategory.WALKING) score += 8

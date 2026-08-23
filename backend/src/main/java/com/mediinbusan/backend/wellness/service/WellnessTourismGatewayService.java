@@ -34,18 +34,8 @@ public class WellnessTourismGatewayService {
         return request("related-tourism", properties.relatedTourismBaseUrl(), "areaBasedList1", bigdataParams(district, baseYm));
     }
 
-    public TourismExternalResponse hubs(BusanTourismCodes.District district, String baseYm) {
-        return request("hub-tourism", properties.hubTourismBaseUrl(), "areaBasedList1", bigdataParams(district, baseYm));
-    }
-
     public TourismExternalResponse crowding(BusanTourismCodes.District district) {
         return request("crowding-forecast", properties.crowdingBaseUrl(), "tatsCnctrRatedList", bigdataParams(district, null));
-    }
-
-    public TourismExternalResponse photos(String keyword) {
-        Map<String, Object> params = tourismParams(null);
-        params.put("keyword", keyword);
-        return request("photo-gallery", properties.photoBaseUrl(), "gallerySearchList1", params);
     }
 
     public TourismExternalResponse walkingCourses() {
@@ -58,14 +48,6 @@ public class WellnessTourismGatewayService {
         params.put("MobileOS", MOBILE_OS);
         params.put("MobileApp", MOBILE_APP);
         return request("durunubi", properties.walkingBaseUrl(), "courseList", params);
-    }
-
-    public TourismExternalResponse audio(double latitude, double longitude) {
-        Map<String, Object> params = tourismParams(null);
-        params.put("mapX", longitude);
-        params.put("mapY", latitude);
-        params.put("radius", 20_000);
-        return request("odii", properties.audioBaseUrl(), "themeLocationBasedList", params);
     }
 
     private TourismExternalResponse request(String source, String baseUrl, String operation, Map<String, Object> params) {

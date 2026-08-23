@@ -3,6 +3,8 @@ package com.mediinbusan.app.core.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -40,6 +42,9 @@ import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTransition
 import com.kakao.vectormap.label.Transition
+import com.kakao.vectormap.route.RouteLineOptions
+import com.kakao.vectormap.route.RouteLineSegment
+import com.kakao.vectormap.route.RouteLineStyle
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -51,7 +56,16 @@ data class MapPin(
     val latitude: Double,
     val longitude: Double,
     val type: MapPinType,
-    val selected: Boolean = false
+    val selected: Boolean = false,
+    val sequenceNumber: Int? = null
+)
+
+data class MapRoutePoint(val latitude: Double, val longitude: Double)
+
+data class MapRoutePath(
+    val id: String,
+    val points: List<MapRoutePoint>,
+    val color: Int = 0xFFFF6F61.toInt()
 )
 
 /**
@@ -96,6 +110,7 @@ object KakaoMapAvailability {
 @Composable
 fun KakaoMapView(
     pins: List<MapPin>,
+    routePaths: List<MapRoutePath> = emptyList(),
     modifier: Modifier = Modifier,
     onPinClick: (String) -> Unit = {},
     onMapClick: () -> Unit = {},
@@ -116,6 +131,7 @@ fun KakaoMapView(
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
+    var mapErrorMessage by remember { mutableStateOf<String?>(null) }
     // pinId -> 현재 그 자리에 떠 있는 Label과, 그 Label이 마지막으로 반영한 MapPin 상태.
     // 선택 여부만 바뀐 마커를 매번 layer.removeAll()+addLabels()로 다시 그리면 관련 없는 다른
     // 라벨까지 전부 깜빡여 부자연스럽다 — 대신 바뀐 라벨만 Label.changeStyles(..., animate=true)로
@@ -137,24 +153,38 @@ fun KakaoMapView(
         }
     }
 
-    AndroidView(
-        modifier = modifier,
-        factory = {
-            mapView.apply {
-                start(
-                    object : MapLifeCycleCallback() {
-                        override fun onMapDestroy() = Unit
-                        override fun onMapError(error: Exception) = Unit
-                    },
-                    object : KakaoMapReadyCallback() {
-                        override fun onMapReady(map: KakaoMap) {
-                            kakaoMap = map
+    Box(modifier = modifier) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = {
+                mapView.apply {
+                    start(
+                        object : MapLifeCycleCallback() {
+                            override fun onMapDestroy() = Unit
+
+                            override fun onMapError(error: Exception) {
+                                android.util.Log.e("KakaoMapView", "Kakao 지도 렌더링 실패", error)
+                                mapErrorMessage = if (error.message?.contains("401") == true) {
+                                    "Kakao 지도 인증에 실패했습니다.\n패키지명과 디버그 키 해시 등록을 확인해 주세요."
+                                } else {
+                                    "Kakao 지도를 불러오지 못했습니다.\n네트워크 연결과 앱 키 설정을 확인해 주세요."
+                                }
+                            }
+                        },
+                        object : KakaoMapReadyCallback() {
+                            override fun onMapReady(map: KakaoMap) {
+                                mapErrorMessage = null
+                                kakaoMap = map
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
+        )
+        mapErrorMessage?.let { message ->
+            MapUnavailableFallback(modifier = Modifier.fillMaxSize(), message = message)
         }
-    )
+    }
 
     // 지도가 처음 준비됐을 때 서면으로 카메라를 맞춰둔다. fitCameraToPins=true인 화면(예: 병원 상세의
     // "지도에서 보기")은 바로 아래 LaunchedEffect(kakaoMap, pins)가 pins 도착 즉시 알맞은 위치로
@@ -167,6 +197,11 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap, pins) {
         val map = kakaoMap ?: return@LaunchedEffect
         renderPins(context, map, pins, onPinClick, fitCameraToPins, trackedLabels)
+    }
+
+    LaunchedEffect(kakaoMap, routePaths) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        renderRoutePaths(map, routePaths)
     }
 
     // 마커가 아닌 빈 지도를 눌렀을 때의 신호 — BrowseMap이 이걸로 선택을 해제한다
@@ -191,13 +226,16 @@ fun KakaoMapView(
 }
 
 @Composable
-private fun MapUnavailableFallback(modifier: Modifier = Modifier) {
+private fun MapUnavailableFallback(
+    modifier: Modifier = Modifier,
+    message: String = KakaoMapAvailability.unavailableReason
+) {
     Box(
         modifier = modifier.fillMaxSize().background(Color(0xFFE9E9EE)).padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = KakaoMapAvailability.unavailableReason,
+            text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center
@@ -260,7 +298,11 @@ private fun renderPins(
     // 이미 떠 있던 핀 중 선택 상태/타입이 바뀐 라벨만 애니메이션과 함께 스타일을 교체한다.
     pins.forEach { pin ->
         val entry = tracked[pin.id] ?: return@forEach
-        if (entry.pin.selected != pin.selected || entry.pin.type != pin.type) {
+        if (
+            entry.pin.selected != pin.selected ||
+            entry.pin.type != pin.type ||
+            entry.pin.sequenceNumber != pin.sequenceNumber
+        ) {
             entry.label.changeStyles(LabelStyles.from(pin.toLabelStyle(context)), true)
             tracked[pin.id] = entry.copy(pin = pin)
         }
@@ -283,7 +325,32 @@ private fun MapPin.iconRes(): Int = when (type) {
 }
 
 private fun MapPin.toLabelStyle(context: Context): LabelStyle =
-    LabelStyle.from(context.pinIconBitmap(iconRes())).setIconTransition(PinSelectTransition)
+    LabelStyle.from(
+        sequenceNumber?.let { context.numberedPinBitmap(it, selected) } ?: context.pinIconBitmap(iconRes())
+    ).setIconTransition(PinSelectTransition)
+
+private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
+    val manager = map.routeLineManager ?: return
+    if (paths.isEmpty()) {
+        manager.getLayer(COURSE_ROUTE_LAYER_ID)?.removeAll()
+        return
+    }
+    val layer = manager.getLayer(COURSE_ROUTE_LAYER_ID)
+        ?: manager.addLayer(COURSE_ROUTE_LAYER_ID, COURSE_ROUTE_Z_ORDER)
+    layer.removeAll()
+    paths.forEach { path ->
+        if (path.points.size < 2) return@forEach
+        val points = path.points.map { LatLng.from(it.latitude, it.longitude) }
+        val style = RouteLineStyle.from(
+            COURSE_LINE_WIDTH_PX,
+            path.color,
+            COURSE_LINE_STROKE_WIDTH_PX,
+            android.graphics.Color.WHITE
+        )
+        val segment = RouteLineSegment.from(points, style)
+        layer.addRouteLine(RouteLineOptions.from(path.id, segment))
+    }
+}
 
 // LabelStyle.from(Context, Int)는 내부적으로 BitmapFactory.decodeResource()를 쓰는 것으로 보이는데,
 // 이 API는 래스터 이미지(PNG/WebP)만 디코딩하고 우리 핀 아이콘 같은 VectorDrawable(XML)에는 null을
@@ -291,19 +358,53 @@ private fun MapPin.toLabelStyle(context: Context): LabelStyle =
 // VectorDrawable을 직접 Bitmap으로 래스터화해 LabelStyle.from(Bitmap)에 넘기면 정상 동작한다.
 // 아이콘 종류가 3개뿐이라 리소스 ID 기준으로 캐싱해 재렌더링마다 다시 그리지 않게 한다.
 private val pinIconBitmapCache = mutableMapOf<Int, Bitmap>()
+private val numberedPinBitmapCache = mutableMapOf<Pair<Int, Boolean>, Bitmap>()
 
 private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
     pinIconBitmapCache.getOrPut(resId) {
         val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
-        val width = drawable.intrinsicWidth.coerceAtLeast(1)
-        val height = drawable.intrinsicHeight.coerceAtLeast(1)
-        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+        val size = (32 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
         }
     }
 
+private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
+    numberedPinBitmapCache.getOrPut(number to selected) {
+        val density = resources.displayMetrics.density
+        val size = (if (selected) 32 else 28) * density
+        val bitmapSize = size.toInt().coerceAtLeast(1)
+        Bitmap.createBitmap(bitmapSize, bitmapSize, Bitmap.Config.ARGB_8888).also { bitmap ->
+            val canvas = Canvas(bitmap)
+            val center = bitmapSize / 2f
+            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (selected) 0xFFE9564F.toInt() else 0xFFFF6F61.toInt()
+                style = Paint.Style.FILL
+            }
+            val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.STROKE
+                strokeWidth = 2f * density
+            }
+            canvas.drawCircle(center, center, center - border.strokeWidth, fill)
+            canvas.drawCircle(center, center, center - border.strokeWidth, border)
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                textAlign = Paint.Align.CENTER
+                textSize = 11f * density
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val baseline = center - (textPaint.ascent() + textPaint.descent()) / 2f
+            canvas.drawText(number.toString(), center, baseline, textPaint)
+        }
+    }
+
 private const val DEFAULT_ZOOM_LEVEL = 12
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
+private const val COURSE_ROUTE_LAYER_ID = "recommended-tourism-course"
+private const val COURSE_ROUTE_Z_ORDER = 20_000
+private const val COURSE_LINE_WIDTH_PX = 5f
+private const val COURSE_LINE_STROKE_WIDTH_PX = 1.5f
