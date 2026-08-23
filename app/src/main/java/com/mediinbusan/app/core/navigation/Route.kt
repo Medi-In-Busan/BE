@@ -80,6 +80,17 @@ sealed interface Route {
     data class PlaceDetail(val placeId: String) : Route // S-07 상세
 
     @Serializable
+    data object TourismHub : Route // S-07 하위 부산 관광 공공데이터 허브
+
+    @Serializable
+    data class TourismCatalog(val category: String) : Route // S-07 하위 관광 데이터 카테고리 목록
+
+    // core/common/PendingTourismCatalogItem을 거쳐 선택 항목을 전달한다(위 TourismCatalog 주석과
+    // 같은 이유 — Map 필드가 있는 항목을 타입세이프 인자로 넘기기 어렵고, 항목 단건 조회 API도 없다).
+    @Serializable
+    data object TourismCatalogItemDetail : Route // S-07 하위 관광 데이터 항목 상세
+
+    @Serializable
     data class MapView(val hospitalId: String? = null) : Route // S-08, hospitalId=null이면 전체 병원 지도 모드
 
     @Serializable

@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.data.place.WellnessTourismRepository
 import com.mediinbusan.app.domain.course.AssembleWellnessCourseUseCase
 import com.mediinbusan.app.domain.nearby.GetNearbyPlacesSortedByDistanceUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class NearbyViewModel @Inject constructor(
     private val getNearbyPlacesSortedByDistance: GetNearbyPlacesSortedByDistanceUseCase,
-    private val assembleWellnessCourse: AssembleWellnessCourseUseCase
+    private val assembleWellnessCourse: AssembleWellnessCourseUseCase,
+    private val wellnessTourismRepository: WellnessTourismRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NearbyUiState())
@@ -42,6 +44,13 @@ class NearbyViewModel @Inject constructor(
                         is Result.Success -> state.copy(courses = result.data)
                         is Result.Error -> state
                     }
+                }
+            }
+        }
+        viewModelScope.launch {
+            wellnessTourismRepository.getWalkingCourses().collect { result ->
+                if (result is Result.Success) {
+                    _uiState.update { it.copy(walkingCourses = result.data) }
                 }
             }
         }
