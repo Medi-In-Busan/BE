@@ -1,38 +1,40 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
+import com.mediinbusan.app.data.diagnosischat.DiagnosisSlotsDto
+
+enum class ChatMessageRole { USER, ASSISTANT }
+
+/** role은 순수 로컬 UI 개념(말풍선 정렬)일 뿐 서버로 전송되지 않는다 — 서버에는 그 턴의
+ *  userMessage 하나만 보낸다(DiagnosisChatRequestDto 참고). */
+data class ChatMessage(
+    val role: ChatMessageRole,
+    val text: String
+)
+
 data class SelfDiagnosisUiState(
-    // 홈 -> [인트로(시작 페이지)] -> 질문 1~5 -> 결과. hasStarted=false면 인트로 단계.
-    val hasStarted: Boolean = false,
-    val currentQuestionIndex: Int = 0,
-    val selectedAnswers: Map<DiagnosisQuestionId, Set<DiagnosisAnswerOption>> = emptyMap(),
+    val messages: List<ChatMessage> = emptyList(),
+    val inputText: String = "",
+    val isLoading: Boolean = false,
+    val hasError: Boolean = false,
+    val slots: DiagnosisSlotsDto = DiagnosisSlotsDto(),
     val resultType: DiagnosisResultType? = null
 ) {
-    // 질문 내용(title/description 등)은 언어에 따라 바뀌므로 여기 담지 않고 화면에서
-    // diagnosisQuestions(strings)로 매번 조회한다. id 순서는 DiagnosisQuestionId 선언 순서(Q1~Q5)와 같다.
-    private val questionIds: List<DiagnosisQuestionId>
-        get() = DiagnosisQuestionId.entries
-
-    val currentQuestionId: DiagnosisQuestionId
-        get() = questionIds[currentQuestionIndex]
-
-    val isFirstQuestion: Boolean
-        get() = currentQuestionIndex == 0
-
-    val isLastQuestion: Boolean
-        get() = currentQuestionIndex == questionIds.lastIndex
-
     val isResultVisible: Boolean
         get() = resultType != null
 
-    val isIntroVisible: Boolean
-        get() = !hasStarted && !isResultVisible
+    val canSend: Boolean
+        get() = inputText.isNotBlank() && !isLoading
 
-    val isQuestionVisible: Boolean
-        get() = hasStarted && !isResultVisible
-
-    val progress: Float
-        get() = (currentQuestionIndex + 1) / questionIds.size.toFloat()
-
-    val canGoNext: Boolean
-        get() = selectedAnswers[currentQuestionId]?.isNotEmpty() == true
+    /** 현재 채워지지 않은 첫 슬롯의 선택지를 추천 답변 칩으로 노출한다. 서버가 다음 질문 대상을
+     *  계산하는 고정 순서(visitPurpose -> stayDuration -> reservationStatus -> interpretationNeed)와
+     *  동일한 순서를 클라이언트에서도 그대로 따른다 — 서버는 이 칩 데이터를 내려주지 않는다. */
+    val suggestedOptions: List<DiagnosisAnswerOption>?
+        get() = when {
+            isResultVisible -> null
+            slots.visitPurpose == null -> DiagnosisAnswerOption.VisitPurpose.entries.toList()
+            slots.stayDuration == null -> DiagnosisAnswerOption.StayDuration.entries.toList()
+            slots.reservationStatus == null -> DiagnosisAnswerOption.ReservationStatus.entries.toList()
+            slots.interpretationNeed == null -> DiagnosisAnswerOption.InterpretationNeed.entries.toList()
+            else -> null
+        }
 }

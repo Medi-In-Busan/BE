@@ -1,5 +1,7 @@
 package com.mediinbusan.app.data.di
 
+import com.mediinbusan.app.data.diagnosischat.DiagnosisChatRepository
+import com.mediinbusan.app.data.diagnosischat.DiagnosisChatRepositoryImpl
 import com.mediinbusan.app.data.document.DocumentOcrRepository
 import com.mediinbusan.app.data.document.DocumentOcrRepositoryImpl
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -57,4 +59,7 @@ interface RepositoryModule {
 
     @Binds
     fun bindDocumentOcrRepository(impl: DocumentOcrRepositoryImpl): DocumentOcrRepository
+
+    @Binds
+    fun bindDiagnosisChatRepository(impl: DiagnosisChatRepositoryImpl): DiagnosisChatRepository
 }

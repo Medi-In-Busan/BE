@@ -13,8 +13,7 @@ data class UserPreferences(
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val onboardingComplete: Boolean = false,
     val medicalPurpose: MedicalCategory? = null,
-    val notificationsEnabled: Boolean = true,
-    val diagnosisComplete: Boolean = false
+    val notificationsEnabled: Boolean = true
 )
 
 interface UserPreferencesRepository {
@@ -23,7 +22,6 @@ interface UserPreferencesRepository {
     suspend fun setOnboardingComplete(complete: Boolean)
     suspend fun setMedicalPurpose(purpose: MedicalCategory?)
     suspend fun setNotificationsEnabled(enabled: Boolean)
-    suspend fun setDiagnosisComplete(complete: Boolean)
 }
 
 class UserPreferencesRepositoryImpl @Inject constructor(
@@ -40,8 +38,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
                 MedicalCategory.entries.find { it.name == stored }
                     ?: MedicalCategory.entries.find { it.label == stored }
             },
-            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true,
-            diagnosisComplete = prefs[UserPreferencesKeys.DIAGNOSIS_COMPLETE] ?: false
+            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
         )
     }
 
@@ -65,9 +62,5 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[UserPreferencesKeys.NOTIFICATIONS_ENABLED] = enabled }
-    }
-
-    override suspend fun setDiagnosisComplete(complete: Boolean) {
-        dataStore.edit { it[UserPreferencesKeys.DIAGNOSIS_COMPLETE] = complete }
     }
 }
