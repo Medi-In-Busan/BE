@@ -47,6 +47,7 @@ import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
 import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
+import com.mediinbusan.app.feature.tourism.TourismCatalogItemDetailScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
 import com.mediinbusan.app.feature.tourism.TourismHubScreen
 
@@ -72,14 +73,6 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                         popUpTo(Route.Splash) { inclusive = true }
                     }
                 },
-                onNavigateToSelfDiagnosis = {
-                    // 언어선택은 이미 끝냈고(재개된 세션) 진단만 남은 경우. Splash가 스스로를
-                    // 스택에서 지우므로 뒤로가기는 SelfDiagnosisScreen의 onBack(popBackStack)이
-                    // 처리할 대상이 없어 앱을 벗어난다 — 언어선택을 다시 거치게 하고 싶지 않아 의도한 동작이다.
-                    navController.navigate(Route.SelfDiagnosis(fromOnboarding = true)) {
-                        popUpTo(Route.Splash) { inclusive = true }
-                    }
-                },
                 onNavigateToHome = {
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Splash) { inclusive = true }
@@ -90,13 +83,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable<Route.Onboarding> {
             // 스켈레톤 단계의 통합 샘플(구 OnboardingScreen, 언어+의료목적 통합)은 삭제됐고
             // feature/languageselect의 언어선택 화면만 배선한다. 의료 목적 선택(F-003)은 별도
-            // 진단 플로우로 분리될 예정이라 이 화면에서 다루지 않는다.
+            // 진단 챗봇 화면으로 분리돼 있고, 더 이상 이 최초 실행 흐름에 강제로 끼지 않는다
+            // (Home의 "AI 진단하기" 진입점을 통해서만 접근 — SplashViewModel 참고).
             LanguageSelectScreen(
-                onNext = {
-                    // popUpTo 없이 그대로 push한다 — 진단 화면에서 시스템 뒤로가기를 누르면
-                    // 이 언어선택 화면으로 돌아와야 하기 때문(스택에 남겨둬야 함).
-                    navController.navigate(Route.SelfDiagnosis(fromOnboarding = true))
-                }
+                onNext = { navController.navigateToHomeAfterSetup() }
             )
         }
         composable<Route.Home> {
@@ -104,7 +94,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToHospitalDetail = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
-                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis()) },
+                onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
                 // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
                 // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
                 // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
@@ -248,8 +238,12 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.TourismCatalog>()
             TourismCatalogScreen(
                 categoryName = route.category,
+                onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onBack = navController::popBackStack
             )
+        }
+        composable<Route.TourismCatalogItemDetail> {
+            TourismCatalogItemDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.MapView> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.MapView>()
@@ -294,14 +288,12 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable<Route.DocumentScan> {
             DocumentScanScreen(onMenuClick = { navController.navigate(Route.Settings) })
         }
-        composable<Route.SelfDiagnosis> { backStackEntry ->
-            val route = backStackEntry.toRoute<Route.SelfDiagnosis>()
+        composable<Route.SelfDiagnosis> {
             val context = LocalContext.current
             val reservationInquiryTitle = LocalAppStrings.current.guide.stepReservationInquiryTitle
             SelfDiagnosisScreen(
-                fromOnboarding = route.fromOnboarding,
                 onBack = navController::popBackStack,
-                onFinishSetup = { navController.navigateToHomeAfterSetup() },
+                onFinishSetup = navController::popBackStack,
                 onNavigateToCtaTarget = { target ->
                     when (target) {
                         DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST ->

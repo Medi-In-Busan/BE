@@ -5,6 +5,5 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 
 data class TourismHubUiState(
     val language: SupportedLanguage = SupportedLanguage.DEFAULT,
-    val categories: List<TourismCatalogCategory> = emptyList(),
-    val recommendedCategories: List<TourismCatalogCategory> = emptyList()
+    val categories: List<TourismCatalogCategory> = emptyList()
 )

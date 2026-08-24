@@ -1,19 +1,19 @@
 package com.mediinbusan.backend.wellness.controller;
 
+import com.mediinbusan.backend.wellness.domain.TourismCatalogCategory;
+import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
+import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessIngestionResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessPlaceResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessSnapshotIngestionResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessWalkingCourseResponse;
-import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
-import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
-import com.mediinbusan.backend.wellness.domain.TourismCatalogCategory;
 import com.mediinbusan.backend.wellness.service.BusanTourismCodes;
+import com.mediinbusan.backend.wellness.service.TourismCatalogService;
 import com.mediinbusan.backend.wellness.service.WellnessIngestionService;
 import com.mediinbusan.backend.wellness.service.WellnessService;
 import com.mediinbusan.backend.wellness.service.WellnessSnapshotIngestionService;
 import com.mediinbusan.backend.wellness.service.WellnessTourismGatewayService;
 import com.mediinbusan.backend.wellness.service.WellnessWalkingCourseService;
-import com.mediinbusan.backend.wellness.service.TourismCatalogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -91,10 +91,9 @@ public class WellnessController {
         return tourismCatalogService.getCatalog(category, district, baseYm);
     }
 
+    @Operation(summary = "관광공사 외부 API 스냅샷 적재", description = "부산 전 구역 관광 데이터를 wellness_external_snapshot에 upsert한다.")
     @PostMapping("/ingest/snapshots")
-    public WellnessSnapshotIngestionResponse ingestSnapshots(
-        @RequestParam String baseYm
-    ) {
+    public WellnessSnapshotIngestionResponse ingestSnapshots(@RequestParam String baseYm) {
         return snapshotIngestionService.sync(baseYm);
     }
 
