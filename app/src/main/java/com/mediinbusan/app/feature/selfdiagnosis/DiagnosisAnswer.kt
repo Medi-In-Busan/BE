@@ -1,28 +1,36 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
 import com.mediinbusan.app.core.i18n.DiagnosisAnswerOptionStrings
+import kotlinx.serialization.Serializable
 
 /** 5개 진단 질문의 선택지. 질문별로 sealed 하위 enum을 둬 매퍼(DiagnosisTypeMapper)에서
  *  exhaustive when으로 타입 안전하게 분기할 수 있게 한다. 표시 라벨은 언어에 따라 바뀌므로
- *  enum 자체에는 담지 않고 [label] 함수로 DiagnosisAnswerOptionStrings에서 조회한다. */
+ *  enum 자체에는 담지 않고 [label] 함수로 DiagnosisAnswerOptionStrings에서 조회한다.
+ *  각 하위 enum은 diagnosis-chat 백엔드와 주고받는 슬롯 값이라 @Serializable이다 — 상수명이
+ *  곧 서버(Java enum)와 공유하는 JSON 문자열이므로 이름을 바꾸면 서버도 같이 바꿔야 한다. */
 sealed interface DiagnosisAnswerOption {
 
+    @Serializable
     enum class VisitPurpose : DiagnosisAnswerOption {
         SKIN_BEAUTY, HEALTH_CHECKUP, DENTAL, ORIENTAL_RECOVERY, REHABILITATION, WELLNESS_REST, UNKNOWN
     }
 
+    @Serializable
     enum class StayDuration : DiagnosisAnswerOption {
         SAME_DAY, DAYS_1_3, DAYS_4_7, DAYS_8_30, DAYS_31_PLUS_OR_UNDECIDED, UNKNOWN
     }
 
+    @Serializable
     enum class ReservationStatus : DiagnosisAnswerOption {
         SEARCHING, PLANNING_TO_INQUIRE, RESERVED, USING_AGENCY_OR_PACKAGE, NOT_NEEDED, UNKNOWN
     }
 
+    @Serializable
     enum class InterpretationNeed : DiagnosisAnswerOption {
         NEEDED, WANT_TO_CHECK_SUPPORTED_LANGUAGE, NOT_NEEDED, UNKNOWN
     }
 
+    @Serializable
     enum class EntryStayCondition : DiagnosisAnswerOption {
         SHORT_VISIT_NO_VISA, LONG_TERM_TREATMENT_OVER_91_DAYS, ACCOMPANIED_BY_FAMILY, INVITATION_DOCUMENT_MAY_BE_NEEDED, UNKNOWN
     }

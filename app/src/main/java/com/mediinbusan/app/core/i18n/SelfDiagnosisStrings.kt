@@ -1,27 +1,18 @@
 package com.mediinbusan.app.core.i18n
 
 /**
- * 준비 유형 진단(SelfDiagnosis: 인트로 → 5문항 → 준비 유형 A~E) 정적 UI 문구.
- * DiagnosisQuestionId·DiagnosisAnswerOption·DiagnosisResultType·DiagnosisCtaTarget 등 내부 식별자는
- * 그대로 두고, 화면에 노출되는 표시 문자열만 이 구조로 옮긴다.
+ * 준비 유형 진단(SelfDiagnosis: 챗봇 대화 → 준비 유형 A~E) 결과 화면 정적 UI 문구.
+ * 대화 중 문구는 core/i18n/ChatStrings.kt가 담당하고, 여기는 결과 화면(DiagnosisResultContent) 전용이다.
+ * DiagnosisAnswerOption·DiagnosisResultType·DiagnosisCtaTarget 등 내부 식별자는 그대로 두고,
+ * 화면에 노출되는 표시 문자열만 이 구조로 옮긴다.
  */
 data class SelfDiagnosisStrings(
     val topBarTitle: String,
     val backContentDescription: String,
-    val introTitle: String,
-    val introDescription: String,
-    val introDuration: String,
-    val introStartButton: String,
-    val introSkipButton: String,
-    val questionProgressFormat: String,
-    val nextButton: String,
-    val viewResultButton: String,
     val restartButton: String,
-    val startFromHomeButton: String,
     val backToHomeButton: String,
     val commonSafetyNotice: String,
     val nextChecksTitle: String,
-    val questions: DiagnosisQuestionStrings,
     val options: DiagnosisAnswerOptionStrings,
     val results: DiagnosisResultStrings
 ) {
@@ -29,156 +20,42 @@ data class SelfDiagnosisStrings(
         val Ko = SelfDiagnosisStrings(
             topBarTitle = "준비 유형 진단",
             backContentDescription = "뒤로가기",
-            introTitle = "나에게 맞는 준비 유형 진단",
-            introDescription = "5개의 질문에 답하면 나에게 맞는 의료관광 준비 유형을 확인할 수 있어요.",
-            introDuration = "약 1분이면 충분해요",
-            introStartButton = "진단 시작하기",
-            introSkipButton = "건너뛰고 홈으로",
-            questionProgressFormat = "%d / %d",
-            nextButton = "다음",
-            viewResultButton = "결과 보기",
             restartButton = "다시 진단하기",
-            startFromHomeButton = "홈으로 시작하기",
             backToHomeButton = "홈으로 돌아가기",
             commonSafetyNotice = "본 결과는 의료 또는 비자 판단이 아닌 일반 준비 안내입니다.",
             nextChecksTitle = "다음 확인 항목",
-            questions = DiagnosisQuestionStrings.Ko,
             options = DiagnosisAnswerOptionStrings.Ko,
             results = DiagnosisResultStrings.Ko
         )
         val En = SelfDiagnosisStrings(
             topBarTitle = "Readiness Check",
             backContentDescription = "Back",
-            introTitle = "Find Your Readiness Type",
-            introDescription = "Answer 5 questions to find the medical tourism preparation type that fits you.",
-            introDuration = "Takes about 1 minute",
-            introStartButton = "Start Check",
-            introSkipButton = "Skip to Home",
-            questionProgressFormat = "%d / %d",
-            nextButton = "Next",
-            viewResultButton = "See Result",
             restartButton = "Retake Check",
-            startFromHomeButton = "Start from Home",
             backToHomeButton = "Back to Home",
             commonSafetyNotice = "This result is general preparation guidance, not medical or visa advice.",
             nextChecksTitle = "Next Steps to Check",
-            questions = DiagnosisQuestionStrings.En,
             options = DiagnosisAnswerOptionStrings.En,
             results = DiagnosisResultStrings.En
         )
         val Zh = SelfDiagnosisStrings(
             topBarTitle = "准备类型诊断",
             backContentDescription = "返回",
-            introTitle = "查找适合我的准备类型",
-            introDescription = "回答5个问题，即可确认适合您的医疗观光准备类型。",
-            introDuration = "大约1分钟即可完成",
-            introStartButton = "开始诊断",
-            introSkipButton = "跳过并前往首页",
-            questionProgressFormat = "%d / %d",
-            nextButton = "下一步",
-            viewResultButton = "查看结果",
             restartButton = "重新诊断",
-            startFromHomeButton = "从首页开始",
             backToHomeButton = "返回首页",
             commonSafetyNotice = "本结果为一般准备指南，并非医疗或签证判断。",
             nextChecksTitle = "下一步确认项目",
-            questions = DiagnosisQuestionStrings.Zh,
             options = DiagnosisAnswerOptionStrings.Zh,
             results = DiagnosisResultStrings.Zh
         )
         val Ja = SelfDiagnosisStrings(
             topBarTitle = "準備タイプ診断",
             backContentDescription = "戻る",
-            introTitle = "自分に合った準備タイプ診断",
-            introDescription = "5つの質問に答えると、自分に合った医療観光の準備タイプが分かります。",
-            introDuration = "約1分で完了します",
-            introStartButton = "診断を始める",
-            introSkipButton = "スキップしてホームへ",
-            questionProgressFormat = "%d / %d",
-            nextButton = "次へ",
-            viewResultButton = "結果を見る",
             restartButton = "もう一度診断する",
-            startFromHomeButton = "ホームから始める",
             backToHomeButton = "ホームに戻る",
             commonSafetyNotice = "本結果は医療または査証の判断ではなく、一般的な準備案内です。",
             nextChecksTitle = "次に確認する項目",
-            questions = DiagnosisQuestionStrings.Ja,
             options = DiagnosisAnswerOptionStrings.Ja,
             results = DiagnosisResultStrings.Ja
-        )
-    }
-}
-
-data class DiagnosisQuestionStrings(
-    val q1Title: String,
-    val q1Description: String,
-    val q2Title: String,
-    val q2Description: String,
-    val q3Title: String,
-    val q3Description: String,
-    val q4Title: String,
-    val q4Description: String,
-    val q4NoticeText: String,
-    val q5Title: String,
-    val q5Description: String,
-    val q5NoticeText: String
-) {
-    companion object {
-        val Ko = DiagnosisQuestionStrings(
-            q1Title = "어떤 방문 목적을 고려하고 있나요?",
-            q1Description = "가장 가까운 목적을 선택해 주세요. 나중에 다시 변경할 수 있습니다.",
-            q2Title = "한국에 얼마나 머무를 예정인가요?",
-            q2Description = "체류기간에 따라 준비해야 할 항목이 달라질 수 있어요.",
-            q3Title = "현재 병원 예약 상태는 어떤가요?",
-            q3Description = "현재 상황에 맞는 준비 흐름을 안내해드릴게요.",
-            q4Title = "진료 시 통역이나 외국어 지원이 필요한가요?",
-            q4Description = "병원마다 지원 언어와 통역 가능 여부가 다를 수 있습니다.",
-            q4NoticeText = "메디인부산은 통역사를 매칭하지 않습니다. 병원별 지원 언어와 문의 채널 확인을 도와드립니다.",
-            q5Title = "입국·체류와 관련해 해당되는 상황이 있나요?",
-            q5Description = "국적, 체류기간, 방문 목적에 따라 공식 확인이 필요할 수 있습니다.",
-            q5NoticeText = "메디인부산은 비자 발급 가능 여부를 판단하거나 대행하지 않습니다."
-        )
-        val En = DiagnosisQuestionStrings(
-            q1Title = "What's your purpose of visit?",
-            q1Description = "Choose the closest match. You can change this later.",
-            q2Title = "How long will you stay in Korea?",
-            q2Description = "What you need to prepare can vary depending on your length of stay.",
-            q3Title = "What's the status of your hospital reservation?",
-            q3Description = "We'll guide you through the preparation flow that fits your current situation.",
-            q4Title = "Do you need interpretation or foreign language support for your treatment?",
-            q4Description = "Supported languages and interpretation availability vary by hospital.",
-            q4NoticeText = "MediIn Busan does not match interpreters. We help you check each hospital's supported languages and inquiry channels.",
-            q5Title = "Does any of the following apply to your entry or stay?",
-            q5Description = "Depending on your nationality, length of stay, and purpose of visit, official confirmation may be needed.",
-            q5NoticeText = "MediIn Busan does not determine or arrange visa eligibility."
-        )
-        val Zh = DiagnosisQuestionStrings(
-            q1Title = "您考虑的访问目的是什么？",
-            q1Description = "请选择最接近的目的，之后可以再次更改。",
-            q2Title = "您计划在韩国停留多久？",
-            q2Description = "根据停留时间，需要准备的事项可能会有所不同。",
-            q3Title = "您目前的医院预约状态如何？",
-            q3Description = "我们将根据您的现状为您提供准备流程指引。",
-            q4Title = "就诊时是否需要口译或外语支持？",
-            q4Description = "各医院支持的语言及口译提供情况可能不同。",
-            q4NoticeText = "MediIn Busan不提供口译人员匹配服务，我们帮助您确认各医院支持的语言及咨询渠道。",
-            q5Title = "在入境·停留方面是否有符合以下情况？",
-            q5Description = "根据国籍、停留时间、访问目的的不同，可能需要官方确认。",
-            q5NoticeText = "MediIn Busan不判断或代办签证获批可能性。"
-        )
-        val Ja = DiagnosisQuestionStrings(
-            q1Title = "どのような訪問目的を検討していますか？",
-            q1Description = "最も近い目的を選択してください。後で変更することもできます。",
-            q2Title = "韓国にどのくらい滞在する予定ですか？",
-            q2Description = "滞在期間によって準備すべき項目が変わることがあります。",
-            q3Title = "現在の病院予約状況はどうですか？",
-            q3Description = "現在の状況に合った準備の流れをご案内します。",
-            q4Title = "診療時に通訳や外国語サポートが必要ですか？",
-            q4Description = "病院によって対応言語や通訳の可否が異なる場合があります。",
-            q4NoticeText = "メディインブサンは通訳者のマッチングは行いません。病院ごとの対応言語や問い合わせチャネルの確認をお手伝いします。",
-            q5Title = "入国・滞在に関して該当する状況はありますか？",
-            q5Description = "国籍、滞在期間、訪問目的によって公式な確認が必要になる場合があります。",
-            q5NoticeText = "メディインブサンはビザ発給可否の判断や代行は行いません。"
         )
     }
 }

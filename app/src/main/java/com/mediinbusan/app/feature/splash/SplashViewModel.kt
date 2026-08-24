@@ -13,9 +13,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * F-001: 최초 실행 여부를 확인해 언어 선택/준비 유형 진단/홈 중 하나로 보낸다.
- * 순서는 항상 언어 선택 -> 진단 -> 홈이라, 언어 선택만 끝내고 앱을 종료했던 세션이면
- * 진단부터 다시 시작한다(언어 선택은 반복하지 않음).
+ * F-001: 최초 실행 여부를 확인해 언어 선택/홈 중 하나로 보낸다. 준비 유형 진단(챗봇)은 더 이상
+ * 이 최초 실행 흐름에 강제로 끼지 않고, Home의 "AI 진단하기" 진입점을 통해서만 접근한다.
  */
 @HiltViewModel
 class SplashViewModel @Inject constructor(
@@ -29,12 +28,11 @@ class SplashViewModel @Inject constructor(
         viewModelScope.launch {
             val preferences = async { userPreferencesRepository.userPreferences.first() }
             delay(MINIMUM_SPLASH_DURATION_MS)
-            val (onboardingComplete, diagnosisComplete) = preferences.await()
-                .let { it.onboardingComplete to it.diagnosisComplete }
-            _uiState.value = when {
-                !onboardingComplete -> SplashUiState.NavigateToOnboarding
-                !diagnosisComplete -> SplashUiState.NavigateToSelfDiagnosis
-                else -> SplashUiState.NavigateToHome
+            val onboardingComplete = preferences.await().onboardingComplete
+            _uiState.value = if (!onboardingComplete) {
+                SplashUiState.NavigateToOnboarding
+            } else {
+                SplashUiState.NavigateToHome
             }
         }
     }

@@ -2,6 +2,7 @@ package com.mediinbusan.app.core.network
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.mediinbusan.app.BuildConfig
+import com.mediinbusan.app.data.diagnosischat.DiagnosisChatApi
 import com.mediinbusan.app.data.document.DocumentOcrApi
 import com.mediinbusan.app.data.hospital.HospitalApi
 import com.mediinbusan.app.data.place.TourismApi
@@ -104,4 +105,15 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(DocumentOcrApi::class.java)
+
+    // DiagnosisChatApi도 자체 백엔드(backend/diagnosischat, Gemini 프록시)를 바라본다.
+    @Provides
+    @Singleton
+    fun provideDiagnosisChatApi(okHttpClient: OkHttpClient, json: Json): DiagnosisChatApi =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.MEDIINBUSAN_API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(DiagnosisChatApi::class.java)
 }

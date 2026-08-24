@@ -11,6 +11,7 @@ import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.place.PlaceRepository
+import com.mediinbusan.app.domain.course.AssembleWellnessCourseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +32,8 @@ class MapViewModel @Inject constructor(
     private val hospitalRepository: HospitalRepository,
     private val placeRepository: PlaceRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val assembleWellnessCourse: AssembleWellnessCourseUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -64,8 +66,40 @@ class MapViewModel @Inject constructor(
         BottomBarVisibilityController.setMapSelectionActive(false)
     }
 
-    fun load(hospitalId: String?) {
-        if (hospitalId != null) loadHospitalFocused(hospitalId) else loadAllHospitals()
+    fun load(hospitalId: String?, courseId: String? = null) {
+        when {
+            hospitalId != null && courseId != null -> loadCourseRoute(hospitalId, courseId)
+            hospitalId != null -> loadHospitalFocused(hospitalId)
+            else -> loadAllHospitals()
+        }
+    }
+
+    // F-014 웰니스 코스 동선: 코스를 구성하는 병원+장소들을 방문 순서 그대로 지도에 그리기 위한 로드 경로.
+    // AssembleWellnessCourseUseCase는 feature/nearby의 WellnessCourseCard가 이미 쓰는 것과 동일한
+    // 유스케이스 — 여기서는 그 결과 중 courseId가 일치하는 코스 하나만 골라 activeCourse에 담는다.
+    private fun loadCourseRoute(hospitalId: String, courseId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+
+            val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
+                .first { it !is Result.Loading }
+            val coursesResult = assembleWellnessCourse(hospitalId)
+                .first { it !is Result.Loading }
+
+            val hospital = (hospitalResult as? Result.Success)?.data
+            val course = (coursesResult as? Result.Success)?.data?.firstOrNull { it.id == courseId }
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    focusedHospital = hospital,
+                    activeCourse = course,
+                    selectedMarkerId = hospital?.id,
+                    errorMessage = if (hospital == null || course == null) "코스 정보를 불러올 수 없습니다." else null
+                )
+            }
+        }
     }
 
     private fun loadHospitalFocused(hospitalId: String) {

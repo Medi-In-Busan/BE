@@ -33,12 +33,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -103,33 +105,45 @@ import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.RouteStop
 import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.domain.course.WellnessCourse
 
 /**
- * S-08. hospitalId가 있으면 상세페이지 '지도에서 보기'로 진입한 "특정 병원 지도" 모드,
- * 없으면 하단 탭 '지도'로 진입한 "전체 병원 브라우징" 모드다(Route.MapView 문서 참고).
+ * S-08. hospitalId+courseId가 둘 다 있으면 웰니스 코스 동선(F-014 지도 연동) 모드,
+ * hospitalId만 있으면 상세페이지 '지도에서 보기'로 진입한 "특정 병원 지도" 모드,
+ * 둘 다 없으면 하단 탭 '지도'로 진입한 "전체 병원 브라우징" 모드다(Route.MapView 문서 참고).
  */
 @Composable
 fun MapScreen(
     hospitalId: String?,
+    courseId: String? = null,
     onSelectHospital: (String) -> Unit,
+    onSelectPlace: (String) -> Unit = {},
     onBack: () -> Unit,
     viewModel: MapViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val errorMessage = uiState.errorMessage
 
-    LaunchedEffect(hospitalId) {
-        viewModel.load(hospitalId)
+    LaunchedEffect(hospitalId, courseId) {
+        viewModel.load(hospitalId, courseId)
     }
 
     when {
         uiState.isLoading -> LoadingState()
-        errorMessage != null -> ErrorState(message = errorMessage, onRetry = { viewModel.load(hospitalId) })
+        errorMessage != null -> ErrorState(message = errorMessage, onRetry = { viewModel.load(hospitalId, courseId) })
+        hospitalId != null && courseId != null -> {
+            val hospital = uiState.focusedHospital
+            val course = uiState.activeCourse
+            if (hospital != null && course != null) {
+                CourseRouteMap(hospital = hospital, course = course, onSelectPlace = onSelectPlace, onBack = onBack)
+            }
+        }
         hospitalId != null -> {
             val hospital = uiState.focusedHospital
             if (hospital != null) {
@@ -216,6 +230,124 @@ private fun FocusedHospitalMap(hospital: Hospital, nearbyPlaces: List<Place>, on
                 )
             }
         }
+    }
+}
+
+// F-014 웰니스 코스 동선: feature/nearby의 WellnessCourseCard "이 코스 동선 보기"에서 진입한다.
+// FocusedHospitalMap과 같은 시각적 뼈대(전체화면 지도 + 좌상단 뒤로가기 + 하단 흰색 라운드 카드)를
+// 그대로 따르되, 하단 카드는 병원 정보 대신 코스 이름/소요시간 + 번호 매긴 스탑 칩 목록을 보여준다.
+@Composable
+private fun CourseRouteMap(hospital: Hospital, course: WellnessCourse, onSelectPlace: (String) -> Unit, onBack: () -> Unit) {
+    val strings = LocalAppStrings.current
+    val mapStrings = strings.map
+    // 병원(출발점, 배지 없음) + 코스 장소들(1부터 시작하는 방문 순서 배지) 순서로 pins를 구성한다.
+    // routeStops는 같은 순서의 좌표만 뽑아 KakaoMapView(routeStops=...)에 넘기고, 그 지도 위에
+    // 화살표 패턴이 반복되는 경로선으로 그려진다 — 외부 카카오맵 앱으로 내보내는 길찾기 연동 없이
+    // 우리 지도 안에서 방향을 보여준다(core/ui/KakaoMapView.kt의 renderRoute 참고).
+    val pins = remember(hospital, course) {
+        buildList {
+            hospital.toMapPin(selectedId = null)?.let(::add)
+            course.places.forEachIndexed { index, place ->
+                place.toMapPin(selectedId = null)?.copy(routeIndex = index + 1)?.let(::add)
+            }
+        }
+    }
+    val routeStops = remember(hospital, course) {
+        buildList {
+            val hospitalLat = hospital.latitude
+            val hospitalLng = hospital.longitude
+            if (hospitalLat != null && hospitalLng != null) add(RouteStop(hospital.name, hospitalLat, hospitalLng))
+            course.places.forEach { place ->
+                val lat = place.latitude
+                val lng = place.longitude
+                if (lat != null && lng != null) add(RouteStop(place.name, lat, lng))
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        KakaoMapView(pins = pins, routeStops = routeStops, modifier = Modifier.fillMaxSize())
+
+        RoundIconButton(
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = strings.common.backContentDescription,
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+        )
+
+        Surface(
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            color = Color.White,
+            shadowElevation = 16.dp,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(modifier = Modifier.navigationBarsPadding().padding(16.dp)) {
+                Text(text = course.name, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${mapStrings.courseDurationPrefix}${course.estimatedDurationMinutes / 60}h",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                if (routeStops.size >= 2) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    RouteArrowHint(label = mapStrings.routeArrowHintLabel)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    itemsIndexed(course.places, key = { _, place -> place.id }) { index, place ->
+                        CourseStopChip(index = index + 1, place = place, onClick = { onSelectPlace(place.id) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 지도 위 화살표 경로선(core/ui/KakaoMapView.kt의 renderRoute)이 뭘 뜻하는지 짧게 짚어주는 안내 pill.
+// SpecialtyFilterRow/FilterPillButton과 같은 톤(코랄 컨테이너 배경 + 진한 텍스트)을 재사용해 이
+// 화면만 튀지 않게 한다.
+@Composable
+private fun RouteArrowHint(label: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CoralPrimaryContainer)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            tint = CoralPrimary,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = TextPrimary)
+    }
+}
+
+// feature/nearby의 CourseStopRow와 시각적으로 비슷하지만 이 파일 로컬 private composable이다 —
+// CLAUDE.md의 "feature 패키지는 서로를 직접 import하지 않는다" 규칙에 따라 작은 중복을 허용한다.
+@Composable
+private fun CourseStopChip(index: Int, place: Place, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .background(Color(0xFFF5F5F7))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(18.dp).clip(CircleShape).background(CoralPrimary),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = index.toString(), style = MaterialTheme.typography.labelSmall, color = Color.White)
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = place.name, style = MaterialTheme.typography.labelMedium, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

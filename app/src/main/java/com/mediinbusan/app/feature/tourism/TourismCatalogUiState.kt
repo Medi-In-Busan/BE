@@ -8,8 +8,6 @@ data class TourismCatalogUiState(
     val category: TourismCatalogCategory? = null,
     val selectedDistrict: BusanDistrict? = null,
     val catalog: TourismCatalog? = null,
-    val personalizedItemIds: Set<String> = emptySet(),
-    val lastSelectedItemId: String? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )

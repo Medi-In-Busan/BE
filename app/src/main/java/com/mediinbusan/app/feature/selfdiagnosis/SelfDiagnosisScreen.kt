@@ -1,41 +1,39 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,32 +41,25 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.TextPrimary
-import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.ChatStrings
+import com.mediinbusan.app.core.i18n.DiagnosisAnswerOptionStrings
 import com.mediinbusan.app.core.i18n.LocalAppStrings
-import com.mediinbusan.app.core.i18n.SelfDiagnosisStrings
 
 /**
- * S-XX 준비 유형 진단(인트로 → 5문항 → 준비 유형).
- * [fromOnboarding]이 true면 최초 실행 흐름(Splash -> 언어선택 -> 진단 -> Home) 중이라는 뜻으로,
- * 인트로에 "건너뛰기"가, 결과 화면에 "홈으로 시작하기"가 추가로 노출된다.
+ * S-XX 준비 유형 진단 챗봇. 자유 텍스트 + 추천 답변 칩으로 5개 슬롯(방문목적/체류기간/예약상태/
+ * 통역필요/입국체류조건)을 채우면 서버가 판정한 준비 유형(TYPE A~E) 결과를 보여준다.
  */
 @Composable
 fun SelfDiagnosisScreen(
-    fromOnboarding: Boolean = false,
     onBack: () -> Unit = {},
     onNavigateToCtaTarget: (DiagnosisCtaTarget) -> Unit = {},
     onFinishSetup: () -> Unit = {},
@@ -86,21 +77,18 @@ fun SelfDiagnosisScreen(
         }
     }
 
-    SelfDiagnosisContent(
-        uiState = uiState,
-        fromOnboarding = fromOnboarding,
-        onIntent = viewModel::onIntent
-    )
+    SelfDiagnosisContent(uiState = uiState, onIntent = viewModel::onIntent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SelfDiagnosisContent(
     uiState: SelfDiagnosisUiState,
-    fromOnboarding: Boolean,
     onIntent: (SelfDiagnosisIntent) -> Unit
 ) {
     val strings = LocalAppStrings.current.selfDiagnosis
+    val chatStrings = LocalAppStrings.current.chat
+
     Scaffold(
         containerColor = PageBackground,
         topBar = {
@@ -117,231 +105,178 @@ private fun SelfDiagnosisContent(
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             val resultType = uiState.resultType
-            when {
-                resultType != null -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        item {
-                            DiagnosisResultContent(
-                                resultType = resultType,
-                                onCtaClick = { target -> onIntent(SelfDiagnosisIntent.ClickCta(target)) },
-                                onRestart = { onIntent(SelfDiagnosisIntent.Restart) },
-                                onGoHome = { onIntent(SelfDiagnosisIntent.FinishSetup) },
-                                goHomeButtonLabel = if (fromOnboarding) strings.startFromHomeButton else strings.backToHomeButton
-                            )
-                        }
+            if (resultType != null) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item {
+                        DiagnosisResultContent(
+                            resultType = resultType,
+                            onCtaClick = { target -> onIntent(SelfDiagnosisIntent.ClickCta(target)) },
+                            onRestart = { onIntent(SelfDiagnosisIntent.Restart) },
+                            onGoHome = { onIntent(SelfDiagnosisIntent.FinishSetup) },
+                            goHomeButtonLabel = strings.backToHomeButton
+                        )
                     }
                 }
-                uiState.isIntroVisible -> {
-                    IntroContent(
-                        strings = strings,
-                        onStart = { onIntent(SelfDiagnosisIntent.StartDiagnosis) },
-                        onSkip = if (fromOnboarding) {
-                            { onIntent(SelfDiagnosisIntent.FinishSetup) }
-                        } else {
-                            null
-                        }
-                    )
-                }
-                else -> {
-                    QuestionContent(uiState = uiState, strings = strings, onIntent = onIntent)
-                }
+            } else {
+                ChatContent(
+                    uiState = uiState,
+                    chatStrings = chatStrings,
+                    optionStrings = strings.options,
+                    onIntent = onIntent
+                )
             }
         }
     }
 }
 
 @Composable
-private fun IntroContent(strings: SelfDiagnosisStrings, onStart: () -> Unit, onSkip: (() -> Unit)? = null) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.self_diagnosis_start),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1536f / 1024f)
-                .clip(RoundedCornerShape(20.dp))
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = strings.introTitle,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = strings.introDescription,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = strings.introDuration,
-            style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        NoticeBanner(text = strings.commonSafetyNotice, isWarning = false)
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = onStart,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
-        ) {
-            Text(text = strings.introStartButton, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-        if (onSkip != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            TextButton(onClick = onSkip) {
-                Text(text = strings.introSkipButton, color = TextSecondary)
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuestionContent(
+private fun ChatContent(
     uiState: SelfDiagnosisUiState,
-    strings: SelfDiagnosisStrings,
+    chatStrings: ChatStrings,
+    optionStrings: DiagnosisAnswerOptionStrings,
     onIntent: (SelfDiagnosisIntent) -> Unit
 ) {
-    val questions = diagnosisQuestions(strings.questions)
-    val question = questions[uiState.currentQuestionIndex]
-    val selectedOptions = uiState.selectedAnswers[question.id].orEmpty()
-
     Column(modifier = Modifier.fillMaxSize()) {
-        LinearProgressIndicator(
-            progress = { uiState.progress },
-            modifier = Modifier.fillMaxWidth(),
-            color = CoralPrimary,
-            trackColor = BorderColor
-        )
+        val listState = rememberLazyListState()
+        // 고정 인사말(1) + 대화 메시지 + 로딩 버블(있으면) + 에러 배너(있으면). 새 항목이 생길
+        // 때마다 맨 아래로 스크롤한다.
+        val totalItemCount = 1 + uiState.messages.size + (if (uiState.isLoading) 1 else 0) + (if (uiState.hasError) 1 else 0)
+        LaunchedEffect(totalItemCount) {
+            if (totalItemCount > 0) listState.animateScrollToItem(totalItemCount - 1)
+        }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item {
-                Text(
-                    text = strings.questionProgressFormat.format(uiState.currentQuestionIndex + 1, questions.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
-                )
+            item { ChatBubble(role = ChatMessageRole.ASSISTANT, text = chatStrings.greetingMessage) }
+            items(uiState.messages) { message -> ChatBubble(role = message.role, text = message.text) }
+            if (uiState.isLoading) {
+                item { TypingIndicatorBubble() }
             }
-            item {
-                Text(
-                    text = question.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+            if (uiState.hasError) {
+                item { NoticeBanner(text = chatStrings.errorMessage, isWarning = true) }
             }
-            item {
-                Text(
-                    text = question.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-            items(question.options) { option ->
-                AnswerOptionCard(
-                    label = option.label(strings.options),
-                    isMultiSelect = question.isMultiSelect,
-                    isSelected = option in selectedOptions,
-                    onClick = { onIntent(SelfDiagnosisIntent.SelectAnswer(question.id, option)) }
-                )
-            }
-            if (question.noticeText != null) {
-                item { NoticeBanner(text = question.noticeText, isWarning = false) }
-            }
-            item {
-                Button(
-                    onClick = { onIntent(SelfDiagnosisIntent.GoNext) },
-                    enabled = uiState.canGoNext,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
-                ) {
-                    Text(
-                        text = if (uiState.isLastQuestion) strings.viewResultButton else strings.nextButton,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+        }
+
+        val suggestedOptions = uiState.suggestedOptions
+        if (!uiState.isLoading && suggestedOptions != null) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(suggestedOptions) { option ->
+                    val label = option.label(optionStrings)
+                    SuggestedReplyChip(label = label, onClick = { onIntent(SelfDiagnosisIntent.TapSuggestedReply(label)) })
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
+
+        ChatInputBar(
+            value = uiState.inputText,
+            enabled = !uiState.isLoading,
+            placeholder = chatStrings.inputPlaceholder,
+            sendContentDescription = chatStrings.sendButtonContentDescription,
+            onValueChange = { onIntent(SelfDiagnosisIntent.UpdateInputText(it)) },
+            onSend = { onIntent(SelfDiagnosisIntent.SendMessage(uiState.inputText)) }
+        )
     }
 }
 
 @Composable
-private fun AnswerOptionCard(
-    label: String,
-    isMultiSelect: Boolean,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val borderColor = if (isSelected) CoralPrimary else BorderColor
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(width = if (isSelected) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
-        color = Color.White
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+private fun ChatBubble(role: ChatMessageRole, text: String) {
+    val isUser = role == ChatMessageRole.USER
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start) {
+        Surface(
+            modifier = Modifier.widthIn(max = 280.dp),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isUser) 16.dp else 4.dp,
+                bottomEnd = if (isUser) 4.dp else 16.dp
+            ),
+            color = if (isUser) CoralPrimary else Color.White,
+            border = if (isUser) null else BorderStroke(1.dp, BorderColor)
         ) {
-            if (isMultiSelect) {
-                CheckboxIndicator(isSelected = isSelected)
-            } else {
-                RadioButton(
-                    selected = isSelected,
-                    onClick = onClick,
-                    colors = RadioButtonDefaults.colors(selectedColor = CoralPrimary)
-                )
-            }
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimary,
-                modifier = Modifier.padding(start = 8.dp)
+                text = text,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                color = if (isUser) Color.White else TextPrimary,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
 }
 
 @Composable
-private fun CheckboxIndicator(isSelected: Boolean) {
-    val backgroundColor = if (isSelected) CoralPrimary else Color.Transparent
-    Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(backgroundColor)
-            .border(width = 1.dp, color = if (isSelected) CoralPrimary else BorderColor, shape = RoundedCornerShape(6.dp)),
-        contentAlignment = Alignment.Center
+private fun TypingIndicatorBubble() {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        Surface(
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, BorderColor)
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = CoralPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestedReplyChip(label: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(percent = 50),
+        color = Color.White,
+        border = BorderStroke(1.dp, CoralPrimary)
     ) {
-        if (isSelected) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(16.dp)
-            )
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            color = CoralPrimary,
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+@Composable
+private fun ChatInputBar(
+    value: String,
+    enabled: Boolean,
+    placeholder: String,
+    sendContentDescription: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit
+) {
+    val canSend = enabled && value.isNotBlank()
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            placeholder = { Text(text = placeholder) },
+            enabled = enabled,
+            shape = RoundedCornerShape(24.dp),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { if (value.isNotBlank()) onSend() })
+        )
+        IconButton(
+            onClick = onSend,
+            enabled = canSend,
+            modifier = Modifier
+                .size(48.dp)
+                .background(if (canSend) CoralPrimary else BorderColor, CircleShape)
+        ) {
+            Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = sendContentDescription, tint = Color.White)
         }
     }
 }

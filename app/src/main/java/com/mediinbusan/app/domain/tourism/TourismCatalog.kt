@@ -20,29 +20,26 @@ data class TourismCatalogItem(
     val details: Map<String, String>
 )
 
-enum class TourismCatalogGroup(val label: String, val description: String) {
-    PLACES("관광지 탐색", "부산의 장소와 사진, 이동 편의 정보를 확인해요."),
-    ROUTES("여행 동선", "함께 둘러볼 곳과 걷기·오디오 코스를 찾아요."),
-    INSIGHTS("여행 데이터", "방문 흐름과 관광지 혼잡도를 참고해요.")
+enum class TourismCatalogGroup {
+    PLACES, ROUTES, INSIGHTS
 }
 
 enum class TourismCatalogCategory(
     val label: String,
-    val shortDescription: String,
     val group: TourismCatalogGroup,
     val supportsDistrict: Boolean
 ) {
-    PLACES_KO("부산 관광지", "관광지·음식점·숙박·쇼핑", TourismCatalogGroup.PLACES, true),
-    ACCESSIBLE("무장애 관광", "이동 편의 정보를 포함한 관광지", TourismCatalogGroup.PLACES, true),
-    PHOTOS("부산 관광사진", "한국관광공사 관광사진", TourismCatalogGroup.PLACES, false),
-    PLACES_EN("Busan in English", "영문 관광정보", TourismCatalogGroup.PLACES, true),
-    PLACES_JA("日本語の釜山観光", "일문 관광정보", TourismCatalogGroup.PLACES, true),
-    PLACES_ZH("中文釜山旅游", "중문 관광정보", TourismCatalogGroup.PLACES, true),
-    RELATED("함께 찾는 관광지", "빅데이터 기반 연관 관광지", TourismCatalogGroup.ROUTES, true),
-    HUBS("지역 관광 허브", "구·군별 방문 중심 관광지", TourismCatalogGroup.ROUTES, true),
-    WALKING("부산 걷기 코스", "두루누비 부산 걷기 여행길", TourismCatalogGroup.ROUTES, false),
-    AUDIO("오디오 관광", "부산 중심부 오디오 콘텐츠", TourismCatalogGroup.ROUTES, false),
-    CROWDING("관광지 혼잡도", "관광지별 예상 혼잡 정보", TourismCatalogGroup.INSIGHTS, true)
+    PLACES_KO("부산 관광지", TourismCatalogGroup.PLACES, true),
+    ACCESSIBLE("무장애 관광", TourismCatalogGroup.PLACES, true),
+    PHOTOS("부산 관광사진", TourismCatalogGroup.PLACES, false),
+    PLACES_EN("Busan in English", TourismCatalogGroup.PLACES, true),
+    PLACES_JA("日本語の釜山観光", TourismCatalogGroup.PLACES, true),
+    PLACES_ZH("中文釜山旅游", TourismCatalogGroup.PLACES, true),
+    RELATED("함께 찾는 관광지", TourismCatalogGroup.ROUTES, true),
+    HUBS("지역 관광 허브", TourismCatalogGroup.ROUTES, true),
+    WALKING("부산 걷기 코스", TourismCatalogGroup.ROUTES, false),
+    AUDIO("오디오 관광", TourismCatalogGroup.ROUTES, false),
+    CROWDING("관광지 혼잡도", TourismCatalogGroup.INSIGHTS, true)
 }
 
 val TourismCatalogCategory.isLanguageVariant: Boolean

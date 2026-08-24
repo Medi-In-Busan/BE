@@ -77,6 +77,14 @@ papago:
     client-id: ${PAPAGO_TRANSLATION_CLIENT_ID:}
     client-secret: ${PAPAGO_TRANSLATION_CLIENT_SECRET:}
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  # 2026-08 확인: gemini-2.5-flash는 신규 사용자에게 더 이상 제공되지 않아(ListModels엔 나오지만
+  # generateContent 호출 시 404) gemini-3.6-flash로 교체함. Gemini 모델 라인업은 자주 바뀌므로
+  # 배포 전 https://generativelanguage.googleapis.com/v1beta/models?key=... 로 실제 사용 가능한
+  # 모델인지(그리고 generateContent 호출까지 되는지) 재확인할 것 — 목록에 있다고 실제로 되는 건 아님.
+  model: ${GEMINI_MODEL:gemini-3.6-flash}
+
 document:
   ocr:
     # spring.servlet.multipart.max-file-size와 별개로, 우리 서비스가 CLOVA 호출 전에 직접 거절하는 기준값이다.

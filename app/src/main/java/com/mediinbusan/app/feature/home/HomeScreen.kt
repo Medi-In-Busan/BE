@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -182,6 +184,15 @@ private fun HomeContent(
                     onLanguageSelected = onLanguageSelected
                 )
             }
+        },
+        floatingActionButtonPosition = FabPosition.End,
+        floatingActionButton = {
+            // 공용 하단 탭바는 이 Scaffold 밖(MediInBusanApp.kt)에서 떠 있는 오버레이라, FAB 기본
+            // 위치(화면 맨 아래)에 그대로 두면 바텀바에 가려진다. BottomNavBarHeight만큼 띄운다.
+            AiChatFab(
+                onClick = onNavigateToSelfDiagnosis,
+                modifier = Modifier.padding(bottom = BottomNavBarHeight + 8.dp)
+            )
         }
     ) { innerPadding ->
         // Home은 공용 하단 탭바가 항상 보이는 화면이라, 상위 Scaffold의 innerPadding에 기대지
@@ -662,6 +673,27 @@ private fun SectionCardContainer(modifier: Modifier = Modifier, content: @Compos
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         content()
+    }
+}
+
+// "AI 진단하기" 챗봇 진입점. 온보딩 강제 흐름에서 빠진 준비 유형 진단(챗봇)은 이제 여기서만
+// 접근한다(MediInBusanNavHost.kt의 Route.SelfDiagnosis 배선 참고). Scaffold의 floatingActionButton
+// 슬롯에 얹혀있어 스크롤과 무관하게 항상 같은 자리(바텀바 바로 위)에 떠 있다.
+@Composable
+private fun AiChatFab(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val strings = LocalAppStrings.current.chat
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = CircleShape,
+        containerColor = CoralPrimary,
+        contentColor = Color.White
+    ) {
+        Text(
+            text = strings.chatBubbleLabel,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

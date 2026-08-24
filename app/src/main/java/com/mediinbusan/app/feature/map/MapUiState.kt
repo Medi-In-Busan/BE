@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.map
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.domain.course.WellnessCourse
 
 enum class MapCategory { ALL, HOSPITAL, TOURIST, FOOD }
 
@@ -12,6 +13,8 @@ data class MapUiState(
     // hospitalId != null인 "특정 병원 지도" 모드(상세페이지 '지도에서 보기'로 진입)에서만 채워진다.
     val focusedHospital: Hospital? = null,
     val nearbyPlaces: List<Place> = emptyList(),
+    // hospitalId + courseId 둘 다 있는 "코스 동선" 모드에서만 채워진다(Route.MapView.courseId 참고).
+    val activeCourse: WellnessCourse? = null,
     // hospitalId == null인 "전체 병원 브라우징" 모드(하단 탭 '지도'로 진입)에서만 채워진다.
     val allHospitals: List<Hospital> = emptyList(),
     val allPlaces: List<Place> = emptyList(),

@@ -11,11 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 
+/** 관광공사 외부 API 응답을 wellness_external_snapshot 테이블에 upsert해 두는 배치용 서비스. */
 @Service
 public class WellnessSnapshotIngestionService {
     private final WellnessTourismGatewayService gateway;
@@ -23,7 +22,8 @@ public class WellnessSnapshotIngestionService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WellnessSnapshotIngestionService(WellnessTourismGatewayService gateway, WellnessExternalSnapshotRepository repository) {
-        this.gateway = gateway; this.repository = repository;
+        this.gateway = gateway;
+        this.repository = repository;
     }
 
     @Transactional
@@ -50,7 +50,9 @@ public class WellnessSnapshotIngestionService {
         try {
             for (JsonNode item : items(objectMapper.valueToTree(response.data()))) {
                 String externalId = first(item, "contentId", "contentid", "tAtsCd", "hubTatsCd", "rlteTatsCd", "courseNo", "themeId", "storyId", "galContentId");
-                if (externalId == null) externalId = Integer.toHexString(item.toString().hashCode());
+                if (externalId == null) {
+                    externalId = Integer.toHexString(item.toString().hashCode());
+                }
                 String key = source + ":" + scope + ":" + periodKey + ":" + externalId;
                 String title = first(item, "title", "tAtsNm", "hubTatsNm", "rlteTatsNm", "courseName", "galTitle", "name");
                 Double latitude = number(item, "mapY", "mapy", "latitude", "lat");
@@ -65,21 +67,57 @@ public class WellnessSnapshotIngestionService {
                     counter.inserted++;
                 }
             }
-        } catch (Exception e) { failures.add(source + "/" + scope + ": " + e.getMessage()); }
+        } catch (Exception e) {
+            failures.add(source + "/" + scope + ": " + e.getMessage());
+        }
     }
 
     private void syncSafely(String source, String scope, String periodKey, Supplier<TourismExternalResponse> sourceCall, Counter counter, List<String> failures) {
-        try { sync(source, scope, periodKey, sourceCall.get(), counter, failures); }
-        catch (Exception e) { failures.add(source + "/" + scope + ": " + e.getMessage()); }
+        try {
+            sync(source, scope, periodKey, sourceCall.get(), counter, failures);
+        } catch (Exception e) {
+            failures.add(source + "/" + scope + ": " + e.getMessage());
+        }
     }
 
     private static List<JsonNode> items(JsonNode root) {
         JsonNode items = root.path("items").path("item");
-        if (items.isArray()) { List<JsonNode> result = new ArrayList<>(); items.forEach(result::add); return result; }
-        if (items.isObject()) return List.of(items);
+        if (items.isArray()) {
+            List<JsonNode> result = new ArrayList<>();
+            items.forEach(result::add);
+            return result;
+        }
+        if (items.isObject()) {
+            return List.of(items);
+        }
         return List.of();
     }
-    private static String first(JsonNode item, String... fields) { for (String field : fields) { String value = item.path(field).asText(null); if (value != null && !value.isBlank()) return value; } return null; }
-    private static Double number(JsonNode item, String... fields) { for (String field : fields) try { String value = item.path(field).asText(null); if (value != null && !value.isBlank()) return Double.valueOf(value); } catch (NumberFormatException ignored) {} return null; }
-    private static final class Counter { int inserted; int updated; }
+
+    private static String first(JsonNode item, String... fields) {
+        for (String field : fields) {
+            String value = item.path(field).asText(null);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private static Double number(JsonNode item, String... fields) {
+        for (String field : fields) {
+            try {
+                String value = item.path(field).asText(null);
+                if (value != null && !value.isBlank()) {
+                    return Double.valueOf(value);
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private static final class Counter {
+        int inserted;
+        int updated;
+    }
 }
