@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 코스 동선 경로선(RouteLine)의 반복 패턴으로 쓰는 화살촉. 진행 방향으로 갈수록 좁아지는
+         노치형 화살표라 얇은 선 위에서도 방향이 뚜렷하게 읽힌다(core/ui/KakaoMapView.kt의
+         renderRoute 참고). -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,5 L19,17 L12,13.5 L5,17 Z" />
+</vector>

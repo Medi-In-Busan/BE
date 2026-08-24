@@ -20,7 +20,14 @@ data class MapStrings(
     val detailButtonLabel: String,
     val hidePanelContentDescription: String,
     val showPanelContentDescription: String,
-    val specialtyFilterSectionLabel: String
+    val specialtyFilterSectionLabel: String,
+    // F-014 웰니스 코스 동선 모드(Route.MapView.courseId) 전용. "예상 소요 " 뒤에 "${hours}h"를
+    // 그대로 이어붙이는 접두어 필드다 — 이 파일의 다른 필드처럼 함수가 아닌 flat field 컨벤션을 따른다.
+    val courseDurationPrefix: String,
+    val courseNotFoundMessage: String,
+    // 코스 동선 지도 위 화살표 경로선(외부 카카오맵 앱 연동 없이 우리 지도 안에서 방향을 표시,
+    // core/ui/KakaoMapView.kt의 renderRoute 참고)이 뭘 뜻하는지 짚어주는 짧은 안내 문구.
+    val routeArrowHintLabel: String
 ) {
     companion object {
         val Ko = MapStrings(
@@ -38,7 +45,10 @@ data class MapStrings(
             detailButtonLabel = "상세보기",
             hidePanelContentDescription = "카드 목록 숨기기",
             showPanelContentDescription = "카드 목록 보기",
-            specialtyFilterSectionLabel = "진료과목"
+            specialtyFilterSectionLabel = "진료과목",
+            courseDurationPrefix = "예상 소요 ",
+            courseNotFoundMessage = "코스 정보를 불러올 수 없습니다.",
+            routeArrowHintLabel = "지도의 화살표를 따라 이동 순서를 확인하세요"
         )
         val En = MapStrings(
             searchPlaceholder = "Search on map...",
@@ -55,7 +65,10 @@ data class MapStrings(
             detailButtonLabel = "View details",
             hidePanelContentDescription = "Hide card list",
             showPanelContentDescription = "Show card list",
-            specialtyFilterSectionLabel = "Specialty"
+            specialtyFilterSectionLabel = "Specialty",
+            courseDurationPrefix = "Est. ",
+            courseNotFoundMessage = "Couldn't load course details.",
+            routeArrowHintLabel = "Follow the arrows on the map to see the visiting order"
         )
         val Zh = MapStrings(
             searchPlaceholder = "在地图上搜索...",
@@ -72,7 +85,10 @@ data class MapStrings(
             detailButtonLabel = "查看详情",
             hidePanelContentDescription = "隐藏卡片列表",
             showPanelContentDescription = "显示卡片列表",
-            specialtyFilterSectionLabel = "诊疗科目"
+            specialtyFilterSectionLabel = "诊疗科目",
+            courseDurationPrefix = "预计所需 ",
+            courseNotFoundMessage = "无法加载课程信息。",
+            routeArrowHintLabel = "请沿地图上的箭头查看移动顺序"
         )
         val Ja = MapStrings(
             searchPlaceholder = "地図で検索...",
@@ -89,7 +105,10 @@ data class MapStrings(
             detailButtonLabel = "詳細を見る",
             hidePanelContentDescription = "カードリストを隠す",
             showPanelContentDescription = "カードリストを表示",
-            specialtyFilterSectionLabel = "診療科目"
+            specialtyFilterSectionLabel = "診療科目",
+            courseDurationPrefix = "所要時間目安 ",
+            courseNotFoundMessage = "コース情報を読み込めません。",
+            routeArrowHintLabel = "地図の矢印に沿って移動順序をご確認ください"
         )
     }
 }

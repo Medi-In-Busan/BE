@@ -85,8 +85,11 @@ sealed interface Route {
     @Serializable
     data class TourismCatalog(val category: String) : Route // S-07 관광 공공데이터 카테고리 목록
 
+    // S-08. courseId가 non-null이면(hospitalId도 non-null이어야 함) 웰니스 코스 동선 모드 — 해당 코스의
+    // 장소들을 방문 순서대로 번호 마커+연결선으로 그린다(feature/nearby의 WellnessCourseCard "이 코스
+    // 동선 보기"에서 진입). hospitalId만 있으면 기존 단일 병원 포커스 모드, 둘 다 null이면 전체 병원 지도 모드.
     @Serializable
-    data class MapView(val hospitalId: String? = null) : Route // S-08, hospitalId=null이면 전체 병원 지도 모드
+    data class MapView(val hospitalId: String? = null, val courseId: String? = null) : Route
 
     @Serializable
     data object Favorite : Route // S-09

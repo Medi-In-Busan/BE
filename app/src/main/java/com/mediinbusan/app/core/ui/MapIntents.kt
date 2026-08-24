@@ -25,3 +25,12 @@ fun Context.launchIntentSafely(intent: Intent) {
         // 대상 앱(다이얼러/지도/문자/공유)이 없는 환경(에뮬레이터 등)에서는 조용히 무시한다.
     }
 }
+
+/**
+ * F-014 웰니스 코스 동선의 경유지 하나. name은 지도 위 화살표 경로선을 그릴 때는 쓰이지 않고(좌표만
+ * 사용), 향후 다른 표시 용도를 위해 남겨둔다. core/ui/KakaoMapView.kt의 KakaoMapView(routeStops=...)에
+ * 넘겨 방문 순서대로 화살표 패턴이 반복되는 경로선을 그리는 데 쓴다 — 외부 지도 앱으로 나가는 대신
+ * 우리 지도 안에서 방향을 보여주기 위한 용도라 실제 도로/보행로를 정확히 따라가지는 않는다(그
+ * 문서의 renderRoute 주석 참고).
+ */
+data class RouteStop(val name: String, val latitude: Double, val longitude: Double)

@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
@@ -81,6 +82,7 @@ fun NearbyScreen(
     hospitalId: String,
     onSelectPlace: (String) -> Unit,
     onNavigateToMap: () -> Unit,
+    onNavigateToCourseRoute: (String) -> Unit,
     onExploreTourism: () -> Unit,
     onBack: () -> Unit,
     viewModel: NearbyViewModel = hiltViewModel()
@@ -95,6 +97,7 @@ fun NearbyScreen(
         uiState = uiState,
         onSelectPlace = onSelectPlace,
         onNavigateToMap = onNavigateToMap,
+        onNavigateToCourseRoute = onNavigateToCourseRoute,
         onExploreTourism = onExploreTourism,
         onBack = onBack,
         onRetry = { viewModel.load(hospitalId) }
@@ -107,6 +110,7 @@ private fun NearbyContent(
     uiState: NearbyUiState,
     onSelectPlace: (String) -> Unit,
     onNavigateToMap: () -> Unit,
+    onNavigateToCourseRoute: (String) -> Unit,
     onExploreTourism: () -> Unit,
     onBack: () -> Unit,
     onRetry: () -> Unit
@@ -149,6 +153,7 @@ private fun NearbyContent(
                 uiState = uiState,
                 onSelectPlace = onSelectPlace,
                 onNavigateToMap = onNavigateToMap,
+                onNavigateToCourseRoute = onNavigateToCourseRoute,
                 onExploreTourism = onExploreTourism,
                 modifier = Modifier.padding(innerPadding)
             )
@@ -161,6 +166,7 @@ private fun NearbyLoadedContent(
     uiState: NearbyUiState,
     onSelectPlace: (String) -> Unit,
     onNavigateToMap: () -> Unit,
+    onNavigateToCourseRoute: (String) -> Unit,
     onExploreTourism: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -231,7 +237,11 @@ private fun NearbyLoadedContent(
 
         if (uiState.courses.isNotEmpty()) {
             item {
-                WellnessCourseSection(courses = uiState.courses, onSelectPlace = onSelectPlace)
+                WellnessCourseSection(
+                    courses = uiState.courses,
+                    onSelectPlace = onSelectPlace,
+                    onViewRoute = onNavigateToCourseRoute
+                )
             }
         }
 
@@ -303,12 +313,16 @@ private fun NearbySummaryCard(
 }
 
 @Composable
-private fun WellnessCourseSection(courses: List<WellnessCourse>, onSelectPlace: (String) -> Unit) {
+private fun WellnessCourseSection(
+    courses: List<WellnessCourse>,
+    onSelectPlace: (String) -> Unit,
+    onViewRoute: (String) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(text = "웰니스 회복 코스", style = SectionTitleStyle, color = TextPrimary)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(courses, key = { it.id }) { course ->
-                WellnessCourseCard(course = course, onSelectPlace = onSelectPlace)
+                WellnessCourseCard(course = course, onSelectPlace = onSelectPlace, onViewRoute = { onViewRoute(course.id) })
             }
         }
     }
@@ -415,7 +429,7 @@ private fun WellnessFocusSection(selectedFocus: WellnessFocus, onFocusSelected: 
 }
 
 @Composable
-private fun WellnessCourseCard(course: WellnessCourse, onSelectPlace: (String) -> Unit) {
+private fun WellnessCourseCard(course: WellnessCourse, onSelectPlace: (String) -> Unit, onViewRoute: () -> Unit) {
     Card(
         modifier = Modifier.width(280.dp),
         shape = RoundedCornerShape(24.dp),
@@ -454,6 +468,15 @@ private fun WellnessCourseCard(course: WellnessCourse, onSelectPlace: (String) -
                 course.places.forEachIndexed { index, place ->
                     CourseStopRow(index = index + 1, place = place, onClick = { onSelectPlace(place.id) })
                 }
+            }
+            // F-014 지도 연동: 이 코스의 장소들을 방문 순서대로 카카오맵 위에 번호 마커+연결선으로
+            // 그려주는 화면(feature/map의 코스 동선 모드)으로 진입한다. 이 화면(NearbyScreen)은
+            // 원래 전체가 하드코딩 한국어였는데, CLAUDE.md §5 규칙대로 새로 추가하는 이 문구만
+            // core/i18n을 거친다 — 나머지 기존 문구의 소급 i18n 정비는 이번 작업 스코프 밖이다.
+            OutlinedButton(onClick = onViewRoute, modifier = Modifier.fillMaxWidth()) {
+                Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = LocalAppStrings.current.nearby.viewCourseRouteButtonLabel)
             }
             course.caution?.let {
                 Text(text = it, style = MaterialTheme.typography.labelSmall, color = MediBlue40)
