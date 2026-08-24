@@ -24,7 +24,7 @@ data class AppStrings(
     val chat: ChatStrings,
     val documentScan: DocumentScanStrings,
     val map: MapStrings,
-    val tourism: TourismStrings
+    val nearby: NearbyStrings
 )
 
 private val KoreanAppStrings = AppStrings(
@@ -85,6 +85,7 @@ private val ChineseAppStrings = AppStrings(
     documentScan = DocumentScanStrings.Zh,
     map = MapStrings.Zh,
     tourism = TourismStrings.Zh
+    nearby = NearbyStrings.Zh
 )
 
 private val JapaneseAppStrings = AppStrings(
@@ -105,6 +106,7 @@ private val JapaneseAppStrings = AppStrings(
     documentScan = DocumentScanStrings.Ja,
     map = MapStrings.Ja,
     tourism = TourismStrings.Ja
+    nearby = NearbyStrings.Ja
 )
 
 fun appStringsFor(language: SupportedLanguage): AppStrings = when (language) {

@@ -3,6 +3,7 @@ package com.mediinbusan.app.core.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Paint
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,13 @@ import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTransition
 import com.kakao.vectormap.label.Transition
+import com.kakao.vectormap.route.RouteLine
+import com.kakao.vectormap.route.RouteLineOptions
+import com.kakao.vectormap.route.RouteLinePattern
+import com.kakao.vectormap.route.RouteLineSegment
+import com.kakao.vectormap.route.RouteLineStyle
+import com.kakao.vectormap.route.RouteLineStyles
+import com.kakao.vectormap.route.RouteLineStylesSet
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -51,7 +59,11 @@ data class MapPin(
     val latitude: Double,
     val longitude: Double,
     val type: MapPinType,
-    val selected: Boolean = false
+    val selected: Boolean = false,
+    // 웰니스 코스 동선(F-014 지도 연동)에서만 쓰는 1-based 방문 순서 배지. null이면 배지를 그리지 않는다 —
+    // 기존 호출부(HospitalDetail 단일 핀, MapScreen의 병원/장소 브라우징)는 전부 이 값을 지정하지 않으므로
+    // 기존 동작에 영향이 없다.
+    val routeIndex: Int? = null
 )
 
 /**
@@ -92,6 +104,12 @@ object KakaoMapAvailability {
  * 카메라를 건드리지 않는다 — 병원 전체 브라우징처럼 핀이 부산 전역에 흩어져 있어 fitMapPoints를 쓰면
  * 서면 클러스터가 화면에서 작아져 버리는 경우, 그리고 "이 위치에서 검색" 이후 사용자가 이동시킨
  * 카메라 위치를 결과 목록 갱신 때문에 다시 튕겨내고 싶지 않은 경우에 쓴다.
+ *
+ * [routeStops]가 2개 이상이면 웰니스 코스 동선(F-014)의 방문 순서를 화살표 패턴이 반복되는 경로선으로
+ * 그린다(카카오맵 RouteLine API, [renderRoute] 참고). 좌표를 그대로 직선으로 이은 것이라 실제
+ * 도로/보행로를 정확히 따라가지는 않는다 — 다만 이건 실제 길찾기 경로 대신 "이 순서로 이동한다"는
+ * 방향성만 우리 지도 안에서 보여주려는 의도적 선택이다(외부 카카오맵 앱으로 내보내는 길찾기 연동은
+ * 쓰지 않는다). [MapPin.routeIndex] 번호 배지와 함께 방문 순서를 이중으로 안내한다.
  */
 @Composable
 fun KakaoMapView(
@@ -102,7 +120,11 @@ fun KakaoMapView(
     recenterRequestId: Int = 0,
     searchAreaRequestId: Int = 0,
     onSearchArea: (latitude: Double, longitude: Double) -> Unit = { _, _ -> },
-    fitCameraToPins: Boolean = true
+    fitCameraToPins: Boolean = true,
+    // 웰니스 코스 동선(F-014)의 방문 순서. 2개 미만이면 아무것도 그리지 않는다 — 기존 호출부
+    // (HospitalDetail 단일 핀, MapScreen의 병원/장소 브라우징)는 전부 빈 목록 기본값을 그대로 쓰므로
+    // 기존 동작에 영향이 없다.
+    routeStops: List<RouteStop> = emptyList()
 ) {
     // libK3fAndroid.so는 arm64-v8a/armeabi-v7a로만 배포되어 x86_64 에뮬레이터에서는
     // KakaoMapSdk.init()이 실패한다(MediInBusanApp.onCreate() 참고). 그 경우 MapView를 만들지
@@ -121,6 +143,9 @@ fun KakaoMapView(
     // 라벨까지 전부 깜빡여 부자연스럽다 — 대신 바뀐 라벨만 Label.changeStyles(..., animate=true)로
     // 애니메이션과 함께 스타일만 갈아끼운다.
     val trackedLabels = remember { mutableMapOf<String, TrackedPinLabel>() }
+    // 코스 동선 화살표 경로선(RouteLine)은 라벨과 달리 매번 새로 그려도 저렴하고(경유지 몇 개짜리
+    // 선 하나) 부분 갱신할 이유가 없어, 라벨처럼 diff하지 않고 이전 것을 지우고 다시 그린다.
+    var trackedRouteLine by remember { mutableStateOf<RouteLine?>(null) }
 
     DisposableEffect(lifecycleOwner, mapView) {
         val observer = LifecycleEventObserver { _, event ->
@@ -167,6 +192,11 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap, pins) {
         val map = kakaoMap ?: return@LaunchedEffect
         renderPins(context, map, pins, onPinClick, fitCameraToPins, trackedLabels)
+    }
+
+    LaunchedEffect(kakaoMap, routeStops) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        trackedRouteLine = renderRoute(context, map, routeStops, trackedRouteLine)
     }
 
     // 마커가 아닌 빈 지도를 눌렀을 때의 신호 — BrowseMap이 이걸로 선택을 해제한다
@@ -276,6 +306,40 @@ private fun renderPins(
     }
 }
 
+// 웰니스 코스 동선(F-014)의 방문 순서를 화살표 패턴이 반복되는 경로선으로 그린다. stops를 순서대로
+// 이은 직선일 뿐 실제 도로/보행로 좌표가 아니다 — 정확한 길찾기 경로가 아니라 "이 순서로 이동한다"는
+// 방향성 표시가 목적이므로(KakaoMapView 문서 참고) 좌표 몇 개를 직선으로 잇는 것으로 충분하다.
+// stops가 바뀔 때마다 previous를 지우고 새로 그린다(라벨과 달리 diff할 이유가 없다 — renderPins 주석 참고).
+private fun renderRoute(context: Context, map: KakaoMap, stops: List<RouteStop>, previous: RouteLine?): RouteLine? {
+    val layer = map.routeLineManager?.layer
+    previous?.let { layer?.remove(it) }
+    if (layer == null || stops.size < 2) return null
+
+    val points = stops.map { LatLng.from(it.latitude, it.longitude) }
+    val pattern = RouteLinePattern.from(context.routeArrowBitmap(), ROUTE_ARROW_PATTERN_DISTANCE_PX)
+    val style = RouteLineStyle.from(ROUTE_LINE_WIDTH_PX, ROUTE_LINE_COLOR, pattern)
+    val stylesSet = RouteLineStylesSet.from(RouteLineStyles.from(style))
+    val segment = RouteLineSegment.from(points, stylesSet.getStyles(0))
+    val options = RouteLineOptions.from(segment).setStylesSet(stylesSet)
+    return layer.addRouteLine(options)
+}
+
+// ic_route_arrow도 pinIconBitmap과 같은 이유로(VectorDrawable은 LabelStyle/RouteLinePattern의
+// BitmapFactory 기반 리소스ID 오버로드에서 아이콘 없이 비어 보인다) Bitmap으로 직접 래스터화해서
+// 넘긴다. 아이콘 자체는 컨텍스트와 무관하게 항상 같은 모양이라 라벨 아이콘과 달리 단일 캐시 하나면 된다.
+private var routeArrowBitmapCache: Bitmap? = null
+
+private fun Context.routeArrowBitmap(): Bitmap = routeArrowBitmapCache ?: run {
+    val drawable = requireNotNull(ContextCompat.getDrawable(this, R.drawable.ic_route_arrow)) { "drawable not found: ic_route_arrow" }
+    val width = drawable.intrinsicWidth.coerceAtLeast(1)
+    val height = drawable.intrinsicHeight.coerceAtLeast(1)
+    Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+    }.also { routeArrowBitmapCache = it }
+}
+
 private fun MapPin.iconRes(): Int = when (type) {
     MapPinType.HOSPITAL -> if (selected) R.drawable.ic_map_pin_hospital_selected else R.drawable.ic_map_pin_hospital
     MapPinType.TOURIST -> if (selected) R.drawable.ic_map_pin_tourist_selected else R.drawable.ic_map_pin_tourist
@@ -283,17 +347,21 @@ private fun MapPin.iconRes(): Int = when (type) {
 }
 
 private fun MapPin.toLabelStyle(context: Context): LabelStyle =
-    LabelStyle.from(context.pinIconBitmap(iconRes())).setIconTransition(PinSelectTransition)
+    LabelStyle.from(context.pinIconBitmap(iconRes(), routeIndex)).setIconTransition(PinSelectTransition)
 
 // LabelStyle.from(Context, Int)는 내부적으로 BitmapFactory.decodeResource()를 쓰는 것으로 보이는데,
 // 이 API는 래스터 이미지(PNG/WebP)만 디코딩하고 우리 핀 아이콘 같은 VectorDrawable(XML)에는 null을
 // 반환한다 — 그 결과 K3fAApi가 "ImageAsset is invalid"를 찍으며 라벨은 추가되지만 아이콘 없이 안 보인다.
 // VectorDrawable을 직접 Bitmap으로 래스터화해 LabelStyle.from(Bitmap)에 넘기면 정상 동작한다.
-// 아이콘 종류가 3개뿐이라 리소스 ID 기준으로 캐싱해 재렌더링마다 다시 그리지 않게 한다.
-private val pinIconBitmapCache = mutableMapOf<Int, Bitmap>()
+// 웰니스 코스 동선의 방문 순서 배지도 별도 Label/Badge 오브젝트를 새로 띄우는 대신, 바로 이 래스터화
+// 단계에서 같은 Bitmap 위에 그려 넣는다 — 이미 검증된 LabelStyle.from(Bitmap) 경로 하나만 타면 되므로
+// 이 코드베이스에서 한 번도 안 써본 Badge/LabelTextBuilder API를 새로 검증할 필요가 없다.
+// 캐시 키에 routeIndex를 포함하되, 아이콘 종류(3개) x 배지 종류(코스당 최대 몇 개)로 조합이 작아
+// 캐시가 무한정 자라지 않는다.
+private val pinIconBitmapCache = mutableMapOf<Pair<Int, Int?>, Bitmap>()
 
-private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
-    pinIconBitmapCache.getOrPut(resId) {
+private fun Context.pinIconBitmap(@DrawableRes resId: Int, routeIndex: Int? = null): Bitmap =
+    pinIconBitmapCache.getOrPut(resId to routeIndex) {
         val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
         val width = drawable.intrinsicWidth.coerceAtLeast(1)
         val height = drawable.intrinsicHeight.coerceAtLeast(1)
@@ -301,9 +369,52 @@ private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
+            if (routeIndex != null) {
+                drawRouteBadge(canvas, routeIndex, width, height)
+            }
         }
     }
+
+// 핀 아이콘 우상단에 작게 원+숫자 배지를 그린다. 별도 Kakao Label/Badge 오브젝트가 아니라 아이콘
+// Bitmap의 픽셀 일부이므로, Label 선택/추가/삭제 라이프사이클(trackedLabels)을 그대로 재사용할 수 있다.
+private fun drawRouteBadge(canvas: Canvas, routeIndex: Int, iconWidth: Int, iconHeight: Int) {
+    val radius = (iconWidth.coerceAtMost(iconHeight) * ROUTE_BADGE_RADIUS_RATIO)
+    val centerX = iconWidth - radius - (iconWidth * ROUTE_BADGE_MARGIN_RATIO)
+    val centerY = radius + (iconHeight * ROUTE_BADGE_MARGIN_RATIO)
+
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ROUTE_BADGE_COLOR; style = Paint.Style.FILL }
+    val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = radius * 0.18f
+    }
+    canvas.drawCircle(centerX, centerY, radius, fillPaint)
+    canvas.drawCircle(centerX, centerY, radius, strokePaint)
+
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        textAlign = Paint.Align.CENTER
+        textSize = radius * 1.15f
+        isFakeBoldText = true
+    }
+    val textY = centerY - (textPaint.descent() + textPaint.ascent()) / 2f
+    canvas.drawText(routeIndex.toString(), centerX, textY, textPaint)
+}
 
 private const val DEFAULT_ZOOM_LEVEL = 12
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
+private const val ROUTE_BADGE_RADIUS_RATIO = 0.24f
+private const val ROUTE_BADGE_MARGIN_RATIO = 0.06f
+// designsystem CoralPrimary(0xFFFD6677)와 톤을 맞춘다 — core/ui는 core/designsystem을 참조할 수 있지만,
+// android.graphics.Paint 쪽은 androidx.compose.ui.graphics.Color가 아닌 android.graphics 정수 색상값을
+// 받으므로 Color 객체 대신 바로 파싱한 Int를 쓴다.
+private val ROUTE_BADGE_COLOR = android.graphics.Color.parseColor("#FD6677")
+
+// 코스 동선 화살표 경로선(RouteLine) 스타일. lineWidth는 카카오 SDK 문서 기준 px 단위(dp 아님).
+// 굵은 선(14px)에 반투명 코랄을 깔고 그 위로 흰 화살표(ic_route_arrow)가 일정 간격(70px)마다
+// 반복돼, 옅은 배경 위에서도 방향이 또렷이 보이면서 실제 도로 위에 그린 것처럼 두꺼워 보이지
+// 않게 균형을 맞췄다.
+private const val ROUTE_LINE_WIDTH_PX = 14f
+private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 70f
+private val ROUTE_LINE_COLOR = android.graphics.Color.parseColor("#B3FD6677") // CoralPrimary @ ~70% alpha
