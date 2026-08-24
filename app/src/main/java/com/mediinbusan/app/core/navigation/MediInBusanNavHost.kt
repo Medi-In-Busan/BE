@@ -47,6 +47,7 @@ import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
 import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
+import com.mediinbusan.app.feature.tourism.TourismCatalogItemDetailScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
 import com.mediinbusan.app.feature.tourism.TourismHubScreen
 
@@ -245,8 +246,12 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.TourismCatalog>()
             TourismCatalogScreen(
                 categoryName = route.category,
+                onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onBack = navController::popBackStack
             )
+        }
+        composable<Route.TourismCatalogItemDetail> {
+            TourismCatalogItemDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.MapView> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.MapView>()

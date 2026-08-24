@@ -1,5 +1,7 @@
 package com.mediinbusan.app.feature.nearby
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Explore
@@ -53,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,10 +71,12 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.data.place.WellnessWalkingCourse
@@ -111,6 +117,7 @@ private fun NearbyContent(
     onBack: () -> Unit,
     onRetry: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Scaffold(
         containerColor = WellnessCanvas,
         topBar = {
@@ -124,7 +131,7 @@ private fun NearbyContent(
                 title = { Text(text = "관광·웰니스") },
                 actions = {
                     IconButton(onClick = onExploreTourism) {
-                        Icon(imageVector = Icons.Default.Explore, contentDescription = "부산 관광 데이터")
+                        Icon(imageVector = Icons.Default.Explore, contentDescription = strings.tourism.exploreTourismContentDescription)
                     }
                     IconButton(onClick = onNavigateToMap) {
                         Icon(imageVector = Icons.Default.Map, contentDescription = "지도에서 보기")
@@ -164,6 +171,7 @@ private fun NearbyLoadedContent(
     onExploreTourism: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var selectedType by remember { mutableStateOf<PlaceType?>(null) }
     var selectedFocus by remember { mutableStateOf(WellnessFocus.ALL) }
     val types = uiState.places.map { it.type }.distinct()
@@ -210,7 +218,7 @@ private fun NearbyLoadedContent(
 
         item {
             Text(
-                text = "${filteredPlaces.size}곳 둘러보기",
+                text = String.format(strings.tourism.placesSummaryFormat, filteredPlaces.size),
                 style = SectionTitleStyle,
                 color = TextPrimary
             )
@@ -250,6 +258,7 @@ private fun NearbySummaryCard(
     onNavigateToMap: () -> Unit,
     onExploreTourism: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Surface(
         shape = MaterialTheme.shapes.large,
         color = CoralPrimaryContainer,
@@ -295,7 +304,9 @@ private fun NearbySummaryCard(
                     Text(text = "지도에서 동선 보기")
                 }
                 OutlinedButton(onClick = onExploreTourism, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "부산 관광 데이터 둘러보기")
+                    Icon(imageVector = Icons.Default.Explore, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = strings.tourism.exploreTourismLabel)
                 }
             }
         }
@@ -651,6 +662,121 @@ private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun WalkingCourseSection(courses: List<WellnessWalkingCourse>) {
+    val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(text = strings.tourism.walkingSectionTitle, style = SectionTitleStyle, color = TextPrimary)
+            Text(
+                text = strings.tourism.walkingSectionSubtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(courses, key = { it.id }) { course ->
+                WalkingCourseCard(course = course)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WalkingCourseCard(course: WellnessWalkingCourse) {
+    val strings = LocalAppStrings.current
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier.width(280.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = course.name,
+                style = CardTitleStyle,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = course.district,
+                style = MaterialTheme.typography.labelMedium,
+                color = SkyBlue
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                course.distanceKm?.let { InfoPill(text = "${it.formatDistance()}km") }
+                course.durationMinutes?.let {
+                    InfoPill(text = "${it / 60}${strings.tourism.walkingHourUnit} ${it % 60}${strings.tourism.walkingMinuteUnit}")
+                }
+                course.difficulty?.let { InfoPill(text = String.format(strings.tourism.walkingDifficultyFormat, it)) }
+            }
+            course.summary?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            course.gpxUrl?.let { gpxUrl ->
+                OutlinedButton(
+                    onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(gpxUrl))) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = strings.tourism.openGpxLabel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyPlaceFilter(onReset: () -> Unit) {
+    val strings = LocalAppStrings.current
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(text = strings.tourism.emptyPlaceFilterMessage, style = CardTitleStyle, color = TextPrimary)
+            OutlinedButton(onClick = onReset) {
+                Text(text = strings.tourism.resetFilterLabel)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WellnessFocusSection(selectedFocus: WellnessFocus, onFocusSelected: (WellnessFocus) -> Unit) {
+    val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(text = strings.tourism.todayFocusSectionTitle, style = SectionTitleStyle, color = TextPrimary)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(WellnessFocus.entries, key = { it.name }) { focus ->
+                FilterChip(
+                    selected = selectedFocus == focus,
+                    onClick = { onFocusSelected(focus) },
+                    label = { Text(text = focus.label(strings.tourism)) },
+                    colors = nearbyFilterChipColors()
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun InfoPill(text: String) {
     Box(
         modifier = Modifier
@@ -724,5 +850,25 @@ private fun Double.toDistanceLabel(): String =
 
 private fun Double.formatDistance(): String =
     if (this % 1.0 == 0.0) toInt().toString() else String.format("%.1f", this)
+
+private enum class WellnessFocus {
+    ALL, REST, WALK, FOOD, STAY;
+
+    fun label(strings: com.mediinbusan.app.core.i18n.TourismStrings): String = when (this) {
+        ALL -> strings.focusAll
+        REST -> strings.focusRest
+        WALK -> strings.focusWalk
+        FOOD -> strings.focusFood
+        STAY -> strings.focusStay
+    }
+
+    fun filter(places: List<Place>): List<Place> = when (this) {
+        ALL -> places
+        REST -> places.filter { it.type in setOf(PlaceType.SPA, PlaceType.TOURIST_ATTRACTION) }
+        WALK -> places.filter { it.type == PlaceType.WALK }
+        FOOD -> places.filter { it.type == PlaceType.RESTAURANT }
+        STAY -> places.filter { it.type == PlaceType.LODGING }
+    }
+}
 
 private val WellnessCanvas = Color(0xFFFFFAFF)

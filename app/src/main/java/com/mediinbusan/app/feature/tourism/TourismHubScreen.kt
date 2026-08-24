@@ -15,9 +15,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Route
@@ -51,6 +51,9 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedDescription
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogGroup
 
@@ -62,6 +65,7 @@ fun TourismHubScreen(
     viewModel: TourismHubViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
 
     Scaffold(
         containerColor = TourismCanvas,
@@ -70,10 +74,10 @@ fun TourismHubScreen(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.tourism.backContentDescription)
                     }
                 },
-                title = { Text("부산 관광 데이터") }
+                title = { Text(strings.tourism.hubTitle) }
             )
         }
     ) { innerPadding ->
@@ -85,33 +89,16 @@ fun TourismHubScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             item { TourismHubHero(languageName = uiState.language.displayName) }
-            if (uiState.recommendedCategories.isNotEmpty()) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("맞춤 추천", style = SectionTitleStyle, color = TextPrimary)
-                        Text("앱에서 둘러본 기록을 바탕으로 추천해요.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-                    }
-                }
-                items(
-                    items = uiState.recommendedCategories,
-                    key = { "recommended-${it.name}" }
-                ) { category ->
-                    TourismCategoryCard(category = category, onClick = { onSelectCategory(category) }, recommended = true)
-                }
-            }
             TourismCatalogGroup.entries.forEach { group ->
                 val groupCategories = uiState.categories.filter { it.group == group }
                 if (groupCategories.isNotEmpty()) {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(group.label, style = SectionTitleStyle, color = TextPrimary)
-                            Text(group.description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                            Text(group.translatedLabel(strings.language), style = SectionTitleStyle, color = TextPrimary)
+                            Text(group.translatedDescription(strings.language), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                         }
                     }
-                    items(
-                        items = groupCategories,
-                        key = { "group-${it.name}" }
-                    ) { category ->
+                    items(items = groupCategories, key = { "group-${it.name}" }) { category ->
                         TourismCategoryCard(category = category, onClick = { onSelectCategory(category) })
                     }
                 }
@@ -122,6 +109,7 @@ fun TourismHubScreen(
 
 @Composable
 private fun TourismHubHero(languageName: String) {
+    val strings = LocalAppStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -142,24 +130,22 @@ private fun TourismHubHero(languageName: String) {
                         modifier = Modifier.padding(10.dp).size(24.dp)
                     )
                 }
-                Text("부산을 더 편하게 둘러보세요", style = SectionTitleStyle, color = TextPrimary)
+                Text(strings.tourism.hubHeroTitle, style = SectionTitleStyle, color = TextPrimary)
+                Text(strings.tourism.hubHeroDescription, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 Text(
-                    "한국관광공사 공공데이터를 장소, 언어, 동선, 여행 데이터로 나눠 한곳에 정리했습니다.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    text = String.format(strings.tourism.hubHeroLanguageBadgeFormat, languageName),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = CoralPrimary,
+                    fontWeight = FontWeight.SemiBold
                 )
-                Text("$languageName 관광정보 적용 중", style = MaterialTheme.typography.labelLarge, color = CoralPrimary, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
 
 @Composable
-private fun TourismCategoryCard(
-    category: TourismCatalogCategory,
-    onClick: () -> Unit,
-    recommended: Boolean = false
-) {
+private fun TourismCategoryCard(category: TourismCatalogCategory, onClick: () -> Unit) {
+    val language = LocalAppStrings.current.language
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -181,13 +167,8 @@ private fun TourismCategoryCard(
                 )
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(category.label, style = CardTitleStyle, color = TextPrimary)
-                    if (recommended) {
-                        Text("추천", style = MaterialTheme.typography.labelSmall, color = CoralPrimary, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                Text(category.shortDescription, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(category.translatedLabel(language), style = CardTitleStyle, color = TextPrimary)
+                Text(category.translatedDescription(language), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextSecondary)
         }

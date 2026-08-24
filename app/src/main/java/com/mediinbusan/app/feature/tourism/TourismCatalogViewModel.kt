@@ -2,21 +2,13 @@ package com.mediinbusan.app.feature.tourism
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.data.favorite.FavoriteItemType
-import com.mediinbusan.app.data.favorite.FavoriteRepository
-import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
-import com.mediinbusan.app.data.tourism.TourismInteractionRepository
 import com.mediinbusan.app.domain.tourism.BusanDistrict
-import com.mediinbusan.app.domain.tourism.RecommendTourismCatalogUseCase
-import com.mediinbusan.app.domain.tourism.TourismCatalog
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
-import com.mediinbusan.app.domain.tourism.TourismRecommendationContext
-import com.mediinbusan.app.domain.tourism.TourismReferenceLocation
-import com.mediinbusan.app.domain.tourism.inferTourismRecoveryStage
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,20 +20,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * "맞춤 추천" 재정렬(RecommendTourismCatalogUseCase)과 방문 기록 저장(TourismInteractionRepository)은
+ * feature/tourism-recommendation/84의 몫이라 이 ViewModel엔 없다 — 카테고리 조회·구·군 필터만 다룬다.
+ */
 @HiltViewModel
 class TourismCatalogViewModel @Inject constructor(
     private val repository: TourismCatalogRepository,
-    private val interactionRepository: TourismInteractionRepository,
-    private val favoriteRepository: FavoriteRepository,
-    private val recentRepository: RecentRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val recommendTourismCatalog: RecommendTourismCatalogUseCase
+    private val pendingTourismCatalogItem: PendingTourismCatalogItem
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TourismCatalogUiState())
     val uiState: StateFlow<TourismCatalogUiState> = _uiState
     private var loadJob: Job? = null
-    private var baseCatalog: TourismCatalog? = null
-    private var initialViewRecorded = false
 
     fun load(categoryName: String) {
         viewModelScope.launch {
@@ -56,15 +47,10 @@ class TourismCatalogViewModel @Inject constructor(
             } else {
                 requestedCategory
             }
-            val profile = interactionRepository.profile.first()
             val district = if (category.supportsDistrict) {
-                profile.preferredDistrict ?: BusanDistrict.HAEUNDAE
+                _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
             } else {
                 null
-            }
-            if (!initialViewRecorded) {
-                interactionRepository.recordCategoryView(category)
-                initialViewRecorded = true
             }
             loadCatalog(category, district)
         }
@@ -72,7 +58,6 @@ class TourismCatalogViewModel @Inject constructor(
 
     fun selectDistrict(district: BusanDistrict) {
         val category = _uiState.value.category ?: return
-        viewModelScope.launch { interactionRepository.setPreferredDistrict(district) }
         loadCatalog(category, district)
     }
 
@@ -83,10 +68,7 @@ class TourismCatalogViewModel @Inject constructor(
 
     fun selectItem(item: TourismCatalogItem) {
         val category = _uiState.value.category ?: return
-        viewModelScope.launch {
-            interactionRepository.recordItemSelection(category, item)
-            baseCatalog?.let { applyRecommendation(it, lastSelectedItemId = item.id) }
-        }
+        pendingTourismCatalogItem.set(category, item)
     }
 
     private fun loadCatalog(category: TourismCatalogCategory, district: BusanDistrict?) {
@@ -95,16 +77,16 @@ class TourismCatalogViewModel @Inject constructor(
             repository.getCatalog(category, district).collect { result ->
                 when (result) {
                     Result.Loading -> _uiState.update { state ->
+                        state.copy(category = category, selectedDistrict = district, isLoading = true, errorMessage = null)
+                    }
+                    is Result.Success -> _uiState.update { state ->
                         state.copy(
                             category = category,
                             selectedDistrict = district,
-                            isLoading = true,
+                            catalog = result.data,
+                            isLoading = false,
                             errorMessage = null
                         )
-                    }
-                    is Result.Success -> {
-                        baseCatalog = result.data
-                        applyRecommendation(result.data)
                     }
                     is Result.Error -> _uiState.update { state ->
                         state.copy(
@@ -116,54 +98,6 @@ class TourismCatalogViewModel @Inject constructor(
                     }
                 }
             }
-        }
-    }
-
-    private suspend fun applyRecommendation(catalog: TourismCatalog, lastSelectedItemId: String? = null) {
-        val profile = interactionRepository.profile.first()
-        val preferences = userPreferencesRepository.userPreferences.first()
-        val favoriteNames = favoriteRepository.observeFavorites().first()
-            .filter { it.itemType == FavoriteItemType.PLACE }
-            .map { it.name }
-        val recentItems = recentRepository.observeRecentlyViewed().first()
-        val recentNames = recentItems
-            .filter { it.itemType == FavoriteItemType.PLACE }
-            .map { it.itemName }
-        val recentHospital = recentItems.firstOrNull {
-            it.itemType == FavoriteItemType.HOSPITAL && it.latitude != null && it.longitude != null
-        }
-        val now = System.currentTimeMillis()
-        val context = TourismRecommendationContext(
-            medicalPurpose = preferences.medicalPurpose,
-            referenceLocation = recentHospital?.let {
-                TourismReferenceLocation(
-                    latitude = requireNotNull(it.latitude),
-                    longitude = requireNotNull(it.longitude)
-                )
-            },
-            recoveryStage = inferTourismRecoveryStage(
-                medicalPurpose = preferences.medicalPurpose,
-                lastHospitalViewedAt = recentHospital?.viewedAt,
-                nowEpochMillis = now
-            ),
-            nowEpochMillis = now
-        )
-        val recommendation = recommendTourismCatalog(
-            catalog = catalog,
-            profile = profile,
-            favoritePlaceNames = favoriteNames,
-            recentPlaceNames = recentNames,
-            context = context
-        )
-        _uiState.update { state ->
-            state.copy(
-                category = catalog.category,
-                catalog = recommendation.catalog,
-                personalizedItemIds = recommendation.personalizedItemIds,
-                lastSelectedItemId = lastSelectedItemId,
-                isLoading = false,
-                errorMessage = null
-            )
         }
     }
 }
