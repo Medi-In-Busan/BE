@@ -19,6 +19,7 @@ public record WellnessIngestionProperties(
     String chineseTourismBaseUrl,
     String tourApiServiceKey,
     String kakaoLocalBaseUrl,
+    String kakaoNaviBaseUrl,
     String kakaoRestApiKey,
     int tourApiRowsPerType,
     int kakaoRowsPerKeyword,

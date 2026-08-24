@@ -53,6 +53,7 @@ wellness:
     chinese-tourism-base-url: https://apis.data.go.kr/B551011/ChsService2
     tour-api-service-key: ${TOURISM_API_SERVICE_KEY:}
     kakao-local-base-url: https://dapi.kakao.com
+    kakao-navi-base-url: https://apis-navi.kakaomobility.com
     kakao-rest-api-key: ${KAKAO_REST_API_KEY:}
     tour-api-rows-per-type: 30
     kakao-rows-per-keyword: 10

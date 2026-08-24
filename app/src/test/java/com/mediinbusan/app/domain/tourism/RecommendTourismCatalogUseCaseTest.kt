@@ -53,6 +53,23 @@ class RecommendTourismCatalogUseCaseTest {
     }
 
     @Test
+    fun `관광 허브에는 현재 언어 관광지와 실제 탐색에 쓰는 기능만 노출한다`() {
+        assertEquals(
+            listOf(
+                TourismCatalogCategory.PLACES_KO,
+                TourismCatalogCategory.ACCESSIBLE,
+                TourismCatalogCategory.WALKING,
+                TourismCatalogCategory.RELATED,
+                TourismCatalogCategory.CROWDING
+            ),
+            tourismHubCategories("ko")
+        )
+        assertEquals(TourismCatalogCategory.PLACES_EN, tourismHubCategories("en").first())
+        assertEquals(TourismCatalogCategory.PLACES_JA, tourismHubCategories("ja").first())
+        assertEquals(TourismCatalogCategory.PLACES_ZH, tourismHubCategories("zh").first())
+    }
+
+    @Test
     fun `최근 확인한 병원에서 가까운 관광지를 우선한다`() {
         val near = item("near", "가까운 공원", latitude = 35.10, longitude = 129.10)
         val far = item("far", "먼 공원", latitude = 35.30, longitude = 129.30)

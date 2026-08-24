@@ -6,7 +6,6 @@ import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.data.place.WellnessTourismRepository
 import com.mediinbusan.app.domain.course.AssembleWellnessCourseUseCase
 import com.mediinbusan.app.domain.nearby.GetNearbyPlacesSortedByDistanceUseCase
-import com.mediinbusan.app.data.place.WellnessTourismRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

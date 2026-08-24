@@ -38,6 +38,7 @@ import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
 import com.mediinbusan.app.feature.map.MapScreen
 import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
+import com.mediinbusan.app.feature.nearby.WellnessCourseMapScreen
 import com.mediinbusan.app.feature.languageselect.LanguageSelectScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
 import com.mediinbusan.app.feature.selfdiagnosis.DiagnosisCtaTarget
@@ -50,6 +51,7 @@ import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogItemDetailScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
 import com.mediinbusan.app.feature.tourism.TourismHubScreen
+import com.mediinbusan.app.feature.tourism.RecommendedCourseScreen
 
 /** 10개 화면(S-01~S-10)을 잇는 단일 NavHost. feature 패키지는 서로를 직접 참조하지 않고 이 파일을 통해서만 연결된다. */
 @Composable
@@ -213,10 +215,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             NearbyScreen(
                 hospitalId = route.hospitalId,
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
-                onNavigateToMap = { navController.navigate(Route.MapView(route.hospitalId)) },
-                onNavigateToCourseRoute = { courseId ->
-                    navController.navigate(Route.MapView(hospitalId = route.hospitalId, courseId = courseId))
-                },
+                onNavigateToMap = { navController.navigate(Route.WellnessCourseMap(route.hospitalId)) },
                 onExploreTourism = { navController.navigate(Route.TourismHub) },
                 onBack = navController::popBackStack
             )
@@ -225,6 +224,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.PlaceDetail>()
             PlaceDetailScreen(
                 placeId = route.placeId,
+                onBack = navController::popBackStack
+            )
+        }
+        composable<Route.WellnessCourseMap> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.WellnessCourseMap>()
+            WellnessCourseMapScreen(
+                hospitalId = route.hospitalId,
                 onBack = navController::popBackStack
             )
         }
@@ -238,7 +244,17 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.TourismCatalog>()
             TourismCatalogScreen(
                 categoryName = route.category,
-                onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail) },
+                onNavigateToCourse = { category, district ->
+                    navController.navigate(Route.RecommendedTourismCourse(category, district))
+                },
+                onBack = navController::popBackStack
+            )
+        }
+        composable<Route.RecommendedTourismCourse> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.RecommendedTourismCourse>()
+            RecommendedCourseScreen(
+                categoryName = route.category,
+                districtName = route.district,
                 onBack = navController::popBackStack
             )
         }
