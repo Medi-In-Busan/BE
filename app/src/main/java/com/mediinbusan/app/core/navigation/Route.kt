@@ -96,6 +96,7 @@ sealed interface Route {
         val district: String? = null
     ) : Route // S-07 개인화 추천 관광지 3~5개 코스 지도
 
+    @Serializable
     data object TourismCatalogItemDetail : Route // S-07 하위 관광 데이터 항목 상세
 
     // S-08. courseId가 non-null이면(hospitalId도 non-null이어야 함) 웰니스 코스 동선 모드 — 해당 코스의

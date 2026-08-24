@@ -2,8 +2,13 @@ package com.mediinbusan.app.feature.tourism
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.data.favorite.FavoriteItemType
+import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.recent.RecentRepository
+import com.mediinbusan.app.data.tourism.TourismInteractionRepository
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismInteractionProfile
 import com.mediinbusan.app.domain.tourism.TourismRecoveryStage
@@ -12,17 +17,19 @@ import com.mediinbusan.app.domain.tourism.tourismHubCategories
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.math.exp
+import kotlin.math.ln
 
-/**
- * 행동 기반 "맞춤 추천"(방문 기록·즐겨찾기·최근 본 항목 반영)은 feature/tourism-recommendation/84의
- * 몫이라 여기서는 다루지 않는다 — 현재 언어에 맞는 카테고리만 걸러 그룹별로 보여준다.
- */
 @HiltViewModel
 class TourismHubViewModel @Inject constructor(
-    userPreferencesRepository: UserPreferencesRepository
+    userPreferencesRepository: UserPreferencesRepository,
+    interactionRepository: TourismInteractionRepository,
+    favoriteRepository: FavoriteRepository,
+    recentRepository: RecentRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TourismHubUiState())
     val uiState: StateFlow<TourismHubUiState> = _uiState
