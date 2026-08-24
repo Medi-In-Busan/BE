@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.hospitaldetail
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.mediinbusan.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -165,7 +166,7 @@ private fun HospitalDetailContent(
                 .padding(bottom = bottomBarHeight)
         ) {
             ImageCarouselSection(
-                imageUrls = hospital.imageUrls,
+                imageUrls = hospital.imageUrls.ifEmpty { HospitalDetailFallbackImages },
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
                 onBack = onBack,
@@ -303,9 +304,18 @@ private fun HospitalDetailContent(
     }
 }
 
+// 병원마다 다른 실제 사진이 없어서, 모든 병원 상세에 공통으로 쓰는 4장짜리 기본 갤러리.
+// hospital.imageUrls가 실제 값(String URL)으로 채워지면 그쪽이 우선(ifEmpty 폴백이라)한다.
+private val HospitalDetailFallbackImages: List<Any> = listOf(
+    R.drawable.hospital_detail1,
+    R.drawable.hospital_detail2,
+    R.drawable.hospital_detail3,
+    R.drawable.hospital_detail4
+)
+
 @Composable
 private fun ImageCarouselSection(
-    imageUrls: List<String>,
+    imageUrls: List<Any>,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
@@ -315,13 +325,14 @@ private fun ImageCarouselSection(
     val pageCount = imageUrls.size.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
-    // 하단 모서리를 둥글게 깎아 아래 카드 스택으로 이어지는 전환을 부드럽게 한다(각진 사각형 →
-    // 스파 앱다운 곡선). 뒤로가기·공유 같은 오버레이 컨트롤은 위쪽에 있어 영향받지 않는다.
+    // 화면 맨 위에 딱 붙은 배너 대신, 위쪽에 작은 여백을 두고 네 모서리를 전부 둥글려서
+    // 한 장의 사진처럼 떠 보이게 한다(기존엔 아래쪽만 둥글려 카드 스택과 이어붙인 배너 느낌이었음).
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(top = 10.dp)
             .height(260.dp)
-            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .clip(RoundedCornerShape(28.dp))
     ) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             val imageUrl = imageUrls.getOrNull(page)

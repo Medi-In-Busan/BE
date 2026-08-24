@@ -39,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,6 +50,8 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -62,6 +63,7 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 fun TourismCatalogScreen(
     categoryName: String,
     onNavigateToCourse: (category: String, district: String?) -> Unit,
+    onSelectItem: () -> Unit,
     onBack: () -> Unit,
     viewModel: TourismCatalogViewModel = hiltViewModel()
 ) {
@@ -71,7 +73,10 @@ fun TourismCatalogScreen(
     TourismCatalogContent(
         uiState = uiState,
         onDistrictSelected = viewModel::selectDistrict,
-        onItemSelected = viewModel::selectItem,
+        onItemSelected = { item ->
+            viewModel.selectItem(item)
+            onSelectItem()
+        },
         onRetry = viewModel::retry,
         onNavigateToCourse = {
             uiState.category?.let { category ->
@@ -92,6 +97,7 @@ private fun TourismCatalogContent(
     onNavigateToCourse: () -> Unit,
     onBack: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Scaffold(
         containerColor = TourismCanvas,
         topBar = {
@@ -99,7 +105,7 @@ private fun TourismCatalogContent(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.tourism.backContentDescription)
                     }
                 },
                 title = { Text(uiState.category?.label ?: "관광 데이터") },
@@ -122,7 +128,7 @@ private fun TourismCatalogContent(
                 onRetry = onRetry
             )
             uiState.catalog == null || uiState.catalog.items.isEmpty() -> EmptyState(
-                message = "현재 제공되는 관광 데이터가 없습니다.",
+                message = strings.tourism.emptyResultMessage,
                 modifier = Modifier.padding(innerPadding)
             )
             else -> {
@@ -136,7 +142,7 @@ private fun TourismCatalogContent(
                         CatalogSummaryCard(
                             title = catalog.title,
                             description = catalog.description,
-                            source = catalog.source.toSourceLabel(),
+                            source = strings.tourism.sourceLabels[catalog.source] ?: catalog.source,
                             itemCount = catalog.items.size
                         )
                     }
@@ -149,18 +155,15 @@ private fun TourismCatalogContent(
                         }
                     }
                     item {
-                        Text("${catalog.items.size}개 결과", style = SectionTitleStyle, color = TextPrimary)
+                        Text(String.format(strings.tourism.resultCountFormat, catalog.items.size), style = SectionTitleStyle, color = TextPrimary)
                     }
+                    // 중복 id가 나올 수 있어(원본 API 응답 그대로 정규화) 인덱스를 함께 key에 섞어
+                    // Compose 리스트 key 충돌로 인한 크래시를 막는다.
                     itemsIndexed(
                         items = catalog.items,
                         key = { index, item -> "${catalog.category.name}-${item.id}-$index" }
                     ) { _, item ->
-                        TourismDataCard(
-                            item = item,
-                            personalized = item.id in uiState.personalizedItemIds,
-                            selected = item.id == uiState.lastSelectedItemId,
-                            onClick = { onItemSelected(item) }
-                        )
+                        TourismDataCard(item = item, onClick = { onItemSelected(item) })
                     }
                 }
             }
@@ -170,6 +173,7 @@ private fun TourismCatalogContent(
 
 @Composable
 private fun CatalogSummaryCard(title: String, description: String, source: String, itemCount: Int) {
+    val strings = LocalAppStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -181,7 +185,7 @@ private fun CatalogSummaryCard(title: String, description: String, source: Strin
             Text(description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoBadge(source)
-                InfoBadge("${itemCount}개 제공")
+                InfoBadge(String.format(strings.tourism.sourceCountFormat, itemCount))
             }
         }
     }
@@ -190,14 +194,15 @@ private fun CatalogSummaryCard(title: String, description: String, source: Strin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DistrictFilter(selectedDistrict: BusanDistrict?, onDistrictSelected: (BusanDistrict) -> Unit) {
+    val strings = LocalAppStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Text("지역 선택", style = SectionTitleStyle, color = TextPrimary)
+        Text(strings.tourism.districtSectionTitle, style = SectionTitleStyle, color = TextPrimary)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(BusanDistrict.entries, key = { it.name }) { district ->
                 FilterChip(
                     selected = selectedDistrict == district,
                     onClick = { onDistrictSelected(district) },
-                    label = { Text(district.label) },
+                    label = { Text(district.translatedLabel(strings.language)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = CoralPrimaryContainer,
                         selectedLabelColor = CoralPrimary,
@@ -210,12 +215,8 @@ private fun DistrictFilter(selectedDistrict: BusanDistrict?, onDistrictSelected:
 }
 
 @Composable
-private fun TourismDataCard(
-    item: TourismCatalogItem,
-    personalized: Boolean,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
+private fun TourismDataCard(item: TourismCatalogItem, onClick: () -> Unit) {
+    val strings = LocalAppStrings.current
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -240,14 +241,6 @@ private fun TourismDataCard(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (selected || personalized) {
-                    Text(
-                        text = if (selected) "관심 반영됨" else "맞춤 추천",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = CoralPrimary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
                 Text(item.title, style = CardTitleStyle, color = TextPrimary)
                 item.subtitle?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -259,9 +252,13 @@ private fun TourismDataCard(
                         Text(address, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                     }
                 }
-                item.details.entries.take(4).forEach { (key, value) ->
-                    DetailRow(label = key.toDetailLabel(), value = value)
-                }
+                // 카테고리 코드·원본 타임스탬프 같은 원본 API 필드를 그대로 보여주지 않도록,
+                // TourismStrings.detailFieldLabels에 사람이 읽을 라벨이 있는 필드만 고른다
+                // (없는 필드는 raw key로 대체 표시하지 않고 그냥 숨긴다).
+                item.details.entries
+                    .mapNotNull { (key, value) -> strings.tourism.detailFieldLabels[key]?.let { it to value } }
+                    .take(4)
+                    .forEach { (label, value) -> DetailRow(label = label, value = value) }
             }
         }
     }
@@ -283,34 +280,7 @@ private fun InfoBadge(text: String) {
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             color = CoralPrimary,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
         )
     }
-}
-
-private fun String.toSourceLabel(): String = when (this) {
-    "tourism-ko" -> "국문 TourAPI"
-    "tourism-en" -> "영문 TourAPI"
-    "tourism-ja" -> "일문 TourAPI"
-    "tourism-zh" -> "중문 TourAPI"
-    "accessible-tourism" -> "무장애 TourAPI"
-    "related-tourism" -> "연관 관광지 API"
-    "hub-tourism" -> "지역 관광 허브 API"
-    "crowding-forecast" -> "관광 혼잡도 API"
-    "photo-gallery" -> "관광사진 갤러리"
-    "durunubi" -> "두루누비"
-    "odii" -> "오디"
-    else -> this
-}
-
-private fun String.toDetailLabel(): String = when (this) {
-    "tel" -> "전화"
-    "cat1", "cat2", "cat3" -> "분류"
-    "modifiedtime", "modifiedTime" -> "수정일"
-    "distance" -> "거리"
-    "requiredTime", "leadTime" -> "소요시간"
-    "tatsCnctrRate" -> "혼잡도"
-    "baseYmd", "baseYm" -> "기준일"
-    "signguNm" -> "지역"
-    else -> this
 }
