@@ -182,7 +182,7 @@ private fun PlaceHeroCard(place: Place) {
                 ) {
                     Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = Color.White)
                     Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                    place.description?.takeUnless { it.startsWith("http") }?.let {
+                    place.displayDescription?.let {
                         Text(text = it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
                     }
                 }
@@ -200,7 +200,7 @@ private fun PlaceHeroCard(place: Place) {
                     }
                 Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = place.type.tint)
                 Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
-                place.description?.takeUnless { it.startsWith("http") }?.let {
+                place.displayDescription?.let {
                     Text(text = it, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 }
             }
@@ -312,3 +312,6 @@ private val PlaceType.tint: Color
 
 private fun Double.toDistanceLabel(): String =
     if (this < 1000.0) "${toInt()}m" else String.format("%.1fkm", this / 1000.0)
+
+private val Place.displayDescription: String?
+    get() = description?.takeUnless { it.startsWith("http") || it.matches(Regex("EX\\d+")) }

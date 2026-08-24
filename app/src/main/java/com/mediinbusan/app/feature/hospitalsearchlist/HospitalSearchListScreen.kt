@@ -104,7 +104,7 @@ import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.ErrorState
-import com.mediinbusan.app.core.ui.fallbackBannerImageFor
+import com.mediinbusan.app.core.common.resolveHospitalThumbnailRes
 import com.mediinbusan.app.core.ui.FilterChipPill
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
@@ -711,8 +711,8 @@ private fun SearchResultCard(
         // 즐겨찾기 버튼을 빼서(상세 화면에 이미 있어 중복) 생긴 여유를 사진 쪽으로 좀 더 준다.
         // 사진 위아래 여백을 좌우 여백(14dp)과 같은 값으로 맞춰서, 기존 20dp 여백일 때보다
         // 위아래로 6dp씩(총 12dp) 더 늘어나 보이게 한다 — 카드 전체 크기·텍스트 위치는 그대로.
-        // 실제 사진(imageUrl)이 없으면 빈 자리 대신 Home 배너 이미지 중 하나로 채운다 — 병원 ID
-        // 기준으로 고정 배정해서 같은 병원은 스크롤/재조회해도 항상 같은 배너를 보여준다.
+        // 실제 사진(imageUrl)이 없으면 의료태그/이름 기반으로 고른 진료과 사진으로 채운다
+        // (ETC 태그 최우선 → 이름 키워드 → 태그, resolveHospitalThumbnailRes 참고).
         if (hospital.imageUrl != null) {
             AsyncImageBox(
                 model = hospital.imageUrl,
@@ -725,7 +725,9 @@ private fun SearchResultCard(
             )
         } else {
             Image(
-                painter = painterResource(id = fallbackBannerImageFor(hospital.id)),
+                painter = painterResource(
+                    id = resolveHospitalThumbnailRes(hospital.name, hospital.specialties)
+                ),
                 contentDescription = hospital.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

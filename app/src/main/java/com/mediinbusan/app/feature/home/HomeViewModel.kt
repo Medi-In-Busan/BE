@@ -6,8 +6,6 @@ import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.data.favorite.Favorite
-import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.recent.RecentRepository
@@ -56,16 +54,11 @@ class HomeViewModel @Inject constructor(
                 recentRepository.observeRecentlyViewed()
             ) { favorites, result, recentlyViewed -> Triple(favorites, result, recentlyViewed) }
                 .collect { (favorites, result, recentlyViewed) ->
-                    val favoriteHospitalIds = favorites
-                        .filter { it.itemType == FavoriteItemType.HOSPITAL }
-                        .map { it.itemId }
-                        .toSet()
                     when (result) {
                         is Result.Success -> _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 isError = false,
-                                favoriteHospitalIds = favoriteHospitalIds,
                                 recommendedHospitals = getRecommendedHospitalsUseCase(
                                     allHospitals = result.data,
                                     favorites = favorites,
@@ -77,7 +70,7 @@ class HomeViewModel @Inject constructor(
                         is Result.Error -> _uiState.update {
                             // 서버 메시지가 없을 때 보여줄 폴백 문구는 여기서 언어를 고정해 넣지 않고,
                             // 화면(HomeScreen)이 LocalAppStrings로 매 리컴포지션마다 새로 읽게 한다.
-                            it.copy(isLoading = false, isError = true, error = result.message, favoriteHospitalIds = favoriteHospitalIds)
+                            it.copy(isLoading = false, isError = true, error = result.message)
                         }
                         Result.Loading -> Unit
                     }
@@ -96,25 +89,6 @@ class HomeViewModel @Inject constructor(
     // 결과 목록 대신 검색 입력 모드(최근 검색어/자동완성 패널)로 바로 열리도록 요청만 남긴다.
     fun onSearchBarClicked() {
         pendingHospitalSearchEntry.requestFocus()
-    }
-
-    fun onFavoriteToggleClicked(hospitalId: String) {
-        val hospital = _uiState.value.recommendedHospitals.firstOrNull { it.id == hospitalId } ?: return
-        viewModelScope.launch {
-            favoriteRepository.toggleFavorite(
-                Favorite(
-                    itemId = hospital.id,
-                    itemType = FavoriteItemType.HOSPITAL,
-                    name = hospital.name,
-                    imageUrl = hospital.imageUrl,
-                    savedAt = System.currentTimeMillis(),
-                    subtitle = hospital.specialties.joinToString(", "),
-                    address = hospital.address,
-                    latitude = hospital.latitude,
-                    longitude = hospital.longitude
-                )
-            )
-        }
     }
 
     fun onRetryClicked() {
