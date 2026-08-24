@@ -248,7 +248,7 @@ private fun CourseRouteMap(hospital: Hospital, course: WellnessCourse, onSelectP
         buildList {
             hospital.toMapPin(selectedId = null)?.let(::add)
             course.places.forEachIndexed { index, place ->
-                place.toMapPin(selectedId = null)?.copy(routeIndex = index + 1)?.let(::add)
+                place.toMapPin(selectedId = null)?.copy(sequenceNumber = index + 1)?.let(::add)
             }
         }
     }

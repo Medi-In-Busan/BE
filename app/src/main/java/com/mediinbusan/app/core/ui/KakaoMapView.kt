@@ -115,7 +115,7 @@ object KakaoMapAvailability {
  * 그린다(카카오맵 RouteLine API, [renderRoute] 참고). 좌표를 그대로 직선으로 이은 것이라 실제
  * 도로/보행로를 정확히 따라가지는 않는다 — 다만 이건 실제 길찾기 경로 대신 "이 순서로 이동한다"는
  * 방향성만 우리 지도 안에서 보여주려는 의도적 선택이다(외부 카카오맵 앱으로 내보내는 길찾기 연동은
- * 쓰지 않는다). [MapPin.routeIndex] 번호 배지와 함께 방문 순서를 이중으로 안내한다.
+ * 쓰지 않는다). [MapPin.sequenceNumber] 번호 배지와 함께 방문 순서를 이중으로 안내한다.
  */
 @Composable
 fun KakaoMapView(
@@ -219,6 +219,11 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap, routePaths) {
         val map = kakaoMap ?: return@LaunchedEffect
         renderRoutePaths(map, routePaths)
+    }
+
+    LaunchedEffect(kakaoMap, routeStops) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        trackedRouteLine = renderRoute(context, map, routeStops, trackedRouteLine)
     }
 
     // 마커가 아닌 빈 지도를 눌렀을 때의 신호 — BrowseMap이 이걸로 선택을 해제한다
@@ -411,17 +416,14 @@ private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
 private val pinIconBitmapCache = mutableMapOf<Int, Bitmap>()
 private val numberedPinBitmapCache = mutableMapOf<Pair<Int, Boolean>, Bitmap>()
 
-private fun Context.pinIconBitmap(@DrawableRes resId: Int, routeIndex: Int? = null): Bitmap =
-    pinIconBitmapCache.getOrPut(resId to routeIndex) {
+private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
+    pinIconBitmapCache.getOrPut(resId) {
         val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
         val size = (32 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
         Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
-            if (routeIndex != null) {
-                drawRouteBadge(canvas, routeIndex, width, height)
-            }
         }
     }
 
@@ -462,3 +464,11 @@ private const val COURSE_ROUTE_LAYER_ID = "recommended-tourism-course"
 private const val COURSE_ROUTE_Z_ORDER = 20_000
 private const val COURSE_LINE_WIDTH_PX = 5f
 private const val COURSE_LINE_STROKE_WIDTH_PX = 1.5f
+
+// 코스 동선 화살표 경로선(RouteLine) 스타일. lineWidth는 카카오 SDK 문서 기준 px 단위(dp 아님).
+// 굵은 선(14px)에 반투명 코랄을 깔고 그 위로 흰 화살표(ic_route_arrow)가 일정 간격(70px)마다
+// 반복돼, 옅은 배경 위에서도 방향이 또렷이 보이면서 실제 도로 위에 그린 것처럼 두꺼워 보이지
+// 않게 균형을 맞췄다.
+private const val ROUTE_LINE_WIDTH_PX = 14f
+private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 70f
+private val ROUTE_LINE_COLOR = android.graphics.Color.parseColor("#B3FD6677") // CoralPrimary @ ~70% alpha
