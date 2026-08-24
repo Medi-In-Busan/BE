@@ -43,16 +43,14 @@ wellness:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
     accessible-tourism-base-url: https://apis.data.go.kr/B551011/KorWithService2
     related-tourism-base-url: https://apis.data.go.kr/B551011/TarRlteTarService1
-    hub-tourism-base-url: https://apis.data.go.kr/B551011/LocgoHubTarService1
     crowding-base-url: https://apis.data.go.kr/B551011/TatsCnctrRateService
-    photo-base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1
     walking-base-url: https://apis.data.go.kr/B551011/Durunubi
-    audio-base-url: https://apis.data.go.kr/B551011/Odii
     english-tourism-base-url: https://apis.data.go.kr/B551011/EngService2
     japanese-tourism-base-url: https://apis.data.go.kr/B551011/JpnService2
     chinese-tourism-base-url: https://apis.data.go.kr/B551011/ChsService2
     tour-api-service-key: ${TOURISM_API_SERVICE_KEY:}
     kakao-local-base-url: https://dapi.kakao.com
+    kakao-navi-base-url: https://apis-navi.kakaomobility.com
     kakao-rest-api-key: ${KAKAO_REST_API_KEY:}
     tour-api-rows-per-type: 30
     kakao-rows-per-keyword: 10

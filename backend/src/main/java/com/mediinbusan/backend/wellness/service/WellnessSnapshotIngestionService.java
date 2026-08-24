@@ -34,13 +34,10 @@ public class WellnessSnapshotIngestionService {
         for (WellnessTourismGatewayService.Language language : WellnessTourismGatewayService.Language.values()) {
             syncSafely("places-" + language.name().toLowerCase(), "BUSAN", baseYm, () -> gateway.places(language, null, null), counter, failures);
         }
-        syncSafely("photos", "BUSAN", baseYm, () -> gateway.photos("부산"), counter, failures);
         syncSafely("walking", "BUSAN", baseYm, gateway::walkingCourses, counter, failures);
-        syncSafely("audio", "BUSAN", baseYm, () -> gateway.audio(35.1796, 129.0756), counter, failures);
         for (BusanTourismCodes.District district : BusanTourismCodes.districts()) {
             String scope = district.name();
             syncSafely("related", scope, baseYm, () -> gateway.related(district, baseYm), counter, failures);
-            syncSafely("hubs", scope, baseYm, () -> gateway.hubs(district, baseYm), counter, failures);
             syncSafely("crowding", scope, LocalDate.now().toString(), () -> gateway.crowding(district), counter, failures);
         }
         return new WellnessSnapshotIngestionResponse(counter.inserted, counter.updated, failures.size(), failures);

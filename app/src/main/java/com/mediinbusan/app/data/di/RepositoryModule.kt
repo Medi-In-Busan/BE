@@ -20,6 +20,10 @@ import com.mediinbusan.app.data.searchhistory.SearchHistoryRepository
 import com.mediinbusan.app.data.searchhistory.SearchHistoryRepositoryImpl
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepositoryImpl
+import com.mediinbusan.app.data.tourism.TourismInteractionRepository
+import com.mediinbusan.app.data.tourism.TourismInteractionRepositoryImpl
+import com.mediinbusan.app.data.route.DrivingRouteRepository
+import com.mediinbusan.app.data.route.DrivingRouteRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -39,6 +43,12 @@ interface RepositoryModule {
 
     @Binds
     fun bindTourismCatalogRepository(impl: TourismCatalogRepositoryImpl): TourismCatalogRepository
+
+    @Binds
+    fun bindTourismInteractionRepository(impl: TourismInteractionRepositoryImpl): TourismInteractionRepository
+
+    @Binds
+    fun bindDrivingRouteRepository(impl: DrivingRouteRepositoryImpl): DrivingRouteRepository
 
     @Binds
     fun bindGuideRepository(impl: GuideRepositoryImpl): GuideRepository

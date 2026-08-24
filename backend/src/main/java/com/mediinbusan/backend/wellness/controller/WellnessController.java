@@ -7,6 +7,11 @@ import com.mediinbusan.backend.wellness.dto.WellnessIngestionResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessPlaceResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessSnapshotIngestionResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessWalkingCourseResponse;
+import com.mediinbusan.backend.wellness.dto.WellnessRouteRequest;
+import com.mediinbusan.backend.wellness.dto.WellnessRouteResponse;
+import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
+import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
+import com.mediinbusan.backend.wellness.domain.TourismCatalogCategory;
 import com.mediinbusan.backend.wellness.service.BusanTourismCodes;
 import com.mediinbusan.backend.wellness.service.TourismCatalogService;
 import com.mediinbusan.backend.wellness.service.WellnessIngestionService;
@@ -14,6 +19,8 @@ import com.mediinbusan.backend.wellness.service.WellnessService;
 import com.mediinbusan.backend.wellness.service.WellnessSnapshotIngestionService;
 import com.mediinbusan.backend.wellness.service.WellnessTourismGatewayService;
 import com.mediinbusan.backend.wellness.service.WellnessWalkingCourseService;
+import com.mediinbusan.backend.wellness.service.TourismCatalogService;
+import com.mediinbusan.backend.wellness.service.KakaoMobilityRouteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +29,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -37,6 +45,7 @@ public class WellnessController {
     private final WellnessSnapshotIngestionService snapshotIngestionService;
     private final WellnessWalkingCourseService walkingCourseService;
     private final TourismCatalogService tourismCatalogService;
+    private final KakaoMobilityRouteService routeService;
 
     public WellnessController(
         WellnessService wellnessService,
@@ -44,7 +53,8 @@ public class WellnessController {
         WellnessTourismGatewayService tourismGatewayService,
         WellnessSnapshotIngestionService snapshotIngestionService,
         WellnessWalkingCourseService walkingCourseService,
-        TourismCatalogService tourismCatalogService
+        TourismCatalogService tourismCatalogService,
+        KakaoMobilityRouteService routeService
     ) {
         this.wellnessService = wellnessService;
         this.wellnessIngestionService = wellnessIngestionService;
@@ -52,6 +62,7 @@ public class WellnessController {
         this.snapshotIngestionService = snapshotIngestionService;
         this.walkingCourseService = walkingCourseService;
         this.tourismCatalogService = tourismCatalogService;
+        this.routeService = routeService;
     }
 
     @Operation(summary = "병원 주변 웰니스 장소 조회", description = "병원 좌표 기준 반경 내 웰니스 장소를 거리순으로 반환한다.")
@@ -61,6 +72,12 @@ public class WellnessController {
         @Parameter(description = "검색 반경(m). 기본값 3000m") @RequestParam(required = false) Double radiusMeters
     ) {
         return wellnessService.getNearbyPlaces(hospitalRegNo, radiusMeters);
+    }
+
+    @Operation(summary = "병원 출발 웰니스 코스 경로", description = "Kakao 자동차·도보 길찾기로 4~5개 장소의 실제 이동 경로를 반환한다.")
+    @PostMapping("/routes")
+    public WellnessRouteResponse getRoute(@RequestBody WellnessRouteRequest request) {
+        return routeService.route(request);
     }
 
     @Operation(summary = "웰니스 장소 상세 조회")
@@ -120,22 +137,9 @@ public class WellnessController {
         return tourismGatewayService.related(district, baseYm);
     }
 
-    @GetMapping("/external/hubs")
-    public TourismExternalResponse hubs(
-        @RequestParam BusanTourismCodes.District district,
-        @RequestParam String baseYm
-    ) {
-        return tourismGatewayService.hubs(district, baseYm);
-    }
-
     @GetMapping("/external/crowding")
     public TourismExternalResponse crowding(@RequestParam BusanTourismCodes.District district) {
         return tourismGatewayService.crowding(district);
-    }
-
-    @GetMapping("/external/photos")
-    public TourismExternalResponse photos(@RequestParam(defaultValue = "부산") String keyword) {
-        return tourismGatewayService.photos(keyword);
     }
 
     @GetMapping("/external/walking-courses")
@@ -143,8 +147,4 @@ public class WellnessController {
         return tourismGatewayService.walkingCourses();
     }
 
-    @GetMapping("/external/audio")
-    public TourismExternalResponse audio(@RequestParam double latitude, @RequestParam double longitude) {
-        return tourismGatewayService.audio(latitude, longitude);
-    }
 }

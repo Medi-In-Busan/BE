@@ -34,25 +34,8 @@ public class WellnessTourismGatewayService {
         return request("related-tourism", properties.relatedTourismBaseUrl(), "areaBasedList1", bigdataParams(district, baseYm));
     }
 
-    public TourismExternalResponse hubs(BusanTourismCodes.District district, String baseYm) {
-        return request("hub-tourism", properties.hubTourismBaseUrl(), "areaBasedList1", bigdataParams(district, baseYm));
-    }
-
     public TourismExternalResponse crowding(BusanTourismCodes.District district) {
         return request("crowding-forecast", properties.crowdingBaseUrl(), "tatsCnctrRatedList", bigdataParams(district, null));
-    }
-
-    public TourismExternalResponse photos(String keyword) {
-        // PhotoGalleryService1은 Service1세대 API라 lDongRegnCd(법정동 코드)를 모른다 — 붙이면
-        // INVALID_REQUEST_PARAMETER_ERROR(lDongRegnCd)로 요청 자체가 거부된다(실제 호출로 확인).
-        Map<String, Object> params = pageParams();
-        // 장소 하나당 사진이 여러 장 걸려 있어(같은 제목 반복) 기본 50건만 받으면 제목 기준
-        // dedupe(TourismCatalogService) 이후 장소 수가 너무 적어진다 — 더 많이 받아온다.
-        params.put("numOfRows", 100);
-        params.put("MobileOS", MOBILE_OS);
-        params.put("MobileApp", MOBILE_APP);
-        params.put("keyword", keyword);
-        return request("photo-gallery", properties.photoBaseUrl(), "gallerySearchList1", params);
     }
 
     public TourismExternalResponse walkingCourses() {
@@ -65,19 +48,6 @@ public class WellnessTourismGatewayService {
         params.put("MobileOS", MOBILE_OS);
         params.put("MobileApp", MOBILE_APP);
         return request("durunubi", properties.walkingBaseUrl(), "courseList", params);
-    }
-
-    public TourismExternalResponse audio(double latitude, double longitude) {
-        // Odii도 Service1세대라 lDongRegnCd는 안 쓰고, 대신 langCode가 필수 파라미터다 — 빠지면
-        // NO_MANDATORY_REQUEST_PARAMETERS_ERROR1(langCode)로 실패한다(실제 호출로 확인).
-        Map<String, Object> params = pageParams();
-        params.put("MobileOS", MOBILE_OS);
-        params.put("MobileApp", MOBILE_APP);
-        params.put("mapX", longitude);
-        params.put("mapY", latitude);
-        params.put("radius", 20_000);
-        params.put("langCode", "ko");
-        return request("odii", properties.audioBaseUrl(), "themeLocationBasedList", params);
     }
 
     private TourismExternalResponse request(String source, String baseUrl, String operation, Map<String, Object> params) {

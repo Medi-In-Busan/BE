@@ -21,8 +21,6 @@ import java.util.Set;
 @Service
 public class TourismCatalogService {
 
-    private static final double BUSAN_CENTER_LATITUDE = 35.1796;
-    private static final double BUSAN_CENTER_LONGITUDE = 129.0756;
     private static final int MAX_DETAILS = 8;
 
     private final WellnessTourismGatewayService gateway;
@@ -48,11 +46,8 @@ public class TourismCatalogService {
             case PLACES_ZH -> gateway.places(WellnessTourismGatewayService.Language.ZH, district, null);
             case ACCESSIBLE -> gateway.accessibility(district);
             case RELATED -> gateway.related(resolvedDistrict, resolvedBaseYm);
-            case HUBS -> gateway.hubs(resolvedDistrict, resolvedBaseYm);
             case CROWDING -> gateway.crowding(resolvedDistrict);
-            case PHOTOS -> gateway.photos("부산");
             case WALKING -> gateway.walkingCourses();
-            case AUDIO -> gateway.audio(BUSAN_CENTER_LATITUDE, BUSAN_CENTER_LONGITUDE);
         };
 
         List<TourismCatalogItemResponse> items = normalizeItems(objectMapper.valueToTree(external.data()));

@@ -77,6 +77,9 @@ sealed interface Route {
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable
+    data class WellnessCourseMap(val hospitalId: String) : Route // S-07 병원 출발 추천 관광·웰니스 코스
+
+    @Serializable
     data class PlaceDetail(val placeId: String) : Route // S-07 상세
 
     @Serializable
@@ -88,6 +91,11 @@ sealed interface Route {
     // core/common/PendingTourismCatalogItem을 거쳐 선택 항목을 전달한다(위 TourismCatalog 주석과
     // 같은 이유 — Map 필드가 있는 항목을 타입세이프 인자로 넘기기 어렵고, 항목 단건 조회 API도 없다).
     @Serializable
+    data class RecommendedTourismCourse(
+        val category: String,
+        val district: String? = null
+    ) : Route // S-07 개인화 추천 관광지 3~5개 코스 지도
+
     data object TourismCatalogItemDetail : Route // S-07 하위 관광 데이터 항목 상세
 
     // S-08. courseId가 non-null이면(hospitalId도 non-null이어야 함) 웰니스 코스 동선 모드 — 해당 코스의
