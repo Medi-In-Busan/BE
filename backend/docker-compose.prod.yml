@@ -1,0 +1,61 @@
+# EC2 배포용. 로컬 개발용 docker-compose.yml(MySQL만, H2로 앱 실행)과 달리, 여기서는
+# 백엔드 컨테이너까지 도커허브에서 pull해서 함께 띄운다.
+#
+# 이 파일 자체는 시크릿을 담지 않는다 — 전부 이 파일과 같은 디렉터리의 .env(EC2에만 존재,
+# 절대 커밋하지 않음)에서 읽는다. .env에 채워야 하는 값:
+#   MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+#   TOURISM_API_SERVICE_KEY, KAKAO_REST_API_KEY
+#   CLOVA_OCR_API_URL, CLOVA_OCR_SECRET_KEY
+#   PAPAGO_TRANSLATION_CLIENT_ID, PAPAGO_TRANSLATION_CLIENT_SECRET
+# DOCKERHUB_USERNAME과 IMAGE_TAG는 배포 스크립트(.github/workflows/backend-deploy.yml)가
+# 매 배포 시점에 셸 환경변수로 채워 넘긴다 — .env에 넣어둘 필요 없다(비워두면 latest로 동작).
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: mediinbusan-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks: [mediinbusan]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${DOCKERHUB_USERNAME}/mediinbusan-backend:${IMAGE_TAG:-latest}
+    container_name: mediinbusan-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: mysql
+      DB_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TOURISM_API_SERVICE_KEY: ${TOURISM_API_SERVICE_KEY}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      CLOVA_OCR_API_URL: ${CLOVA_OCR_API_URL}
+      CLOVA_OCR_SECRET_KEY: ${CLOVA_OCR_SECRET_KEY}
+      PAPAGO_TRANSLATION_CLIENT_ID: ${PAPAGO_TRANSLATION_CLIENT_ID}
+      PAPAGO_TRANSLATION_CLIENT_SECRET: ${PAPAGO_TRANSLATION_CLIENT_SECRET}
+      TZ: Asia/Seoul
+    ports:
+      - "8080:8080"
+    networks: [mediinbusan]
+
+networks:
+  mediinbusan:
+
+volumes:
+  mysql-data:
