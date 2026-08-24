@@ -9,9 +9,6 @@ import com.mediinbusan.backend.wellness.dto.WellnessSnapshotIngestionResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessWalkingCourseResponse;
 import com.mediinbusan.backend.wellness.dto.WellnessRouteRequest;
 import com.mediinbusan.backend.wellness.dto.WellnessRouteResponse;
-import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
-import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
-import com.mediinbusan.backend.wellness.domain.TourismCatalogCategory;
 import com.mediinbusan.backend.wellness.service.BusanTourismCodes;
 import com.mediinbusan.backend.wellness.service.TourismCatalogService;
 import com.mediinbusan.backend.wellness.service.WellnessIngestionService;
@@ -19,7 +16,6 @@ import com.mediinbusan.backend.wellness.service.WellnessService;
 import com.mediinbusan.backend.wellness.service.WellnessSnapshotIngestionService;
 import com.mediinbusan.backend.wellness.service.WellnessTourismGatewayService;
 import com.mediinbusan.backend.wellness.service.WellnessWalkingCourseService;
-import com.mediinbusan.backend.wellness.service.TourismCatalogService;
 import com.mediinbusan.backend.wellness.service.KakaoMobilityRouteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -137,9 +133,22 @@ public class WellnessController {
         return tourismGatewayService.related(district, baseYm);
     }
 
+    @GetMapping("/external/hubs")
+    public TourismExternalResponse hubs(
+        @RequestParam BusanTourismCodes.District district,
+        @RequestParam String baseYm
+    ) {
+        return tourismGatewayService.hubs(district, baseYm);
+    }
+
     @GetMapping("/external/crowding")
     public TourismExternalResponse crowding(@RequestParam BusanTourismCodes.District district) {
         return tourismGatewayService.crowding(district);
+    }
+
+    @GetMapping("/external/photos")
+    public TourismExternalResponse photos(@RequestParam(defaultValue = "부산") String keyword) {
+        return tourismGatewayService.photos(keyword);
     }
 
     @GetMapping("/external/walking-courses")
@@ -147,4 +156,8 @@ public class WellnessController {
         return tourismGatewayService.walkingCourses();
     }
 
+    @GetMapping("/external/audio")
+    public TourismExternalResponse audio(@RequestParam double latitude, @RequestParam double longitude) {
+        return tourismGatewayService.audio(latitude, longitude);
+    }
 }
