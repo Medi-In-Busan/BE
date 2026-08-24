@@ -2,7 +2,9 @@ package com.mediinbusan.app.feature.selfdiagnosis
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.data.diagnosischat.DiagnosisChatRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,17 +12,20 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * 준비 유형 진단(인트로 → 5문항 → 준비 유형) 화면 상태. 답변 자체는 로컬 상태로만 관리하고,
- * "진단을 완료(또는 건너뜀)했는지" 여부만 DataStore에 저장해 앱 재실행 시 최초 실행 흐름을
- * 반복하지 않도록 한다 (SplashViewModel 참고).
+ * 준비 유형 진단 챗봇 화면 상태. 백엔드(diagnosis-chat)는 세션을 저장하지 않으므로(stateless)
+ * 대화 상태(messages/slots)는 이 ViewModel이 로컬로만 들고 있다가 매 턴 현재 slots 전체를
+ * 실어 보낸다. 첫 인사말은 이 상태에 담지 않고 Screen이 항상 고정으로 먼저 그린다(네트워크 호출
+ * 없이) — 그래서 [Restart]도 서버 호출 없이 이 상태를 초기값으로 되돌리는 것뿐이다.
  */
 @HiltViewModel
 class SelfDiagnosisViewModel @Inject constructor(
+    private val diagnosisChatRepository: DiagnosisChatRepository,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -32,63 +37,46 @@ class SelfDiagnosisViewModel @Inject constructor(
 
     fun onIntent(intent: SelfDiagnosisIntent) {
         when (intent) {
-            SelfDiagnosisIntent.StartDiagnosis -> _uiState.update { it.copy(hasStarted = true) }
-            is SelfDiagnosisIntent.SelectAnswer -> selectAnswer(intent.questionId, intent.option)
-            SelfDiagnosisIntent.GoNext -> goNext()
-            SelfDiagnosisIntent.Restart -> restart()
+            is SelfDiagnosisIntent.UpdateInputText -> _uiState.update { it.copy(inputText = intent.text) }
+            is SelfDiagnosisIntent.SendMessage -> sendMessage(intent.text)
+            is SelfDiagnosisIntent.TapSuggestedReply -> sendMessage(intent.label)
+            SelfDiagnosisIntent.Restart -> _uiState.update { SelfDiagnosisUiState() }
             is SelfDiagnosisIntent.ClickCta -> emitEvent(SelfDiagnosisEvent.NavigateToCtaTarget(intent.target))
-            SelfDiagnosisIntent.ClickBack -> clickBack()
-            SelfDiagnosisIntent.FinishSetup -> finishSetup()
+            SelfDiagnosisIntent.ClickBack -> emitEvent(SelfDiagnosisEvent.NavigateBack)
+            SelfDiagnosisIntent.FinishSetup -> emitEvent(SelfDiagnosisEvent.NavigateToHome)
         }
     }
 
-    private fun selectAnswer(questionId: DiagnosisQuestionId, option: DiagnosisAnswerOption) {
-        _uiState.update { state ->
-            val current = state.selectedAnswers[questionId].orEmpty()
-            val updated = if (questionId.isMultiSelect()) {
-                if (option in current) current - option else current + option
-            } else {
-                setOf(option)
+    private fun sendMessage(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty() || _uiState.value.isLoading) return
+
+        _uiState.update {
+            it.copy(
+                messages = it.messages + ChatMessage(ChatMessageRole.USER, trimmed),
+                inputText = "",
+                isLoading = true,
+                hasError = false
+            )
+        }
+
+        viewModelScope.launch {
+            val language = userPreferencesRepository.userPreferences.first().languageCode
+            val slots = _uiState.value.slots
+            diagnosisChatRepository.sendMessage(language, trimmed, slots).collect { result ->
+                when (result) {
+                    Result.Loading -> Unit
+                    is Result.Success -> _uiState.update { state ->
+                        state.copy(
+                            messages = state.messages + ChatMessage(ChatMessageRole.ASSISTANT, result.data.reply),
+                            slots = result.data.slots,
+                            resultType = result.data.resultType,
+                            isLoading = false
+                        )
+                    }
+                    is Result.Error -> _uiState.update { it.copy(isLoading = false, hasError = true) }
+                }
             }
-            state.copy(selectedAnswers = state.selectedAnswers + (questionId to updated))
-        }
-    }
-
-    private fun goNext() {
-        var reachedResult = false
-        _uiState.update { state ->
-            if (!state.canGoNext) {
-                state
-            } else if (state.isLastQuestion) {
-                reachedResult = true
-                state.copy(resultType = DiagnosisTypeMapper.map(state.selectedAnswers))
-            } else {
-                state.copy(currentQuestionIndex = state.currentQuestionIndex + 1)
-            }
-        }
-        if (reachedResult) markDiagnosisComplete()
-    }
-
-    private fun finishSetup() {
-        markDiagnosisComplete()
-        emitEvent(SelfDiagnosisEvent.NavigateToHome)
-    }
-
-    private fun markDiagnosisComplete() {
-        viewModelScope.launch { userPreferencesRepository.setDiagnosisComplete(true) }
-    }
-
-    private fun restart() {
-        _uiState.update { SelfDiagnosisUiState() }
-    }
-
-    private fun clickBack() {
-        val state = _uiState.value
-        when {
-            state.isResultVisible -> _uiState.update { it.copy(resultType = null) }
-            state.isIntroVisible -> emitEvent(SelfDiagnosisEvent.NavigateBack)
-            !state.isFirstQuestion -> _uiState.update { it.copy(currentQuestionIndex = it.currentQuestionIndex - 1) }
-            else -> _uiState.update { it.copy(hasStarted = false) }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.mediinbusan.backend;
 
+import com.mediinbusan.backend.diagnosischat.client.GeminiProperties;
 import com.mediinbusan.backend.document.client.ClovaOcrProperties;
 import com.mediinbusan.backend.document.client.PapagoTranslationProperties;
 import com.mediinbusan.backend.document.validation.DocumentOcrProperties;
@@ -13,7 +14,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
     WellnessIngestionProperties.class,
     ClovaOcrProperties.class,
     DocumentOcrProperties.class,
-    PapagoTranslationProperties.class
+    PapagoTranslationProperties.class,
+    GeminiProperties.class
 })
 public class BackendApplication {
 

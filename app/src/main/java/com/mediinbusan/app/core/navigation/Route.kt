@@ -108,10 +108,10 @@ sealed interface Route {
     @Serializable
     data object RecentlyViewed : Route // S-10 하위 최근 본 항목 (F-016)
 
-    // 준비 유형 진단(TYPE A~E). Home 퀵링크·설정에서 재진입 시 fromOnboarding=false,
-    // 최초 실행 흐름(Splash -> 언어선택 -> 진단 -> Home) 중에는 true.
+    // 준비 유형 진단 챗봇(TYPE A~E). Home의 "AI 진단하기" 진입점에서만 접근한다 — 더 이상
+    // 최초 실행 흐름에 강제로 끼지 않는다(SplashViewModel 참고).
     @Serializable
-    data class SelfDiagnosis(val fromOnboarding: Boolean = false) : Route
+    data object SelfDiagnosis : Route
 
     // 진단서·처방전 OCR 번역(문서 스캔). 바텀바 5번째 탭. OCR/번역 백엔드 연동 전, 이미지
     // 촬영·선택까지만 우선 배선한다 — 관련 이슈 참고.
@@ -143,10 +143,8 @@ internal fun NavHostController.navigateToTab(route: Route) {
 }
 
 /**
- * 최초 실행 설정 흐름(언어선택 -> 진단) 완료 시 Home으로 이동하며 그 전까지 쌓인 스택을 비운다.
- * 앱을 종료했다가 재개한 세션에서는 Splash가 언어선택을 건너뛰고 진단으로 바로 보낼 수도 있어
- * (SplashViewModel 참고) 스택에 Onboarding이 있을 수도, 없을 수도 있다 — 특정 destination을
- * popUpTo 기준으로 잡을 수 없으므로 그래프 전체를 기준으로 비운다.
+ * 최초 실행 설정 흐름(언어선택) 완료 시 Home으로 이동하며 그 전까지 쌓인 스택을 비운다.
+ * 특정 destination을 popUpTo 기준으로 잡을 필요 없이 그래프 전체를 기준으로 비운다.
  */
 internal fun NavHostController.navigateToHomeAfterSetup() {
     navigate(Route.Home) {
