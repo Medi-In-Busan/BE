@@ -3,24 +3,16 @@ package com.mediinbusan.app.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
-import com.mediinbusan.app.core.datastore.UserPreferencesRepository
-import com.mediinbusan.app.data.hospital.HospitalRepository
-import com.mediinbusan.app.data.favorite.FavoriteRepository
-import com.mediinbusan.app.data.recent.RecentRepository
-import com.mediinbusan.app.data.place.PlaceRepository
-import com.mediinbusan.app.data.tourism.TourismInteractionRepository
 import com.mediinbusan.app.data.route.DrivingRoute
 import com.mediinbusan.app.data.route.DrivingRoutePoint
 import com.mediinbusan.app.data.route.DrivingRouteRepository
 import com.mediinbusan.app.data.route.TravelMode
-import com.mediinbusan.app.domain.course.BuildHospitalWellnessRouteUseCase
-import com.mediinbusan.app.domain.course.BuildHospitalWellnessPersonalizationUseCase
+import com.mediinbusan.app.domain.course.GetRecommendedHospitalWellnessRouteUseCase
 import com.mediinbusan.app.domain.course.HospitalWellnessRoute
 import com.mediinbusan.app.domain.course.HospitalWellnessRoutePoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,14 +20,7 @@ import kotlin.math.ceil
 
 @HiltViewModel
 class WellnessCourseMapViewModel @Inject constructor(
-    private val hospitalRepository: HospitalRepository,
-    private val placeRepository: PlaceRepository,
-    private val userPreferencesRepository: UserPreferencesRepository,
-    private val interactionRepository: TourismInteractionRepository,
-    private val favoriteRepository: FavoriteRepository,
-    private val recentRepository: RecentRepository,
-    private val buildPersonalization: BuildHospitalWellnessPersonalizationUseCase,
-    private val buildRoute: BuildHospitalWellnessRouteUseCase,
+    private val getRecommendedRoute: GetRecommendedHospitalWellnessRouteUseCase,
     private val drivingRouteRepository: DrivingRouteRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WellnessCourseMapUiState())
@@ -45,42 +30,16 @@ class WellnessCourseMapViewModel @Inject constructor(
     fun load(hospitalId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val preferences = userPreferencesRepository.userPreferences.first()
-            val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, preferences.languageCode)
-                .first { it !is Result.Loading }
-            val placesResult = placeRepository.getNearbyPlaces(hospitalId)
-                .first { it !is Result.Loading }
-            val hospital = (hospitalResult as? Result.Success)?.data
-            val places = (placesResult as? Result.Success)?.data
-            if (hospital == null || places == null) {
+            val recommendationResult = getRecommendedRoute(hospitalId)
+            val recommendation = (recommendationResult as? Result.Success)?.data
+            if (recommendation == null) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = (hospitalResult as? Result.Error)?.message
-                            ?: (placesResult as? Result.Error)?.message
+                        errorMessage = (recommendationResult as? Result.Error)?.message
                             ?: "추천 코스를 불러오지 못했습니다."
                     )
                 }
-                return@launch
-            }
-
-            val profile = interactionRepository.profile.first()
-            val personalization = buildPersonalization(
-                medicalPurpose = preferences.medicalPurpose,
-                profile = profile,
-                favorites = favoriteRepository.observeFavorites().first(),
-                recentItems = recentRepository.observeRecentlyViewed().first()
-            )
-            val recommendation = buildRoute(
-                hospital = hospital,
-                places = places,
-                personalization = personalization
-            )
-            if (recommendation == null) {
-                _uiState.value = WellnessCourseMapUiState(
-                    isLoading = false,
-                    errorMessage = "코스를 만들 수 있는 주변 장소가 4곳 이상 필요합니다."
-                )
                 return@launch
             }
             recommendedRoute = recommendation
@@ -89,7 +48,7 @@ class WellnessCourseMapViewModel @Inject constructor(
             _uiState.value = WellnessCourseMapUiState(
                 isLoading = false,
                 route = route,
-                selectedId = hospital.id,
+                selectedId = recommendation.hospital.id,
                 travelMode = TravelMode.DRIVING,
                 errorMessage = if (route == null) {
                     (routeResult as? Result.Error)?.message ?: "실제 이동 경로를 불러오지 못했습니다."

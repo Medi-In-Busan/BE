@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.view.MotionEvent
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -143,7 +144,16 @@ fun KakaoMapView(
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val mapView = remember { MapView(context) }
+    val mapView = remember {
+        MapView(context).apply {
+            setOnTouchListener { view, event ->
+                val isTouchingMap = event.actionMasked != MotionEvent.ACTION_UP &&
+                    event.actionMasked != MotionEvent.ACTION_CANCEL
+                view.parent?.requestDisallowInterceptTouchEvent(isTouchingMap)
+                false
+            }
+        }
+    }
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var mapErrorMessage by remember { mutableStateOf<String?>(null) }
     // pinId -> 현재 그 자리에 떠 있는 Label과, 그 Label이 마지막으로 반영한 MapPin 상태.
@@ -166,6 +176,7 @@ fun KakaoMapView(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.setOnTouchListener(null)
             mapView.finish()
         }
     }

@@ -5,17 +5,32 @@ import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.data.hospital.Hospital
+import com.mediinbusan.app.domain.tourism.BusanDistrict
+import com.mediinbusan.app.domain.tourism.RecommendedTourismCourse
+import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 
 data class HomeUiState(
     val medicalPurposes: List<MedicalCategory> = MedicalCategory.entries,
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val quickLinks: List<QuickLinkItem> = QuickLinkItem.DEFAULTS,
     val recommendedHospitals: List<Hospital> = emptyList(),
+    val favoriteHospitalIds: Set<String> = emptySet(),
+    val recommendedCourses: List<HomeRecommendedCourse> = emptyList(),
+    val isCourseLoading: Boolean = false,
+    val hasMoreCourses: Boolean = true,
+    val courseError: String? = null,
     val isLoading: Boolean = true,
     // 로드 실패 여부와 서버 메시지를 분리한다. error가 null이어도 isError가 true면 화면에서
     // LocalAppStrings 기준으로 폴백 문구를 그려, 에러가 떠 있는 동안 언어를 바꿔도 즉시 반영되게 한다.
     val isError: Boolean = false,
     val error: String? = null
+)
+
+data class HomeRecommendedCourse(
+    val id: String,
+    val category: TourismCatalogCategory,
+    val district: BusanDistrict?,
+    val course: RecommendedTourismCourse
 )
 
 enum class QuickLinkType { HOSPITAL_LIST, GUIDE, WELLNESS, MAP, SELF_DIAGNOSIS, FAVORITE }

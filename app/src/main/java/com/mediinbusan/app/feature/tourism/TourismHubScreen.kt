@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,7 +64,10 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedDescription
 import com.mediinbusan.app.core.i18n.translatedLabel
+import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.TourismHotPlace
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +99,15 @@ fun TourismHubScreen(
             verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
             item {
+                HotPlacesSection(
+                    hotPlaces = uiState.hotPlaces,
+                    isLoading = uiState.isHighlightsLoading,
+                    errorMessage = uiState.highlightsError,
+                    onSeeAll = { onSelectCategory(TourismCatalogCategory.CROWDING) },
+                    onRetry = viewModel::retryHighlights
+                )
+            }
+            item {
                 FeaturedExploreBanner(
                     languageName = uiState.language.displayName,
                     category = uiState.featuredCategory,
@@ -114,10 +130,288 @@ fun TourismHubScreen(
                     onSelectCategory = onSelectCategory
                 )
             }
+            item {
+                AccessibleTourismSection(
+                    places = uiState.accessiblePlaces,
+                    isLoading = uiState.isHighlightsLoading,
+                    onSeeAll = { onSelectCategory(TourismCatalogCategory.ACCESSIBLE) }
+                )
+            }
             item { TourismSourceNotice() }
         }
     }
 }
+
+@Composable
+private fun HotPlacesSection(
+    hotPlaces: List<TourismHotPlace>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onSeeAll: () -> Unit,
+    onRetry: () -> Unit
+) {
+    HighlightSectionHeader(
+        title = "현재 부산 핫 플레이스",
+        description = "관광 혼잡도 지수가 높은 장소를 먼저 보여드려요.",
+        showSeeAll = hotPlaces.isNotEmpty(),
+        onSeeAll = onSeeAll
+    )
+    Spacer(Modifier.height(12.dp))
+    when {
+        isLoading -> HighlightLoadingCard()
+        errorMessage != null -> HighlightErrorCard(message = errorMessage, onRetry = onRetry)
+        hotPlaces.isNotEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            hotPlaces.take(HOT_PLACE_CARD_LIMIT).forEachIndexed { index, hotPlace ->
+                HotPlaceCard(rank = index + 1, hotPlace = hotPlace, onClick = onSeeAll)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            HotPlaceThumbnail(rank = rank)
+            Column(
+                modifier = Modifier.weight(1f).height(112.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = hotPlace.item.title,
+                            style = CardTitleStyle,
+                            color = TextPrimary,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = hotPlace.congestionRate.toDisplayRate(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CoralPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Surface(shape = CircleShape, color = CoralPrimary.copy(alpha = 0.11f)) {
+                        Text(
+                            text = hotPlace.congestionRate.toCongestionLabel(),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CoralPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Text(
+                        text = "부산 ${hotPlace.district.label}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+                Text(
+                    text = "혼잡도를 확인하고 방문 시간을 조정해 보세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HotPlaceThumbnail(rank: Int) {
+    Box(
+        modifier = Modifier
+            .size(width = 104.dp, height = 112.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFFFFE2DA), Color(0xFFFFF5F0), Color(0xFFEAF7FF))
+                )
+            )
+    ) {
+        Box(
+            modifier = Modifier.size(54.dp).align(Alignment.Center).clip(CircleShape).background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.BarChart,
+                contentDescription = null,
+                tint = CoralPrimary,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Text(
+            text = "HOT $rank",
+            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = CoralPrimary,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun AccessibleTourismSection(
+    places: List<TourismCatalogItem>,
+    isLoading: Boolean,
+    onSeeAll: () -> Unit
+) {
+    HighlightSectionHeader(
+        title = "편안하게 즐기는 무장애 관광",
+        description = "이동 편의 정보가 제공되는 부산 관광지를 모았어요.",
+        showSeeAll = places.isNotEmpty(),
+        onSeeAll = onSeeAll
+    )
+    Spacer(Modifier.height(12.dp))
+    when {
+        isLoading -> HighlightLoadingCard()
+        places.isNotEmpty() -> LazyRow(
+            contentPadding = PaddingValues(end = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(places, key = { "accessible-${it.id}" }) { place ->
+                AccessiblePlaceCard(place = place, onClick = onSeeAll)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccessiblePlaceCard(place: TourismCatalogItem, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.width(224.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Column {
+            if (place.imageUrl != null) {
+                AsyncImageBox(
+                    model = place.imageUrl,
+                    contentDescription = place.title,
+                    modifier = Modifier.fillMaxWidth().height(128.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(128.dp)
+                        .background(SkyBlue.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Accessible,
+                        contentDescription = null,
+                        tint = SkyBlue,
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.padding(15.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = place.title,
+                    style = CardTitleStyle,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = place.address ?: "이동 편의 정보 제공",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HighlightSectionHeader(
+    title: String,
+    description: String,
+    showSeeAll: Boolean,
+    onSeeAll: () -> Unit
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = SectionTitleStyle, color = TextPrimary)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        }
+        if (showSeeAll) {
+            TextButton(onClick = onSeeAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text("전체보기", color = CoralPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HighlightLoadingCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(112.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = CoralPrimary, strokeWidth = 3.dp)
+        }
+    }
+}
+
+@Composable
+private fun HighlightErrorCard(message: String, onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            TextButton(onClick = onRetry) { Text("다시 시도", color = CoralPrimary) }
+        }
+    }
+}
+
+private fun Double.toDisplayRate(): String = if (this % 1.0 == 0.0) {
+    "${toInt()}%"
+} else {
+    "${"%.1f".format(this)}%"
+}
+
+private fun Double.toCongestionLabel(): String = when {
+    this >= 80.0 -> "매우 혼잡"
+    this >= 60.0 -> "혼잡"
+    this >= 40.0 -> "보통"
+    else -> "여유"
+}
+
+private const val HOT_PLACE_CARD_LIMIT = 5
 
 @Composable
 private fun FeaturedExploreBanner(

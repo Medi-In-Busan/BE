@@ -139,7 +139,7 @@ public class TourismCatalogService {
             // CROWDING(TatsCnctrRateService) 응답의 실제 혼잡도 필드명은 tatsCnctrRate가 아니라
             // cnctrRate다 — 오타 때문에 subtitle이 항상 비어서 날짜별로 다른 카드인데도 구분이 안 됐다.
             // crsSummary는 WALKING의 코스 요약 필드 — "courseBrf"는 실존하지 않는 필드였다.
-            first(item, "overview", "crsSummary", "galSearchKeyword", "cat3", "cnctrRate", "daywkDivNm"),
+            first(item, "overview", "crsSummary", "courseBrf", "galSearchKeyword", "cat3", "cnctrRate", "tatsCnctrRate", "daywkDivNm"),
             // sigun은 WALKING의 시/군 필드 — 지금까지 주소 후보에 없어서 항상 null이었다.
             first(item, "addr1", "baseAddr", "address", "roadAddr", "sigun"),
             first(item, "firstimage", "firstimage2", "galWebImageUrl", "imageUrl"),

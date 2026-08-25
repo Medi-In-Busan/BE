@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -218,21 +217,6 @@ private fun WellnessRouteContent(
                     onPinClick = onSelect,
                     modifier = Modifier.fillMaxSize()
                 )
-                Surface(
-                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.94f),
-                    shadowElevation = 4.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.Route, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(17.dp))
-                        Text("Kakao ${travelMode.routeLabel()} · 번호 순서대로 이동", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
             }
         }
         item {
@@ -423,8 +407,6 @@ private fun distanceLabel(distanceKm: Double): String = String.format(Locale.US,
 private fun TravelMode.buttonLabel(): String = if (this == TravelMode.DRIVING) "자동차" else "도보"
 
 private fun TravelMode.summaryLabel(): String = if (this == TravelMode.DRIVING) "차량 이동" else "도보 이동"
-
-private fun TravelMode.routeLabel(): String = if (this == TravelMode.DRIVING) "자동차 실제 도로 경로" else "도보 편안한 길"
 
 private fun TravelMode.disclaimer(): String = if (this == TravelMode.DRIVING) {
     "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다."

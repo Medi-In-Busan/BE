@@ -3,8 +3,7 @@ package com.mediinbusan.app.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
-import com.mediinbusan.app.data.place.WellnessTourismRepository
-import com.mediinbusan.app.domain.course.AssembleWellnessCourseUseCase
+import com.mediinbusan.app.domain.course.GetRecommendedHospitalWellnessRouteUseCase
 import com.mediinbusan.app.domain.nearby.GetNearbyPlacesSortedByDistanceUseCase
 import com.mediinbusan.app.data.place.WellnessTourismRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class NearbyViewModel @Inject constructor(
     private val getNearbyPlacesSortedByDistance: GetNearbyPlacesSortedByDistanceUseCase,
-    private val assembleWellnessCourse: AssembleWellnessCourseUseCase,
+    private val getRecommendedRoute: GetRecommendedHospitalWellnessRouteUseCase,
     private val wellnessTourismRepository: WellnessTourismRepository
 ) : ViewModel() {
 
@@ -38,14 +37,9 @@ class NearbyViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            assembleWellnessCourse(hospitalId).collect { result ->
-                _uiState.update { state ->
-                    when (result) {
-                        is Result.Loading -> state
-                        is Result.Success -> state.copy(courses = result.data)
-                        is Result.Error -> state
-                    }
-                }
+            when (val result = getRecommendedRoute(hospitalId)) {
+                is Result.Success -> _uiState.update { it.copy(recommendedRoute = result.data) }
+                is Result.Error, Result.Loading -> Unit
             }
         }
         viewModelScope.launch {
