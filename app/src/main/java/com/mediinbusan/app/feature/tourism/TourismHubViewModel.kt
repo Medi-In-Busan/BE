@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentRepository

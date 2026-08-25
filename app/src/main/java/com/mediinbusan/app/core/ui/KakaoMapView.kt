@@ -422,17 +422,14 @@ private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
 private val pinIconBitmapCache = mutableMapOf<Int, Bitmap>()
 private val numberedPinBitmapCache = mutableMapOf<Pair<Int, Boolean>, Bitmap>()
 
-private fun Context.pinIconBitmap(@DrawableRes resId: Int, routeIndex: Int? = null): Bitmap =
-    pinIconBitmapCache.getOrPut(resId to routeIndex) {
+private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
+    pinIconBitmapCache.getOrPut(resId) {
         val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
         val size = (32 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
         Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
-            if (routeIndex != null) {
-                drawRouteBadge(canvas, routeIndex, width, height)
-            }
         }
     }
 
@@ -469,6 +466,9 @@ private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
 private const val DEFAULT_ZOOM_LEVEL = 12
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
+private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 48f
+private const val ROUTE_LINE_WIDTH_PX = 10f
+private const val ROUTE_LINE_COLOR = 0xFFFF6F61.toInt()
 private const val COURSE_ROUTE_LAYER_ID = "recommended-tourism-course"
 private const val COURSE_ROUTE_Z_ORDER = 20_000
 private const val COURSE_LINE_WIDTH_PX = 5f

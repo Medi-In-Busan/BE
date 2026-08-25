@@ -7,6 +7,7 @@ import com.mediinbusan.app.core.common.PendingHospitalSearchEntry
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository

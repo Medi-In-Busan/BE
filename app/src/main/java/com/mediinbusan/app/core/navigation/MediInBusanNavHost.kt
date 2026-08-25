@@ -251,6 +251,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.TourismCatalog>()
             TourismCatalogScreen(
                 categoryName = route.category,
+                onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onNavigateToCourse = { category, district ->
                     navController.navigate(Route.RecommendedTourismCourse(category, district))
                 },

@@ -11,12 +11,10 @@ import org.springframework.stereotype.Service;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class TourismCatalogService {
@@ -51,12 +49,6 @@ public class TourismCatalogService {
         };
 
         List<TourismCatalogItemResponse> items = normalizeItems(objectMapper.valueToTree(external.data()));
-        if (category == TourismCatalogCategory.PHOTOS) {
-            // 관광사진 갤러리는 "장소 하나당 사진 여러 장"이 정상이라 galContentId는 사진마다
-            // 전부 다르다 — 같은 장소(제목)의 사진이 여러 장 오면 목록엔 그 장소가 여러 번 뿌려지는
-            // 것처럼 보인다. 카드 하나 = 장소 하나가 되도록 제목 기준으로 첫 장만 남긴다.
-            items = dedupeByTitle(items);
-        }
         return new TourismCatalogResponse(
             category,
             category.title(),
@@ -85,17 +77,6 @@ public class TourismCatalogService {
                 item = withId(item, item.id() + "-" + occurrence);
             }
             result.add(item);
-        }
-        return result;
-    }
-
-    private List<TourismCatalogItemResponse> dedupeByTitle(List<TourismCatalogItemResponse> items) {
-        List<TourismCatalogItemResponse> result = new ArrayList<>();
-        Set<String> seenTitles = new HashSet<>();
-        for (TourismCatalogItemResponse item : items) {
-            if (seenTitles.add(item.title())) {
-                result.add(item);
-            }
         }
         return result;
     }
