@@ -219,7 +219,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 hospitalId = route.hospitalId,
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
                 onNavigateToNearbyMap = { navController.navigate(Route.MapView(route.hospitalId)) },
-                onNavigateToCourseMap = { navController.navigate(Route.WellnessCourseMap(route.hospitalId)) },
+                onNavigateToCourseMap = { courseIndex ->
+                    navController.navigate(Route.WellnessCourseMap(route.hospitalId, courseIndex))
+                },
                 onExploreTourism = { navController.navigate(Route.TourismHub) },
                 onBack = navController::popBackStack
             )
@@ -235,6 +237,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.WellnessCourseMap>()
             WellnessCourseMapScreen(
                 hospitalId = route.hospitalId,
+                courseIndex = route.courseIndex,
                 onBack = navController::popBackStack
             )
         }

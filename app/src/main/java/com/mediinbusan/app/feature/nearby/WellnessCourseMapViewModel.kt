@@ -27,10 +27,10 @@ class WellnessCourseMapViewModel @Inject constructor(
     val uiState: StateFlow<WellnessCourseMapUiState> = _uiState
     private var recommendedRoute: HospitalWellnessRoute? = null
 
-    fun load(hospitalId: String) {
+    fun load(hospitalId: String, courseIndex: Int = 0) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val recommendationResult = getRecommendedRoute(hospitalId)
+            val recommendationResult = getRecommendedRoute(hospitalId, courseIndex)
             val recommendation = (recommendationResult as? Result.Success)?.data
             if (recommendation == null) {
                 _uiState.update {

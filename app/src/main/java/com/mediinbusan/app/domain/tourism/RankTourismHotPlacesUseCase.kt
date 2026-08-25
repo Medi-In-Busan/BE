@@ -11,7 +11,7 @@ data class TourismHotPlace(
 class RankTourismHotPlacesUseCase @Inject constructor() {
     operator fun invoke(
         catalogs: List<Pair<BusanDistrict, TourismCatalog>>,
-        limit: Int = 8
+        limit: Int = 5
     ): List<TourismHotPlace> = catalogs
         .flatMap { (district, catalog) ->
             catalog.items.mapNotNull { item ->

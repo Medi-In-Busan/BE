@@ -20,7 +20,16 @@ class GetRecommendedHospitalWellnessRouteUseCase @Inject constructor(
     private val buildPersonalization: BuildHospitalWellnessPersonalizationUseCase,
     private val buildRoute: BuildHospitalWellnessRouteUseCase
 ) {
-    suspend operator fun invoke(hospitalId: String): Result<HospitalWellnessRoute> {
+    suspend operator fun invoke(hospitalId: String, routeIndex: Int = 0): Result<HospitalWellnessRoute> {
+        return when (val result = getRoutes(hospitalId)) {
+            is Result.Success -> result.data.getOrNull(routeIndex)?.let { Result.Success(it) }
+                ?: Result.Error(message = "선택한 추천 코스를 찾을 수 없습니다.")
+            is Result.Error -> result
+            Result.Loading -> Result.Loading
+        }
+    }
+
+    suspend fun getRoutes(hospitalId: String): Result<List<HospitalWellnessRoute>> {
         val preferences = userPreferencesRepository.userPreferences.first()
         val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, preferences.languageCode)
             .first { it !is Result.Loading }
@@ -42,12 +51,15 @@ class GetRecommendedHospitalWellnessRouteUseCase @Inject constructor(
             favorites = favoriteRepository.observeFavorites().first(),
             recentItems = recentRepository.observeRecentlyViewed().first()
         )
-        val route = buildRoute(
+        val routes = buildRoute.buildAlternatives(
             hospital = hospital,
             places = places,
             personalization = personalization
-        ) ?: return Result.Error(message = "코스를 만들 수 있는 주변 장소가 4곳 이상 필요합니다.")
+        )
+        if (routes.isEmpty()) {
+            return Result.Error(message = "코스를 만들 수 있는 주변 장소가 4곳 이상 필요합니다.")
+        }
 
-        return Result.Success(route)
+        return Result.Success(routes)
     }
 }

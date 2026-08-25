@@ -70,11 +70,12 @@ import java.util.Locale
 @Composable
 fun WellnessCourseMapScreen(
     hospitalId: String,
+    courseIndex: Int = 0,
     onBack: () -> Unit,
     viewModel: WellnessCourseMapViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    LaunchedEffect(hospitalId) { viewModel.load(hospitalId) }
+    LaunchedEffect(hospitalId, courseIndex) { viewModel.load(hospitalId, courseIndex) }
 
     Scaffold(
         containerColor = WellnessCourseCanvas,
@@ -95,7 +96,7 @@ fun WellnessCourseMapScreen(
             uiState.errorMessage != null -> ErrorState(
                 message = uiState.errorMessage.orEmpty(),
                 modifier = Modifier.padding(innerPadding),
-                onRetry = { viewModel.load(hospitalId) }
+                onRetry = { viewModel.load(hospitalId, courseIndex) }
             )
             uiState.route != null -> WellnessRouteContent(
                 route = requireNotNull(uiState.route),

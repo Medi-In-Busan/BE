@@ -399,9 +399,9 @@ private fun HighlightErrorCard(message: String, onRetry: () -> Unit) {
 }
 
 private fun Double.toDisplayRate(): String = if (this % 1.0 == 0.0) {
-    "${toInt()}%"
+    "지수 ${toInt()}"
 } else {
-    "${"%.1f".format(this)}%"
+    "지수 ${"%.1f".format(this)}"
 }
 
 private fun Double.toCongestionLabel(): String = when {

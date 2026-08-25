@@ -59,6 +59,22 @@ class RankTourismHotPlacesUseCaseTest {
         assertEquals(emptyList<TourismHotPlace>(), result)
     }
 
+    @Test
+    fun `기본 결과는 집중도 상위 다섯 곳만 반환한다`() {
+        val result = useCase(
+            catalogs = listOf(
+                BusanDistrict.JUNG to catalog(
+                    *(1..7).map { index ->
+                        item("place-$index", "관광지 $index", (index * 10).toString())
+                    }.toTypedArray()
+                )
+            )
+        )
+
+        assertEquals(5, result.size)
+        assertEquals(listOf(70.0, 60.0, 50.0, 40.0, 30.0), result.map { it.congestionRate })
+    }
+
     private fun catalog(vararg items: TourismCatalogItem) = TourismCatalog(
         category = TourismCatalogCategory.CROWDING,
         title = "관광지 혼잡도",

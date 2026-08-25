@@ -77,7 +77,10 @@ sealed interface Route {
     data class Nearby(val hospitalId: String) : Route // S-07
 
     @Serializable
-    data class WellnessCourseMap(val hospitalId: String) : Route // S-07 병원 출발 추천 관광·웰니스 코스
+    data class WellnessCourseMap(
+        val hospitalId: String,
+        val courseIndex: Int = 0
+    ) : Route // S-07 병원 출발 추천 관광·웰니스 코스
 
     @Serializable
     data class PlaceDetail(val placeId: String) : Route // S-07 상세
