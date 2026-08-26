@@ -24,8 +24,8 @@ data class AppStrings(
     val chat: ChatStrings,
     val documentScan: DocumentScanStrings,
     val map: MapStrings,
-    val nearby: NearbyStrings,
-    val tourism: TourismStrings
+    val tourism: TourismStrings,
+    val nearby: NearbyStrings
 )
 
 private val KoreanAppStrings = AppStrings(
@@ -45,8 +45,8 @@ private val KoreanAppStrings = AppStrings(
     chat = ChatStrings.Ko,
     documentScan = DocumentScanStrings.Ko,
     map = MapStrings.Ko,
-    nearby = NearbyStrings.Ko,
-    tourism = TourismStrings.Ko
+    tourism = TourismStrings.Ko,
+    nearby = NearbyStrings.Ko
 )
 
 private val EnglishAppStrings = AppStrings(
@@ -66,8 +66,8 @@ private val EnglishAppStrings = AppStrings(
     chat = ChatStrings.En,
     documentScan = DocumentScanStrings.En,
     map = MapStrings.En,
-    nearby = NearbyStrings.En,
-    tourism = TourismStrings.En
+    tourism = TourismStrings.En,
+    nearby = NearbyStrings.En
 )
 
 private val ChineseAppStrings = AppStrings(
@@ -87,8 +87,8 @@ private val ChineseAppStrings = AppStrings(
     chat = ChatStrings.Zh,
     documentScan = DocumentScanStrings.Zh,
     map = MapStrings.Zh,
-    nearby = NearbyStrings.Zh,
-    tourism = TourismStrings.Zh
+    tourism = TourismStrings.Zh,
+    nearby = NearbyStrings.Zh
 )
 
 private val JapaneseAppStrings = AppStrings(

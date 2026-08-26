@@ -62,15 +62,50 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
         hospital: Hospital,
         places: List<Place>,
         personalization: HospitalWellnessPersonalization
-    ): HospitalWellnessRoute? {
-        val hospitalLatitude = hospital.latitude ?: return null
-        val hospitalLongitude = hospital.longitude ?: return null
+    ): HospitalWellnessRoute? = buildAlternatives(hospital, places, personalization).firstOrNull()
+
+    fun buildAlternatives(
+        hospital: Hospital,
+        places: List<Place>,
+        personalization: HospitalWellnessPersonalization,
+        maxRoutes: Int = MAX_ROUTES
+    ): List<HospitalWellnessRoute> {
+        if (hospital.latitude == null || hospital.longitude == null) return emptyList()
         val candidates = places
             .filter { it.latitude != null && it.longitude != null && it.type != PlaceType.LODGING }
             .distinctBy { it.id }
-        if (candidates.size < MIN_STOPS) return null
+        if (candidates.size < MIN_STOPS) return emptyList()
 
-        val targetSize = minOf(MAX_STOPS, candidates.size)
+        val usageCounts = mutableMapOf<String, Int>()
+        val routes = mutableListOf<HospitalWellnessRoute>()
+        repeat(maxRoutes.coerceAtLeast(1)) { routeIndex ->
+            val route = buildSingleRoute(
+                hospital = hospital,
+                candidates = candidates,
+                personalization = personalization,
+                usageCounts = usageCounts,
+                routeIndex = routeIndex
+            )
+            val stopIds = route.stops.map { it.place.id }.toSet()
+            if (routes.none { existing -> existing.stops.map { it.place.id }.toSet() == stopIds }) {
+                routes += route
+                route.stops.forEach { stop -> usageCounts.merge(stop.place.id, 1, Int::plus) }
+            }
+        }
+        return routes
+    }
+
+    private fun buildSingleRoute(
+        hospital: Hospital,
+        candidates: List<Place>,
+        personalization: HospitalWellnessPersonalization,
+        usageCounts: Map<String, Int>,
+        routeIndex: Int
+    ): HospitalWellnessRoute {
+        val hospitalLatitude = requireNotNull(hospital.latitude)
+        val hospitalLongitude = requireNotNull(hospital.longitude)
+
+        val targetSize = if (candidates.size >= MAX_STOPS && routeIndex % 2 == 0) MAX_STOPS else MIN_STOPS
         val selected = mutableListOf<Place>()
         val remaining = candidates.toMutableList()
         while (selected.size < targetSize) {
@@ -80,7 +115,8 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
                     hospitalLatitude = hospitalLatitude,
                     hospitalLongitude = hospitalLongitude,
                     personalization = personalization
-                ) - selected.count { it.type == place.type } * SAME_TYPE_PENALTY
+                ) - selected.count { it.type == place.type } * SAME_TYPE_PENALTY -
+                    (usageCounts[place.id] ?: 0) * ROUTE_REUSE_PENALTY
             }
             selected += next
             remaining -= next
@@ -199,9 +235,11 @@ class BuildHospitalWellnessRouteUseCase @Inject constructor() {
     private companion object {
         const val MIN_STOPS = 4
         const val MAX_STOPS = 5
+        const val MAX_ROUTES = 4
         const val MAX_DISTANCE_SCORE = 36.0
         const val DISTANCE_DECAY_KM = 2.0
         const val SAME_TYPE_PENALTY = 16.0
+        const val ROUTE_REUSE_PENALTY = 60.0
         const val INTEREST_KEYWORD_SCORE = 6.0
         const val TYPE_AFFINITY_SCORE = 7.0
         const val FAVORITE_PLACE_SCORE = 45.0

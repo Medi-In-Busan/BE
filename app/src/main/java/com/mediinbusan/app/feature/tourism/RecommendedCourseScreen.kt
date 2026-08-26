@@ -20,9 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +61,9 @@ import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.MapRoutePath
 import com.mediinbusan.app.core.ui.MapRoutePoint
+import com.mediinbusan.app.data.route.DrivingRoute
+import com.mediinbusan.app.data.route.DrivingRouteSection
+import com.mediinbusan.app.data.route.TravelMode
 import com.mediinbusan.app.domain.tourism.RecommendedTourismCourse
 import com.mediinbusan.app.domain.tourism.RecommendedTourismStop
 import java.util.Locale
@@ -97,17 +101,22 @@ fun RecommendedCourseScreen(
                 modifier = Modifier.padding(innerPadding),
                 onRetry = { viewModel.load(categoryName, districtName) }
             )
-            uiState.course == null -> EmptyState(
+            uiState.course == null || uiState.route == null -> EmptyState(
                 message = strings.notEnoughPlaces,
                 modifier = Modifier.padding(innerPadding)
             )
             else -> CourseContent(
                 modifier = Modifier.padding(innerPadding),
                 course = requireNotNull(uiState.course),
+                route = requireNotNull(uiState.route),
                 districtLabel = uiState.district?.label,
                 selectedStopId = uiState.selectedStopId,
+                travelMode = uiState.travelMode,
+                isRouteRefreshing = uiState.isRouteRefreshing,
+                routeErrorMessage = uiState.routeErrorMessage,
                 strings = strings,
-                onSelectStop = viewModel::selectStop
+                onSelectStop = viewModel::selectStop,
+                onTravelModeSelect = viewModel::selectTravelMode
             )
         }
     }
@@ -117,10 +126,15 @@ fun RecommendedCourseScreen(
 private fun CourseContent(
     modifier: Modifier,
     course: RecommendedTourismCourse,
+    route: DrivingRoute,
     districtLabel: String?,
     selectedStopId: String?,
+    travelMode: TravelMode,
+    isRouteRefreshing: Boolean,
+    routeErrorMessage: String?,
     strings: CourseStrings,
-    onSelectStop: (String) -> Unit
+    onSelectStop: (String) -> Unit,
+    onTravelModeSelect: (TravelMode) -> Unit
 ) {
     val pins = remember(course, selectedStopId) {
         course.stops.map { stop ->
@@ -134,13 +148,11 @@ private fun CourseContent(
             )
         }
     }
-    val paths = remember(course) {
+    val paths = remember(route) {
         listOf(
             MapRoutePath(
                 id = "recommended-course",
-                points = course.stops.map { stop ->
-                    MapRoutePoint(requireNotNull(stop.item.latitude), requireNotNull(stop.item.longitude))
-                }
+                points = route.path.map { MapRoutePoint(it.latitude, it.longitude) }
             )
         )
     }
@@ -162,7 +174,7 @@ private fun CourseContent(
                 )
                 Surface(shape = CircleShape, color = CoralPrimaryContainer) {
                     Text(
-                        text = strings.summary(course),
+                        text = strings.summary(course.stops.size, route, travelMode),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = CoralPrimary,
@@ -172,10 +184,27 @@ private fun CourseContent(
             }
         }
         item {
+            TravelModeSelector(
+                selectedMode = travelMode,
+                isLoading = isRouteRefreshing,
+                onSelect = onTravelModeSelect,
+                strings = strings,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+            )
+            routeErrorMessage?.let { message ->
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(310.dp)
+                    .height(320.dp)
                     .padding(horizontal = 20.dp)
                     .clip(RoundedCornerShape(24.dp))
             ) {
@@ -185,21 +214,6 @@ private fun CourseContent(
                     onPinClick = onSelectStop,
                     modifier = Modifier.fillMaxSize()
                 )
-                Surface(
-                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.94f),
-                    shadowElevation = 4.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.Route, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(17.dp))
-                        Text(strings.mapHint, style = MaterialTheme.typography.labelMedium, color = TextPrimary)
-                    }
-                }
             }
         }
         item {
@@ -208,7 +222,13 @@ private fun CourseContent(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 course.stops.forEachIndexed { index, stop ->
-                    if (index > 0) TransferLeg(stop = stop, strings = strings)
+                    if (index > 0) {
+                        TransferLeg(
+                            section = route.sections[index - 1],
+                            travelMode = travelMode,
+                            strings = strings
+                        )
+                    }
                     CourseStopRow(
                         stop = stop,
                         selected = stop.item.id == selectedStopId,
@@ -216,7 +236,7 @@ private fun CourseContent(
                     )
                 }
                 Text(
-                    text = strings.routeDisclaimer,
+                    text = strings.routeDisclaimer(travelMode),
                     modifier = Modifier.padding(top = 18.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
@@ -227,17 +247,80 @@ private fun CourseContent(
 }
 
 @Composable
-private fun TransferLeg(stop: RecommendedTourismStop, strings: CourseStrings) {
+private fun TravelModeSelector(
+    selectedMode: TravelMode,
+    isLoading: Boolean,
+    onSelect: (TravelMode) -> Unit,
+    strings: CourseStrings,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFF3F1F0)
+    ) {
+        Row(modifier = Modifier.padding(4.dp)) {
+            TravelMode.entries.forEach { mode ->
+                val selected = selectedMode == mode
+                Surface(
+                    modifier = Modifier.weight(1f).clickable(enabled = !isLoading) { onSelect(mode) },
+                    shape = RoundedCornerShape(13.dp),
+                    color = if (selected) Color.White else Color.Transparent,
+                    shadowElevation = if (selected) 2.dp else 0.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 11.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isLoading && !selected) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(17.dp),
+                                strokeWidth = 2.dp,
+                                color = CoralPrimary
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (mode == TravelMode.DRIVING) Icons.Default.DirectionsCar else Icons.AutoMirrored.Filled.DirectionsWalk,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (selected) CoralPrimary else TextSecondary
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = strings.modeLabel(mode),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (selected) TextPrimary else TextSecondary,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransferLeg(section: DrivingRouteSection, travelMode: TravelMode, strings: CourseStrings) {
     Row(
         modifier = Modifier.padding(start = 19.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.width(2.dp).height(34.dp).background(CoralPrimary.copy(alpha = 0.35f)))
         Spacer(Modifier.width(18.dp))
-        Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(17.dp))
+        Icon(
+            if (travelMode == TravelMode.DRIVING) Icons.Default.DirectionsCar else Icons.AutoMirrored.Filled.DirectionsWalk,
+            contentDescription = null,
+            tint = TextSecondary,
+            modifier = Modifier.size(17.dp)
+        )
         Spacer(Modifier.width(7.dp))
         Text(
-            text = strings.transfer(stop.transferMinutes ?: 0, stop.distanceFromPreviousKm ?: 0.0),
+            text = strings.transfer(
+                kotlin.math.ceil(section.durationSeconds / 60.0).toInt().coerceAtLeast(1),
+                section.distanceMeters / 1_000.0
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
         )
@@ -285,58 +368,58 @@ private data class CourseStrings(
     val back: String,
     val topBarTitle: String,
     val courseTitle: String,
-    val mapHint: String,
-    val routeDisclaimer: String,
     val notEnoughPlaces: String,
     val subtitle: (String?) -> String,
-    val summary: (RecommendedTourismCourse) -> String,
-    val transfer: (Int, Double) -> String
+    val summary: (Int, DrivingRoute, TravelMode) -> String,
+    val transfer: (Int, Double) -> String,
+    val modeLabel: (TravelMode) -> String,
+    val routeDisclaimer: (TravelMode) -> String
 )
 
 private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     SupportedLanguage.KO -> CourseStrings(
         back = "뒤로가기",
-        topBarTitle = "추천 동선",
+        topBarTitle = "추천 웰니스 코스",
         courseTitle = "나를 위한 부산 회복 코스",
-        mapHint = "번호 순서대로 둘러보세요",
-        routeDisclaimer = "지도 선과 이동 시간은 장소 좌표를 기준으로 계산한 예상 동선입니다. 실제 도로 상황과 다를 수 있습니다.",
         notEnoughPlaces = "코스를 만들 수 있는 위치 정보가 충분하지 않습니다.",
         subtitle = { district -> "${district ?: "부산"}에서 추천 점수와 이동 부담을 함께 고려했어요." },
-        summary = { course -> "${course.stops.size}곳 · 약 ${durationKo(course.estimatedDurationMinutes)} · ${formatKm(course.totalDistanceKm)}" },
-        transfer = { minutes, km -> "약 ${minutes}분 · ${formatKm(km)}" }
+        summary = { stops, route, mode -> "${stops}곳 · ${if (mode == TravelMode.DRIVING) "차량" else "도보"} 이동 약 ${durationKo(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
+        transfer = { minutes, km -> "약 ${minutes}분 · ${formatKm(km)}" },
+        modeLabel = { if (it == TravelMode.DRIVING) "자동차" else "도보" },
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다." else "Kakao 도보 편안한 길 기준이며 현장 보행 환경에 따라 이동 시간이 달라질 수 있습니다." }
     )
     SupportedLanguage.EN -> CourseStrings(
         back = "Back",
         topBarTitle = "Recommended route",
         courseTitle = "Your Busan recovery course",
-        mapHint = "Follow the numbered stops",
-        routeDisclaimer = "The route and travel times are estimates based on place coordinates and may differ from actual roads.",
         notEnoughPlaces = "There are not enough places with location data to build a course.",
         subtitle = { district -> "Balanced for recommendation fit and travel effort around ${district ?: "Busan"}." },
-        summary = { course -> "${course.stops.size} stops · about ${durationEn(course.estimatedDurationMinutes)} · ${formatKm(course.totalDistanceKm)}" },
-        transfer = { minutes, km -> "About $minutes min · ${formatKm(km)}" }
+        summary = { stops, route, mode -> "$stops stops · ${if (mode == TravelMode.DRIVING) "driving" else "walking"} about ${durationEn(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
+        transfer = { minutes, km -> "About $minutes min · ${formatKm(km)}" },
+        modeLabel = { if (it == TravelMode.DRIVING) "Car" else "Walk" },
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "Based on a Kakao Mobility recommended route; traffic may affect travel time." else "Based on Kakao's comfortable walking route; actual walking conditions may vary." }
     )
     SupportedLanguage.JA -> CourseStrings(
         back = "戻る",
         topBarTitle = "おすすめルート",
         courseTitle = "釜山リカバリーコース",
-        mapHint = "番号順に巡ってください",
-        routeDisclaimer = "ルートと移動時間は座標を基準にした目安で、実際の道路状況とは異なる場合があります。",
         notEnoughPlaces = "コース作成に必要な位置情報が不足しています。",
         subtitle = { district -> "${district ?: "釜山"}でおすすめ度と移動負担を考慮しました。" },
-        summary = { course -> "${course.stops.size}か所 · 約${durationJa(course.estimatedDurationMinutes)} · ${formatKm(course.totalDistanceKm)}" },
-        transfer = { minutes, km -> "約${minutes}分 · ${formatKm(km)}" }
+        summary = { stops, route, mode -> "$stops\u304b\u6240 \u00b7 ${if (mode == TravelMode.DRIVING) "\u8eca" else "\u5f92\u6b69"}\u3067\u7d04${durationJa(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
+        transfer = { minutes, km -> "\u7d04${minutes}\u5206 \u00b7 ${formatKm(km)}" },
+        modeLabel = { if (it == TravelMode.DRIVING) "\u81ea\u52d5\u8eca" else "\u5f92\u6b69" },
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility\u306e\u63a8\u5968\u30eb\u30fc\u30c8\u3067\u3001\u4ea4\u901a\u72b6\u6cc1\u306b\u3088\u308a\u6240\u8981\u6642\u9593\u304c\u5909\u308f\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" else "Kakao\u306e\u6b69\u884c\u30eb\u30fc\u30c8\u3067\u3001\u73fe\u5730\u306e\u6b69\u884c\u74b0\u5883\u306b\u3088\u308a\u7570\u306a\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" }
     )
     SupportedLanguage.ZH -> CourseStrings(
         back = "返回",
         topBarTitle = "推荐路线",
         courseTitle = "釜山疗愈路线",
-        mapHint = "请按编号顺序游览",
-        routeDisclaimer = "路线和移动时间根据地点坐标估算，可能与实际道路情况不同。",
         notEnoughPlaces = "没有足够的地点位置信息来生成路线。",
         subtitle = { district -> "综合考虑了${district ?: "釜山"}的推荐度和移动距离。" },
-        summary = { course -> "${course.stops.size}处 · 约${durationZh(course.estimatedDurationMinutes)} · ${formatKm(course.totalDistanceKm)}" },
-        transfer = { minutes, km -> "约${minutes}分钟 · ${formatKm(km)}" }
+        summary = { stops, route, mode -> "$stops\u5904 \u00b7 ${if (mode == TravelMode.DRIVING) "\u9a7e\u8f66" else "\u6b65\u884c"}\u7ea6${durationZh(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
+        transfer = { minutes, km -> "\u7ea6${minutes}\u5206\u949f \u00b7 ${formatKm(km)}" },
+        modeLabel = { if (it == TravelMode.DRIVING) "\u6c7d\u8f66" else "\u6b65\u884c" },
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "\u57fa\u4e8e Kakao Mobility \u63a8\u8350\u8def\u7ebf\uff0c\u4ea4\u901a\u72b6\u51b5\u53ef\u80fd\u5f71\u54cd\u65f6\u95f4\u3002" else "\u57fa\u4e8e Kakao \u8212\u9002\u6b65\u884c\u8def\u7ebf\uff0c\u5b9e\u9645\u6b65\u884c\u73af\u5883\u53ef\u80fd\u6709\u6240\u4e0d\u540c\u3002" }
     )
 }
 
@@ -345,3 +428,5 @@ private fun durationEn(minutes: Int): String = if (minutes >= 60) "${minutes / 6
 private fun durationJa(minutes: Int): String = if (minutes >= 60) "${minutes / 60}時間${minutes % 60}分" else "${minutes}分"
 private fun durationZh(minutes: Int): String = if (minutes >= 60) "${minutes / 60}小时${minutes % 60}分钟" else "${minutes}分钟"
 private fun formatKm(distanceKm: Double): String = String.format(Locale.US, "%.1fkm", distanceKm)
+private fun DrivingRoute.durationMinutes(): Int = kotlin.math.ceil(durationSeconds / 60.0).toInt().coerceAtLeast(1)
+private fun DrivingRoute.distanceKm(): Double = distanceMeters / 1_000.0

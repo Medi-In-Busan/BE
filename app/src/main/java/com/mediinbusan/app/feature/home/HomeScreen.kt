@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -56,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -104,6 +107,8 @@ import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.delay
 
 @Composable
@@ -114,6 +119,7 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToMap: () -> Unit = {},
     onNavigateToWellness: () -> Unit = {},
+    onNavigateToRecommendedCourse: (String, String?) -> Unit = { _, _ -> },
     // SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
     onNavigateToSelfDiagnosis: () -> Unit = {},
     // 의료목적 선택 칩이 여기로 모인다. 실제 필터 값은 이 콜백이 아니라 viewModel::onCategorySelected
@@ -132,6 +138,7 @@ fun HomeScreen(
         onNavigateToGuide = onNavigateToGuide,
         onNavigateToMap = onNavigateToMap,
         onNavigateToWellness = onNavigateToWellness,
+        onNavigateToRecommendedCourse = onNavigateToRecommendedCourse,
         onNavigateToSelfDiagnosis = onNavigateToSelfDiagnosis,
         onNavigateToSearch = onNavigateToSearch,
         onNavigateToSearchFocused = onNavigateToSearchFocused,
@@ -140,6 +147,8 @@ fun HomeScreen(
         onPurposeSelected = viewModel::onCategorySelected,
         onSearchBarClicked = viewModel::onSearchBarClicked,
         onRetry = viewModel::onRetryClicked,
+        onLoadMoreCourses = viewModel::onLoadMoreCourses,
+        onRetryCourses = viewModel::onRetryCourses,
         onLanguageSelected = viewModel::onLanguageSelected
     )
 }
@@ -152,6 +161,7 @@ private fun HomeContent(
     onNavigateToGuide: () -> Unit,
     onNavigateToMap: () -> Unit,
     onNavigateToWellness: () -> Unit,
+    onNavigateToRecommendedCourse: (String, String?) -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToSearchFocused: () -> Unit,
@@ -160,6 +170,8 @@ private fun HomeContent(
     onPurposeSelected: (MedicalCategory) -> Unit,
     onSearchBarClicked: () -> Unit,
     onRetry: () -> Unit,
+    onLoadMoreCourses: () -> Unit,
+    onRetryCourses: () -> Unit,
     onLanguageSelected: (String) -> Unit
 ) {
     val isLoading = uiState.isLoading
@@ -254,9 +266,17 @@ private fun HomeContent(
                     )
 
                     Spacer(modifier = Modifier.height(72.dp))
-                    // TODO: 실제 코스/관광지 데이터 연동은 담당자 몫 — 디자인 감 잡기용 스텁
-                    // 카드 2개(관광지 1 + 웰니스 1)만 고정으로 둔다.
-                    RecommendedCourseSection()
+                    RecommendedCourseSection(
+                        courses = uiState.recommendedCourses,
+                        isLoading = uiState.isCourseLoading,
+                        hasMore = uiState.hasMoreCourses,
+                        hasError = uiState.courseError != null,
+                        onCourseClick = { course ->
+                            onNavigateToRecommendedCourse(course.category.name, course.district?.name)
+                        },
+                        onLoadMore = onLoadMoreCourses,
+                        onRetry = onRetryCourses
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
                     // 바텀바 뒤로 밀려 들어간 만큼의 여백 — 이게 있어야 마지막 카드가 끝까지
@@ -915,18 +935,29 @@ private fun RecommendedHospitalCard(
     }
 }
 
-// S-07(주변 관광·웰니스) 실제 연동 전까지, 담당자가 참고할 디자인 감을 잡도록 고정된
-// 스텁 카드 2장(관광지 1 + 웰니스 1)만 둔다. 영역 구조(제목+서브텍스트+흰 카드)는
-// RecommendedHospitalSection과 동일하게 맞춘다.
-private data class CourseStubItem(val imageRes: Int, val title: String, val place: String)
-
 @Composable
-private fun RecommendedCourseSection(modifier: Modifier = Modifier) {
+private fun RecommendedCourseSection(
+    courses: List<HomeRecommendedCourse>,
+    isLoading: Boolean,
+    hasMore: Boolean,
+    hasError: Boolean,
+    onCourseClick: (HomeRecommendedCourse) -> Unit,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val strings = LocalAppStrings.current.home
-    val stubItems = listOf(
-        CourseStubItem(R.drawable.banner1, strings.courseStubPlaceTitle, strings.courseStubPlaceLocation),
-        CourseStubItem(R.drawable.banner2, strings.courseStubWellnessTitle, strings.courseStubWellnessLocation)
-    )
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState, courses.size, hasMore, isLoading) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+            info.totalItemsCount > 0 && lastVisible >= info.totalItemsCount - 2
+        }
+            .distinctUntilChanged()
+            .filter { it && hasMore && !isLoading }
+            .collect { onLoadMore() }
+    }
     Column(modifier = modifier) {
         Text(
             text = strings.recommendedCourseSectionTitle,
@@ -943,18 +974,58 @@ private fun RecommendedCourseSection(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         SectionCardContainer {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(stubItems, key = { it.title }) { item -> CourseStubCard(item) }
+            when {
+                courses.isEmpty() && isLoading -> Box(
+                    modifier = Modifier.fillMaxWidth().height(190.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = CoralPrimary, strokeWidth = 2.dp)
+                }
+                courses.isEmpty() -> Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(strings.recommendedCourseEmpty, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    if (hasError) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = strings.recommendedCourseRetry,
+                            modifier = Modifier.clickable(onClick = onRetry).padding(8.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = CoralPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                else -> LazyRow(
+                    state = listState,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(courses, key = { it.id }) { course ->
+                        RecommendedCourseCard(course = course, onClick = { onCourseClick(course) })
+                    }
+                    if (isLoading) {
+                        item(key = "course-loading") {
+                            Box(modifier = Modifier.width(64.dp).height(210.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = CoralPrimary, strokeWidth = 2.dp)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CourseStubCard(item: CourseStubItem) {
+private fun RecommendedCourseCard(course: HomeRecommendedCourse, onClick: () -> Unit) {
+    val strings = LocalAppStrings.current.home
+    val representative = course.course.stops.first()
+    val title = course.course.stops.take(2).joinToString(" · ") { it.item.title }
+    val location = course.district?.label ?: representative.item.address.orEmpty()
     Column(
         modifier = Modifier
-            .width(170.dp)
+            .width(210.dp)
             .shadow(
                 elevation = 3.dp,
                 shape = MaterialTheme.shapes.large,
@@ -962,21 +1033,34 @@ private fun CourseStubCard(item: CourseStubItem) {
                 spotColor = Color.Black.copy(alpha = 0.04f)
             )
             .clip(MaterialTheme.shapes.large)
+            .clickable(onClick = onClick)
             .background(Color.White)
             .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.large)
     ) {
-        Image(
-            painter = painterResource(id = item.imageRes),
-            contentDescription = item.title,
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp)
+                .height(138.dp)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-        )
+        ) {
+            AsyncImageBox(
+                model = representative.item.imageUrl,
+                contentDescription = title,
+                modifier = Modifier.fillMaxSize()
+            )
+            Text(
+                text = "${course.course.stops.size}${strings.courseStopsSuffix}",
+                modifier = Modifier.align(Alignment.TopStart).padding(9.dp).background(
+                    color = Color.White.copy(alpha = 0.92f),
+                    shape = CircleShape
+                ).padding(horizontal = 9.dp, vertical = 5.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = CoralPrimary
+            )
+        }
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = item.title,
+                text = title,
                 style = CardTitleStyle,
                 color = TextPrimary,
                 maxLines = 1,
@@ -984,7 +1068,7 @@ private fun CourseStubCard(item: CourseStubItem) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = item.place,
+                text = location,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
                 maxLines = 1,
@@ -1034,6 +1118,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToGuide = {},
             onNavigateToMap = {},
             onNavigateToWellness = {},
+            onNavigateToRecommendedCourse = { _, _ -> },
             onNavigateToSelfDiagnosis = {},
             onNavigateToSearch = {},
             onNavigateToSearchFocused = {},
@@ -1042,6 +1127,8 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onPurposeSelected = {},
             onSearchBarClicked = {},
             onRetry = {},
+            onLoadMoreCourses = {},
+            onRetryCourses = {},
             onLanguageSelected = {}
         )
     }

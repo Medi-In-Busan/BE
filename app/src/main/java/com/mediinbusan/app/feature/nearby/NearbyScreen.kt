@@ -1,7 +1,5 @@
 package com.mediinbusan.app.feature.nearby
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,28 +12,29 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,14 +55,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
-import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
@@ -72,23 +69,22 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
-import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.LoadingState
-import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.data.place.WellnessWalkingCourse
-import com.mediinbusan.app.domain.course.WellnessCourse
+import com.mediinbusan.app.domain.course.HospitalWellnessRoute
+import com.mediinbusan.app.domain.tourism.TourismHotPlace
 
 @Composable
 fun NearbyScreen(
     hospitalId: String,
     onSelectPlace: (String) -> Unit,
-    onNavigateToMap: () -> Unit,
-    onNavigateToCourseRoute: (String) -> Unit,
+    onNavigateToNearbyMap: () -> Unit,
+    onNavigateToCourseMap: (Int) -> Unit,
     onExploreTourism: () -> Unit,
     onBack: () -> Unit,
     viewModel: NearbyViewModel = hiltViewModel()
@@ -102,8 +98,8 @@ fun NearbyScreen(
     NearbyContent(
         uiState = uiState,
         onSelectPlace = onSelectPlace,
-        onNavigateToMap = onNavigateToMap,
-        onNavigateToCourseRoute = onNavigateToCourseRoute,
+        onNavigateToNearbyMap = onNavigateToNearbyMap,
+        onNavigateToCourseMap = onNavigateToCourseMap,
         onExploreTourism = onExploreTourism,
         onBack = onBack,
         onRetry = { viewModel.load(hospitalId) }
@@ -115,13 +111,12 @@ fun NearbyScreen(
 private fun NearbyContent(
     uiState: NearbyUiState,
     onSelectPlace: (String) -> Unit,
-    onNavigateToMap: () -> Unit,
-    onNavigateToCourseRoute: (String) -> Unit,
+    onNavigateToNearbyMap: () -> Unit,
+    onNavigateToCourseMap: (Int) -> Unit,
     onExploreTourism: () -> Unit,
     onBack: () -> Unit,
     onRetry: () -> Unit
 ) {
-    val strings = LocalAppStrings.current
     Scaffold(
         containerColor = WellnessCanvas,
         topBar = {
@@ -134,11 +129,11 @@ private fun NearbyContent(
                 },
                 title = { Text(text = "관광·웰니스") },
                 actions = {
-                    IconButton(onClick = onExploreTourism) {
-                        Icon(imageVector = Icons.Default.Explore, contentDescription = strings.tourism.exploreTourismContentDescription)
+                    IconButton(onClick = onNavigateToNearbyMap) {
+                        Icon(imageVector = Icons.Default.Map, contentDescription = "병원 주변 지도 보기")
                     }
-                    IconButton(onClick = onNavigateToMap) {
-                        Icon(imageVector = Icons.Default.Map, contentDescription = "지도에서 보기")
+                    IconButton(onClick = onExploreTourism) {
+                        Icon(imageVector = Icons.Default.Explore, contentDescription = "부산 관광 데이터")
                     }
                 }
             )
@@ -159,9 +154,7 @@ private fun NearbyContent(
             else -> NearbyLoadedContent(
                 uiState = uiState,
                 onSelectPlace = onSelectPlace,
-                onNavigateToMap = onNavigateToMap,
-                onNavigateToCourseRoute = onNavigateToCourseRoute,
-                onExploreTourism = onExploreTourism,
+                onNavigateToCourseMap = onNavigateToCourseMap,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -172,12 +165,9 @@ private fun NearbyContent(
 private fun NearbyLoadedContent(
     uiState: NearbyUiState,
     onSelectPlace: (String) -> Unit,
-    onNavigateToMap: () -> Unit,
-    onNavigateToCourseRoute: (String) -> Unit,
-    onExploreTourism: () -> Unit,
+    onNavigateToCourseMap: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val strings = LocalAppStrings.current
     var selectedType by remember { mutableStateOf<PlaceType?>(null) }
     var selectedFocus by remember { mutableStateOf(WellnessFocus.ALL) }
     val types = uiState.places.map { it.type }.distinct()
@@ -190,14 +180,10 @@ private fun NearbyLoadedContent(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         item {
-            NearbySummaryCard(
-                placeCount = uiState.places.size,
-                nearestDistanceLabel = uiState.places.minOfOrNull { it.distanceFromHospitalMeters ?: Double.MAX_VALUE }
-                    ?.takeIf { it != Double.MAX_VALUE }
-                    ?.toDistanceLabel()
-                    ?: "거리 정보 없음",
-                onNavigateToMap = onNavigateToMap,
-                onExploreTourism = onExploreTourism
+            HotTourismTopFiveSection(
+                hotPlaces = uiState.hotPlaces,
+                isLoading = uiState.isHotPlacesLoading,
+                errorMessage = uiState.hotPlacesError
             )
         }
 
@@ -209,6 +195,12 @@ private fun NearbyLoadedContent(
                     selectedType = null
                 }
             )
+        }
+
+        if (uiState.recommendedRoutes.isNotEmpty()) {
+            item {
+                RecommendedRouteSection(routes = uiState.recommendedRoutes, onClick = onNavigateToCourseMap)
+            }
         }
 
         item {
@@ -224,7 +216,7 @@ private fun NearbyLoadedContent(
 
         item {
             Text(
-                text = String.format(strings.tourism.placesSummaryFormat, filteredPlaces.size),
+                text = "${filteredPlaces.size}곳 둘러보기",
                 style = SectionTitleStyle,
                 color = TextPrimary
             )
@@ -243,16 +235,6 @@ private fun NearbyLoadedContent(
             }
         }
 
-        if (uiState.courses.isNotEmpty()) {
-            item {
-                WellnessCourseSection(
-                    courses = uiState.courses,
-                    onSelectPlace = onSelectPlace,
-                    onViewRoute = onNavigateToCourseRoute
-                )
-            }
-        }
-
         if (uiState.walkingCourses.isNotEmpty()) {
             item {
                 WalkingCourseSection(courses = uiState.walkingCourses)
@@ -262,166 +244,339 @@ private fun NearbyLoadedContent(
 }
 
 @Composable
-private fun NearbySummaryCard(
-    placeCount: Int,
-    nearestDistanceLabel: String,
-    onNavigateToMap: () -> Unit,
-    onExploreTourism: () -> Unit
-) {
-    val strings = LocalAppStrings.current
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = CoralPrimaryContainer,
-        border = BorderStroke(1.dp, Color.White),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(CoralPrimaryContainer, Color.White, Color(0xFFEAF7FF))
-                    )
-                )
-                .padding(20.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(118.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 42.dp, y = (-34).dp)
-                    .clip(CircleShape)
-                    .background(CoralPrimary.copy(alpha = 0.10f))
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(text = "진료 전후 무리 없는 동선", style = SectionTitleStyle, color = TextPrimary)
-                Text(
-                    text = "병원 근처에서 바로 갈 수 있는 휴식·산책·스파·식사 장소를 거리순으로 정리했습니다.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    InfoPill(text = "${placeCount}곳 추천")
-                    InfoPill(text = "가장 가까운 곳 $nearestDistanceLabel")
-                }
-                Button(
-                    onClick = onNavigateToMap,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = SkyBlue, contentColor = Color.White)
-                ) {
-                    Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "지도에서 동선 보기")
-                }
-                OutlinedButton(onClick = onExploreTourism, modifier = Modifier.fillMaxWidth()) {
-                    Icon(imageVector = Icons.Default.Explore, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = strings.tourism.exploreTourismLabel)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WellnessCourseSection(
-    courses: List<WellnessCourse>,
-    onSelectPlace: (String) -> Unit,
-    onViewRoute: (String) -> Unit
+private fun HotTourismTopFiveSection(
+    hotPlaces: List<TourismHotPlace>,
+    isLoading: Boolean,
+    errorMessage: String?
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(text = "웰니스 회복 코스", style = SectionTitleStyle, color = TextPrimary)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(courses, key = { it.id }) { course ->
-                WellnessCourseCard(course = course, onSelectPlace = onSelectPlace, onViewRoute = { onViewRoute(course.id) })
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "부산 핫 관광지 TOP 5", style = SectionTitleStyle, color = TextPrimary)
+            Text(
+                text = "향후 30일 예상 집중도 지수가 높은 순서예요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, DividerColor)
+        ) {
+            when {
+                isLoading -> Box(
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        color = CoralPrimary,
+                        strokeWidth = 3.dp
+                    )
+                }
+                errorMessage != null -> Text(
+                    text = errorMessage,
+                    modifier = Modifier.padding(18.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                else -> Column {
+                    hotPlaces.take(5).forEachIndexed { index, hotPlace ->
+                        HotTourismRankRow(rank = index + 1, hotPlace = hotPlace)
+                        if (index < hotPlaces.take(5).lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = DividerColor
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun WellnessCourseCard(course: WellnessCourse, onSelectPlace: (String) -> Unit, onViewRoute: () -> Unit) {
+private fun HotTourismRankRow(rank: Int, hotPlace: TourismHotPlace) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier.size(32.dp).clip(CircleShape).background(CoralPrimaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = rank.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                color = CoralPrimary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = hotPlace.item.title,
+                style = CardTitleStyle,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "부산 ${hotPlace.district.label}",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        Text(
+            text = "지수 ${hotPlace.congestionRate.toHotPlaceRate()}",
+            style = MaterialTheme.typography.labelLarge,
+            color = CoralPrimary,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+private fun Double.toHotPlaceRate(): String = if (this % 1.0 == 0.0) {
+    toInt().toString()
+} else {
+    "%.1f".format(this)
+}
+
+@Composable
+private fun WalkingCourseSection(courses: List<WellnessWalkingCourse>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(text = "부산 걷기 여행", style = SectionTitleStyle, color = TextPrimary)
+            Text(
+                text = "두루누비 걷기여행길 중 부산 코스",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(courses, key = { it.id }) { course ->
+                WalkingCourseCard(course = course)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WalkingCourseCard(course: WellnessWalkingCourse) {
     Card(
         modifier = Modifier.width(280.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = course.name,
-                    style = CardTitleStyle,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "${course.estimatedDurationMinutes / 60}h",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CoralPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
             Text(
-                text = course.recommendationReason,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
-                maxLines = 2,
+                text = course.name,
+                style = CardTitleStyle,
+                color = TextPrimary,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                course.places.forEachIndexed { index, place ->
-                    CourseStopRow(index = index + 1, place = place, onClick = { onSelectPlace(place.id) })
-                }
+            Text(
+                text = course.district,
+                style = MaterialTheme.typography.labelMedium,
+                color = SkyBlue
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                course.distanceKm?.let { InfoPill(text = "${it.formatDistance()}km") }
+                course.durationMinutes?.let { InfoPill(text = "${it / 60}시간 ${it % 60}분") }
+                course.difficulty?.let { InfoPill(text = "난이도 $it") }
             }
-            // F-014 지도 연동: 이 코스의 장소들을 방문 순서대로 카카오맵 위에 번호 마커+연결선으로
-            // 그려주는 화면(feature/map의 코스 동선 모드)으로 진입한다. 이 화면(NearbyScreen)은
-            // 원래 전체가 하드코딩 한국어였는데, CLAUDE.md §5 규칙대로 새로 추가하는 이 문구만
-            // core/i18n을 거친다 — 나머지 기존 문구의 소급 i18n 정비는 이번 작업 스코프 밖이다.
-            OutlinedButton(onClick = onViewRoute, modifier = Modifier.fillMaxWidth()) {
-                Icon(imageVector = Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = LocalAppStrings.current.nearby.viewCourseRouteButtonLabel)
-            }
-            course.caution?.let {
-                Text(text = it, style = MaterialTheme.typography.labelSmall, color = MediBlue40)
+            course.summary?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CourseStopRow(index: Int, place: Place, onClick: () -> Unit) {
-    Row(
+private fun EmptyPlaceFilter(onReset: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = Color.White,
+        border = BorderStroke(1.dp, DividerColor),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(text = "선택한 조건의 장소가 없습니다.", style = CardTitleStyle, color = TextPrimary)
+            OutlinedButton(onClick = onReset) {
+                Text(text = "전체 장소 보기")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WellnessFocusSection(selectedFocus: WellnessFocus, onFocusSelected: (WellnessFocus) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(text = "오늘의 목적", style = SectionTitleStyle, color = TextPrimary)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(WellnessFocus.entries, key = { it.name }) { focus ->
+                FilterChip(
+                    selected = selectedFocus == focus,
+                    onClick = { onFocusSelected(focus) },
+                    label = { Text(text = focus.label) },
+                    colors = nearbyFilterChipColors()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedRouteSection(routes: List<HospitalWellnessRoute>, onClick: (Int) -> Unit) {
+    val pagerState = rememberPagerState(pageCount = { routes.size })
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = "추천 웰니스 코스", style = SectionTitleStyle, color = TextPrimary)
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(end = 24.dp),
+            pageSpacing = 12.dp,
+            modifier = Modifier.fillMaxWidth().height(162.dp)
+        ) { page ->
+            RecommendedRouteCard(
+                route = routes[page],
+                title = courseTitle(page),
+                onClick = { onClick(page) }
+            )
+        }
+        if (routes.size > 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                routes.indices.forEach { index ->
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (pagerState.currentPage == index) 18.dp else 7.dp, 7.dp)
+                            .clip(CircleShape)
+                            .background(if (pagerState.currentPage == index) CoralPrimary else DividerColor)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedRouteCard(route: HospitalWellnessRoute, title: String, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, DividerColor)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            RouteThumbnail(route = route)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = title,
+                        style = CardTitleStyle,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text = route.stops.joinToString(" · ") { it.place.name },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    RouteBadge(text = "${route.stops.size}곳")
+                    RouteBadge(text = durationLabel(route.estimatedDurationMinutes))
+                    RouteBadge(text = "${route.totalDistanceKm.formatDistance()}km")
+                }
+                Text(
+                    text = "코스를 눌러 지도에서 실제 동선을 확인하세요.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CoralPrimary
+                )
+            }
+        }
+    }
+}
+
+private fun courseTitle(index: Int): String = when (index) {
+    0 -> "나를 위한 부산 회복 코스"
+    1 -> "가볍게 쉬어가는 웰니스 코스"
+    2 -> "산책과 관광을 잇는 회복 코스"
+    else -> "부산의 맛과 휴식을 담은 코스"
+}
+
+@Composable
+private fun RouteThumbnail(route: HospitalWellnessRoute) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .size(width = 104.dp, height = 136.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(CoralPrimaryContainer, Color(0xFFEAF7FF))
+                )
+            )
     ) {
         Box(
             modifier = Modifier
-                .size(22.dp)
+                .size(54.dp)
+                .align(Alignment.Center)
                 .clip(CircleShape)
-                .background(CoralPrimary),
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = index.toString(), style = MaterialTheme.typography.labelSmall, color = Color.White)
+            Icon(Icons.Default.Map, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(28.dp))
         }
         Text(
-            text = place.name,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            text = "${route.stops.size} STOPS",
+            style = MaterialTheme.typography.labelSmall,
+            color = CoralPrimary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
+        )
+    }
+}
+
+@Composable
+private fun RouteBadge(text: String) {
+    Surface(shape = RoundedCornerShape(999.dp), color = CoralPrimaryContainer) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = CoralPrimary,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -585,121 +740,6 @@ private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun WalkingCourseSection(courses: List<WellnessWalkingCourse>) {
-    val strings = LocalAppStrings.current
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(text = strings.tourism.walkingSectionTitle, style = SectionTitleStyle, color = TextPrimary)
-            Text(
-                text = strings.tourism.walkingSectionSubtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(courses, key = { it.id }) { course ->
-                WalkingCourseCard(course = course)
-            }
-        }
-    }
-}
-
-@Composable
-private fun WalkingCourseCard(course: WellnessWalkingCourse) {
-    val strings = LocalAppStrings.current
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier.width(280.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, DividerColor)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = course.name,
-                style = CardTitleStyle,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = course.district,
-                style = MaterialTheme.typography.labelMedium,
-                color = SkyBlue
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                course.distanceKm?.let { InfoPill(text = "${it.formatDistance()}km") }
-                course.durationMinutes?.let {
-                    InfoPill(text = "${it / 60}${strings.tourism.walkingHourUnit} ${it % 60}${strings.tourism.walkingMinuteUnit}")
-                }
-                course.difficulty?.let { InfoPill(text = String.format(strings.tourism.walkingDifficultyFormat, it)) }
-            }
-            course.summary?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            course.gpxUrl?.let { gpxUrl ->
-                OutlinedButton(
-                    onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(gpxUrl))) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = strings.tourism.openGpxLabel)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyPlaceFilter(onReset: () -> Unit) {
-    val strings = LocalAppStrings.current
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = Color.White,
-        border = BorderStroke(1.dp, DividerColor),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(text = strings.tourism.emptyPlaceFilterMessage, style = CardTitleStyle, color = TextPrimary)
-            OutlinedButton(onClick = onReset) {
-                Text(text = strings.tourism.resetFilterLabel)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun WellnessFocusSection(selectedFocus: WellnessFocus, onFocusSelected: (WellnessFocus) -> Unit) {
-    val strings = LocalAppStrings.current
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(text = strings.tourism.todayFocusSectionTitle, style = SectionTitleStyle, color = TextPrimary)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(WellnessFocus.entries, key = { it.name }) { focus ->
-                FilterChip(
-                    selected = selectedFocus == focus,
-                    onClick = { onFocusSelected(focus) },
-                    label = { Text(text = focus.label(strings.tourism)) },
-                    colors = nearbyFilterChipColors()
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun InfoPill(text: String) {
     Box(
         modifier = Modifier
@@ -718,6 +758,22 @@ private fun nearbyFilterChipColors() = FilterChipDefaults.filterChipColors(
     labelColor = BadgeText,
     containerColor = Color.White
 )
+
+private enum class WellnessFocus(val label: String) {
+    ALL("전체"),
+    REST("휴식"),
+    WALK("산책"),
+    FOOD("식사"),
+    STAY("숙소") ;
+
+    fun filter(places: List<Place>): List<Place> = when (this) {
+        ALL -> places
+        REST -> places.filter { it.type in setOf(PlaceType.SPA, PlaceType.TOURIST_ATTRACTION) }
+        WALK -> places.filter { it.type == PlaceType.WALK }
+        FOOD -> places.filter { it.type == PlaceType.RESTAURANT }
+        STAY -> places.filter { it.type == PlaceType.LODGING }
+    }
+}
 
 private val PlaceType.label: String
     get() = when (this) {
@@ -758,24 +814,7 @@ private fun Double.toDistanceLabel(): String =
 private fun Double.formatDistance(): String =
     if (this % 1.0 == 0.0) toInt().toString() else String.format("%.1f", this)
 
-private enum class WellnessFocus {
-    ALL, REST, WALK, FOOD, STAY;
-
-    fun label(strings: com.mediinbusan.app.core.i18n.TourismStrings): String = when (this) {
-        ALL -> strings.focusAll
-        REST -> strings.focusRest
-        WALK -> strings.focusWalk
-        FOOD -> strings.focusFood
-        STAY -> strings.focusStay
-    }
-
-    fun filter(places: List<Place>): List<Place> = when (this) {
-        ALL -> places
-        REST -> places.filter { it.type in setOf(PlaceType.SPA, PlaceType.TOURIST_ATTRACTION) }
-        WALK -> places.filter { it.type == PlaceType.WALK }
-        FOOD -> places.filter { it.type == PlaceType.RESTAURANT }
-        STAY -> places.filter { it.type == PlaceType.LODGING }
-    }
-}
+private fun durationLabel(minutes: Int): String =
+    if (minutes >= 60) "${minutes / 60}시간 ${minutes % 60}분" else "${minutes}분"
 
 private val WellnessCanvas = Color(0xFFFFFAFF)

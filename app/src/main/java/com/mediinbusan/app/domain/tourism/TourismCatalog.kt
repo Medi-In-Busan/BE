@@ -34,6 +34,7 @@ enum class TourismCatalogCategory(
 ) {
     PLACES_KO("부산 관광지", "관광지·음식점·숙박·쇼핑", TourismCatalogGroup.PLACES, true),
     ACCESSIBLE("무장애 관광", "이동 편의 정보를 포함한 관광지", TourismCatalogGroup.PLACES, true),
+    PHOTOS("부산 관광사진", "한국관광공사 관광사진", TourismCatalogGroup.PLACES, false),
     PLACES_EN("Busan in English", "영문 관광정보", TourismCatalogGroup.PLACES, true),
     PLACES_JA("日本語の釜山観光", "일문 관광정보", TourismCatalogGroup.PLACES, true),
     PLACES_ZH("中文釜山旅游", "중문 관광정보", TourismCatalogGroup.PLACES, true),
@@ -41,8 +42,7 @@ enum class TourismCatalogCategory(
     HUBS("지역 관광 허브", "구·군별 방문 중심 관광지", TourismCatalogGroup.ROUTES, true),
     WALKING("부산 걷기 코스", "두루누비 부산 걷기 여행길", TourismCatalogGroup.ROUTES, false),
     AUDIO("오디오 관광", "부산 중심부 오디오 콘텐츠", TourismCatalogGroup.ROUTES, false),
-    CROWDING("관광지 혼잡도", "관광지별 예상 혼잡 정보", TourismCatalogGroup.INSIGHTS, true),
-    PHOTOS("부산 관광사진", "한국관광공사 관광사진", TourismCatalogGroup.PLACES, false)
+    CROWDING("관광지 혼잡도", "관광지별 예상 혼잡 정보", TourismCatalogGroup.INSIGHTS, true)
 }
 
 val TourismCatalogCategory.isLanguageVariant: Boolean

@@ -90,6 +90,27 @@ class BuildHospitalWellnessRouteUseCaseTest {
         assertTrue(defaultRoute.stops.map { it.place.id }.toSet() != personalizedRoute.stops.map { it.place.id }.toSet())
     }
 
+    @Test
+    fun `장소가 충분하면 서로 다른 추천 코스를 네 개 만든다`() {
+        val places = (1..20).map { index ->
+            place(
+                id = "place-$index",
+                type = PlaceType.entries[index % (PlaceType.entries.size - 1)],
+                offset = index
+            )
+        }
+
+        val routes = useCase.buildAlternatives(
+            hospital = hospital(),
+            places = places,
+            personalization = HospitalWellnessPersonalization()
+        )
+
+        assertEquals(4, routes.size)
+        assertEquals(4, routes.map { route -> route.stops.map { it.place.id }.toSet() }.distinct().size)
+        assertTrue(routes.all { it.stops.size in 4..5 })
+    }
+
     private fun hospital() = Hospital(
         id = "hospital",
         name = "테스트 병원",
