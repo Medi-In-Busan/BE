@@ -127,7 +127,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.HospitalDetail>()
             HospitalDetailScreen(
                 hospitalId = route.hospitalId,
-                onNavigateToGuide = { navController.navigate(Route.Guide) },
+                onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
                 onNavigateToNearby = { navController.navigate(Route.Nearby(route.hospitalId)) },
                 onNavigateToMap = { navController.navigate(Route.MapView(route.hospitalId)) },
                 onBack = navController::popBackStack
@@ -313,37 +313,46 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             DocumentScanScreen(onMenuClick = { navController.navigate(Route.Settings) })
         }
         composable<Route.SelfDiagnosis> {
-            val context = LocalContext.current
-            val reservationInquiryTitle = LocalAppStrings.current.guide.stepReservationInquiryTitle
+            val guideStrings = LocalAppStrings.current.guide
             SelfDiagnosisScreen(
                 onBack = navController::popBackStack,
-                onFinishSetup = navController::popBackStack,
+                onFinishSetup = {
+                    // "홈으로 돌아가기" — 온보딩 경유든 Home "AI 진단하기" 경유든 상관없이 항상
+                    // 메인 홈으로 명시적으로 보낸다(popBackStack만으로는 진입 경로에 따라 목적지가
+                    // 달라질 수 있다).
+                    navController.navigate(Route.Home) {
+                        popUpTo(Route.Home) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToCtaTarget = { target ->
                     when (target) {
-                        DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST ->
-                            navController.navigate(Route.HospitalInquiryDetail)
                         DiagnosisCtaTarget.HOSPITAL_BROWSE ->
                             // 다른 진입점과 동일하게 navigateToTab으로 통일한다 — HospitalSearchList로
                             // 가는 경로가 하나라도 순수 navigate()를 쓰면 바텀바 "홈" 탭이 못 빠져나오는
                             // 문제가 있다(Route.kt의 navigateToTab 함수 주석 참고).
                             navController.navigateToTab(Route.HospitalSearchList)
-                        DiagnosisCtaTarget.INTERPRETATION_SUPPORT ->
-                            navController.navigate(
-                                Route.GuideStepDetail(phase = GuidePhase.RESERVATION_INQUIRY, title = reservationInquiryTitle)
-                            )
-                        DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST ->
-                            context.launchIntentSafely(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("https://www.medicalkorea.or.kr/en/registeredhospitals"))
-                            )
-                        DiagnosisCtaTarget.VISA_ENTRY_GUIDE ->
-                            navController.navigate(Route.VisaEntryCheckDetail)
-                        DiagnosisCtaTarget.TOTAL_COST_COVERAGE_CHECK ->
-                            navController.navigate(Route.TotalCostCoverageCheckDetail)
-                        DiagnosisCtaTarget.DEPARTURE_CHECKLIST ->
-                            navController.navigate(Route.AirportDeparturePreparationDetail)
                         DiagnosisCtaTarget.WELLNESS_PLACES ->
                             // Home의 웰니스 진입점과 동일하게 MVP 기준 병원(해운대권 regNo=14)으로 연결한다.
                             navController.navigate(Route.Nearby(hospitalId = "14"))
+                        // 나머지는 진단 결과 전용 신규 화면을 따로 만들지 않고, 이용 가이드(S-06)
+                        // STEP 상세를 그대로 재사용한다(사용자 피드백으로 신규 화면은 걷어냄).
+                        DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION ->
+                            navController.navigate(
+                                Route.GuideStepDetail(GuidePhase.ENTRY_PREPARATION, guideStrings.stepEntryPreparationTitle)
+                            )
+                        DiagnosisCtaTarget.GUIDE_STEP02_RESERVATION_INQUIRY ->
+                            navController.navigate(
+                                Route.GuideStepDetail(GuidePhase.RESERVATION_INQUIRY, guideStrings.stepReservationInquiryTitle)
+                            )
+                        DiagnosisCtaTarget.GUIDE_STEP03_HOSPITAL_CHECKIN ->
+                            navController.navigate(
+                                Route.GuideStepDetail(GuidePhase.HOSPITAL_CHECKIN, guideStrings.stepHospitalCheckinTitle)
+                            )
+                        DiagnosisCtaTarget.GUIDE_STEP06_AFTERCARE_RETURN_CHECK ->
+                            navController.navigate(
+                                Route.GuideStepDetail(GuidePhase.AFTERCARE_RETURN_CHECK, guideStrings.stepAftercareReturnCheckTitle)
+                            )
                     }
                 }
             )

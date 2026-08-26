@@ -116,7 +116,7 @@ object KakaoMapAvailability {
  * 그린다(카카오맵 RouteLine API, [renderRoute] 참고). 좌표를 그대로 직선으로 이은 것이라 실제
  * 도로/보행로를 정확히 따라가지는 않는다 — 다만 이건 실제 길찾기 경로 대신 "이 순서로 이동한다"는
  * 방향성만 우리 지도 안에서 보여주려는 의도적 선택이다(외부 카카오맵 앱으로 내보내는 길찾기 연동은
- * 쓰지 않는다). [MapPin.routeIndex] 번호 배지와 함께 방문 순서를 이중으로 안내한다.
+ * 쓰지 않는다). [MapPin.sequenceNumber] 번호 배지와 함께 방문 순서를 이중으로 안내한다.
  */
 @Composable
 fun KakaoMapView(
@@ -230,6 +230,11 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap, routePaths) {
         val map = kakaoMap ?: return@LaunchedEffect
         renderRoutePaths(map, routePaths)
+    }
+
+    LaunchedEffect(kakaoMap, routeStops) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        trackedRouteLine = renderRoute(context, map, routeStops, trackedRouteLine)
     }
 
     // 마커가 아닌 빈 지도를 눌렀을 때의 신호 — BrowseMap이 이걸로 선택을 해제한다

@@ -2,10 +2,10 @@ package com.mediinbusan.app.feature.tourism
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.common.Result
-import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentRepository
@@ -35,10 +35,6 @@ import javax.inject.Inject
 import kotlin.math.exp
 import kotlin.math.ln
 
-/**
- * 행동 기반 "맞춤 추천"(방문 기록·즐겨찾기·최근 본 항목 반영)은 feature/tourism-recommendation/84의
- * 몫이라 여기서는 다루지 않는다 — 현재 언어에 맞는 카테고리만 걸러 그룹별로 보여준다.
- */
 @HiltViewModel
 class TourismHubViewModel @Inject constructor(
     userPreferencesRepository: UserPreferencesRepository,

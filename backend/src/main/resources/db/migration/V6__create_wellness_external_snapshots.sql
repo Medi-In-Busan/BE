@@ -1,2 +1,0 @@
--- Compatibility migration retained after V5 and V6 introduced the same table.
--- The schema is created by V5__create_wellness_external_snapshots.sql.

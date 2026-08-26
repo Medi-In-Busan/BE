@@ -549,7 +549,7 @@ private fun TourismJourneyRow(
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(category.label, style = CardTitleStyle, color = TextPrimary)
-            Text(category.description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(category.shortDescription, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
         Icon(
             Icons.AutoMirrored.Filled.ArrowForward,

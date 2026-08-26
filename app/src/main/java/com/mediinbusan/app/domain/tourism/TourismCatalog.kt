@@ -28,7 +28,7 @@ enum class TourismCatalogGroup(val label: String, val description: String) {
 
 enum class TourismCatalogCategory(
     val label: String,
-    val description: String,
+    val shortDescription: String,
     val group: TourismCatalogGroup,
     val supportsDistrict: Boolean
 ) {

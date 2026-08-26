@@ -1,104 +1,106 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
+import androidx.compose.ui.graphics.Color
+import com.mediinbusan.app.R
+import com.mediinbusan.app.core.designsystem.GuideStepBlue
+import com.mediinbusan.app.core.designsystem.GuideStepGreen
+import com.mediinbusan.app.core.designsystem.GuideStepOrange
+import com.mediinbusan.app.core.designsystem.GuideStepRed
+import com.mediinbusan.app.core.designsystem.GuideStepTeal
 import com.mediinbusan.app.core.i18n.DiagnosisResultStrings
 
-/** [DiagnosisResultType] 하나를 화면에 표시할 때 필요한 언어별 문구 묶음. */
+/** [DiagnosisResultType] 하나를 화면에 표시할 때 필요한 언어별 문구 + 지표 막대 + CTA 묶음. */
 data class DiagnosisResultDisplay(
-    val typeLabel: String,
     val title: String,
-    val description: String,
+    val subtitle: String,
+    val accentColor: Color,
+    /** 직접 문의 / 서류 복잡도 / 지원 필요도 / 관광·웰니스 순, 각 0~4단계. */
+    val metricLevels: List<Int>,
     val checklist: List<String>,
-    val noticeText: String?,
     val ctas: List<DiagnosisCta>
 )
 
 fun DiagnosisResultType.toDisplay(strings: DiagnosisResultStrings): DiagnosisResultDisplay = when (this) {
     DiagnosisResultType.TYPE_A -> DiagnosisResultDisplay(
-        typeLabel = strings.typeATypeLabel,
         title = strings.typeATitle,
-        description = strings.typeADescription,
+        subtitle = strings.typeASubtitle,
+        accentColor = GuideStepBlue,
+        metricLevels = listOf(4, 2, 1, 2),
         checklist = listOf(
             strings.typeAChecklist1,
             strings.typeAChecklist2,
             strings.typeAChecklist3,
-            strings.typeAChecklist4,
-            strings.typeAChecklist5
+            strings.typeAChecklist4
         ),
-        noticeText = null,
         ctas = listOf(
-            DiagnosisCta(strings.typeACta1Label, DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST),
-            DiagnosisCta(strings.typeACta2Label, DiagnosisCtaTarget.HOSPITAL_BROWSE)
+            DiagnosisCta(strings.typeACta1Label, DiagnosisCtaTarget.GUIDE_STEP03_HOSPITAL_CHECKIN, R.drawable.self_diagnosis_hospital_inquiry_preparation),
+            DiagnosisCta(strings.typeACta2Label, DiagnosisCtaTarget.HOSPITAL_BROWSE, R.drawable.self_diagnosis_busan_medical_institution_search)
         )
     )
     DiagnosisResultType.TYPE_B -> DiagnosisResultDisplay(
-        typeLabel = strings.typeBTypeLabel,
         title = strings.typeBTitle,
-        description = strings.typeBDescription,
+        subtitle = strings.typeBSubtitle,
+        accentColor = GuideStepTeal,
+        metricLevels = listOf(3, 3, 4, 1),
         checklist = listOf(
             strings.typeBChecklist1,
             strings.typeBChecklist2,
             strings.typeBChecklist3,
-            strings.typeBChecklist4,
-            strings.typeBChecklist5
+            strings.typeBChecklist4
         ),
-        noticeText = null,
         ctas = listOf(
-            DiagnosisCta(strings.typeBCta1Label, DiagnosisCtaTarget.INTERPRETATION_SUPPORT),
-            DiagnosisCta(strings.typeBCta2Label, DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST),
-            DiagnosisCta(strings.typeBCta3Label, DiagnosisCtaTarget.HOSPITAL_BROWSE)
+            DiagnosisCta(strings.typeBCta1Label, DiagnosisCtaTarget.GUIDE_STEP02_RESERVATION_INQUIRY, R.drawable.self_diagnosis_interpreter_language_support),
+            DiagnosisCta(strings.typeBCta2Label, DiagnosisCtaTarget.GUIDE_STEP03_HOSPITAL_CHECKIN, R.drawable.self_diagnosis_hospital_inquiry_preparation),
+            DiagnosisCta(strings.typeBCta3Label, DiagnosisCtaTarget.HOSPITAL_BROWSE, R.drawable.self_diagnosis_busan_medical_institution_search)
         )
     )
     DiagnosisResultType.TYPE_C -> DiagnosisResultDisplay(
-        typeLabel = strings.typeCTypeLabel,
         title = strings.typeCTitle,
-        description = strings.typeCDescription,
+        subtitle = strings.typeCSubtitle,
+        accentColor = GuideStepOrange,
+        metricLevels = listOf(2, 4, 4, 1),
         checklist = listOf(
             strings.typeCChecklist1,
             strings.typeCChecklist2,
             strings.typeCChecklist3,
-            strings.typeCChecklist4,
-            strings.typeCChecklist5
+            strings.typeCChecklist4
         ),
-        noticeText = strings.typeCNoticeText,
         ctas = listOf(
-            DiagnosisCta(strings.typeCCta1Label, DiagnosisCtaTarget.REGISTERED_AGENCY_CHECKLIST),
-            DiagnosisCta(strings.typeCCta2Label, DiagnosisCtaTarget.VISA_ENTRY_GUIDE),
-            DiagnosisCta(strings.typeCCta3Label, DiagnosisCtaTarget.TOTAL_COST_COVERAGE_CHECK)
+            DiagnosisCta(strings.typeCCta1Label, DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION, R.drawable.self_diagnosis_visa_entry_guide),
+            DiagnosisCta(strings.typeCCta2Label, DiagnosisCtaTarget.GUIDE_STEP03_HOSPITAL_CHECKIN, R.drawable.self_diagnosis_medical_use_process)
         )
     )
     DiagnosisResultType.TYPE_D -> DiagnosisResultDisplay(
-        typeLabel = strings.typeDTypeLabel,
         title = strings.typeDTitle,
-        description = strings.typeDDescription,
+        subtitle = strings.typeDSubtitle,
+        accentColor = GuideStepRed,
+        metricLevels = listOf(2, 4, 3, 1),
         checklist = listOf(
             strings.typeDChecklist1,
             strings.typeDChecklist2,
             strings.typeDChecklist3,
-            strings.typeDChecklist4,
-            strings.typeDChecklist5
+            strings.typeDChecklist4
         ),
-        noticeText = strings.typeDNoticeText,
         ctas = listOf(
-            DiagnosisCta(strings.typeDCta1Label, DiagnosisCtaTarget.VISA_ENTRY_GUIDE),
-            DiagnosisCta(strings.typeDCta2Label, DiagnosisCtaTarget.HOSPITAL_INQUIRY_CHECKLIST),
-            DiagnosisCta(strings.typeDCta3Label, DiagnosisCtaTarget.DEPARTURE_CHECKLIST)
+            DiagnosisCta(strings.typeDCta1Label, DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION, R.drawable.self_diagnosis_visa_entry_guide),
+            DiagnosisCta(strings.typeDCta2Label, DiagnosisCtaTarget.GUIDE_STEP02_RESERVATION_INQUIRY, R.drawable.self_diagnosis_hospital_inquiry_checklist),
+            DiagnosisCta(strings.typeDCta3Label, DiagnosisCtaTarget.GUIDE_STEP06_AFTERCARE_RETURN_CHECK, R.drawable.self_diagnosis_return_home_checklist)
         )
     )
     DiagnosisResultType.TYPE_E -> DiagnosisResultDisplay(
-        typeLabel = strings.typeETypeLabel,
         title = strings.typeETitle,
-        description = strings.typeEDescription,
+        subtitle = strings.typeESubtitle,
+        accentColor = GuideStepGreen,
+        metricLevels = listOf(2, 1, 1, 4),
         checklist = listOf(
             strings.typeEChecklist1,
             strings.typeEChecklist2,
             strings.typeEChecklist3,
-            strings.typeEChecklist4,
-            strings.typeEChecklist5
+            strings.typeEChecklist4
         ),
-        noticeText = null,
         ctas = listOf(
-            DiagnosisCta(strings.typeECta1Label, DiagnosisCtaTarget.WELLNESS_PLACES),
-            DiagnosisCta(strings.typeECta2Label, DiagnosisCtaTarget.VISA_ENTRY_GUIDE)
+            DiagnosisCta(strings.typeECta1Label, DiagnosisCtaTarget.WELLNESS_PLACES, R.drawable.self_diagnosis_busan_wellness_places),
+            DiagnosisCta(strings.typeECta2Label, DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION, R.drawable.self_diagnosis_visa_entry_guide_e)
         )
     )
 }
