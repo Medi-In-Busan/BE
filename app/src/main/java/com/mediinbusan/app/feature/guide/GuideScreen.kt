@@ -1,5 +1,7 @@
 package com.mediinbusan.app.feature.guide
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -190,6 +193,31 @@ private fun GuideStepCarousel(
     }
 
     /*
+     * focusedCardHeight를 그대로 쓰면 pagerState.currentPage가 스와이프 도중 50% 지점에서
+     * 바뀌는 순간 카드 높이가 한 프레임에 스냅되어(옆 스텝과 카드 높이가 다를 경우) 캐릭터와
+     * 말풍선이 순간적으로 위아래로 튀어 보인다. 애니메이션으로 보간해 부드럽게 따라가게 한다.
+     *
+     * 단, 화면 최초 진입 시(0dp → 첫 실측 높이)까지 애니메이션되면 캐릭터가 위에서 아래로
+     * 내려오는 것처럼 보이는 부작용이 있어, 최초 1회는 snapTo로 즉시 배치하고 그 이후
+     * 스와이프로 인한 높이 변화만 animateTo로 보간한다.
+     */
+    val animatedFocusedCardHeight = remember {
+        Animatable(0.dp, Dp.VectorConverter)
+    }
+    var hasPlacedFocusedCardOnce by remember {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(focusedCardHeight) {
+        if (focusedCardHeight <= 0.dp) return@LaunchedEffect
+        if (hasPlacedFocusedCardOnce) {
+            animatedFocusedCardHeight.animateTo(focusedCardHeight)
+        } else {
+            animatedFocusedCardHeight.snapTo(focusedCardHeight)
+            hasPlacedFocusedCardOnce = true
+        }
+    }
+
+    /*
      * 현재 페이지에 해당하는 Step입니다.
      *
      * 캐릭터 자체는 움직이지 않고,
@@ -328,7 +356,7 @@ private fun GuideStepCarousel(
             ) {
                 Image(
                     painter = painterResource(
-                        id = R.drawable.common_medin_busan_mascot
+                        id = activeStep.phase.toMascotResId()
                     ),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
@@ -341,7 +369,7 @@ private fun GuideStepCarousel(
                                             cardWidth *
                                                     MascotOffsetXFraction
                                             ),
-                            y = focusedCardHeight *
+                            y = animatedFocusedCardHeight.value *
                                     MascotOffsetYFraction
                         )
                         .width(mascotWidth)
@@ -374,7 +402,7 @@ private fun GuideStepCarousel(
                                             cardWidth *
                                                     BubbleOffsetXFraction
                                             ),
-                            y = focusedCardHeight *
+                            y = animatedFocusedCardHeight.value *
                                     BubbleOffsetYFraction
                         )
                 )
