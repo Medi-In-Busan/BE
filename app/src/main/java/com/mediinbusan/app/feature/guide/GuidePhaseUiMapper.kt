@@ -92,6 +92,18 @@ fun GuidePhase.toTipHighlight(strings: GuideStrings): String = when (this) {
     GuidePhase.AFTERCARE_RETURN_CHECK -> strings.stepAftercareReturnCheckTipHighlight
 }
 
+// STEP 목록 캐러셀 상단에 뜨는 마스코트 캐릭터. STEP별로 다른 포즈/의상을 보여준다.
+// STEP01은 전용 이미지가 아직 없어 기본 마스코트를 그대로 쓴다.
+@DrawableRes
+fun GuidePhase.toMascotResId(): Int = when (this) {
+    GuidePhase.ENTRY_PREPARATION -> R.drawable.common_medin_busan_mascot
+    GuidePhase.RESERVATION_INQUIRY -> R.drawable.guide_step02_reservation_inquiry
+    GuidePhase.HOSPITAL_CHECKIN -> R.drawable.guide_step03_hospital_visit_registration
+    GuidePhase.TREATMENT_EXAMINATION -> R.drawable.guide_step04_treatment_examination
+    GuidePhase.PAYMENT_RECEIPT -> R.drawable.guide_step05_payment_billing
+    GuidePhase.AFTERCARE_RETURN_CHECK -> R.drawable.guide_step06_recovery_return
+}
+
 // 카드 번호 강조색.
 fun GuidePhase.toAccentColor(): Color = when (this) {
     GuidePhase.ENTRY_PREPARATION -> GuideStepBlue

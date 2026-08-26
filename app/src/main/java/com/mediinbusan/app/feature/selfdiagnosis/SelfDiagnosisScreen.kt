@@ -43,11 +43,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.PageBackground
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.i18n.ChatStrings
@@ -278,5 +280,79 @@ private fun ChatInputBar(
         ) {
             Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = sendContentDescription, tint = Color.White)
         }
+    }
+}
+
+// ViewModel(hiltViewModel) 없이 결과 화면 상태를 흉내 낸 미리보기 — 에뮬레이터 없이 확인할 때 사용.
+// 5개 유형 전부: Android Studio에서 이 파일을 Split/Design 뷰로 열면 아래 5개가 세로로 나란히
+// 렌더링된다 — 프리뷰 패널을 스크롤해서 보면 된다(코드 스크롤과 별개).
+@Preview(showBackground = true, heightDp = 1600, name = "TYPE A 직접 문의형")
+@Composable
+private fun SelfDiagnosisContentResultTypeAPreview() {
+    MediInBusanTheme {
+        SelfDiagnosisContent(
+            uiState = SelfDiagnosisUiState(resultType = DiagnosisResultType.TYPE_A),
+            onIntent = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1600, name = "TYPE B 국제진료센터 문의형")
+@Composable
+private fun SelfDiagnosisContentResultTypeBPreview() {
+    MediInBusanTheme {
+        SelfDiagnosisContent(
+            uiState = SelfDiagnosisUiState(resultType = DiagnosisResultType.TYPE_B),
+            onIntent = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1600, name = "TYPE C 등록 유치기관 확인형")
+@Composable
+private fun SelfDiagnosisContentResultTypeCPreview() {
+    MediInBusanTheme {
+        SelfDiagnosisContent(
+            uiState = SelfDiagnosisUiState(resultType = DiagnosisResultType.TYPE_C),
+            onIntent = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1600, name = "TYPE D 장기치료·비자확인형")
+@Composable
+private fun SelfDiagnosisContentResultTypeDPreview() {
+    MediInBusanTheme {
+        SelfDiagnosisContent(
+            uiState = SelfDiagnosisUiState(resultType = DiagnosisResultType.TYPE_D),
+            onIntent = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1600, name = "TYPE E 관광 중심 웰니스 체험형")
+@Composable
+private fun SelfDiagnosisContentResultTypeEPreview() {
+    MediInBusanTheme {
+        SelfDiagnosisContent(
+            uiState = SelfDiagnosisUiState(resultType = DiagnosisResultType.TYPE_E),
+            onIntent = {}
+        )
+    }
+}
+
+/** 대화 중(결과 나오기 전) 상태 미리보기. */
+@Preview(showBackground = true, heightDp = 900)
+@Composable
+private fun SelfDiagnosisContentChatPreview() {
+    MediInBusanTheme {
+        SelfDiagnosisContent(
+            uiState = SelfDiagnosisUiState(
+                messages = listOf(
+                    ChatMessage(role = ChatMessageRole.ASSISTANT, text = "안녕하세요! 방문 목적을 알려주세요.")
+                )
+            ),
+            onIntent = {}
+        )
     }
 }
