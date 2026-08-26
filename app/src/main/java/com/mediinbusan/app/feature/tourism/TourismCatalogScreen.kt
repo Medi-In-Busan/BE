@@ -284,3 +284,30 @@ private fun InfoBadge(text: String) {
         )
     }
 }
+
+private fun String.toSourceLabel(): String = when (this) {
+    "tourism-ko" -> "국문 TourAPI"
+    "tourism-en" -> "영문 TourAPI"
+    "tourism-ja" -> "일문 TourAPI"
+    "tourism-zh" -> "중문 TourAPI"
+    "accessible-tourism" -> "무장애 TourAPI"
+    "related-tourism" -> "연관 관광지 API"
+    "hub-tourism" -> "지역 관광 허브 API"
+    "crowding-forecast" -> "관광 혼잡도 API"
+    "photo-gallery" -> "관광사진 갤러리"
+    "durunubi" -> "두루누비"
+    "odii" -> "오디"
+    else -> this
+}
+
+private fun String.toDetailLabel(): String = when (this) {
+    "tel" -> "전화"
+    "cat1", "cat2", "cat3" -> "분류"
+    "modifiedtime", "modifiedTime" -> "수정일"
+    "distance" -> "거리"
+    "requiredTime", "leadTime" -> "소요시간"
+    "tatsCnctrRate", "cnctrRate" -> "혼잡도"
+    "baseYmd", "baseYm" -> "기준일"
+    "signguNm" -> "지역"
+    else -> this
+}

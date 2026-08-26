@@ -104,6 +104,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
                 // 병원 검색 API가 실패해도 웰니스 UI/API를 확인할 수 있도록 MVP 확인용 기준 병원(해운대권 regNo=14)으로 바로 진입한다.
                 onNavigateToWellness = { navController.navigate(Route.Nearby(hospitalId = "14")) },
+                onNavigateToRecommendedCourse = { category, district ->
+                    navController.navigate(Route.RecommendedTourismCourse(category, district))
+                },
                 // 의료목적 선택/검색바 진입점이 전부 여기 하나로 모인다. purpose/포커스 요청은 Route
                 // 인자가 아니라 HomeViewModel이 PendingHospitalSearchEntry에 미리 심어두고,
                 // HospitalSearchListViewModel이 진입 시 그걸 읽는다(PendingHospitalSearchEntry 주석
@@ -215,9 +218,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             NearbyScreen(
                 hospitalId = route.hospitalId,
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
-                onNavigateToMap = { navController.navigate(Route.WellnessCourseMap(route.hospitalId)) },
-                onNavigateToCourseRoute = { courseId ->
-                    navController.navigate(Route.MapView(hospitalId = route.hospitalId, courseId = courseId))
+                onNavigateToNearbyMap = { navController.navigate(Route.MapView(route.hospitalId)) },
+                onNavigateToCourseMap = { courseIndex ->
+                    navController.navigate(Route.WellnessCourseMap(route.hospitalId, courseIndex))
                 },
                 onExploreTourism = { navController.navigate(Route.TourismHub) },
                 onBack = navController::popBackStack
@@ -234,6 +237,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.WellnessCourseMap>()
             WellnessCourseMapScreen(
                 hospitalId = route.hospitalId,
+                courseIndex = route.courseIndex,
                 onBack = navController::popBackStack
             )
         }
@@ -247,10 +251,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.TourismCatalog>()
             TourismCatalogScreen(
                 categoryName = route.category,
+                onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onNavigateToCourse = { category, district ->
                     navController.navigate(Route.RecommendedTourismCourse(category, district))
                 },
-                onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onBack = navController::popBackStack
             )
         }

@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.view.MotionEvent
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -143,7 +144,16 @@ fun KakaoMapView(
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val mapView = remember { MapView(context) }
+    val mapView = remember {
+        MapView(context).apply {
+            setOnTouchListener { view, event ->
+                val isTouchingMap = event.actionMasked != MotionEvent.ACTION_UP &&
+                    event.actionMasked != MotionEvent.ACTION_CANCEL
+                view.parent?.requestDisallowInterceptTouchEvent(isTouchingMap)
+                false
+            }
+        }
+    }
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var mapErrorMessage by remember { mutableStateOf<String?>(null) }
     // pinId -> 현재 그 자리에 떠 있는 Label과, 그 Label이 마지막으로 반영한 MapPin 상태.
@@ -166,6 +176,7 @@ fun KakaoMapView(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.setOnTouchListener(null)
             mapView.finish()
         }
     }
@@ -460,15 +471,10 @@ private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
 private const val DEFAULT_ZOOM_LEVEL = 12
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
+private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 48f
+private const val ROUTE_LINE_WIDTH_PX = 10f
+private const val ROUTE_LINE_COLOR = 0xFFFF6F61.toInt()
 private const val COURSE_ROUTE_LAYER_ID = "recommended-tourism-course"
 private const val COURSE_ROUTE_Z_ORDER = 20_000
 private const val COURSE_LINE_WIDTH_PX = 5f
 private const val COURSE_LINE_STROKE_WIDTH_PX = 1.5f
-
-// 코스 동선 화살표 경로선(RouteLine) 스타일. lineWidth는 카카오 SDK 문서 기준 px 단위(dp 아님).
-// 굵은 선(14px)에 반투명 코랄을 깔고 그 위로 흰 화살표(ic_route_arrow)가 일정 간격(70px)마다
-// 반복돼, 옅은 배경 위에서도 방향이 또렷이 보이면서 실제 도로 위에 그린 것처럼 두꺼워 보이지
-// 않게 균형을 맞췄다.
-private const val ROUTE_LINE_WIDTH_PX = 14f
-private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 70f
-private val ROUTE_LINE_COLOR = android.graphics.Color.parseColor("#B3FD6677") // CoralPrimary @ ~70% alpha

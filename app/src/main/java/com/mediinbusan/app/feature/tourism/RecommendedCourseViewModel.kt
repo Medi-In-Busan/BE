@@ -8,11 +8,16 @@ import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentRepository
+import com.mediinbusan.app.data.route.DrivingRoute
+import com.mediinbusan.app.data.route.DrivingRoutePoint
+import com.mediinbusan.app.data.route.DrivingRouteRepository
+import com.mediinbusan.app.data.route.TravelMode
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.data.tourism.TourismInteractionRepository
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.BuildRecommendedTourismCourseUseCase
 import com.mediinbusan.app.domain.tourism.RecommendTourismCatalogUseCase
+import com.mediinbusan.app.domain.tourism.RecommendedTourismCourse
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismRecommendationContext
 import com.mediinbusan.app.domain.tourism.TourismReferenceLocation
@@ -36,11 +41,13 @@ class RecommendedCourseViewModel @Inject constructor(
     private val recentRepository: RecentRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val recommendTourismCatalog: RecommendTourismCatalogUseCase,
-    private val buildCourse: BuildRecommendedTourismCourseUseCase
+    private val buildCourse: BuildRecommendedTourismCourseUseCase,
+    private val drivingRouteRepository: DrivingRouteRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(RecommendedCourseUiState())
     val uiState: StateFlow<RecommendedCourseUiState> = _uiState
     private var loadJob: Job? = null
+    private var recommendedCourse: RecommendedTourismCourse? = null
 
     fun load(categoryName: String, districtName: String?) {
         loadJob?.cancel()
@@ -113,13 +120,33 @@ class RecommendedCourseViewModel @Inject constructor(
                 )
             )
             val course = buildCourse(recommendation.catalog.items, reference)
+            if (course == null) {
+                recommendedCourse = null
+                _uiState.value = RecommendedCourseUiState(
+                    language = language,
+                    category = category,
+                    district = district,
+                    isLoading = false
+                )
+                return@launch
+            }
+            recommendedCourse = course
+            val routeResult = getRoute(course, TravelMode.DRIVING)
+            val route = (routeResult as? Result.Success)?.data?.takeIf { course.isValidRoute(it) }
             _uiState.value = RecommendedCourseUiState(
                 language = language,
                 category = category,
                 district = district,
                 course = course,
-                selectedStopId = course?.stops?.firstOrNull()?.item?.id,
-                isLoading = false
+                route = route,
+                selectedStopId = course.stops.first().item.id,
+                travelMode = TravelMode.DRIVING,
+                isLoading = false,
+                errorMessage = if (route == null) {
+                    (routeResult as? Result.Error)?.message ?: "실제 이동 경로를 불러오지 못했습니다."
+                } else {
+                    null
+                }
             )
         }
     }
@@ -127,4 +154,53 @@ class RecommendedCourseViewModel @Inject constructor(
     fun selectStop(itemId: String) {
         _uiState.update { it.copy(selectedStopId = itemId) }
     }
+
+    fun selectTravelMode(mode: TravelMode) {
+        val course = recommendedCourse ?: return
+        if (_uiState.value.travelMode == mode || _uiState.value.isRouteRefreshing) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRouteRefreshing = true, routeErrorMessage = null) }
+            val result = getRoute(course, mode)
+            val route = (result as? Result.Success)?.data?.takeIf { course.isValidRoute(it) }
+            if (route == null) {
+                _uiState.update {
+                    it.copy(
+                        isRouteRefreshing = false,
+                        routeErrorMessage = (result as? Result.Error)?.message ?: "이동 경로를 변경하지 못했습니다."
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        route = route,
+                        travelMode = mode,
+                        isRouteRefreshing = false,
+                        routeErrorMessage = null
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun getRoute(
+        course: RecommendedTourismCourse,
+        mode: TravelMode
+    ): Result<DrivingRoute> {
+        val points = course.stops.map { stop ->
+            DrivingRoutePoint(
+                name = stop.item.title,
+                latitude = requireNotNull(stop.item.latitude),
+                longitude = requireNotNull(stop.item.longitude)
+            )
+        }
+        return drivingRouteRepository.getRoute(
+            origin = points.first(),
+            stops = points.drop(1),
+            mode = mode
+        )
+    }
+
+    private fun RecommendedTourismCourse.isValidRoute(
+        route: DrivingRoute
+    ): Boolean = route.path.size >= 2 && route.sections.size == stops.size - 1
 }

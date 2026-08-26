@@ -11,12 +11,10 @@ import org.springframework.stereotype.Service;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 public class TourismCatalogService {
@@ -56,12 +54,6 @@ public class TourismCatalogService {
         };
 
         List<TourismCatalogItemResponse> items = normalizeItems(objectMapper.valueToTree(external.data()));
-        if (category == TourismCatalogCategory.PHOTOS) {
-            // 관광사진 갤러리는 "장소 하나당 사진 여러 장"이 정상이라 galContentId는 사진마다
-            // 전부 다르다 — 같은 장소(제목)의 사진이 여러 장 오면 목록엔 그 장소가 여러 번 뿌려지는
-            // 것처럼 보인다. 카드 하나 = 장소 하나가 되도록 제목 기준으로 첫 장만 남긴다.
-            items = dedupeByTitle(items);
-        }
         return new TourismCatalogResponse(
             category,
             category.title(),
@@ -90,17 +82,6 @@ public class TourismCatalogService {
                 item = withId(item, item.id() + "-" + occurrence);
             }
             result.add(item);
-        }
-        return result;
-    }
-
-    private List<TourismCatalogItemResponse> dedupeByTitle(List<TourismCatalogItemResponse> items) {
-        List<TourismCatalogItemResponse> result = new ArrayList<>();
-        Set<String> seenTitles = new HashSet<>();
-        for (TourismCatalogItemResponse item : items) {
-            if (seenTitles.add(item.title())) {
-                result.add(item);
-            }
         }
         return result;
     }
@@ -144,7 +125,7 @@ public class TourismCatalogService {
             // CROWDING(TatsCnctrRateService) 응답의 실제 혼잡도 필드명은 tatsCnctrRate가 아니라
             // cnctrRate다 — 오타 때문에 subtitle이 항상 비어서 날짜별로 다른 카드인데도 구분이 안 됐다.
             // crsSummary는 WALKING의 코스 요약 필드 — "courseBrf"는 실존하지 않는 필드였다.
-            first(item, "overview", "crsSummary", "galSearchKeyword", "cat3", "cnctrRate", "daywkDivNm"),
+            first(item, "overview", "crsSummary", "courseBrf", "galSearchKeyword", "cat3", "cnctrRate", "tatsCnctrRate", "daywkDivNm"),
             // sigun은 WALKING의 시/군 필드 — 지금까지 주소 후보에 없어서 항상 null이었다.
             first(item, "addr1", "baseAddr", "address", "roadAddr", "sigun"),
             first(item, "firstimage", "firstimage2", "galWebImageUrl", "imageUrl"),
