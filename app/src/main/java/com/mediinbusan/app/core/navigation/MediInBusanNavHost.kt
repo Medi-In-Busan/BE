@@ -130,6 +130,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
                 onNavigateToNearby = { navController.navigate(Route.Nearby(route.hospitalId)) },
                 onNavigateToMap = { navController.navigate(Route.MapView(route.hospitalId)) },
+                onNavigateToHome = { navController.navigateToTab(Route.Home) },
                 onBack = navController::popBackStack
             )
         }

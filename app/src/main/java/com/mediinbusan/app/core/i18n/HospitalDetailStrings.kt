@@ -2,12 +2,8 @@ package com.mediinbusan.app.core.i18n
 
 data class HospitalDetailStrings(
     val notFoundMessage: String,
-    val shareContentDescription: String,
+    val homeContentDescription: String,
     val imagePlaceholderLabel: String,
-    val statusOpen: String,
-    val statusClosed: String,
-    val actionCall: String,
-    val actionDirections: String,
     val actionInquiry: String,
     val actionShare: String,
     val introSectionTitle: String,
@@ -24,20 +20,16 @@ data class HospitalDetailStrings(
     val noLocationInfo: String,
     val guideQuickLink: String,
     val nearbyQuickLink: String,
+    val otherInfoSectionTitle: String,
     val callButton: String,
-    val callButtonDisabled: String,
     val smsInquiryTemplateFormat: String,
     val genericErrorFallback: String
 ) {
     companion object {
         val Ko = HospitalDetailStrings(
             notFoundMessage = "병원 정보를 찾을 수 없습니다.",
-            shareContentDescription = "공유",
+            homeContentDescription = "홈으로 이동",
             imagePlaceholderLabel = "병원 대표 이미지",
-            statusOpen = "영업 중",
-            statusClosed = "영업 종료",
-            actionCall = "전화",
-            actionDirections = "길찾기",
             actionInquiry = "문의",
             actionShare = "공유",
             introSectionTitle = "병원 소개",
@@ -54,19 +46,15 @@ data class HospitalDetailStrings(
             noLocationInfo = "위치 정보가 없습니다",
             guideQuickLink = "의료 이용 가이드 보기",
             nearbyQuickLink = "주변 관광·웰니스 보기",
+            otherInfoSectionTitle = "기타정보",
             callButton = "전화 문의하기",
-            callButtonDisabled = "전화번호 정보 없음",
             smsInquiryTemplateFormat = "[메디인부산] %s 문의드립니다.",
             genericErrorFallback = "오류가 발생했습니다."
         )
         val En = HospitalDetailStrings(
             notFoundMessage = "Hospital information not found.",
-            shareContentDescription = "Share",
+            homeContentDescription = "Go to home",
             imagePlaceholderLabel = "Hospital main image",
-            statusOpen = "Open",
-            statusClosed = "Closed",
-            actionCall = "Call",
-            actionDirections = "Directions",
             actionInquiry = "Message",
             actionShare = "Share",
             introSectionTitle = "About",
@@ -83,19 +71,15 @@ data class HospitalDetailStrings(
             noLocationInfo = "No location information",
             guideQuickLink = "View medical guide",
             nearbyQuickLink = "View nearby tourism & wellness",
+            otherInfoSectionTitle = "Other info",
             callButton = "Call now",
-            callButtonDisabled = "No phone number available",
             smsInquiryTemplateFormat = "[MediIn Busan] Inquiry regarding %s.",
             genericErrorFallback = "Something went wrong."
         )
         val Zh = HospitalDetailStrings(
             notFoundMessage = "未找到医院信息。",
-            shareContentDescription = "分享",
+            homeContentDescription = "前往首页",
             imagePlaceholderLabel = "医院代表图片",
-            statusOpen = "营业中",
-            statusClosed = "已结束营业",
-            actionCall = "电话",
-            actionDirections = "路线",
             actionInquiry = "咨询",
             actionShare = "分享",
             introSectionTitle = "医院介绍",
@@ -112,19 +96,15 @@ data class HospitalDetailStrings(
             noLocationInfo = "暂无位置信息",
             guideQuickLink = "查看医疗利用指南",
             nearbyQuickLink = "查看周边观光·养生信息",
+            otherInfoSectionTitle = "其他信息",
             callButton = "电话咨询",
-            callButtonDisabled = "暂无电话号码",
             smsInquiryTemplateFormat = "[MediIn Busan] 关于%s的咨询。",
             genericErrorFallback = "发生了错误。"
         )
         val Ja = HospitalDetailStrings(
             notFoundMessage = "病院情報が見つかりません。",
-            shareContentDescription = "共有",
+            homeContentDescription = "ホームへ移動",
             imagePlaceholderLabel = "病院の代表画像",
-            statusOpen = "営業中",
-            statusClosed = "営業終了",
-            actionCall = "電話",
-            actionDirections = "道案内",
             actionInquiry = "問い合わせ",
             actionShare = "共有",
             introSectionTitle = "病院紹介",
@@ -141,8 +121,8 @@ data class HospitalDetailStrings(
             noLocationInfo = "位置情報がありません",
             guideQuickLink = "医療利用ガイドを見る",
             nearbyQuickLink = "周辺の観光・ウェルネスを見る",
+            otherInfoSectionTitle = "その他情報",
             callButton = "電話で問い合わせる",
-            callButtonDisabled = "電話番号情報がありません",
             smsInquiryTemplateFormat = "【メディインブサン】%sについてお問い合わせします。",
             genericErrorFallback = "エラーが発生しました。"
         )
