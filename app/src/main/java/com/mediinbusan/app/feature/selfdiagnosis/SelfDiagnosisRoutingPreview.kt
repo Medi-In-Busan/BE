@@ -23,41 +23,40 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.TextSecondary
-import com.mediinbusan.app.data.guide.GuidePhase
-import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
 
-private sealed interface RoutingPreviewScreen {
-    data object Result : RoutingPreviewScreen
-    data class Guide(val phase: GuidePhase) : RoutingPreviewScreen
-    data class Placeholder(val message: String) : RoutingPreviewScreen
-}
-
+/**
+ * 챗봇을 실행하지 않고 결과 화면의 CTA 리다이렉트가 맞는지 확인하기 위한 미리보기 전용 조합.
+ * feature 패키지는 서로를 직접 import하지 않는다(core/navigation/MediInBusanNavHost.kt를 통해서만
+ * 연결) — 그래서 GUIDE_STEP* 대상도 실제 feature/guide의 GuideStepDetailScreen을 그리지 않고,
+ * 다른 대상(HOSPITAL_BROWSE 등)과 동일하게 로컬 placeholder로만 "어디로 갈지"를 확인한다. 실제
+ * 화면 전환까지 보고 싶으면 NavHost를 통해 앱을 실행해서 확인해야 한다.
+ * Android Studio에서 이 파일을 열고 Interactive Mode(▶ 아이콘, 프리뷰 썸네일에 마우스를 올리면
+ * 나타남)로 들어가면 카드를 실제로 눌러볼 수 있다.
+ */
 @Composable
 private fun SelfDiagnosisRoutingPreviewHarness(resultType: DiagnosisResultType) {
-    var screen by remember { mutableStateOf<RoutingPreviewScreen>(RoutingPreviewScreen.Result) }
+    var redirectMessage by remember { mutableStateOf<String?>(null) }
 
-    when (val current = screen) {
-        RoutingPreviewScreen.Result -> DiagnosisResultContent(
+    val message = redirectMessage
+    if (message == null) {
+        DiagnosisResultContent(
             resultType = resultType,
             onCtaClick = { target ->
-                screen = when (target) {
-                    DiagnosisCtaTarget.HOSPITAL_BROWSE -> RoutingPreviewScreen.Placeholder("✅ 리다이렉트 성공: 의료기관 목록(HospitalSearchListScreen) 탭으로 이동")
-                    DiagnosisCtaTarget.WELLNESS_PLACES -> RoutingPreviewScreen.Placeholder("✅ 리다이렉트 성공: 주변 관광·웰니스(NearbyScreen)로 이동")
-                    DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION -> RoutingPreviewScreen.Guide(GuidePhase.ENTRY_PREPARATION)
-                    DiagnosisCtaTarget.GUIDE_STEP02_RESERVATION_INQUIRY -> RoutingPreviewScreen.Guide(GuidePhase.RESERVATION_INQUIRY)
-                    DiagnosisCtaTarget.GUIDE_STEP03_HOSPITAL_CHECKIN -> RoutingPreviewScreen.Guide(GuidePhase.HOSPITAL_CHECKIN)
-                    DiagnosisCtaTarget.GUIDE_STEP06_AFTERCARE_RETURN_CHECK -> RoutingPreviewScreen.Guide(GuidePhase.AFTERCARE_RETURN_CHECK)
+                redirectMessage = when (target) {
+                    DiagnosisCtaTarget.HOSPITAL_BROWSE -> "✅ 리다이렉트 성공: 의료기관 목록(HospitalSearchListScreen) 탭으로 이동"
+                    DiagnosisCtaTarget.WELLNESS_PLACES -> "✅ 리다이렉트 성공: 주변 관광·웰니스(NearbyScreen)로 이동"
+                    DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION -> "✅ 리다이렉트 성공: 이용 가이드 STEP01 입국 전 준비 상세로 이동"
+                    DiagnosisCtaTarget.GUIDE_STEP02_RESERVATION_INQUIRY -> "✅ 리다이렉트 성공: 이용 가이드 STEP02 예약 및 문의 상세로 이동"
+                    DiagnosisCtaTarget.GUIDE_STEP03_HOSPITAL_CHECKIN -> "✅ 리다이렉트 성공: 이용 가이드 STEP03 병원 방문 및 접수 상세로 이동"
+                    DiagnosisCtaTarget.GUIDE_STEP06_AFTERCARE_RETURN_CHECK -> "✅ 리다이렉트 성공: 이용 가이드 STEP06 회복 귀국 준비 상세로 이동"
                 }
             },
-            onRestart = { screen = RoutingPreviewScreen.Placeholder("✅ 리다이렉트 성공: 다시 진단하기 → 챗봇 화면(같은 화면 안에서 상태만 초기화됨)") },
-            onGoHome = { screen = RoutingPreviewScreen.Placeholder("✅ 리다이렉트 성공: 메인 홈(Route.Home)으로 이동") },
+            onRestart = { redirectMessage = "✅ 리다이렉트 성공: 다시 진단하기 → 챗봇 화면(같은 화면 안에서 상태만 초기화됨)" },
+            onGoHome = { redirectMessage = "✅ 리다이렉트 성공: 메인 홈(Route.Home)으로 이동" },
             goHomeButtonLabel = "홈으로 돌아가기"
         )
-        is RoutingPreviewScreen.Guide -> GuideStepDetailScreen(
-            phase = current.phase,
-            onBack = { screen = RoutingPreviewScreen.Result }
-        )
-        is RoutingPreviewScreen.Placeholder -> Placeholder(message = current.message, onBack = { screen = RoutingPreviewScreen.Result })
+    } else {
+        Placeholder(message = message, onBack = { redirectMessage = null })
     }
 }
 
@@ -78,7 +77,7 @@ private fun Placeholder(message: String, onBack: () -> Unit) {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = "$message\n\n(위 뒤로가기 버튼을 누르면 결과 화면으로 돌아갑니다 — 이 텍스트 자리는 실제 앱에선 진짜 화면입니다)",
+                text = "$message\n\n(위 뒤로가기 버튼을 누르면 결과 화면으로 돌아갑니다 — 실제 화면 렌더링은 앱을 실행해서 확인하세요)",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
