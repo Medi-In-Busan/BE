@@ -17,7 +17,9 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,6 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -60,7 +63,9 @@ import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.designsystem.WarningBackground
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.appStringsFor
 
 @Composable
 fun DiagnosisResultContent(
@@ -219,9 +224,12 @@ private fun ChecklistRow(text: String, accentColor: Color) {
 
 @Composable
 private fun CtaGrid(ctas: List<DiagnosisCta>, onClick: (DiagnosisCtaTarget) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         ctas.forEach { cta ->
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 CtaCard(cta = cta, onClick = { onClick(cta.target) })
             }
         }
@@ -253,6 +261,7 @@ private fun CtaCard(cta: DiagnosisCta, onClick: () -> Unit) {
         interactionSource = interactionSource,
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
@@ -261,7 +270,9 @@ private fun CtaCard(cta: DiagnosisCta, onClick: () -> Unit) {
         color = Color.Transparent
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp),
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(vertical = 16.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -276,8 +287,7 @@ private fun CtaCard(cta: DiagnosisCta, onClick: () -> Unit) {
                 text = cta.label,
                 style = MaterialTheme.typography.labelMedium,
                 color = TextPrimary,
-                textAlign = TextAlign.Center,
-                maxLines = 2
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -335,6 +345,22 @@ private fun DiagnosisResultContentTypeBPreview() {
     }
 }
 
+@Preview(showBackground = true, heightDp = 1400, name = "TYPE B · English")
+@Composable
+private fun DiagnosisResultContentTypeBEnglishPreview() {
+    MediInBusanTheme {
+        CompositionLocalProvider(LocalAppStrings provides appStringsFor(SupportedLanguage.EN)) {
+            DiagnosisResultContent(
+                resultType = DiagnosisResultType.TYPE_B,
+                onCtaClick = {},
+                onRestart = {},
+                onGoHome = {},
+                goHomeButtonLabel = "Go Home"
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true, heightDp = 1400)
 @Composable
 private fun DiagnosisResultContentTypeCPreview() {
@@ -360,6 +386,22 @@ private fun DiagnosisResultContentTypeDPreview() {
             onGoHome = {},
             goHomeButtonLabel = "홈으로 돌아가기"
         )
+    }
+}
+
+@Preview(showBackground = true, heightDp = 1400, name = "TYPE D · English")
+@Composable
+private fun DiagnosisResultContentTypeDEnglishPreview() {
+    MediInBusanTheme {
+        CompositionLocalProvider(LocalAppStrings provides appStringsFor(SupportedLanguage.EN)) {
+            DiagnosisResultContent(
+                resultType = DiagnosisResultType.TYPE_D,
+                onCtaClick = {},
+                onRestart = {},
+                onGoHome = {},
+                goHomeButtonLabel = "Go Home"
+            )
+        }
     }
 }
 
