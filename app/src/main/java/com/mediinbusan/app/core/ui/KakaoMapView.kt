@@ -181,11 +181,24 @@ fun KakaoMapView(
         }
     }
 
+    // 실기기 화면 녹화로 원인을 다시 확인한 결과, "화면이 흑백으로 보였다가 지도가 뜬다"는 현상은
+    // 렌더링 버그가 아니라 카카오 지도 SDK가 onMapReady 이후 실제 타일/마커 데이터를 네트워크로
+    // 내려받는 동안 아무 안내 없이 무채색 배경만 잠깐 노출되는 것이었다(진입 순간엔 화면 전체가
+    // 이 배경으로 덮여 있어 유채색 대비가 커서 더 도드라져 보인다). SDK 내부 로딩이라 우리 쪽에서
+    // 더 앞당길 수는 없으므로, 그 구간에 스피너를 띄워 "정상적으로 불러오는 중"이라는 걸 명확히
+    // 알려준다 — View.INVISIBLE로 지도 서페이스를 가려두는 것도 유지해 그 구간 동안 준비 안 된
+    // 프레임이 새어 나오지 않게 한다.
     Box(modifier = modifier) {
+        Box(modifier = Modifier.fillMaxSize().background(MapPlaceholderBackground)) {
+            if (kakaoMap == null) {
+                LoadingState(modifier = Modifier.fillMaxSize())
+            }
+        }
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = {
                 mapView.apply {
+                    visibility = android.view.View.INVISIBLE
                     start(
                         object : MapLifeCycleCallback() {
                             override fun onMapDestroy() = Unit
@@ -207,6 +220,9 @@ fun KakaoMapView(
                         }
                     )
                 }
+            },
+            update = { view ->
+                view.visibility = if (kakaoMap != null) android.view.View.VISIBLE else android.view.View.INVISIBLE
             }
         )
         mapErrorMessage?.let { message ->
@@ -257,6 +273,11 @@ fun KakaoMapView(
         onSearchArea(center.latitude, center.longitude)
     }
 }
+
+// MapUnavailableFallback의 회색(0xFFE9E9EE)과는 별개로, 지도가 준비되기 전 짧게 노출되는
+// 중립색이다 — 같은 색을 쓰면 "정상 로딩 중"과 "지도를 아예 못 씀" 상태가 시각적으로
+// 구분되지 않는다.
+private val MapPlaceholderBackground = Color(0xFFF4F4F6)
 
 @Composable
 private fun MapUnavailableFallback(
@@ -430,8 +451,15 @@ private val numberedPinBitmapCache = mutableMapOf<Pair<Int, Boolean>, Bitmap>()
 private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
     pinIconBitmapCache.getOrPut(resId) {
         val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
-        val size = (32 * resources.displayMetrics.density).toInt().coerceAtLeast(1)
-        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+        // 이전에는 리소스가 선언한 실제 크기(ic_map_pin_*_selected.xml은 34dp로 선택 시 더 크게
+        // 보이도록 디자인됐고, 그 외는 24dp)를 무시하고 항상 32dp 고정 캔버스로 래스터화했다 —
+        // setBounds()가 캔버스 크기를 그대로 그리기 영역으로 쓰기 때문에 리소스 고유의
+        // android:width/height는 사실상 무시됐다. 그 결과 마커를 선택해도 아이콘이 커지지
+        // 않았다. intrinsicWidth/Height(리소스에 선언된 dp가 이미 기기 density로 환산된 값)를
+        // 그대로 캔버스 크기로 써서 선택 시 실제로 더 크게 그려지게 한다.
+        val width = drawable.intrinsicWidth.coerceAtLeast(1)
+        val height = drawable.intrinsicHeight.coerceAtLeast(1)
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)

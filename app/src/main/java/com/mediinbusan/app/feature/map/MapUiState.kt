@@ -44,9 +44,15 @@ data class MapUiState(
 
     val visiblePlaces: List<Place>
         get() {
+            // "관광" 탭은 PlaceType.TOURIST_ATTRACTION만 세던 게 버그였다 — MapScreen.kt의
+            // Place.toMapPin()(그리고 PlaceDetailScreen 등 다른 화면)은 RESTAURANT만 FOOD로 두고
+            // 나머지(SHOPPING/LODGING/SPA/WALK/OTHER 포함)는 전부 "관광" 마커로 묶어서 그린다.
+            // "전체" 탭에서는 그 규칙대로 다 보이는데, "관광" 탭만 TOURIST_ATTRACTION으로 좁게 걸러
+            // 같은 장소인데도 전체일 때 개수와 관광 탭일 때 개수가 달라 보였다 — 마커 색 분류와
+            // 동일한 기준(RESTAURANT가 아니면 전부 관광)으로 맞춘다.
             val byCategory = when (selectedCategory) {
                 MapCategory.ALL -> allPlaces
-                MapCategory.TOURIST -> allPlaces.filter { it.type == PlaceType.TOURIST_ATTRACTION }
+                MapCategory.TOURIST -> allPlaces.filter { it.type != PlaceType.RESTAURANT }
                 MapCategory.FOOD -> allPlaces.filter { it.type == PlaceType.RESTAURANT }
                 MapCategory.HOSPITAL -> emptyList()
             }
