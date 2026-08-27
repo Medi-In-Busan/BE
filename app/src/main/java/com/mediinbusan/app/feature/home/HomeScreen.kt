@@ -705,15 +705,13 @@ private fun AiChatFab(modifier: Modifier = Modifier, onClick: () -> Unit) {
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // CategoryCircleItem과 동일한 배경/테두리 패턴(흰 배경 + DividerColor 테두리 원)으로
-        // 통일해서 홈 화면 다른 원형 아이콘들과 톤을 맞춘다. 클릭 영역도 CategoryCircleItem처럼
-        // 텍스트를 제외한 이 원 카드 영역으로만 한정한다.
+        // 채우기 없이 아주 옅은 흰 외곽선만 남긴다 — 배경(HomeBackgroundPink)이 그대로
+        // 비치고, 원 테두리만 은은하게 보인다.
         Box(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(Color.White)
-                .border(width = 1.dp, color = DividerColor, shape = CircleShape)
+                .border(width = 1.dp, color = Color.White.copy(alpha = 0.5f), shape = CircleShape)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {

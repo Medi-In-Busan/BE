@@ -517,17 +517,20 @@ private fun TypingDots() {
 }
 
 @Composable
-private fun SuggestedReplyChip(label: String, onClick: () -> Unit) {
+private fun SuggestedReplyChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // 핑크(CoralPrimary)는 '내가 보낸 답변' 말풍선에만 남기고, 아직 선택 전인 제안 칩은
+    // 중립 hairline 테두리 + 진한 텍스트로 가장 조용하게 보여준다.
     Surface(
         onClick = onClick,
+        modifier = modifier,
         shape = RoundedCornerShape(percent = 50),
         color = Color.White,
-        border = BorderStroke(1.dp, CoralPrimary)
+        border = BorderStroke(1.dp, BorderColor)
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            color = CoralPrimary,
+            color = TextPrimary,
             style = MaterialTheme.typography.labelMedium
         )
     }
