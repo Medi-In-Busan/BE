@@ -257,11 +257,14 @@ private fun DocumentScanIntro(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // 페이지 배경(HomeBackgroundPink = 0xFFFFFAFA)이 거의 흰색에 가까워서, 흰 카드 위에
+            // 옅은 코랄 톤 섀도우는 명도 대비가 거의 없어 안 보이는 거나 마찬가지였다. 검정 계열로
+            // 확실하게 대비를 주고 elevation도 크게 올린다.
             .shadow(
-                elevation = 10.dp,
+                elevation = 32.dp,
                 shape = RoundedCornerShape(28.dp),
-                ambientColor = CoralPrimary.copy(alpha = 0.12f),
-                spotColor = CoralPrimary.copy(alpha = 0.12f)
+                ambientColor = Color.Black.copy(alpha = 0.28f),
+                spotColor = Color.Black.copy(alpha = 0.38f)
             )
             .clip(RoundedCornerShape(28.dp))
             .background(Color.White)
@@ -311,19 +314,14 @@ private fun DocumentScanIntro(
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = strings.galleryButton)
         }
-    }
-    Spacer(modifier = Modifier.height(20.dp))
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(percent = 50))
-            .background(Color.White)
-            .border(width = 1.dp, color = DividerColor, shape = RoundedCornerShape(percent = 50))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(text = strings.privacyNote, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
+        // 이전엔 이 카드 밖에 흰 알약(pill) 배경으로 따로 떠 있었다 — 카드와 분리돼 보이던 걸
+        // 같은 그림자 카드 안으로 끌어올려 하나로 합친다.
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = strings.privacyNote, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
+        }
     }
 }
 

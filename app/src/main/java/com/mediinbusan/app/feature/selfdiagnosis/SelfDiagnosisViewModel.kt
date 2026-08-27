@@ -51,9 +51,15 @@ class SelfDiagnosisViewModel @Inject constructor(
         val trimmed = text.trim()
         if (trimmed.isEmpty() || _uiState.value.isLoading) return
 
+        // 챗봇 응답 자리를 미리 잡아두는 로딩 말풍선. Gemini 응답이 오면 새 메시지를 추가하는
+        // 대신 이 pendingMessage와 같은 id를 가진 항목의 내용만 채운다 — 그래야 LazyColumn이
+        // 같은 아이템으로 인식해서 말풍선이 통째로 교체되지 않고, 로딩 점 3개에서 실제 답변으로
+        // 부드럽게 전환된다(등장 팝 애니메이션이 다시 재생되지 않음).
+        val pendingMessage = ChatMessage(role = ChatMessageRole.ASSISTANT, text = "", isPending = true)
+
         _uiState.update {
             it.copy(
-                messages = it.messages + ChatMessage(ChatMessageRole.USER, trimmed),
+                messages = it.messages + ChatMessage(ChatMessageRole.USER, trimmed) + pendingMessage,
                 inputText = "",
                 isLoading = true,
                 hasError = false
@@ -68,13 +74,25 @@ class SelfDiagnosisViewModel @Inject constructor(
                     Result.Loading -> Unit
                     is Result.Success -> _uiState.update { state ->
                         state.copy(
-                            messages = state.messages + ChatMessage(ChatMessageRole.ASSISTANT, result.data.reply),
+                            messages = state.messages.map { message ->
+                                if (message.id == pendingMessage.id) {
+                                    message.copy(text = result.data.reply, isPending = false)
+                                } else {
+                                    message
+                                }
+                            },
                             slots = result.data.slots,
                             resultType = result.data.resultType,
                             isLoading = false
                         )
                     }
-                    is Result.Error -> _uiState.update { it.copy(isLoading = false, hasError = true) }
+                    is Result.Error -> _uiState.update { state ->
+                        state.copy(
+                            messages = state.messages.filterNot { it.id == pendingMessage.id },
+                            isLoading = false,
+                            hasError = true
+                        )
+                    }
                 }
             }
         }

@@ -8,6 +8,7 @@ package com.mediinbusan.app.core.i18n
  */
 data class SelfDiagnosisStrings(
     val topBarTitle: String,
+    val topBarSubtitle: String,
     val backContentDescription: String,
     val restartButton: String,
     val backToHomeButton: String,
@@ -18,7 +19,8 @@ data class SelfDiagnosisStrings(
 ) {
     companion object {
         val Ko = SelfDiagnosisStrings(
-            topBarTitle = "준비 유형 진단",
+            topBarTitle = "메디인부산 안내봇",
+            topBarSubtitle = "부산 의료관광 · 평균 응답 1초",
             backContentDescription = "뒤로가기",
             restartButton = "다시 진단하기",
             backToHomeButton = "홈으로 돌아가기",
@@ -28,7 +30,8 @@ data class SelfDiagnosisStrings(
             results = DiagnosisResultStrings.Ko
         )
         val En = SelfDiagnosisStrings(
-            topBarTitle = "Readiness Check",
+            topBarTitle = "MediIn Busan Guide Bot",
+            topBarSubtitle = "Busan Medical Tourism · Avg. reply ~1s",
             backContentDescription = "Back",
             restartButton = "Retake Check",
             backToHomeButton = "Back to Home",
@@ -38,7 +41,8 @@ data class SelfDiagnosisStrings(
             results = DiagnosisResultStrings.En
         )
         val Zh = SelfDiagnosisStrings(
-            topBarTitle = "准备类型诊断",
+            topBarTitle = "MediIn Busan 导览机器人",
+            topBarSubtitle = "釜山医疗观光 · 平均响应1秒",
             backContentDescription = "返回",
             restartButton = "重新诊断",
             backToHomeButton = "返回首页",
@@ -48,7 +52,8 @@ data class SelfDiagnosisStrings(
             results = DiagnosisResultStrings.Zh
         )
         val Ja = SelfDiagnosisStrings(
-            topBarTitle = "準備タイプ診断",
+            topBarTitle = "MediIn Busan 案内ボット",
+            topBarSubtitle = "釜山医療観光 · 平均応答1秒",
             backContentDescription = "戻る",
             restartButton = "もう一度診断する",
             backToHomeButton = "ホームに戻る",

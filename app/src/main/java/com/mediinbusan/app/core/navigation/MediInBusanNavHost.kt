@@ -97,6 +97,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
                 onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
+                // 문서스캔은 바텀바에서도 접근 가능한 탭 목적지라 navigateToTab을 써서 저장된
+                // 상태를 복원한다(navigateToTab 주석 참고).
+                onNavigateToDocumentScan = { navController.navigateToTab(Route.DocumentScan) },
                 // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
                 // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
                 // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.

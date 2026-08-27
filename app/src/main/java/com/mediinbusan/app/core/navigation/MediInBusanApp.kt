@@ -9,14 +9,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocalHospital
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -131,6 +131,7 @@ private fun bottomNavTabs(
     currentDestination: NavDestination?
 ): List<BottomNavTabUiModel> {
     val strings = LocalAppStrings.current.common
+    val homeStrings = LocalAppStrings.current.home
     return listOf(
         BottomNavTabUiModel(
             label = strings.bottomNavHomeLabel,
@@ -160,12 +161,17 @@ private fun bottomNavTabs(
             selected = currentDestination.isRouteSelected<Route.MapView>(),
             onClick = { navController.navigateToTab(Route.MapView()) }
         ),
+        // 문서스캔 탭을 추천 웰니스로 교체 — 문서스캔 자체는 Home의 FAB(AiChatFab 위 문서스캔
+        // 아이콘)으로 계속 접근 가능하다. 라우팅은 Home 메인 카드의 "추천 웰니스" 진입점
+        // (HomeScreen.kt의 onNavigateToWellness)과 동일한 목적지를 그대로 쓴다. Route.Nearby는
+        // shouldShowBottomBar 대상이 아니라 이동하면 바텀바 자체가 사라진다 — 기존 "추천 웰니스"
+        // 카드와 동일한 기존 동작이라 별도로 손대지 않는다.
         BottomNavTabUiModel(
-            label = strings.bottomNavDocumentScanLabel,
-            icon = Icons.Outlined.CameraAlt,
-            selectedIcon = Icons.Filled.CameraAlt,
-            selected = currentDestination.isRouteSelected<Route.DocumentScan>(),
-            onClick = { navController.navigateToTab(Route.DocumentScan) }
+            label = homeStrings.quickLinkWellness,
+            icon = Icons.Outlined.Spa,
+            selectedIcon = Icons.Filled.Spa,
+            selected = currentDestination.isRouteSelected<Route.Nearby>(),
+            onClick = { navController.navigate(Route.Nearby(hospitalId = "14")) }
         )
     )
 }

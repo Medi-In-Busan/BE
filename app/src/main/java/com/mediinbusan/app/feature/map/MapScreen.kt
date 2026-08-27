@@ -10,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -78,11 +79,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.resolveHospitalThumbnailRes
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
@@ -205,7 +208,7 @@ private fun FocusedHospitalMap(hospital: Hospital, nearbyPlaces: List<Place>, on
                 Box(
                     modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.medium).background(Color(0xFFE9E9EE))
                 ) {
-                    AsyncImageBox(model = hospital.imageUrl, contentDescription = hospital.name, modifier = Modifier.fillMaxSize())
+                    HospitalThumbnail(hospital = hospital, modifier = Modifier.fillMaxSize())
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -763,16 +766,26 @@ private fun CategoryTab(label: String, icon: ImageVector, selected: Boolean, onC
 
 // "전체" 탭에서 병원과 장소가 한 줄에 섞여 나올 수 있어, 카드에 필요한 필드만 뽑아
 // Hospital/Place 구분 없이 하나의 목록으로 다룬다.
+// hospital.imageUrl은 백엔드가 실제 사진을 내려주지 않아 항상 null이다(HospitalMapper 참고) —
+// 병원 카드는 Home/HospitalSearchListScreen과 동일하게 resolveHospitalThumbnailRes로 고른 진료과
+// 사진을 폴백으로 들고 다니고, 실제 사진이 있을 수 있는 장소(Place)는 폴백 없이 그대로 둔다.
 private data class CardEntry(
     val id: String,
     val title: String,
     val subtitle: String,
     val languages: List<String>,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val fallbackImageRes: Int? = null
 )
 
-private fun Hospital.toCardEntry() =
-    CardEntry(id = id, title = name, subtitle = districtLabel(), languages = supportedLanguages, imageUrl = imageUrl)
+private fun Hospital.toCardEntry() = CardEntry(
+    id = id,
+    title = name,
+    subtitle = districtLabel(),
+    languages = supportedLanguages,
+    imageUrl = imageUrl,
+    fallbackImageRes = resolveHospitalThumbnailRes(name, specialties)
+)
 
 private fun Place.toCardEntry() =
     CardEntry(id = id, title = name, subtitle = address, languages = emptyList(), imageUrl = imageUrl)
@@ -814,15 +827,37 @@ private fun InfoMiniCard(entry: CardEntry, onClick: () -> Unit) {
             .background(Color.White)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
     ) {
-        AsyncImageBox(
-            model = entry.imageUrl,
-            contentDescription = entry.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .background(DividerColor)
-        )
+        if (entry.imageUrl != null) {
+            AsyncImageBox(
+                model = entry.imageUrl,
+                contentDescription = entry.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .background(DividerColor)
+            )
+        } else if (entry.fallbackImageRes != null) {
+            Image(
+                painter = painterResource(id = entry.fallbackImageRes),
+                contentDescription = entry.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .background(DividerColor)
+            )
+        } else {
+            AsyncImageBox(
+                model = null,
+                contentDescription = entry.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .background(DividerColor)
+            )
+        }
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = entry.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.height(4.dp))
@@ -855,10 +890,8 @@ private fun SelectedHospitalCard(
             // 목록 카드(InfoMiniCard)엔 썸네일이 있는데 마커를 눌러 뜨는 이 카드엔 텍스트뿐이라
             // 같은 화면 안에서 불일치했다 — 이미지를 붙여 맞춘다.
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImageBox(
-                    model = hospital.imageUrl,
-                    contentDescription = hospital.name,
-                    contentScale = ContentScale.Crop,
+                HospitalThumbnail(
+                    hospital = hospital,
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(14.dp))
@@ -940,6 +973,24 @@ private fun EmptyResultCard(message: String) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
         }
+    }
+}
+
+// hospital.imageUrl은 백엔드가 실제 사진을 내려주지 않아 항상 null이다(HospitalMapper 참고) — 이걸
+// 그대로 AsyncImageBox에 넘기면(예전 코드) 빈 회색 박스만 보인다. Home/HospitalSearchListScreen이
+// 이미 쓰는 것과 같은 폴백(resolveHospitalThumbnailRes: 진료과 태그·이름 기반으로 고른 대표 사진)을
+// 여기서도 재사용해, 지도 위 병원 썸네일(하단 카드/목록/선택 카드)이 더 이상 빈 채로 뜨지 않게 한다.
+@Composable
+private fun HospitalThumbnail(hospital: Hospital, modifier: Modifier = Modifier) {
+    if (hospital.imageUrl != null) {
+        AsyncImageBox(model = hospital.imageUrl, contentDescription = hospital.name, modifier = modifier)
+    } else {
+        Image(
+            painter = painterResource(id = resolveHospitalThumbnailRes(hospital.name, hospital.specialties)),
+            contentDescription = hospital.name,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+        )
     }
 }
 
