@@ -43,7 +43,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -702,16 +701,33 @@ private fun SectionCardContainer(modifier: Modifier = Modifier, content: @Compos
 @Composable
 private fun AiChatFab(modifier: Modifier = Modifier, onClick: () -> Unit) {
     val strings = LocalAppStrings.current.chat
-    FloatingActionButton(
-        onClick = onClick,
+    Column(
         modifier = modifier,
-        shape = CircleShape,
-        containerColor = CoralPrimary,
-        contentColor = Color.White
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // CategoryCircleItem과 동일한 배경/테두리 패턴(흰 배경 + DividerColor 테두리 원)으로
+        // 통일해서 홈 화면 다른 원형 아이콘들과 톤을 맞춘다. 클릭 영역도 CategoryCircleItem처럼
+        // 텍스트를 제외한 이 원 카드 영역으로만 한정한다.
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .border(width = 1.dp, color = DividerColor, shape = CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.home_chatbot),
+                contentDescription = strings.chatBubbleLabel,
+                modifier = Modifier.size(56.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = strings.chatBubbleLabel,
-            style = MaterialTheme.typography.labelLarge,
+            text = strings.aiDiagnosisLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = TextPrimary,
             fontWeight = FontWeight.Bold
         )
     }
