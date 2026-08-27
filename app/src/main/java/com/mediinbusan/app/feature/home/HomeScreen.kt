@@ -2,8 +2,13 @@ package com.mediinbusan.app.feature.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -106,6 +111,12 @@ import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.delay
@@ -121,6 +132,7 @@ fun HomeScreen(
     onNavigateToRecommendedCourse: (String, String?) -> Unit = { _, _ -> },
     // SELF_DIAGNOSIS는 준비 중 스텁 화면으로 연결된다 (MediInBusanNavHost.kt 참고).
     onNavigateToSelfDiagnosis: () -> Unit = {},
+    onNavigateToDocumentScan: () -> Unit = {},
     // 의료목적 선택 칩이 여기로 모인다. 실제 필터 값은 이 콜백이 아니라 viewModel::onCategorySelected
     // (PendingHospitalSearchEntry)가 전달하고, 이 콜백은 순수하게 "검색 화면으로 이동"만 담당한다.
     onNavigateToSearch: () -> Unit = {},
@@ -139,6 +151,7 @@ fun HomeScreen(
         onNavigateToWellness = onNavigateToWellness,
         onNavigateToRecommendedCourse = onNavigateToRecommendedCourse,
         onNavigateToSelfDiagnosis = onNavigateToSelfDiagnosis,
+        onNavigateToDocumentScan = onNavigateToDocumentScan,
         onNavigateToSearch = onNavigateToSearch,
         onNavigateToSearchFocused = onNavigateToSearchFocused,
         onNavigateToFavorite = onNavigateToFavorite,
@@ -162,6 +175,7 @@ private fun HomeContent(
     onNavigateToWellness: () -> Unit,
     onNavigateToRecommendedCourse: (String, String?) -> Unit,
     onNavigateToSelfDiagnosis: () -> Unit,
+    onNavigateToDocumentScan: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToSearchFocused: () -> Unit,
     onNavigateToFavorite: () -> Unit,
@@ -175,6 +189,29 @@ private fun HomeContent(
 ) {
     val isLoading = uiState.isLoading
     val isError = uiState.isError
+    // AiChatFab의 유리(frosted glass) 배경이 실시간으로 흐릴 소스. 앱 전역 hazeState(BottomNavBar가
+    // 쓰는 것)를 그대로 재사용하면 FAB 자신이 그 소스 서브트리(NavHost 전체) 안에 있어 자기 자신을
+    // 다시 흐리는 자기참조 문제가 생긴다. 그래서 이 화면 로컬로 새 HazeState를 두고, 아래 본문
+    // Column에만 hazeSource를 걸어 FAB(Scaffold의 별도 floatingActionButton 슬롯 — 본문과 형제
+    // 노드)가 그 소스를 안전하게 참조하게 한다.
+    val fabHazeState = rememberHazeState()
+    // 문서스캔/AI진단 FAB은 맨 위에서는 숨겨져 있다가, 아래로 스크롤할 때만 팝 애니메이션으로
+    // 나타나고 위로 스크롤하면 다시 숨는다. Column의 verticalScroll이 이 scrollState를 그대로
+    // 써야 방향을 알 수 있어 여기로 끌어올린다.
+    val homeScrollState = rememberScrollState()
+    var fabsVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(homeScrollState) {
+        var previousOffset = homeScrollState.value
+        snapshotFlow { homeScrollState.value }.collect { offset ->
+            val delta = offset - previousOffset
+            when {
+                offset <= 0 -> fabsVisible = false
+                delta > 4 -> fabsVisible = true
+                delta < -4 -> fabsVisible = false
+            }
+            previousOffset = offset
+        }
+    }
 
     Scaffold(
         // 기본값(colorScheme.background, 거의 흰색)보다 살짝 더 연한 코랄핑크로 — Home 페이지
@@ -200,10 +237,26 @@ private fun HomeContent(
         floatingActionButton = {
             // 공용 하단 탭바는 이 Scaffold 밖(MediInBusanApp.kt)에서 떠 있는 오버레이라, FAB 기본
             // 위치(화면 맨 아래)에 그대로 두면 바텀바에 가려진다. BottomNavBarHeight만큼 띄운다.
-            AiChatFab(
-                onClick = onNavigateToSelfDiagnosis,
-                modifier = Modifier.padding(bottom = BottomNavBarHeight + 8.dp)
-            )
+            // 맨 위에서는 숨겨져 있다가 아래로 스크롤해야 팝 애니메이션으로 나타난다(fabsVisible,
+            // 위 LaunchedEffect 참고) — 위로 스크롤하면 다시 사라진다.
+            AnimatedVisibility(
+                visible = fabsVisible,
+                enter = fadeIn(tween(200)) +
+                    scaleIn(initialScale = 0.6f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)),
+                exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.6f, animationSpec = tween(150))
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(bottom = BottomNavBarHeight + 8.dp)
+                ) {
+                    DocumentScanFab(onClick = onNavigateToDocumentScan, hazeState = fabHazeState)
+                    AiChatFab(
+                        onClick = onNavigateToSelfDiagnosis,
+                        hazeState = fabHazeState
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         // Home은 공용 하단 탭바가 항상 보이는 화면이라, 상위 Scaffold의 innerPadding에 기대지
@@ -232,7 +285,8 @@ private fun HomeContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .hazeSource(state = fabHazeState)
+                        .verticalScroll(homeScrollState)
                         .padding(top = contentPadding.calculateTopPadding())
                 ) {
                     HeroBannerSection(
@@ -699,31 +753,79 @@ private fun SectionCardContainer(modifier: Modifier = Modifier, content: @Compos
 // 접근한다(MediInBusanNavHost.kt의 Route.SelfDiagnosis 배선 참고). Scaffold의 floatingActionButton
 // 슬롯에 얹혀있어 스크롤과 무관하게 항상 같은 자리(바텀바 바로 위)에 떠 있다.
 @Composable
-private fun AiChatFab(modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun AiChatFab(hazeState: HazeState, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val strings = LocalAppStrings.current.chat
+    GlassCircleFab(
+        hazeState = hazeState,
+        iconRes = R.drawable.home_chatbot,
+        contentDescription = strings.chatBubbleLabel,
+        label = strings.aiDiagnosisLabel,
+        onClick = onClick,
+        modifier = modifier
+    )
+}
+
+// 문서 스캔(OCR·번역) 바로가기 — AiChatFab과 동일한 유리(frosted glass) 원형 카드 패턴을 그대로
+// 써서 AI진단 버튼 바로 위에 쌓는다. 지금은 UI만 붙인 상태라 클릭 시 실제 문서스캔 화면으로
+// 이동하는 배선은 아직 없다(호출부의 TODO 참고) — 하단 탭바에 이미 있는 문서스캔 탭과 라벨
+// 문구(bottomNavDocumentScanLabel)를 그대로 재사용해 새 문자열을 만들지 않았다.
+@Composable
+private fun DocumentScanFab(hazeState: HazeState, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val label = LocalAppStrings.current.common.bottomNavDocumentScanLabel
+    GlassCircleFab(
+        hazeState = hazeState,
+        iconRes = R.drawable.home_documentscan,
+        contentDescription = label,
+        label = label,
+        onClick = onClick,
+        modifier = modifier
+    )
+}
+
+// AiChatFab/DocumentScanFab이 공유하는 유리 원형 카드 — 아이콘 56dp + 라벨. BottomNavBar와 같은
+// 실시간 유리(frosted glass) 블러로 뒤로 스크롤되는 실제 콘텐츠를 흐려서 보여준다.
+// HazeMaterials.thin() 프리셋 대신 HazeStyle/HazeTint를 직접 구성한다 — BottomNavBar.kt의
+// GlassSlidingIndicator에서 이미 겪은 문제(프리셋이 지정한 alpha를 무시하고 자체 고정값만 써서
+// 좁은 영역에선 사실상 안 비치는 것처럼 보임)와 정확히 같은 케이스라, 그때 검증된 해결책을
+// 그대로 재사용한다. blurRadius도 좁은 56dp 원형 영역 기준으로 낮게(10dp) 잡는다 — 인디케이터
+// 쪽 주석 참고, 과하게 크면 뒤 배경이 뭉개져 그냥 단색처럼 보인다.
+@Composable
+private fun GlassCircleFab(
+    hazeState: HazeState,
+    iconRes: Int,
+    contentDescription: String?,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 채우기 없이 아주 옅은 흰 외곽선만 남긴다 — 배경(HomeBackgroundPink)이 그대로
-        // 비치고, 원 테두리만 은은하게 보인다.
         Box(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
+                .hazeEffect(
+                    state = hazeState,
+                    style = HazeStyle(
+                        tint = HazeTint(Color.White.copy(alpha = 0.35f)),
+                        blurRadius = 10.dp
+                    )
+                )
                 .border(width = 1.dp, color = Color.White.copy(alpha = 0.5f), shape = CircleShape)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = R.drawable.home_chatbot),
-                contentDescription = strings.chatBubbleLabel,
+                painter = painterResource(id = iconRes),
+                contentDescription = contentDescription,
                 modifier = Modifier.size(56.dp)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = strings.aiDiagnosisLabel,
+            text = label,
             style = MaterialTheme.typography.labelSmall,
             color = TextPrimary,
             fontWeight = FontWeight.Bold
@@ -1134,6 +1236,7 @@ private fun PreviewHomeContent(uiState: HomeUiState) {
             onNavigateToWellness = {},
             onNavigateToRecommendedCourse = { _, _ -> },
             onNavigateToSelfDiagnosis = {},
+            onNavigateToDocumentScan = {},
             onNavigateToSearch = {},
             onNavigateToSearchFocused = {},
             onNavigateToFavorite = {},
