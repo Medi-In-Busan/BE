@@ -79,6 +79,9 @@ import com.mediinbusan.app.core.designsystem.MediBlue40
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
+import com.mediinbusan.app.core.i18n.translatedRecoveryHint
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -120,7 +123,7 @@ fun PlaceDetailScreen(
                 onToggleFavorite = viewModel::onToggleFavorite,
                 onBack = onBack
             )
-            else -> EmptyState(message = "장소 정보를 찾을 수 없습니다.")
+            else -> EmptyState(message = LocalAppStrings.current.nearby.placeNotFoundMessage)
         }
     }
 }
@@ -134,6 +137,7 @@ private fun PlaceDetailContent(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val strings = LocalAppStrings.current
     // 하단 고정 액션바 실측 높이를 그대로 스크롤 콘텐츠 하단 여백으로 써서, 콘텐츠가 액션바에
     // 가려지거나 반대로 그 사이에 빈 여백이 남지 않고 정확히 맞닿게 한다(HospitalDetailScreen과 동일).
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
@@ -168,22 +172,24 @@ private fun PlaceDetailContent(
                 // "정보 갱신일"(place.lastModified, 웰니스 API 원본에 실려 오지만 그동안 안 쓰였다)을
                 // 세 번째 행으로 추가한다. 전화 행은 그 자체가 다이얼 액션도 겸해서, 예전에 따로
                 // 있던 "전화" 아이콘 버튼(ActionButtonsRow)이 여기 하나로 합쳐진다.
-                InfoSection(title = "기본정보") {
+                InfoSection(title = strings.hospitalDetail.basicInfoSectionTitle) {
                     BasicInfoRow(
                         iconRes = R.drawable.hospital_detail_phone,
-                        label = "전화",
-                        value = place.phoneNumber ?: "정보 없음",
+                        label = strings.hospitalDetail.phoneLabel,
+                        value = place.phoneNumber ?: strings.hospitalDetail.infoNotAvailable,
                         onClick = place.phoneNumber?.takeUnless { it.isBlank() }?.let { { context.dialPhone(it) } }
                     )
                     BasicInfoRow(
                         iconRes = R.drawable.hospital_detail_findmap,
-                        label = "거리",
-                        value = place.distanceFromHospitalMeters?.let { "병원에서 ${it.toDistanceLabel()}" } ?: "정보 없음"
+                        label = strings.nearby.distanceLabel,
+                        value = place.distanceFromHospitalMeters
+                            ?.let { strings.nearby.distanceFromHospitalFormat.format(it.toDistanceLabel()) }
+                            ?: strings.hospitalDetail.infoNotAvailable
                     )
                     place.lastModified?.let { lastModified ->
                         BasicInfoRow(
                             iconRes = R.drawable.hospital_detail_runtime,
-                            label = "갱신일",
+                            label = strings.nearby.lastUpdatedLabel,
                             value = lastModified.toDisplayDate()
                         )
                     }
@@ -191,7 +197,7 @@ private fun PlaceDetailContent(
 
                 place.displayDescription?.let { description ->
                     Spacer(modifier = Modifier.height(14.dp))
-                    InfoSection(title = "소개", icon = Icons.Default.Info) {
+                    InfoSection(title = strings.nearby.introSectionTitle, icon = Icons.Default.Info) {
                         Text(text = description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                     }
                 }
@@ -204,7 +210,7 @@ private fun PlaceDetailContent(
                 // 아래 "길찾기" 버튼도 있고, 화면 맨 아래 고정바에도 같은 "길찾기" 버튼이 있어 한
                 // 화면에 길찾기 진입점이 4개(액션 pill/지도/버튼/하단바)였다 — 하단 고정 CTA
                 // 하나로 합치고 나머지는 없앤다.
-                InfoSection(title = "위치", icon = Icons.Default.Place) {
+                InfoSection(title = strings.hospitalDetail.locationSectionTitle, icon = Icons.Default.Place) {
                     LocationMiniMap(place = place)
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -239,7 +245,7 @@ private fun PlaceDetailTopBar(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.Default.ChevronLeft,
-                contentDescription = "뒤로가기",
+                contentDescription = LocalAppStrings.current.common.backContentDescription,
                 tint = CoralPrimary,
                 modifier = Modifier.size(36.dp)
             )
@@ -253,6 +259,7 @@ private fun PlaceHeroSection(place: Place) {
     // 한 장의 사진처럼 떠 보이게 한다. 뒤로가기/공유/즐겨찾기는 더 이상 이 사진 위에 얹지 않는다 —
     // PlaceDetailTopBar(뒤로가기)와 PlaceTitleSection(공유/즐겨찾기)으로 옮겨, HospitalDetailScreen처럼
     // 사진은 순수하게 사진 역할만 하게 한다.
+    val language = LocalAppStrings.current.language
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -279,7 +286,7 @@ private fun PlaceHeroSection(place: Place) {
                 modifier = Modifier.align(Alignment.BottomStart).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(text = place.type.label, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                Text(text = place.type.translatedLabel(language), style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
                 Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold)
             }
         } else {
@@ -309,7 +316,7 @@ private fun PlaceHeroSection(place: Place) {
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(text = place.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(text = place.type.label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    Text(text = place.type.translatedLabel(language), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 }
             }
         }
@@ -325,6 +332,7 @@ private fun PlaceTitleSection(
     onToggleFavorite: () -> Unit,
     onShare: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Column {
         CategoryBadge(place = place, modifier = Modifier.padding(start = 20.dp))
         Spacer(modifier = Modifier.height(10.dp))
@@ -351,7 +359,11 @@ private fun PlaceTitleSection(
                     IconButton(onClick = onToggleFavorite) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
+                            contentDescription = if (isFavorite) {
+                                strings.nearby.favoriteRemoveContentDescription
+                            } else {
+                                strings.nearby.favoriteAddContentDescription
+                            },
                             tint = CoralPrimary
                         )
                     }
@@ -359,7 +371,7 @@ private fun PlaceTitleSection(
                 IconButton(onClick = onShare) {
                     Image(
                         painter = painterResource(id = R.drawable.hospital_detail_share),
-                        contentDescription = "공유",
+                        contentDescription = strings.hospitalDetail.actionShare,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -418,6 +430,7 @@ private fun BasicInfoRow(iconRes: Int, label: String, value: String, onClick: ((
 
 @Composable
 private fun RecoveryNoticeSection(place: Place) {
+    val strings = LocalAppStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         shape = MaterialTheme.shapes.large,
@@ -436,11 +449,15 @@ private fun RecoveryNoticeSection(place: Place) {
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "진료 전후 체크", style = CardTitleStyle, color = TextPrimary)
+                Text(text = strings.nearby.recoveryCheckTitle, style = CardTitleStyle, color = TextPrimary)
             }
-            Text(text = place.type.recoveryHint, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             Text(
-                text = "개인 상태에 따라 적합한 활동이 달라질 수 있으니, 진료 직후 일정은 병원 안내를 우선하세요.",
+                text = place.type.translatedRecoveryHint(strings.language),
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+            Text(
+                text = strings.nearby.recoveryDisclaimer,
                 style = MaterialTheme.typography.labelSmall,
                 color = MediBlue40
             )
@@ -453,6 +470,7 @@ private fun RecoveryNoticeSection(place: Place) {
 // 쓰고 있어 톤을 그대로 이어받는다.
 @Composable
 private fun CategoryBadge(place: Place, modifier: Modifier = Modifier) {
+    val language = LocalAppStrings.current.language
     Row(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
@@ -468,7 +486,7 @@ private fun CategoryBadge(place: Place, modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = place.type.label,
+            text = place.type.translatedLabel(language),
             style = MaterialTheme.typography.labelMedium,
             color = place.type.tint,
             fontWeight = FontWeight.Bold
@@ -494,14 +512,17 @@ private fun LocationMiniMap(place: Place) {
                 pins = listOf(
                     MapPin(id = place.id, latitude = lat, longitude = lng, type = place.type.toMapPinType(), selected = true)
                 ),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                // 탭해도 아무 동작이 없는(길찾기는 하단 고정 CTA 하나로만 연결) 순수 미리보기라,
+                // 팬/핀치 등 카메라 제스처까지 살아있으면 실수로 지도를 옮길 수 있다 — 꺼둔다(코드리뷰 지적).
+                interactive = false
             )
         } else {
             Box(
                 modifier = Modifier.fillMaxSize().background(Color(0xFFE9E9EE)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "위치 정보가 없습니다", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Text(text = LocalAppStrings.current.hospitalDetail.noLocationInfo, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
             }
         }
     }
@@ -539,7 +560,11 @@ private fun BottomActionBar(
                     colorFilter = ColorFilter.tint(Color.White)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "길찾기", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = LocalAppStrings.current.hospitalDetail.directionsButton,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -610,27 +635,8 @@ private fun Context.sharePlace(place: Place) {
     launchIntentSafely(Intent.createChooser(intent, place.name))
 }
 
-private val PlaceType.label: String
-    get() = when (this) {
-        PlaceType.TOURIST_ATTRACTION -> "관광지"
-        PlaceType.RESTAURANT -> "카페·맛집"
-        PlaceType.SHOPPING -> "쇼핑"
-        PlaceType.LODGING -> "숙소"
-        PlaceType.SPA -> "스파"
-        PlaceType.WALK -> "산책"
-        PlaceType.OTHER -> "기타"
-    }
-
-private val PlaceType.recoveryHint: String
-    get() = when (this) {
-        PlaceType.SPA -> "스파·온열 시설은 시술 종류에 따라 제한될 수 있어 이용 전 확인이 필요합니다."
-        PlaceType.WALK -> "짧은 산책 중심으로 계획하고, 오래 걷는 일정은 컨디션을 보며 조절하세요."
-        PlaceType.RESTAURANT -> "진료 전후 금식이나 자극적인 음식 제한이 있는지 먼저 확인하세요."
-        PlaceType.SHOPPING -> "실내 이동은 편하지만 체류 시간이 길어질 수 있어 휴식 시간을 함께 잡는 편이 좋습니다."
-        PlaceType.TOURIST_ATTRACTION -> "혼잡한 시간대와 장시간 야외 활동을 피하면 더 편안하게 방문할 수 있습니다."
-        PlaceType.LODGING -> "병원과 가까운 숙소는 이동 부담을 줄여 회복 일정에 도움이 됩니다."
-        PlaceType.OTHER -> "방문 전 이동 시간과 체류 시간을 짧게 잡아 컨디션을 우선하세요."
-    }
+// PlaceType.label/recoveryHint의 언어별 문구는 core/i18n/PlaceTypeStrings.kt(translatedLabel/
+// translatedRecoveryHint)로 옮겼다 — 여기 있던 한글 하드코딩 버전은 삭제한다.
 
 private val PlaceType.tint: Color
     get() = when (this) {

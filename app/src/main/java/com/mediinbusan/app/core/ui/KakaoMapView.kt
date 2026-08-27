@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.kakao.vectormap.GestureType
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.LatLng
@@ -132,7 +133,12 @@ fun KakaoMapView(
     // 웰니스 코스 동선(F-014)의 방문 순서. 2개 미만이면 아무것도 그리지 않는다 — 기존 호출부
     // (HospitalDetail 단일 핀, MapScreen의 병원/장소 브라우징)는 전부 빈 목록 기본값을 그대로 쓰므로
     // 기존 동작에 영향이 없다.
-    routeStops: List<RouteStop> = emptyList()
+    routeStops: List<RouteStop> = emptyList(),
+    // false면 팬/줌/회전/틸트 등 모든 카메라 제스처를 비활성화한다. 상세 화면 안에 작게 박힌
+    // "미리보기" 지도(PlaceDetailScreen/HospitalDetailScreen의 LocationMiniMap처럼 탭하면 다른
+    // 동작(길찾기/지도 화면 이동)으로 이어지는 지도)에서 쓴다 — 그런 자리에서까지 기본 팬/핀치
+    // 제스처가 살아있으면 사용자가 실수로 카메라를 옮겨버릴 수 있다(코드리뷰 지적).
+    interactive: Boolean = true
 ) {
     // libK3fAndroid.so는 arm64-v8a/armeabi-v7a로만 배포되어 x86_64 에뮬레이터에서는
     // KakaoMapSdk.init()이 실패한다(MediInBusanApp.onCreate() 참고). 그 경우 MapView를 만들지
@@ -155,6 +161,15 @@ fun KakaoMapView(
         }
     }
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
+    // onMapReady는 KakaoMap 객체가 준비됐다는 뜻이지 타일/마커가 화면에 그려졌다는 뜻이 아니다 —
+    // 그 사이에도 실제 지도 이미지는 비동기로 계속 내려받아진다(KakaoMapAvailability 문서의 로딩
+    // 스피너 설명 참고). 예전엔 kakaoMap != null 하나로 스피너를 끄고 AndroidView를 곧장 보여줘서,
+    // 그 찰나에 타일 없는 빈 서페이스가 스피너 대신 노출될 수 있었다(코드리뷰 지적). 이 SDK 공개
+    // API에는 "타일 로딩 완료" 콜백이 없어(KakaoMap/MapView 공개 메서드 전수 확인) 완벽한 신호는
+    // 못 쓰지만, onMapReady 직후 항상 한 번 실행되는 초기 moveCamera가 끝나는 시점
+    // (setOnCameraMoveEndListener)을 그 대체 신호로 삼는다 — onMapReady 단독보다는 실제 렌더링
+    // 시점에 더 가깝다.
+    var isMapVisuallyReady by remember { mutableStateOf(false) }
     var mapErrorMessage by remember { mutableStateOf<String?>(null) }
     // pinId -> 현재 그 자리에 떠 있는 Label과, 그 Label이 마지막으로 반영한 MapPin 상태.
     // 선택 여부만 바뀐 마커를 매번 layer.removeAll()+addLabels()로 다시 그리면 관련 없는 다른
@@ -190,7 +205,7 @@ fun KakaoMapView(
     // 프레임이 새어 나오지 않게 한다.
     Box(modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize().background(MapPlaceholderBackground)) {
-            if (kakaoMap == null) {
+            if (!isMapVisuallyReady) {
                 LoadingState(modifier = Modifier.fillMaxSize())
             }
         }
@@ -222,7 +237,7 @@ fun KakaoMapView(
                 }
             },
             update = { view ->
-                view.visibility = if (kakaoMap != null) android.view.View.VISIBLE else android.view.View.INVISIBLE
+                view.visibility = if (isMapVisuallyReady) android.view.View.VISIBLE else android.view.View.INVISIBLE
             }
         )
         mapErrorMessage?.let { message ->
@@ -236,6 +251,23 @@ fun KakaoMapView(
     LaunchedEffect(kakaoMap) {
         val map = kakaoMap ?: return@LaunchedEffect
         map.moveCamera(CameraUpdateFactory.newCenterPosition(BusanDefaultCenter, DEFAULT_ZOOM_LEVEL))
+    }
+
+    // isMapVisuallyReady 문서 참고 — 이 초기 moveCamera가 끝나는 시점을 스피너를 끄는 신호로 쓴다.
+    // 한 번 true가 되면 이후 recenter 등으로 다시 불려도(값 그대로 true) 상관없다.
+    LaunchedEffect(kakaoMap) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        map.setOnCameraMoveEndListener { _, _, _ -> isMapVisuallyReady = true }
+    }
+
+    // interactive=false(미니 미리보기 지도)면 팬/줌/회전/틸트 등 카메라를 움직이는 제스처를 전부
+    // 막는다. MapView.setOnTouchListener(위 remember 블록)는 이벤트를 소비하지 않고 그대로
+    // 흘려보내 SDK 기본 제스처가 계속 동작했다 — 여기서 SDK 쪽 제스처 자체를 꺼서 막는다.
+    LaunchedEffect(kakaoMap, interactive) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        // GestureType은 Kotlin enum이 아니라 SDK가 내려주는 Java enum이라 .entries 대신
+        // .values()를 쓴다.
+        GestureType.values().forEach { gesture -> map.setGestureEnable(gesture, interactive) }
     }
 
     LaunchedEffect(kakaoMap, pins) {
