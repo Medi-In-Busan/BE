@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.tourism
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.common.Result
@@ -15,6 +16,7 @@ import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.RankTourismHotPlacesUseCase
 import com.mediinbusan.app.domain.tourism.TourismCatalog
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import com.mediinbusan.app.domain.tourism.TourismInteractionProfile
 import com.mediinbusan.app.domain.tourism.TourismRecoveryStage
 import com.mediinbusan.app.domain.tourism.inferTourismRecoveryStage
@@ -42,7 +44,8 @@ class TourismHubViewModel @Inject constructor(
     favoriteRepository: FavoriteRepository,
     recentRepository: RecentRepository,
     private val catalogRepository: TourismCatalogRepository,
-    private val rankHotPlaces: RankTourismHotPlacesUseCase
+    private val rankHotPlaces: RankTourismHotPlacesUseCase,
+    private val pendingTourismCatalogItem: PendingTourismCatalogItem
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TourismHubUiState())
     val uiState: StateFlow<TourismHubUiState> = _uiState
@@ -104,6 +107,10 @@ class TourismHubViewModel @Inject constructor(
     }
 
     fun retryHighlights() = loadHighlights()
+
+    fun selectHotPlace(hotPlace: TourismHotPlace) {
+        pendingTourismCatalogItem.setHotPlace(hotPlace)
+    }
 
     private var highlightsJob: Job? = null
 

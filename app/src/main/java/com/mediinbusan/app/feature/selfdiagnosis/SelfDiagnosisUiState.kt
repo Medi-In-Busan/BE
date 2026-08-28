@@ -1,14 +1,20 @@
 package com.mediinbusan.app.feature.selfdiagnosis
 
 import com.mediinbusan.app.data.diagnosischat.DiagnosisSlotsDto
+import java.util.UUID
 
 enum class ChatMessageRole { USER, ASSISTANT }
 
 /** role은 순수 로컬 UI 개념(말풍선 정렬)일 뿐 서버로 전송되지 않는다 — 서버에는 그 턴의
- *  userMessage 하나만 보낸다(DiagnosisChatRequestDto 참고). */
+ *  userMessage 하나만 보낸다(DiagnosisChatRequestDto 참고). id는 LazyColumn 아이템 key와
+ *  Compose 등장 애니메이션의 정체성 유지용 — Gemini 응답을 기다리는 동안 자리를 잡아두는
+ *  로딩 말풍선(isPending)도 같은 id를 유지한 채 내용만 채워져서, 로딩→답변 전환 때 말풍선이
+ *  통째로 교체되며 등장 애니메이션이 다시 재생되는 일이 없다. */
 data class ChatMessage(
     val role: ChatMessageRole,
-    val text: String
+    val text: String,
+    val id: String = UUID.randomUUID().toString(),
+    val isPending: Boolean = false
 )
 
 data class SelfDiagnosisUiState(

@@ -57,6 +57,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -75,6 +78,7 @@ import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
@@ -183,7 +187,7 @@ private fun TourismCatalogContent(
 ) {
     val strings = LocalAppStrings.current
     Scaffold(
-        containerColor = TourismCanvas,
+        containerColor = HomeBackgroundPink,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
@@ -707,16 +711,22 @@ private fun CatalogSummaryCard(title: String, description: String, source: Strin
     val strings = LocalAppStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = CoralPrimaryContainer,
+        shape = RoundedCornerShape(28.dp),
+        color = Color.Transparent,
         border = BorderStroke(1.dp, Color.White)
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text(title, style = SectionTitleStyle, color = TextPrimary)
-            Text(description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoBadge(source)
-                InfoBadge(String.format(strings.tourism.sourceCountFormat, itemCount))
+        Box(
+            modifier = Modifier.background(
+                Brush.linearGradient(listOf(Color(0xFFFFE7E9), Color(0xFFFFF8F8), Color(0xFFEAF5FF)))
+            )
+        ) {
+            Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text(title, style = SectionTitleStyle, color = TextPrimary)
+                Text(description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoBadge(source)
+                    InfoBadge(String.format(strings.tourism.sourceCountFormat, itemCount))
+                }
             }
         }
     }
@@ -894,10 +904,17 @@ private fun TourismDataCard(item: TourismCatalogItem, onClick: () -> Unit) {
     val distanceLabel = rememberTourismItemDistanceLabel(item)
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.18f),
+                spotColor = Color.Black.copy(alpha = 0.18f)
+            ),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, DividerColor)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             TourismCardBody(item = item, distanceLabel = distanceLabel)
@@ -1001,6 +1018,81 @@ private fun TourismListDataCard(
         }
         if (isRevealAnimated && revealProgress < 1f) {
             ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())
+        }
+    }
+}
+
+@Composable
+private fun CrowdingRankCard(item: TourismCatalogItem, rank: Int, onClick: () -> Unit) {
+    val strings = LocalAppStrings.current
+    val congestion = item.details["congestionRate"] ?: item.subtitle.orEmpty()
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.18f),
+                spotColor = Color.Black.copy(alpha = 0.18f)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 64.dp, height = 76.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
+                Surface(
+                    modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
+                    shape = CircleShape,
+                    color = Color.White
+                ) {
+                    Text(
+                        "#$rank",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CoralPrimary,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    item.details["signguNm"] ?: item.address ?: "부산 관광지",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                item.details["baseYmd"]?.let {
+                    Text(
+                        "${strings.tourism.detailFieldLabels["baseYmd"].orEmpty()} $it",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(congestion, style = MaterialTheme.typography.titleMedium, color = CoralPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(
+                    strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

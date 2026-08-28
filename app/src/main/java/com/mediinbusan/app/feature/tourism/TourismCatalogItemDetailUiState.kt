@@ -6,5 +6,9 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 data class TourismCatalogItemDetailUiState(
     val category: TourismCatalogCategory? = null,
     val item: TourismCatalogItem? = null,
-    val consumed: Boolean = false
+    val consumed: Boolean = false,
+    val selectedTitle: String? = null,
+    val isLoading: Boolean = false,
+    val matchNotFound: Boolean = false,
+    val loadFailed: Boolean = false
 )

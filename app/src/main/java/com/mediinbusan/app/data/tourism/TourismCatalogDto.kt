@@ -16,6 +16,12 @@ data class TourismCatalogDto(
 )
 
 @Serializable
+data class TourismPlaceMatchDto(
+    val matched: Boolean,
+    val item: TourismCatalogItemDto? = null
+)
+
+@Serializable
 data class TourismCatalogItemDto(
     val id: String,
     val title: String,
