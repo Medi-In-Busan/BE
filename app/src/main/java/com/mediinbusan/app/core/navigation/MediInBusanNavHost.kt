@@ -223,7 +223,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToCourseMap = { courseIndex ->
                     navController.navigate(Route.WellnessCourseMap(route.hospitalId, courseIndex))
                 },
-                onExploreTourism = { navController.navigate(Route.TourismHub) },
+                onNavigateToTourismCatalog = { category ->
+                    navController.navigate(Route.TourismCatalog(category.name))
+                },
                 onBack = navController::popBackStack
             )
         }
