@@ -40,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +52,7 @@ import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
@@ -81,7 +84,7 @@ fun RecommendedCourseScreen(
     LaunchedEffect(categoryName, districtName) { viewModel.load(categoryName, districtName) }
 
     Scaffold(
-        containerColor = TourismCanvas,
+        containerColor = HomeBackgroundPink,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
@@ -162,24 +165,35 @@ private fun CourseContent(
         contentPadding = PaddingValues(bottom = 36.dp)
     ) {
         item {
-            Column(
-                modifier = Modifier.padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(strings.courseTitle, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Text(
-                    strings.subtitle(districtLabel),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-                Surface(shape = CircleShape, color = CoralPrimaryContainer) {
-                    Text(
-                        text = strings.summary(course.stops.size, route, travelMode),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = CoralPrimary,
-                        fontWeight = FontWeight.SemiBold
+            Box(
+                modifier = Modifier
+                    .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 12.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFFFFE7E9), Color(0xFFFFF8F8), Color(0xFFEAF5FF))
+                        )
                     )
+                    .padding(22.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text(
+                        strings.courseTitle,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(strings.subtitle(districtLabel), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.9f)) {
+                        Text(
+                            text = strings.summary(course.stops.size, route, travelMode),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = CoralPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -206,7 +220,13 @@ private fun CourseContent(
                     .fillMaxWidth()
                     .height(320.dp)
                     .padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        ambientColor = Color.Black.copy(alpha = 0.18f),
+                        spotColor = Color.Black.copy(alpha = 0.18f)
+                    )
+                    .clip(RoundedCornerShape(20.dp))
             ) {
                 KakaoMapView(
                     pins = pins,
@@ -255,7 +275,14 @@ private fun TravelModeSelector(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.12f),
+                spotColor = Color.Black.copy(alpha = 0.12f)
+            ),
         shape = RoundedCornerShape(16.dp),
         color = Color(0xFFF3F1F0)
     ) {
@@ -330,8 +357,16 @@ private fun TransferLeg(section: DrivingRouteSection, travelMode: TravelMode, st
 @Composable
 private fun CourseStopRow(stop: RecommendedTourismStop, selected: Boolean, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (selected) 5.dp else 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.15f),
+                spotColor = Color.Black.copy(alpha = 0.15f)
+            )
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
         color = if (selected) CoralPrimaryContainer else Color.White,
         border = BorderStroke(1.dp, if (selected) CoralPrimary.copy(alpha = 0.35f) else DividerColor)
     ) {

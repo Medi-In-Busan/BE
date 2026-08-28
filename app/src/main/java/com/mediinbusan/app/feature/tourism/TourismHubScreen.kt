@@ -73,6 +73,7 @@ import com.mediinbusan.app.domain.tourism.TourismHotPlace
 @Composable
 fun TourismHubScreen(
     onSelectCategory: (TourismCatalogCategory) -> Unit,
+    onSelectTourismItem: () -> Unit,
     onBack: () -> Unit,
     viewModel: TourismHubViewModel = hiltViewModel()
 ) {
@@ -104,6 +105,10 @@ fun TourismHubScreen(
                     isLoading = uiState.isHighlightsLoading,
                     errorMessage = uiState.highlightsError,
                     onSeeAll = { onSelectCategory(TourismCatalogCategory.CROWDING) },
+                    onSelectHotPlace = { hotPlace ->
+                        viewModel.selectHotPlace(hotPlace)
+                        onSelectTourismItem()
+                    },
                     onRetry = viewModel::retryHighlights
                 )
             }
@@ -148,6 +153,7 @@ private fun HotPlacesSection(
     isLoading: Boolean,
     errorMessage: String?,
     onSeeAll: () -> Unit,
+    onSelectHotPlace: (TourismHotPlace) -> Unit,
     onRetry: () -> Unit
 ) {
     HighlightSectionHeader(
@@ -162,7 +168,11 @@ private fun HotPlacesSection(
         errorMessage != null -> HighlightErrorCard(message = errorMessage, onRetry = onRetry)
         hotPlaces.isNotEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             hotPlaces.take(HOT_PLACE_CARD_LIMIT).forEachIndexed { index, hotPlace ->
-                HotPlaceCard(rank = index + 1, hotPlace = hotPlace, onClick = onSeeAll)
+                HotPlaceCard(
+                    rank = index + 1,
+                    hotPlace = hotPlace,
+                    onClick = { onSelectHotPlace(hotPlace) }
+                )
             }
         }
     }

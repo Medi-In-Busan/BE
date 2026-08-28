@@ -60,6 +60,10 @@ public class TourismExternalClient {
             }
 
             JsonNode responseJson = objectMapper.readTree(response.body());
+            JsonNode header = responseJson.path("response").path("header");
+            if (header.hasNonNull("resultCode") && !"0000".equals(header.path("resultCode").asText())) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "관광공사 API 오류: " + header.path("resultMsg").asText());
+            }
             if (responseJson.hasNonNull("resultCode") && !"0000".equals(responseJson.path("resultCode").asText())) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "관광공사 API 오류: " + responseJson.path("resultMsg").asText());
             }

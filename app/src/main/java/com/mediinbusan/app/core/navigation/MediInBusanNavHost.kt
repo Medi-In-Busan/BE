@@ -222,11 +222,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             NearbyScreen(
                 hospitalId = route.hospitalId,
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
+                onSelectTourismItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onNavigateToNearbyMap = { navController.navigate(Route.MapView(route.hospitalId)) },
                 onNavigateToCourseMap = { courseIndex ->
                     navController.navigate(Route.WellnessCourseMap(route.hospitalId, courseIndex))
                 },
-                onExploreTourism = { navController.navigate(Route.TourismHub) },
+                onNavigateToTourismCatalog = { category ->
+                    navController.navigate(Route.TourismCatalog(category.name))
+                },
                 onBack = navController::popBackStack
             )
         }
@@ -248,6 +251,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable<Route.TourismHub> {
             TourismHubScreen(
                 onSelectCategory = { category -> navController.navigate(Route.TourismCatalog(category.name)) },
+                onSelectTourismItem = { navController.navigate(Route.TourismCatalogItemDetail) },
                 onBack = navController::popBackStack
             )
         }

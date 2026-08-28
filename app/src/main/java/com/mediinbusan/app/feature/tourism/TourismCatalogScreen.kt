@@ -1,7 +1,9 @@
 package com.mediinbusan.app.feature.tourism
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,13 +12,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
@@ -38,6 +44,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,6 +55,7 @@ import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
@@ -58,6 +68,7 @@ import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 
 @Composable
 fun TourismCatalogScreen(
@@ -99,7 +110,7 @@ private fun TourismCatalogContent(
 ) {
     val strings = LocalAppStrings.current
     Scaffold(
-        containerColor = TourismCanvas,
+        containerColor = HomeBackgroundPink,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
@@ -162,8 +173,13 @@ private fun TourismCatalogContent(
                     itemsIndexed(
                         items = catalog.items,
                         key = { index, item -> "${catalog.category.name}-${item.id}-$index" }
-                    ) { _, item ->
-                        TourismDataCard(item = item, onClick = { onItemSelected(item) })
+                    ) { index, item ->
+                        TourismDataCard(
+                            item = item,
+                            rank = index + 1,
+                            isCrowding = catalog.category == TourismCatalogCategory.CROWDING,
+                            onClick = { onItemSelected(item) }
+                        )
                     }
                 }
             }
@@ -176,16 +192,22 @@ private fun CatalogSummaryCard(title: String, description: String, source: Strin
     val strings = LocalAppStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = CoralPrimaryContainer,
+        shape = RoundedCornerShape(28.dp),
+        color = Color.Transparent,
         border = BorderStroke(1.dp, Color.White)
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text(title, style = SectionTitleStyle, color = TextPrimary)
-            Text(description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoBadge(source)
-                InfoBadge(String.format(strings.tourism.sourceCountFormat, itemCount))
+        Box(
+            modifier = Modifier.background(
+                Brush.linearGradient(listOf(Color(0xFFFFE7E9), Color(0xFFFFF8F8), Color(0xFFEAF5FF)))
+            )
+        ) {
+            Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text(title, style = SectionTitleStyle, color = TextPrimary)
+                Text(description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoBadge(source)
+                    InfoBadge(String.format(strings.tourism.sourceCountFormat, itemCount))
+                }
             }
         }
     }
@@ -215,14 +237,25 @@ private fun DistrictFilter(selectedDistrict: BusanDistrict?, onDistrictSelected:
 }
 
 @Composable
-private fun TourismDataCard(item: TourismCatalogItem, onClick: () -> Unit) {
+private fun TourismDataCard(item: TourismCatalogItem, rank: Int, isCrowding: Boolean, onClick: () -> Unit) {
+    if (isCrowding) {
+        CrowdingRankCard(item = item, rank = rank, onClick = onClick)
+        return
+    }
     val strings = LocalAppStrings.current
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.18f),
+                spotColor = Color.Black.copy(alpha = 0.18f)
+            ),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, DividerColor)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item.imageUrl?.let { imageUrl ->
@@ -259,6 +292,81 @@ private fun TourismDataCard(item: TourismCatalogItem, onClick: () -> Unit) {
                     .mapNotNull { (key, value) -> strings.tourism.detailFieldLabels[key]?.let { it to value } }
                     .take(4)
                     .forEach { (label, value) -> DetailRow(label = label, value = value) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CrowdingRankCard(item: TourismCatalogItem, rank: Int, onClick: () -> Unit) {
+    val strings = LocalAppStrings.current
+    val congestion = item.details["congestionRate"] ?: item.subtitle.orEmpty()
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.18f),
+                spotColor = Color.Black.copy(alpha = 0.18f)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 64.dp, height = 76.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
+                Surface(
+                    modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
+                    shape = CircleShape,
+                    color = Color.White
+                ) {
+                    Text(
+                        "#$rank",
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CoralPrimary,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    item.details["signguNm"] ?: item.address ?: "부산 관광지",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                item.details["baseYmd"]?.let {
+                    Text(
+                        "${strings.tourism.detailFieldLabels["baseYmd"].orEmpty()} $it",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(congestion, style = MaterialTheme.typography.titleMedium, color = CoralPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(
+                    strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    maxLines = 1
+                )
             }
         }
     }

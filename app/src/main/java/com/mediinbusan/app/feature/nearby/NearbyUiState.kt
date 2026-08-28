@@ -4,6 +4,7 @@ import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.WellnessWalkingCourse
 import com.mediinbusan.app.domain.course.HospitalWellnessRoute
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
+import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 
 data class NearbyUiState(
     val isLoading: Boolean = true,
@@ -13,6 +14,8 @@ data class NearbyUiState(
     val isHotPlacesLoading: Boolean = true,
     val hotPlacesError: String? = null,
     val walkingCourses: List<WellnessWalkingCourse> = emptyList(),
+    val tourismPreviews: List<TourismCatalogItem> = emptyList(),
+    val accessiblePreviews: List<TourismCatalogItem> = emptyList(),
     val errorMessage: String? = null
 )
 

@@ -2,6 +2,7 @@ package com.mediinbusan.app.core.common
 
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +26,21 @@ class PendingTourismCatalogItem @Inject constructor() {
 
     fun set(category: TourismCatalogCategory, item: TourismCatalogItem) {
         entry = Entry(category, item)
+    }
+
+    fun setHotPlace(hotPlace: TourismHotPlace) {
+        val item = hotPlace.item
+        set(
+            TourismCatalogCategory.CROWDING,
+            item.copy(
+                details = item.details + mapOf(
+                    "hotPlaceDistrict" to hotPlace.district.name,
+                    "signguNm" to (item.details["signguNm"]?.takeIf { it.isNotBlank() }
+                        ?: hotPlace.district.label),
+                    "congestionRate" to hotPlace.congestionRate.toString()
+                )
+            )
+        )
     }
 
     fun consume(): Pair<TourismCatalogCategory, TourismCatalogItem>? =

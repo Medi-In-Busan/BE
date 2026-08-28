@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.domain.course.GetRecommendedHospitalWellnessRouteUseCase
 import com.mediinbusan.app.domain.nearby.GetNearbyPlacesSortedByDistanceUseCase
 import com.mediinbusan.app.data.place.WellnessTourismRepository
@@ -10,6 +11,8 @@ import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.RankTourismHotPlacesUseCase
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,14 +31,20 @@ class NearbyViewModel @Inject constructor(
     private val getRecommendedRoute: GetRecommendedHospitalWellnessRouteUseCase,
     private val wellnessTourismRepository: WellnessTourismRepository,
     private val tourismCatalogRepository: TourismCatalogRepository,
-    private val rankHotPlaces: RankTourismHotPlacesUseCase
+    private val rankHotPlaces: RankTourismHotPlacesUseCase,
+    private val pendingTourismCatalogItem: PendingTourismCatalogItem
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NearbyUiState())
     val uiState: StateFlow<NearbyUiState> = _uiState
 
+    fun selectHotPlace(hotPlace: TourismHotPlace) {
+        pendingTourismCatalogItem.setHotPlace(hotPlace)
+    }
+
     fun load(hospitalId: String) {
         loadHotPlaces()
+        loadCatalogPreviews()
         viewModelScope.launch {
             getNearbyPlacesSortedByDistance(hospitalId).collect { result ->
                 _uiState.update { state ->
@@ -90,7 +99,35 @@ class NearbyViewModel @Inject constructor(
         }
     }
 
+    private fun loadCatalogPreviews() {
+        viewModelScope.launch {
+            val previews = supervisorScope {
+                listOf(TourismCatalogCategory.PLACES_KO, TourismCatalogCategory.ACCESSIBLE).map { category ->
+                    async {
+                        val result = tourismCatalogRepository
+                            .getCatalog(category, BusanDistrict.HAEUNDAE)
+                            .first { it !is Result.Loading }
+                        category to (result as? Result.Success)?.data?.items.orEmpty()
+                    }
+                }.awaitAll().toMap()
+            }
+            _uiState.update {
+                it.copy(
+                    tourismPreviews = previews[TourismCatalogCategory.PLACES_KO].toPreviewItems(),
+                    accessiblePreviews = previews[TourismCatalogCategory.ACCESSIBLE].toPreviewItems()
+                )
+            }
+        }
+    }
+
+    private fun List<TourismCatalogItem>?.toPreviewItems() =
+        orEmpty()
+            .distinctBy { it.title }
+            .sortedByDescending { it.imageUrl != null }
+            .take(PREVIEW_LIMIT)
+
     private companion object {
         const val HOT_PLACE_LIMIT = 5
+        const val PREVIEW_LIMIT = 3
     }
 }

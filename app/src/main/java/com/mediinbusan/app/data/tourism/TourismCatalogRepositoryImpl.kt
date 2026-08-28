@@ -4,6 +4,7 @@ import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalog
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -12,6 +13,15 @@ import javax.inject.Inject
 class TourismCatalogRepositoryImpl @Inject constructor(
     private val api: TourismCatalogApi
 ) : TourismCatalogRepository {
+    override suspend fun findMatchingPlace(title: String, district: BusanDistrict): Result<TourismCatalogItem?> = try {
+        val response = api.findMatchingPlace(title, district.name)
+        Result.Success(if (response.matched) requireNotNull(response.item).toDomain() else null)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.Error(e)
+    }
+
     override fun getCatalog(
         category: TourismCatalogCategory,
         district: BusanDistrict?

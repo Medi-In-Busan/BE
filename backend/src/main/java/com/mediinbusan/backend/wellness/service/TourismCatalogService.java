@@ -64,7 +64,7 @@ public class TourismCatalogService {
         );
     }
 
-    private List<TourismCatalogItemResponse> normalizeItems(JsonNode body) {
+    List<TourismCatalogItemResponse> normalizeItems(JsonNode body) {
         JsonNode itemNode = body.path("items").path("item");
         List<JsonNode> rawItems = new ArrayList<>();
         if (itemNode.isArray()) {
