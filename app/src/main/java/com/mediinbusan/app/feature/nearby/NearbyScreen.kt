@@ -23,6 +23,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Map
@@ -69,6 +70,10 @@ import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediBlue40
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
+import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
+import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
+import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
+import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -80,6 +85,8 @@ import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.HospitalWellnessRoute
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
+import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 
 @Composable
 fun NearbyScreen(
@@ -88,7 +95,7 @@ fun NearbyScreen(
     onSelectTourismItem: () -> Unit,
     onNavigateToNearbyMap: () -> Unit,
     onNavigateToCourseMap: (Int) -> Unit,
-    onExploreTourism: () -> Unit,
+    onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
     onBack: () -> Unit,
     viewModel: NearbyViewModel = hiltViewModel()
 ) {
@@ -107,7 +114,7 @@ fun NearbyScreen(
         },
         onNavigateToNearbyMap = onNavigateToNearbyMap,
         onNavigateToCourseMap = onNavigateToCourseMap,
-        onExploreTourism = onExploreTourism,
+        onNavigateToTourismCatalog = onNavigateToTourismCatalog,
         onBack = onBack,
         onRetry = { viewModel.load(hospitalId) }
     )
@@ -121,7 +128,7 @@ private fun NearbyContent(
     onSelectHotPlace: (TourismHotPlace) -> Unit,
     onNavigateToNearbyMap: () -> Unit,
     onNavigateToCourseMap: (Int) -> Unit,
-    onExploreTourism: () -> Unit,
+    onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
     onBack: () -> Unit,
     onRetry: () -> Unit
 ) {
@@ -139,9 +146,6 @@ private fun NearbyContent(
                 actions = {
                     IconButton(onClick = onNavigateToNearbyMap) {
                         Icon(imageVector = Icons.Default.Map, contentDescription = "병원 주변 지도 보기")
-                    }
-                    IconButton(onClick = onExploreTourism) {
-                        Icon(imageVector = Icons.Default.Explore, contentDescription = "부산 관광 데이터")
                     }
                 }
             )
@@ -164,6 +168,7 @@ private fun NearbyContent(
                 onSelectPlace = onSelectPlace,
                 onSelectHotPlace = onSelectHotPlace,
                 onNavigateToCourseMap = onNavigateToCourseMap,
+                onNavigateToTourismCatalog = onNavigateToTourismCatalog,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -176,6 +181,7 @@ private fun NearbyLoadedContent(
     onSelectPlace: (String) -> Unit,
     onSelectHotPlace: (TourismHotPlace) -> Unit,
     onNavigateToCourseMap: (Int) -> Unit,
+    onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedType by remember { mutableStateOf<PlaceType?>(null) }
@@ -240,6 +246,124 @@ private fun NearbyLoadedContent(
             }
         }
 
+        item {
+            TourismCatalogEntrySection(
+                tourismPreviews = uiState.tourismPreviews,
+                accessiblePreviews = uiState.accessiblePreviews,
+                onNavigate = onNavigateToTourismCatalog
+            )
+        }
+
+    }
+}
+
+@Composable
+private fun TourismCatalogEntrySection(
+    tourismPreviews: List<TourismCatalogItem>,
+    accessiblePreviews: List<TourismCatalogItem>,
+    onNavigate: (TourismCatalogCategory) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = "부산 관광 더 둘러보기", style = SectionTitleStyle, color = TextPrimary)
+        TourismCatalogEntryCard(
+            title = "부산 관광",
+            description = "관광지·음식점·쇼핑·숙박 정보를 확인해요.",
+            icon = Icons.Default.Explore,
+            accent = SkyBlue,
+            previews = tourismPreviews,
+            onClick = { onNavigate(TourismCatalogCategory.PLACES_KO) }
+        )
+        TourismCatalogEntryCard(
+            title = "무장애 관광",
+            description = "이동 편의 정보가 있는 관광지를 모았어요.",
+            icon = Icons.AutoMirrored.Filled.Accessible,
+            accent = CoralPrimary,
+            previews = accessiblePreviews,
+            onClick = { onNavigate(TourismCatalogCategory.ACCESSIBLE) }
+        )
+    }
+}
+
+@Composable
+private fun TourismCatalogEntryCard(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    previews: List<TourismCatalogItem>,
+    onClick: () -> Unit
+) {
+    val previewImage = previews.firstOrNull { it.imageUrl != null }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.3f),
+                spotColor = Color.Black.copy(alpha = 0.3f)
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp)
+    ) {
+        if (previewImage != null) {
+            AsyncImageBox(
+                model = requireNotNull(previewImage.imageUrl),
+                contentDescription = previewImage.title,
+                modifier = Modifier.padding(vertical = 14.dp).width(96.dp).height(112.dp).clip(RoundedCornerShape(12.dp))
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 14.dp)
+                    .width(96.dp)
+                    .height(112.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(accent.copy(alpha = 0.16f), CoralPrimaryContainer, Color(0xFFEAF5FF))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f).padding(vertical = 20.dp)) {
+            Text(
+                text = description,
+                style = SettingsDescriptionStyle,
+                color = SettingsSecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = title,
+                style = SettingsItemTitleStyle,
+                color = SettingsPrimaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(7.dp))
+            Text(
+                text = previews.take(3).joinToString(" · ") { it.title }.ifBlank { "목록에서 자세히 보기" },
+                style = MaterialTheme.typography.bodySmall,
+                color = SettingsSecondaryText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "전체보기",
+                style = SettingsDescriptionStyle,
+                color = accent,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 
