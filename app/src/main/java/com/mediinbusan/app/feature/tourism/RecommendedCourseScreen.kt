@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,7 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -139,6 +143,8 @@ private fun CourseContent(
     onSelectStop: (String) -> Unit,
     onTravelModeSelect: (TravelMode) -> Unit
 ) {
+    var zoomInRequestId by remember { mutableIntStateOf(0) }
+    var zoomOutRequestId by remember { mutableIntStateOf(0) }
     val pins = remember(course, selectedStopId) {
         course.stops.map { stop ->
             MapPin(
@@ -232,7 +238,14 @@ private fun CourseContent(
                     pins = pins,
                     routePaths = paths,
                     onPinClick = onSelectStop,
+                    zoomInRequestId = zoomInRequestId,
+                    zoomOutRequestId = zoomOutRequestId,
                     modifier = Modifier.fillMaxSize()
+                )
+                MapZoomControls(
+                    onZoomIn = { zoomInRequestId++ },
+                    onZoomOut = { zoomOutRequestId++ },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
                 )
             }
         }
@@ -261,6 +274,34 @@ private fun CourseContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MapZoomControls(
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.shadow(
+            elevation = 5.dp,
+            shape = RoundedCornerShape(14.dp),
+            ambientColor = Color.Black.copy(alpha = 0.22f),
+            spotColor = Color.Black.copy(alpha = 0.22f)
+        ),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.96f)
+    ) {
+        Column {
+            IconButton(onClick = onZoomIn, modifier = Modifier.size(42.dp)) {
+                Icon(Icons.Default.Add, contentDescription = "지도 확대", tint = TextPrimary)
+            }
+            Box(modifier = Modifier.width(42.dp).height(1.dp).background(DividerColor))
+            IconButton(onClick = onZoomOut, modifier = Modifier.size(42.dp)) {
+                Icon(Icons.Default.Remove, contentDescription = "지도 축소", tint = TextPrimary)
             }
         }
     }

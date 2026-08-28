@@ -33,6 +33,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
+import com.kakao.vectormap.GestureType
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.MapView
@@ -126,6 +127,8 @@ fun KakaoMapView(
     onPinClick: (String) -> Unit = {},
     onMapClick: () -> Unit = {},
     recenterRequestId: Int = 0,
+    zoomInRequestId: Int = 0,
+    zoomOutRequestId: Int = 0,
     searchAreaRequestId: Int = 0,
     onSearchArea: (latitude: Double, longitude: Double) -> Unit = { _, _ -> },
     fitCameraToPins: Boolean = true,
@@ -201,6 +204,14 @@ fun KakaoMapView(
                         },
                         object : KakaoMapReadyCallback() {
                             override fun onMapReady(map: KakaoMap) {
+                                listOf(
+                                    GestureType.Pan,
+                                    GestureType.Zoom,
+                                    GestureType.RotateZoom,
+                                    GestureType.OneFingerDoubleTap,
+                                    GestureType.TwoFingerSingleTap,
+                                    GestureType.OneFingerZoom
+                                ).forEach { gesture -> map.setGestureEnable(gesture, true) }
                                 mapErrorMessage = null
                                 kakaoMap = map
                             }
@@ -248,6 +259,18 @@ fun KakaoMapView(
         val map = kakaoMap ?: return@LaunchedEffect
         if (recenterRequestId == 0) return@LaunchedEffect
         map.moveCamera(CameraUpdateFactory.newCenterPosition(BusanDefaultCenter, DEFAULT_ZOOM_LEVEL))
+    }
+
+    LaunchedEffect(kakaoMap, zoomInRequestId) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        if (zoomInRequestId == 0) return@LaunchedEffect
+        map.moveCamera(CameraUpdateFactory.zoomIn())
+    }
+
+    LaunchedEffect(kakaoMap, zoomOutRequestId) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        if (zoomOutRequestId == 0) return@LaunchedEffect
+        map.moveCamera(CameraUpdateFactory.zoomOut())
     }
 
     LaunchedEffect(kakaoMap, searchAreaRequestId) {
