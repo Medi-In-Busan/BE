@@ -30,6 +30,23 @@ public class WellnessTourismGatewayService {
         return request("accessible-tourism", properties.accessibleTourismBaseUrl(), "areaBasedList2", tourismParams(district));
     }
 
+    public TourismExternalResponse searchPlaces(String keyword, BusanTourismCodes.District district, int pageNo) {
+        Map<String, Object> params = tourismParams(district);
+        params.put("keyword", keyword);
+        params.put("numOfRows", 100);
+        params.put("pageNo", pageNo);
+        params.put("arrange", "A");
+        return request("tourism-ko", properties.tourApiBaseUrl(), "searchKeyword2", params);
+    }
+
+    public TourismExternalResponse placeDetail(String contentId) {
+        Map<String, Object> params = pageParams();
+        params.put("MobileOS", MOBILE_OS);
+        params.put("MobileApp", MOBILE_APP);
+        params.put("contentId", contentId);
+        return request("tourism-ko", properties.tourApiBaseUrl(), "detailCommon2", params);
+    }
+
     public TourismExternalResponse related(BusanTourismCodes.District district, String baseYm) {
         return request("related-tourism", properties.relatedTourismBaseUrl(), "areaBasedList1", bigdataParams(district, baseYm));
     }
