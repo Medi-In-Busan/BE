@@ -38,6 +38,8 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.core.ui.BottomNavBar
 import com.mediinbusan.app.core.ui.BottomNavTabUiModel
+import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -116,6 +118,16 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?, mapSelection
             backStackEntry.toRoute<Route.MapView>().hospitalId == null && !mapSelectionActive
         }
         destination.hasRoute(Route.DocumentScan::class) -> true
+        // 무장애 관광·부산 관광지(언어별 PLACES_KO/EN/JA/ZH) 리스트업 화면만 병원 목록(S-04)과
+        // 동일하게 하단 탭바를 노출한다 — 다른 관광 카테고리는 여전히 자체 뒤로가기 버튼이 있는
+        // 일반 push 화면(TourismCatalogScreen.kt 참고). 바텀탭 5개 중 이 화면들에 대응하는 탭은
+        // 없어 이 경우 어떤 탭도 활성 표시되지 않는다.
+        destination.hasRoute(Route.TourismCatalog::class) -> {
+            val category = runCatching {
+                TourismCatalogCategory.valueOf(backStackEntry.toRoute<Route.TourismCatalog>().category)
+            }.getOrNull()
+            category == TourismCatalogCategory.ACCESSIBLE || category?.isLanguageVariant == true
+        }
         // Settings/알림설정/즐겨찾기/최근본항목/정보 상세는 전부 공용 탑바 없이 자체 뒤로가기
         // 버튼이 있는 일반 push 화면이라 하단 탭바를 안 보여준다(SettingsScreen.kt 참고).
         else -> false

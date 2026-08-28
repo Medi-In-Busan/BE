@@ -24,6 +24,7 @@ data class TourismCatalogItemDto(
     val imageUrl: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val categoryCode: String? = null,
     val details: Map<String, String> = emptyMap()
 )
 
@@ -42,6 +43,7 @@ fun TourismCatalogDto.toDomain(): TourismCatalog = TourismCatalog(
             imageUrl = item.imageUrl,
             latitude = item.latitude,
             longitude = item.longitude,
+            categoryCode = item.categoryCode,
             details = item.details
         )
     }
