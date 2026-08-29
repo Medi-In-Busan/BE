@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -127,6 +128,8 @@ fun KakaoMapView(
     onPinClick: (String) -> Unit = {},
     onMapClick: () -> Unit = {},
     recenterRequestId: Int = 0,
+    zoomInRequestId: Int = 0,
+    zoomOutRequestId: Int = 0,
     searchAreaRequestId: Int = 0,
     onSearchArea: (latitude: Double, longitude: Double) -> Unit = { _, _ -> },
     fitCameraToPins: Boolean = true,
@@ -138,7 +141,8 @@ fun KakaoMapView(
     // "미리보기" 지도(PlaceDetailScreen/HospitalDetailScreen의 LocationMiniMap처럼 탭하면 다른
     // 동작(길찾기/지도 화면 이동)으로 이어지는 지도)에서 쓴다 — 그런 자리에서까지 기본 팬/핀치
     // 제스처가 살아있으면 사용자가 실수로 카메라를 옮겨버릴 수 있다(코드리뷰 지적).
-    interactive: Boolean = true
+    interactive: Boolean = true,
+    onMapInteractionChange: (Boolean) -> Unit = {}
 ) {
     // libK3fAndroid.so는 arm64-v8a/armeabi-v7a로만 배포되어 x86_64 에뮬레이터에서는
     // KakaoMapSdk.init()이 실패한다(MediInBusanApp.onCreate() 참고). 그 경우 MapView를 만들지
@@ -150,12 +154,16 @@ fun KakaoMapView(
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentInteractive by rememberUpdatedState(interactive)
+    val currentOnMapInteractionChange by rememberUpdatedState(onMapInteractionChange)
     val mapView = remember {
         MapView(context).apply {
             setOnTouchListener { view, event ->
-                val isTouchingMap = event.actionMasked != MotionEvent.ACTION_UP &&
+                val isTouchingMap = currentInteractive &&
+                    event.actionMasked != MotionEvent.ACTION_UP &&
                     event.actionMasked != MotionEvent.ACTION_CANCEL
                 view.parent?.requestDisallowInterceptTouchEvent(isTouchingMap)
+                currentOnMapInteractionChange(isTouchingMap)
                 false
             }
         }
@@ -191,6 +199,7 @@ fun KakaoMapView(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            currentOnMapInteractionChange(false)
             mapView.setOnTouchListener(null)
             mapView.finish()
         }
@@ -229,6 +238,14 @@ fun KakaoMapView(
                         },
                         object : KakaoMapReadyCallback() {
                             override fun onMapReady(map: KakaoMap) {
+                                listOf(
+                                    GestureType.Pan,
+                                    GestureType.Zoom,
+                                    GestureType.RotateZoom,
+                                    GestureType.OneFingerDoubleTap,
+                                    GestureType.TwoFingerSingleTap,
+                                    GestureType.OneFingerZoom
+                                ).forEach { gesture -> map.setGestureEnable(gesture, true) }
                                 mapErrorMessage = null
                                 kakaoMap = map
                             }
@@ -296,6 +313,18 @@ fun KakaoMapView(
         val map = kakaoMap ?: return@LaunchedEffect
         if (recenterRequestId == 0) return@LaunchedEffect
         map.moveCamera(CameraUpdateFactory.newCenterPosition(BusanDefaultCenter, DEFAULT_ZOOM_LEVEL))
+    }
+
+    LaunchedEffect(kakaoMap, zoomInRequestId) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        if (zoomInRequestId == 0) return@LaunchedEffect
+        map.moveCamera(CameraUpdateFactory.zoomIn())
+    }
+
+    LaunchedEffect(kakaoMap, zoomOutRequestId) {
+        val map = kakaoMap ?: return@LaunchedEffect
+        if (zoomOutRequestId == 0) return@LaunchedEffect
+        map.moveCamera(CameraUpdateFactory.zoomOut())
     }
 
     LaunchedEffect(kakaoMap, searchAreaRequestId) {

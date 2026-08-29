@@ -85,6 +85,7 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedTourismItemCategoryLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
@@ -189,23 +190,27 @@ private fun TourismCatalogContent(
     Scaffold(
         containerColor = HomeBackgroundPink,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.tourism.backContentDescription)
+            if (uiState.category == TourismCatalogCategory.CROWDING) {
+                BackOnlyNavigationBar(onBack = onBack, background = HomeBackgroundPink)
+            } else {
+                CenterAlignedTopAppBar(
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.tourism.backContentDescription)
+                        }
+                    },
+                    title = { Text(uiState.category?.label ?: "관광 데이터") },
+                    actions = {
+                        val canBuildCourse = uiState.catalog?.items?.count {
+                            it.latitude != null && it.longitude != null
+                        }?.let { it >= 3 } == true
+                        IconButton(onClick = onNavigateToCourse, enabled = canBuildCourse) {
+                            Icon(Icons.Default.Map, contentDescription = "추천 장소 동선 보기")
+                        }
                     }
-                },
-                title = { Text(uiState.category?.label ?: "관광 데이터") },
-                actions = {
-                    val canBuildCourse = uiState.catalog?.items?.count {
-                        it.latitude != null && it.longitude != null
-                    }?.let { it >= 3 } == true
-                    IconButton(onClick = onNavigateToCourse, enabled = canBuildCourse) {
-                        Icon(Icons.Default.Map, contentDescription = "추천 장소 동선 보기")
-                    }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         when {
@@ -226,18 +231,24 @@ private fun TourismCatalogContent(
                 val categoryCodes = remember(catalog.items) {
                     catalog.items.mapNotNull { it.categoryCode }.distinct()
                 }
+                val revealedCount = rememberRevealedCount(
+                    itemsKey = uiState.visibleItems,
+                    itemCount = uiState.visibleItems.size
+                )
                 LazyColumn(
                     modifier = Modifier.padding(innerPadding).fillMaxSize(),
                     contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    item {
-                        CatalogSummaryCard(
-                            title = catalog.title,
-                            description = catalog.description,
-                            source = strings.tourism.sourceLabels[catalog.source] ?: catalog.source,
-                            itemCount = catalog.items.size
-                        )
+                    if (uiState.category != TourismCatalogCategory.CROWDING) {
+                        item {
+                            CatalogSummaryCard(
+                                title = catalog.title,
+                                description = catalog.description,
+                                source = strings.tourism.sourceLabels[catalog.source] ?: catalog.source,
+                                itemCount = catalog.items.size
+                            )
+                        }
                     }
                     item {
                         CatalogSearchBar(
@@ -279,8 +290,23 @@ private fun TourismCatalogContent(
                         itemsIndexed(
                             items = uiState.visibleItems,
                             key = { index, item -> "${catalog.category.name}-${item.id}-$index" }
-                        ) { _, item ->
-                            TourismDataCard(item = item, onClick = { onItemSelected(item) })
+                        ) { index, item ->
+                            if (uiState.category == TourismCatalogCategory.CROWDING) {
+                                CrowdingRankCard(
+                                    item = item,
+                                    rank = index + 1,
+                                    onClick = { onItemSelected(item) },
+                                    isRevealAnimated = index < InitialCardRevealCount,
+                                    isRevealed = index < revealedCount
+                                )
+                            } else {
+                                TourismDataCard(
+                                    item = item,
+                                    onClick = { onItemSelected(item) },
+                                    isRevealAnimated = index < InitialCardRevealCount,
+                                    isRevealed = index < revealedCount
+                                )
+                            }
                         }
                     }
                 }
@@ -900,24 +926,39 @@ private fun EmptySearchFilterState(onReset: () -> Unit) {
 }
 
 @Composable
-private fun TourismDataCard(item: TourismCatalogItem, onClick: () -> Unit) {
+private fun TourismDataCard(
+    item: TourismCatalogItem,
+    onClick: () -> Unit,
+    isRevealAnimated: Boolean,
+    isRevealed: Boolean
+) {
     val distanceLabel = rememberTourismItemDistanceLabel(item)
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.18f),
-                spotColor = Color.Black.copy(alpha = 0.18f)
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            TourismCardBody(item = item, distanceLabel = distanceLabel)
+    val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = revealProgress
+                    translationY = (1f - revealProgress) * 10.dp.toPx()
+                }
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.18f),
+                    spotColor = Color.Black.copy(alpha = 0.18f)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TourismCardBody(item = item, distanceLabel = distanceLabel)
+            }
+        }
+        if (isRevealAnimated && revealProgress < 1f) {
+            ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())
         }
     }
 }
@@ -1023,76 +1064,92 @@ private fun TourismListDataCard(
 }
 
 @Composable
-private fun CrowdingRankCard(item: TourismCatalogItem, rank: Int, onClick: () -> Unit) {
+private fun CrowdingRankCard(
+    item: TourismCatalogItem,
+    rank: Int,
+    onClick: () -> Unit,
+    isRevealAnimated: Boolean,
+    isRevealed: Boolean
+) {
     val strings = LocalAppStrings.current
     val congestion = item.details["congestionRate"] ?: item.subtitle.orEmpty()
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.18f),
-                spotColor = Color.Black.copy(alpha = 0.18f)
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+    val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = revealProgress
+                    translationY = (1f - revealProgress) * 10.dp.toPx()
+                }
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.18f),
+                    spotColor = Color.Black.copy(alpha = 0.18f)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 64.dp, height = 76.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.padding(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(imageVector = Icons.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
-                Surface(
-                    modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
-                    shape = CircleShape,
-                    color = Color.White
+                Box(
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 76.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(imageVector = Icons.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
+                        shape = CircleShape,
+                        color = Color.White
+                    ) {
+                        Text(
+                            "#$rank",
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CoralPrimary,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        "#$rank",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                        item.details["signguNm"] ?: item.address ?: "부산 관광지",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    item.details["baseYmd"]?.let {
+                        Text(
+                            "${strings.tourism.detailFieldLabels["baseYmd"].orEmpty()} $it",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(congestion, style = MaterialTheme.typography.titleMedium, color = CoralPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Text(
+                        strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = CoralPrimary,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        color = TextSecondary,
+                        maxLines = 1
                     )
                 }
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    item.details["signguNm"] ?: item.address ?: "부산 관광지",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                item.details["baseYmd"]?.let {
-                    Text(
-                        "${strings.tourism.detailFieldLabels["baseYmd"].orEmpty()} $it",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
-                    )
-                }
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(congestion, style = MaterialTheme.typography.titleMedium, color = CoralPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                Text(
-                    strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary,
-                    maxLines = 1
-                )
-            }
+        }
+        if (isRevealAnimated && revealProgress < 1f) {
+            ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())
         }
     }
 }

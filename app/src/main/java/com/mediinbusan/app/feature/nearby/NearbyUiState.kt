@@ -7,6 +7,7 @@ import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 
 data class NearbyUiState(
+    val selectedLanguage: String = "ko",
     val isLoading: Boolean = true,
     val places: List<Place> = emptyList(),
     val recommendedRoutes: List<HospitalWellnessRoute> = emptyList(),

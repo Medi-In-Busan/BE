@@ -67,10 +67,11 @@ class TourismCatalogViewModel @Inject constructor(
             } else {
                 requestedCategory
             }
-            val district = if (category.supportsDistrict) {
-                _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
-            } else {
-                null
+            val district = when {
+                category == TourismCatalogCategory.CROWDING -> null
+                category.isLanguageVariant -> null
+                category.supportsDistrict -> _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
+                else -> null
             }
             loadCatalog(category, district)
         }
@@ -89,6 +90,9 @@ class TourismCatalogViewModel @Inject constructor(
     fun selectItem(item: TourismCatalogItem) {
         val category = _uiState.value.category ?: return
         pendingTourismCatalogItem.set(category, item)
+        viewModelScope.launch {
+            interactionRepository.recordItemSelection(category, item)
+        }
     }
 
     fun onSearchQueryChanged(query: String) {
@@ -117,6 +121,7 @@ class TourismCatalogViewModel @Inject constructor(
     private fun loadCatalog(category: TourismCatalogCategory, district: BusanDistrict?) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            interactionRepository.recordCategoryView(category)
             repository.getCatalog(category, district).collect { result ->
                 when (result) {
                     Result.Loading -> _uiState.update { state ->
@@ -169,9 +174,12 @@ class TourismCatalogViewModel @Inject constructor(
         val recentPlaceNames = recent
             .filter { it.itemType == FavoriteItemType.PLACE }
             .map { it.itemName }
-        val recentHospital = recent.firstOrNull {
-            it.itemType == FavoriteItemType.HOSPITAL && it.latitude != null && it.longitude != null
-        }
+        val recentHospital = recent
+            .filter {
+                it.itemType == FavoriteItemType.HOSPITAL &&
+                    it.latitude != null && it.longitude != null
+            }
+            .maxByOrNull { it.viewedAt }
         val reference = recentHospital?.let {
             TourismReferenceLocation(requireNotNull(it.latitude), requireNotNull(it.longitude))
         }

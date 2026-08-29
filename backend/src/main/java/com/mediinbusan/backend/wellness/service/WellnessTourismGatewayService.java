@@ -117,7 +117,9 @@ public class WellnessTourismGatewayService {
         params.put("MobileOS", MOBILE_OS);
         params.put("MobileApp", MOBILE_APP);
         params.put("areaCd", BusanTourismCodes.BIGDATA_AREA_CD);
-        params.put("signguCd", district.bigdataSignguCd());
+        if (district != null) {
+            params.put("signguCd", district.bigdataSignguCd());
+        }
         params.put("baseYm", baseYm);
         return params;
     }
