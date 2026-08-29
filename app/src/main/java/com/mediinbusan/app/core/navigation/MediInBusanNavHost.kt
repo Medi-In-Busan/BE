@@ -97,13 +97,16 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToFavorite = { navController.navigate(Route.Favorite) },
                 onNavigateToSettings = { navController.navigate(Route.Settings) },
                 onNavigateToSelfDiagnosis = { navController.navigate(Route.SelfDiagnosis) },
+                // 문서스캔은 바텀바에서도 접근 가능한 탭 목적지라 navigateToTab을 써서 저장된
+                // 상태를 복원한다(navigateToTab 주석 참고).
+                onNavigateToDocumentScan = { navController.navigateToTab(Route.DocumentScan) },
                 // 아래 셋(가이드/지도/검색)은 전부 바텀바가 계속 보이는 목적지라, 하단 탭 클릭과
                 // 동일하게 navigateToTab을 써야 한다. 순수 navigate()를 쓰면 저장된 상태가
                 // restoreState로 소비되지 않고 쌓여서 이후 바텀바 "홈" 탭이 안 먹는 문제가 있었다.
                 onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
                 onNavigateToMap = { navController.navigateToTab(Route.MapView(hospitalId = null)) },
-                // 병원 검색 API가 실패해도 웰니스 UI/API를 확인할 수 있도록 MVP 확인용 기준 병원(해운대권 regNo=14)으로 바로 진입한다.
-                onNavigateToWellness = { navController.navigate(Route.Nearby(hospitalId = "14")) },
+                // 웰니스는 바텀 탭 목적지이므로 다른 진입점과 동일한 백스택 저장/복원 규칙을 쓴다.
+                onNavigateToWellness = { navController.navigateToTab(Route.Nearby(hospitalId = "14")) },
                 onNavigateToRecommendedCourse = { category, district ->
                     navController.navigate(Route.RecommendedTourismCourse(category, district))
                 },
@@ -130,6 +133,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
                 onNavigateToNearby = { navController.navigate(Route.Nearby(route.hospitalId)) },
                 onNavigateToMap = { navController.navigate(Route.MapView(route.hospitalId)) },
+                onNavigateToHome = { navController.navigateToTab(Route.Home) },
                 onBack = navController::popBackStack
             )
         }
@@ -218,11 +222,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             NearbyScreen(
                 hospitalId = route.hospitalId,
                 onSelectTourismItem = { navController.navigate(Route.TourismCatalogItemDetail) },
-                onNavigateToNearbyMap = { navController.navigate(Route.MapView(route.hospitalId)) },
                 onNavigateToTourismCatalog = { category ->
                     navController.navigate(Route.TourismCatalog(category.name))
                 },
-                onBack = navController::popBackStack
+                onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
         composable<Route.PlaceDetail> { backStackEntry ->
@@ -267,7 +270,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             )
         }
         composable<Route.TourismCatalogItemDetail> {
-            TourismCatalogItemDetailScreen(onBack = navController::popBackStack)
+            TourismCatalogItemDetailScreen(
+                onBack = navController::popBackStack,
+                onNavigateHome = { navController.navigateToTab(Route.Home) }
+            )
         }
         composable<Route.MapView> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.MapView>()
@@ -333,8 +339,8 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                             // 문제가 있다(Route.kt의 navigateToTab 함수 주석 참고).
                             navController.navigateToTab(Route.HospitalSearchList)
                         DiagnosisCtaTarget.WELLNESS_PLACES ->
-                            // Home의 웰니스 진입점과 동일하게 MVP 기준 병원(해운대권 regNo=14)으로 연결한다.
-                            navController.navigate(Route.Nearby(hospitalId = "14"))
+                            // Home과 하단 웰니스 탭의 진입 방식까지 통일해 동일 화면이 중복으로 쌓이지 않게 한다.
+                            navController.navigateToTab(Route.Nearby(hospitalId = "14"))
                         // 나머지는 진단 결과 전용 신규 화면을 따로 만들지 않고, 이용 가이드(S-06)
                         // STEP 상세를 그대로 재사용한다(사용자 피드백으로 신규 화면은 걷어냄).
                         DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION ->

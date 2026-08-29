@@ -4,6 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.mediinbusan.app.R
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,14 +20,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -28,33 +38,31 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,9 +70,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,27 +89,22 @@ import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
-import com.mediinbusan.app.core.designsystem.SkyBlue
-import com.mediinbusan.app.core.designsystem.StatusClosedGray
-import com.mediinbusan.app.core.designsystem.StatusOpenGreen
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
-import com.mediinbusan.app.core.ui.FavoriteHeartButton
-import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.KakaoMapView
-import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.WrapRow
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
-import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.core.ui.toLanguageDisplayName
 import com.mediinbusan.app.data.hospital.Hospital
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun HospitalDetailScreen(
@@ -107,6 +112,7 @@ fun HospitalDetailScreen(
     onNavigateToGuide: () -> Unit,
     onNavigateToNearby: () -> Unit,
     onNavigateToMap: () -> Unit,
+    onNavigateToHome: () -> Unit,
     onBack: () -> Unit,
     viewModel: HospitalDetailViewModel = hiltViewModel()
 ) {
@@ -134,6 +140,7 @@ fun HospitalDetailScreen(
                 onNavigateToGuide = onNavigateToGuide,
                 onNavigateToNearby = onNavigateToNearby,
                 onNavigateToMap = onNavigateToMap,
+                onNavigateToHome = onNavigateToHome,
                 onBack = onBack
             )
             else -> EmptyState(message = LocalAppStrings.current.hospitalDetail.notFoundMessage)
@@ -149,52 +156,149 @@ private fun HospitalDetailContent(
     onNavigateToGuide: () -> Unit,
     onNavigateToNearby: () -> Unit,
     onNavigateToMap: () -> Unit,
+    onNavigateToHome: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
     val strings = LocalAppStrings.current.hospitalDetail
-    // 하드코딩한 값 대신 실측한 풋터 높이를 그대로 스크롤 콘텐츠 하단 여백으로 써서, 콘텐츠와
-    // 풋터 사이에 뜬 여백(또는 반대로 풋터에 가려지는 현상) 없이 정확히 맞닿게 한다.
-    var bottomBarHeight by remember { mutableStateOf(0.dp) }
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // 5개 섹션(병원소개/기본정보/진료과목/위치/기타정보)의 스크롤 콘텐츠 내 세로 위치(px) —
+    // 아래 축약 탭바에서 탭을 고르면 이 위치로 스크롤한다. onGloballyPositioned로 매 배치마다
+    // 갱신되므로 콘텐츠 높이가 언어/데이터에 따라 달라져도 항상 최신 위치를 가리킨다.
+    var introSectionTop by remember { mutableIntStateOf(0) }
+    var basicInfoSectionTop by remember { mutableIntStateOf(0) }
+    var specialtiesSectionTop by remember { mutableIntStateOf(0) }
+    var locationSectionTop by remember { mutableIntStateOf(0) }
+    var otherInfoSectionTop by remember { mutableIntStateOf(0) }
+
+    // 의료기관 목록(HospitalSearchListScreen)의 필터바 접힘/펼침과 같은 델타 기반 스크롤 방향
+    // 감지 로직을 그대로 가져오되, 방향은 반대다 — 거기서는 아래로 스크롤하면 필터바가 접히고
+    // (숨고) 위로 올리면 펼쳐지는데, 여기서는 아래로 스크롤하면 축약 헤더(탑바 타이틀+섹션
+    // 탭바)가 나타나고, 위로 스크롤하거나 맨 위 근처로 돌아오면 다시 기본 구성으로 사라진다.
+    var showCollapsedHeader by remember { mutableStateOf(false) }
+    var selectedTabIndex by remember { mutableStateOf<Int?>(null) }
+    // 탭을 눌러 animateScrollTo로 위쪽 섹션까지 프로그램적으로 스크롤할 때도 scrollState.value가
+    // 위로 흐르면서 아래 델타 감지에 "사용자가 위로 스크롤함"으로 잡혀 축약 헤더가 꺼져버렸다.
+    // 탭 이동 중에는 이 플래그로 방향 감지를 잠깐 꺼서, 실제 손가락 스크롤일 때만 사라지게 한다.
+    var isNavigatingToSection by remember { mutableStateOf(false) }
+    LaunchedEffect(scrollState) {
+        var previousValue = scrollState.value
+        snapshotFlow { scrollState.value }.collect { value ->
+            if (!isNavigatingToSection) {
+                val delta = value - previousValue
+                when {
+                    value <= 4 -> showCollapsedHeader = false
+                    delta > 6 -> showCollapsedHeader = true
+                    delta < -6 -> showCollapsedHeader = false
+                }
+            }
+            previousValue = value
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 사진 위에 떠 있던 뒤로가기/공유/즐겨찾기 오버레이 대신, Home 탑바와 같은 영역·배경의
+        // 고정 탑바. 공유는 타이틀 영역에, 즐겨찾기는 타이틀 영역에 이미 동일 기능이 있어
+        // 오버레이에서 빠져도 기능이 사라지지 않는다. 아래로 스크롤하면 뒤로가기 옆에 병원
+        // 타이틀이 나타난다(본문 타이틀과 동일한 스타일).
+        HospitalDetailTopBar(
+            onBack = onBack,
+            onNavigateToHome = onNavigateToHome,
+            onNavigateToInquiry = { context.smsInquiry(hospital, strings) },
+            onNavigateToDirections = { context.launchDirections(hospital) },
+            hospitalName = hospital.name,
+            showTitle = showCollapsedHeader
+        )
+        // 알약(pill) 칩이 아니라 단순 텍스트+밑줄 탭 5개짜리 필터바. HospitalSearchListScreen의
+        // 필터바 접힘/펼침과 동일한 expandVertically/shrinkVertically+fade 애니메이션을 그대로 쓴다.
+        AnimatedVisibility(
+            visible = showCollapsedHeader,
+            enter = expandVertically(animationSpec = tween(durationMillis = 420)) +
+                fadeIn(animationSpec = tween(durationMillis = 340, delayMillis = 50)),
+            exit = shrinkVertically(animationSpec = tween(durationMillis = 380)) +
+                fadeOut(animationSpec = tween(durationMillis = 280))
+        ) {
+            HospitalDetailSectionTabsBar(
+                strings = strings,
+                selectedIndex = selectedTabIndex,
+                onTabSelected = { index ->
+                    selectedTabIndex = index
+                    val targetTop = when (index) {
+                        0 -> introSectionTop
+                        1 -> basicInfoSectionTop
+                        2 -> specialtiesSectionTop
+                        3 -> locationSectionTop
+                        else -> otherInfoSectionTop
+                    }
+                    coroutineScope.launch {
+                        isNavigatingToSection = true
+                        scrollState.animateScrollTo(targetTop)
+                        isNavigatingToSection = false
+                    }
+                }
+            )
+        }
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = bottomBarHeight)
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
         ) {
             ImageCarouselSection(
                 imageUrls = hospital.imageUrls.ifEmpty { HospitalDetailFallbackImages },
-                isFavorite = isFavorite,
-                onToggleFavorite = onToggleFavorite,
-                onBack = onBack,
-                onShare = { context.shareHospital(hospital) },
                 strings = strings
             )
 
             // 웰니스 프로그램다운 톤: 굵은 회색 구분선으로 정보를 뚝뚝 끊어내던 "행정 서류" 같은
             // 느낌 대신, 옅은 분홍 배경(HomeBackgroundPink) 위에 카드가 하나씩 둥둥 떠 있는 스파
             // 앱 스타일 레이아웃으로 바꿨다. 각 InfoSection이 스스로 흰 카드+그림자를 두르므로
-            // (아래 InfoSection 정의 참고) 여기서는 카드 사이 여백만 둔다.
-            Spacer(modifier = Modifier.height(4.dp))
-            SectionCard {
-                CategoryAndStatusRow(hospital = hospital, strings = strings)
-                Spacer(modifier = Modifier.height(8.dp))
+            // (아래 InfoSection 정의 참고) 여기서는 카드 사이 여백만 둔다. 사진-타이틀 간격도
+            // 다른 섹션 사이 여백(14dp)과 동일하게 맞춘다.
+            Spacer(modifier = Modifier.height(14.dp))
+            // 카드 배경/그림자 없이 옅은 분홍 배경(HomeBackgroundPink)이 그대로 비치는 영역.
+            // 타이틀 텍스트는 다른 배경 요소들과 같은 20dp 왼쪽 여백을 쓰지만, 즐겨찾기/공유
+            // 아이콘 줄은 20dp 안쪽 패딩을 아예 안 주고 화면 진짜 오른쪽 끝까지 fillMaxWidth로
+            // 채운다 — HospitalDetailTopBar의 actions Row와 동일한 폭 기준(전체 화면 너비)이라야
+            // 공유 아이콘의 오른쪽 끝이 탑바 findmap 아이콘의 오른쪽 끝과 정확히 같은 위치에 온다.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = hospital.name,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 20.dp).weight(1f, fill = false)
                 )
-                if (hospital.supportedLanguages.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        hospital.supportedLanguages.forEach { lang -> LanguageBadge(text = lang.toLanguageBadgeLabel()) }
+                Spacer(modifier = Modifier.width(12.dp))
+                // 즐겨찾기(흰 원 배경 없이 아이콘만)와 공유(기존 shareHospital 로직). 크기는
+                // 그대로 유지하고, 둘 사이 간격만 탑바 홈/길찾기보다 살짝 더 좁힌다(offset 8dp → 12dp).
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.offset(x = 12.dp)) {
+                        IconButton(onClick = onToggleFavorite) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
+                                tint = CoralPrimary
+                            )
+                        }
+                    }
+                    IconButton(onClick = { context.shareHospital(hospital) }) {
+                        Image(
+                            painter = painterResource(id = R.drawable.hospital_detail_share),
+                            contentDescription = strings.actionShare,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+            }
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                // 위치 서브타이틀이 타이틀 바로 아래 "밑줄"처럼 붙어 보이도록 간격을 최소로 줄인다.
+                Spacer(modifier = Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
@@ -205,102 +309,245 @@ private fun HospitalDetailContent(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = hospital.address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                ActionButtonsRow(hospital = hospital, strings = strings)
+            // 위치 서브타이틀-병원소개 사이는 다른 섹션 간 여백(14dp)의 약 3배를 둬서 "타이틀
+            // 블록"과 "카드형 정보 섹션들" 사이를 시각적으로 크게 구분한다.
+            Spacer(modifier = Modifier.height(42.dp))
+            Box(modifier = Modifier.onGloballyPositioned { introSectionTop = it.positionInParent().y.roundToInt() }) {
+                InfoSection(title = strings.introSectionTitle) {
+                    Text(
+                        text = hospital.description ?: strings.introEmpty,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            InfoSection(title = strings.introSectionTitle) {
-                Text(
-                    text = hospital.description ?: strings.introEmpty,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-            InfoSection(title = strings.basicInfoSectionTitle) {
-                BasicInfoRow(icon = Icons.Default.AccessTime, label = strings.openingHoursLabel, value = hospital.openingHours ?: strings.infoNotAvailable)
-                BasicInfoRow(icon = Icons.Default.Phone, label = strings.phoneLabel, value = hospital.phoneNumber ?: strings.infoNotAvailable)
-                BasicInfoRow(icon = Icons.Default.Public, label = strings.homepageLabel, value = hospital.homepageUrl ?: strings.infoNotAvailable)
-                BasicInfoRow(
-                    icon = Icons.Default.Language,
-                    label = strings.supportedLanguagesLabel,
-                    value = hospital.supportedLanguages.takeIf { it.isNotEmpty() }
-                        ?.joinToString(" · ") { it.toLanguageDisplayName() }
-                        ?: strings.infoNotAvailable
-                )
+            Box(modifier = Modifier.onGloballyPositioned { basicInfoSectionTop = it.positionInParent().y.roundToInt() }) {
+                InfoSection(title = strings.basicInfoSectionTitle) {
+                    BasicInfoRow(iconRes = R.drawable.hospital_detail_runtime, label = strings.openingHoursLabel, value = hospital.openingHours ?: strings.infoNotAvailable)
+                    BasicInfoRow(iconRes = R.drawable.hospital_detail_phone, label = strings.phoneLabel, value = hospital.phoneNumber ?: strings.infoNotAvailable)
+                    BasicInfoRow(iconRes = R.drawable.hospital_detail_homepage, label = strings.homepageLabel, value = hospital.homepageUrl ?: strings.infoNotAvailable)
+                    BasicInfoRow(
+                        iconRes = R.drawable.home_languege,
+                        label = strings.supportedLanguagesLabel,
+                        value = hospital.supportedLanguages.takeIf { it.isNotEmpty() }
+                            ?.joinToString(" · ") { it.toLanguageDisplayName() }
+                            ?: strings.infoNotAvailable
+                    )
+                }
             }
 
             if (hospital.specialties.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(14.dp))
-                InfoSection(title = strings.specialtiesSectionTitle) {
-                    val language = LocalAppStrings.current.language
-                    // 한글 라벨("피부·미용" 4자)은 한 줄에 다 들어가지만 영어 번역("Obstetrics &
-                    // Gynecology" 23자 등)은 훨씬 길어서, 줄바꿈 없는 Row에선 화면 밖으로 넘치거나
-                    // 칩이 잘려 보였다(영어로 바꿨을 때 "깨지는" 원인). androidx.compose.foundation의
-                    // 실험적 FlowRow를 처음 썼다가 이 프로젝트 의존성 그래프의 버전 스큐 때문에
-                    // 실기기에서 NoSuchMethodError로 즉시 죽는 걸 확인해서(core/ui/WrapRow.kt 문서
-                    // 참고), 안정 API만으로 짠 WrapRow로 교체했다.
-                    WrapRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalSpacing = 8.dp,
-                        verticalSpacing = 8.dp
-                    ) {
-                        hospital.specialties.forEach { specialty ->
-                            SpecialtyChip(text = translatedSpecialtyLabel(specialty, language))
+                Box(modifier = Modifier.onGloballyPositioned { specialtiesSectionTop = it.positionInParent().y.roundToInt() }) {
+                    InfoSection(title = strings.specialtiesSectionTitle) {
+                        val language = LocalAppStrings.current.language
+                        // 한글 라벨("피부·미용" 4자)은 한 줄에 다 들어가지만 영어 번역("Obstetrics &
+                        // Gynecology" 23자 등)은 훨씬 길어서, 줄바꿈 없는 Row에선 화면 밖으로 넘치거나
+                        // 칩이 잘려 보였다(영어로 바꿨을 때 "깨지는" 원인). androidx.compose.foundation의
+                        // 실험적 FlowRow를 처음 썼다가 이 프로젝트 의존성 그래프의 버전 스큐 때문에
+                        // 실기기에서 NoSuchMethodError로 즉시 죽는 걸 확인해서(core/ui/WrapRow.kt 문서
+                        // 참고), 안정 API만으로 짠 WrapRow로 교체했다.
+                        WrapRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalSpacing = 8.dp,
+                            verticalSpacing = 8.dp
+                        ) {
+                            hospital.specialties.forEach { specialty ->
+                                SpecialtyChip(text = translatedSpecialtyLabel(specialty, language))
+                            }
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            InfoSection(title = strings.locationSectionTitle) {
-                LocationMiniMap(hospital = hospital, onExpandClick = onNavigateToMap, strings = strings)
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = hospital.address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { context.launchDirections(hospital) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(imageVector = Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = strings.directionsButton)
+            Box(modifier = Modifier.onGloballyPositioned { locationSectionTop = it.positionInParent().y.roundToInt() }) {
+                InfoSection(title = strings.locationSectionTitle) {
+                    LocationMiniMap(hospital = hospital, onExpandClick = onNavigateToMap, strings = strings)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = hospital.address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            SectionCard(innerPadding = 0.dp) {
-                QuickLinkRow(label = strings.guideQuickLink, onClick = onNavigateToGuide)
-                HorizontalDivider(thickness = 1.dp, color = DividerColor)
-                QuickLinkRow(label = strings.nearbyQuickLink, onClick = onNavigateToNearby)
+            Box(modifier = Modifier.onGloballyPositioned { otherInfoSectionTop = it.positionInParent().y.roundToInt() }) {
+                SectionCard(innerPadding = 0.dp) {
+                    Text(
+                        text = strings.otherInfoSectionTitle,
+                        style = SectionTitleStyle,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(start = 20.dp, top = 20.dp, end = 20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    QuickLinkRow(label = strings.guideQuickLink, onClick = onNavigateToGuide)
+                    HorizontalDivider(thickness = 1.dp, color = DividerColor)
+                    QuickLinkRow(label = strings.nearbyQuickLink, onClick = onNavigateToNearby)
+                    HorizontalDivider(thickness = 1.dp, color = DividerColor)
+                    // 라벨은 기존 통화 문구(callButton = "전화 문의하기")를 그대로 재사용한다 — 새
+                    // 문구를 또 만들지 않는다. 문의(qa) 아이콘은 탑바로 옮겨서 여기는 다른 두 줄과
+                    // 동일한 기본 ">" 트레일링 아이콘을 그대로 쓴다(트레일링 파라미터 생략).
+                    QuickLinkRow(
+                        label = strings.callButton,
+                        onClick = { context.dialPhone(hospital.phoneNumber) }
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(14.dp))
         }
+    }
+}
 
-        BottomActionBar(
-            isFavorite = isFavorite,
-            onToggleFavorite = onToggleFavorite,
-            onCallClick = { context.dialPhone(hospital.phoneNumber) },
-            callEnabled = !hospital.phoneNumber.isNullOrBlank(),
-            strings = strings,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .onGloballyPositioned { coordinates ->
-                    bottomBarHeight = with(density) { coordinates.size.height.toDp() }
+// Home 탑바(HomeScreen.kt의 HomeTopAppBar)와 동일한 영역·배경·아이콘 크기의 병원 상세 전용
+// 탑바. 왼쪽은 표준 뒤로가기 화살표, 오른쪽은 홈 이동/문의(qa)/길찾기 아이콘 3개를 순서대로
+// 둔다 — 문의 아이콘이 새로 끼어들면서 홈 아이콘은 자연히 더 왼쪽으로 밀리고, 길찾기는 그대로
+// 가장 오른쪽 끝(다른 화면 요소들의 오른쪽 정렬 기준)에 남는다.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HospitalDetailTopBar(
+    onBack: () -> Unit,
+    onNavigateToHome: () -> Unit,
+    onNavigateToInquiry: () -> Unit,
+    onNavigateToDirections: () -> Unit,
+    hospitalName: String,
+    showTitle: Boolean
+) {
+    val strings = LocalAppStrings.current
+    TopAppBar(
+        title = {
+            // 본문 타이틀(HospitalDetailContent)과 완전히 같은 스타일 — 아래로 스크롤해서 본문
+            // 타이틀이 화면 밖으로 지나가면, 뒤로가기 아이콘 옆에 같은 크기로 나타난다.
+            AnimatedVisibility(
+                visible = showTitle,
+                enter = fadeIn(animationSpec = tween(durationMillis = 220, delayMillis = 80)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 140))
+            ) {
+                Text(
+                    text = hospitalName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1
+                )
+            }
+        },
+        navigationIcon = {
+            // 화살표(줄+화살촉) 모양의 ArrowBack 대신, 단순 꺾쇠 "<" 모양인 ChevronLeft를 쓴다.
+            // 지정된 코랄 톤(0xFFE36A6D, 디자인 토큰 CoralPrimary와는 미세하게 다른 값)으로 tint.
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = strings.common.backContentDescription,
+                    tint = Color(0xFFE36A6D),
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        },
+        actions = {
+            // 세 아이콘(홈/문의/길찾기) 사이 간격은 그대로 두고, 그룹 전체를 타이틀 영역의 공유
+            // 아이콘(화면 진짜 오른쪽 끝까지 fillMaxWidth)과 같은 위치로 밀어준다 — TopAppBar의
+            // actions 슬롯 자체가 안쪽으로 약간 패딩이 있어 그만큼 오른쪽으로 당긴다.
+            Row(modifier = Modifier.offset(x = 12.dp)) {
+                // Home 탑바의 언어선택 아이콘과 같은 자리 — 같은 오프셋으로 간격까지 맞춘다.
+                Box(modifier = Modifier.offset(x = 8.dp)) {
+                    IconButton(onClick = onNavigateToHome) {
+                        Image(
+                            painter = painterResource(id = R.drawable.hospital_detail_home),
+                            contentDescription = strings.hospitalDetail.homeContentDescription,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
-        )
+                // 병원 문의(문자 발송) 아이콘 — 홈과 길찾기 사이에 새로 끼워 넣는다. 이 아이콘 자체는
+                // 옮기지 않는다(옮기면 홈-문의 간격까지 같이 벌어진다) — 대신 오른쪽 길찾기를 왼쪽으로
+                // 당겨서 문의-길찾기 간격만 홈-문의 간격과 같게 좁힌다.
+                IconButton(onClick = onNavigateToInquiry) {
+                    Image(
+                        painter = painterResource(id = R.drawable.hospital_detail_qa),
+                        contentDescription = strings.hospitalDetail.actionInquiry,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                // Home 탑바의 설정 아이콘과 같은 자리. 기존 "길찾기"(launchExternalDirections) 로직을
+                // 그대로 매핑한다. 문의 아이콘과의 간격이 홈-문의 간격보다 넓어 보여서 좀 더 좁힌다.
+                Box(modifier = Modifier.offset(x = (-14).dp)) {
+                    IconButton(onClick = onNavigateToDirections) {
+                        Image(
+                            painter = painterResource(id = R.drawable.hospital_detail_findmap),
+                            contentDescription = strings.hospitalDetail.directionsButton,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+            }
+        },
+        windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink)
+    )
+}
+
+// 알약(pill) 모양의 FilterChipPill(HospitalSearchListScreen 참고) 대신, 단순 텍스트+밑줄
+// 탭 5개를 슬라이드(가로 스크롤) 없이 균등폭으로 배치한다. 기본은 회색 비활성 밑줄이고,
+// 탭을 고르면 뒤로가기 아이콘과 같은 코랄 톤으로 텍스트/밑줄이 활성화되면서 해당 섹션으로
+// 스크롤된다(호출부의 onTabSelected 참고).
+@Composable
+private fun HospitalDetailSectionTabsBar(
+    strings: HospitalDetailStrings,
+    selectedIndex: Int?,
+    onTabSelected: (Int) -> Unit
+) {
+    val labels = listOf(
+        strings.introSectionTitle,
+        strings.basicInfoSectionTitle,
+        strings.specialtiesSectionTitle,
+        strings.locationSectionTitle,
+        strings.otherInfoSectionTitle
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(HomeBackgroundPink)
+            .padding(horizontal = 8.dp, vertical = 10.dp)
+    ) {
+        labels.forEachIndexed { index, label ->
+            val active = index == selectedIndex
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onTabSelected(index) },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (active) Color(0xFFE36A6D) else TextSecondary,
+                    fontWeight = if (active) FontWeight.Bold else null,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                // 탭마다 끊어진 짧은 밑줄 대신, 각 탭이 자기 폭을 전부 채워서 옆 탭의 밑줄과
+                // 이어붙어 탭바 전체 폭에 걸친 하나의 연결된 선처럼 보이게 한다.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(if (active) Color(0xFFE36A6D) else DividerColor)
+                )
+            }
+        }
     }
 }
 
@@ -316,102 +563,95 @@ private val HospitalDetailFallbackImages: List<Any> = listOf(
 @Composable
 private fun ImageCarouselSection(
     imageUrls: List<Any>,
-    isFavorite: Boolean,
-    onToggleFavorite: () -> Unit,
-    onBack: () -> Unit,
-    onShare: () -> Unit,
     strings: HospitalDetailStrings
 ) {
     val pageCount = imageUrls.size.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
-    // 화면 맨 위에 딱 붙은 배너 대신, 위쪽에 작은 여백을 두고 네 모서리를 전부 둥글려서
-    // 한 장의 사진처럼 떠 보이게 한다(기존엔 아래쪽만 둥글려 카드 스택과 이어붙인 배너 느낌이었음).
+    // Home 배너(HeroBannerSection)와 동일한 피킹(peek) 캐러셀 톤 — contentPadding으로 좌우에
+    // 다음/이전 페이지가 살짝 보이게 한다. 다만 Home처럼 양 끝을 순환시키는 가상 페이지 트릭은
+    // 쓰지 않는다: 실제 페이지 개수 그대로 bounded 페이저를 쓰면 첫 장 왼쪽/마지막 장 오른쪽엔
+    // 넘길 페이지 자체가 없어 자연히 아무것도 peek 되지 않고 슬라이드도 안 먹힌다 — 요청한
+    // "1번에서 왼쪽으로 4번 슬라이드 금지, 4번에서 오른쪽으로 1번 슬라이드 금지, 2·3번은 가능"
+    // 동작 그대로다. 화면 맨 위에 딱 붙지 않게 위쪽에 작은 여백만 둔다(둥근 모서리는 각 페이지에
+    // 개별로 준다 — 그래야 옆으로 peek되는 이웃 페이지도 카드 형태로 보인다).
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 10.dp)
             .height(260.dp)
-            .clip(RoundedCornerShape(28.dp))
     ) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            val imageUrl = imageUrls.getOrNull(page)
-            if (imageUrl != null) {
-                AsyncImageBox(
-                    model = imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize().background(Color(0xFFE9E9EE))
-                )
-            } else {
-                // 실제 병원 사진이 아직 없는 경우가 대부분이라(샘플 데이터에 imageUrls가 비어있음)
-                // 이 자리표시자가 사실상 기본 히어로가 된다 — 무채색 박스 대신 앱 브랜드 톤(코랄)의
-                // 옅은 그라데이션 + 아이콘 배지로, DocumentScanScreen 인트로와 같은 톤을 재사용한다.
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(CoralPrimaryContainer.copy(alpha = 0.6f), Color(0xFFEDEDF2))
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(
-                                    brush = Brush.radialGradient(listOf(Color.White, CoralPrimaryContainer)),
-                                    shape = CircleShape
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            pageSpacing = 10.dp,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(28.dp))
+            ) {
+                val imageUrl = imageUrls.getOrNull(page)
+                if (imageUrl != null) {
+                    AsyncImageBox(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().background(Color(0xFFE9E9EE))
+                    )
+                } else {
+                    // 실제 병원 사진이 아직 없는 경우가 대부분이라(샘플 데이터에 imageUrls가 비어있음)
+                    // 이 자리표시자가 사실상 기본 히어로가 된다 — 무채색 박스 대신 앱 브랜드 톤(코랄)의
+                    // 옅은 그라데이션 + 아이콘 배지로, DocumentScanScreen 인트로와 같은 톤을 재사용한다.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(CoralPrimaryContainer.copy(alpha = 0.6f), Color(0xFFEDEDF2))
                                 )
-                                .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.18f), shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocalHospital,
-                                contentDescription = null,
-                                tint = CoralPrimary,
-                                modifier = Modifier.size(32.dp)
-                            )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .background(
+                                        brush = Brush.radialGradient(listOf(Color.White, CoralPrimaryContainer)),
+                                        shape = CircleShape
+                                    )
+                                    .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.18f), shape = CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocalHospital,
+                                    contentDescription = null,
+                                    tint = CoralPrimary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(text = strings.imagePlaceholderLabel, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(text = strings.imagePlaceholderLabel, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                     }
                 }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "${page + 1}/$pageCount",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                }
             }
-        }
-
-        RoundIconButton(
-            icon = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = LocalAppStrings.current.common.backContentDescription,
-            onClick = onBack,
-            modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-            size = 36.dp
-        )
-        Row(
-            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-            // 두 버튼 다 시각적으로는 36dp인데 RoundIconButton/FavoriteHeartButton이 각자
-            // minimumInteractiveComponentSize()로 터치 영역을 48dp까지 보이지 않게 넓힌다 —
-            // 8dp 간격이면 그 넓어진 터치 영역끼리 겹쳐서 옆 버튼을 눌러버릴 수 있어 12dp로 늘린다.
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            RoundIconButton(icon = Icons.Default.Share, contentDescription = strings.shareContentDescription, onClick = onShare, size = 36.dp)
-            FavoriteHeartButton(isFavorite = isFavorite, onClick = onToggleFavorite)
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(12.dp)
-                .clip(RoundedCornerShape(percent = 50))
-                .background(Color.Black.copy(alpha = 0.5f))
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = "${pagerState.currentPage + 1}/$pageCount",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White
-            )
         }
     }
 }
@@ -421,132 +661,6 @@ private fun ImageCarouselSection(
 // 없는 자유 문구(예: 실제 API의 세부 진료과목명)는 원문을 그대로 표시한다.
 private fun translatedSpecialtyLabel(specialty: String, language: SupportedLanguage): String =
     MedicalCategory.entries.find { it.label == specialty }?.translatedLabel(language) ?: specialty
-
-@Composable
-private fun CategoryAndStatusRow(hospital: Hospital, strings: HospitalDetailStrings) {
-    val language = LocalAppStrings.current.language
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 영어 등 긴 번역 문구가 2개 붙으면 오른쪽 영업 상태 배지와 부딪힐 수 있어, weight(fill=false)로
-        // 남는 공간만 쓰게 하고 WrapRow로 넘치면 아래 줄로 흘러가게 한다(위 진료과목 섹션과 같은 이유 —
-        // 실험적 FlowRow는 이 프로젝트에서 NoSuchMethodError로 크래시났다).
-        WrapRow(
-            modifier = Modifier.weight(1f, fill = false),
-            horizontalSpacing = 6.dp,
-            verticalSpacing = 4.dp
-        ) {
-            hospital.specialties.take(2).forEach { specialty ->
-                Box(
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.small)
-                        .background(CoralPrimaryContainer)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    // SpecialtyChip과 같은 이유로 줄바꿈을 막는다(FlowRow가 좁은 잔여 공간에 텍스트를
-                    // 세로로 욱여넣는 것 방지).
-                    // 글자색은 CoralPrimary가 아니라 TextPrimary를 쓴다 — CoralPrimaryContainer
-                    // 배경 위 CoralPrimary 텍스트는 명암비를 재보면 약 2.5:1로, WCAG AA 본문
-                    // 기준(4.5:1)에 크게 못 미친다(UI/UX Pro Max 스킬 검증). 배경의 코랄 톤만으로도
-                    // "강조 배지"라는 건 충분히 전달되니 실제 읽어야 하는 글자는 명암비가 넉넉한
-                    // 짙은 색으로 둔다.
-                    Text(
-                        text = translatedSpecialtyLabel(specialty, language),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                }
-            }
-        }
-        hospital.isOpen?.let { isOpen ->
-            val (color, label) = if (isOpen) StatusOpenGreen to strings.statusOpen else StatusClosedGray to strings.statusClosed
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(color))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = label, style = MaterialTheme.typography.labelSmall, color = color)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionButtonsRow(hospital: Hospital, strings: HospitalDetailStrings) {
-    val context = LocalContext.current
-    val hasPhoneNumber = !hospital.phoneNumber.isNullOrBlank()
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.Phone,
-            label = strings.actionCall,
-            backgroundColor = CoralPrimaryContainer,
-            iconTint = CoralPrimary,
-            enabled = hasPhoneNumber,
-            onClick = { context.dialPhone(hospital.phoneNumber) }
-        )
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.Navigation,
-            label = strings.actionDirections,
-            backgroundColor = Color(0xFFEAF4FB),
-            iconTint = SkyBlue,
-            onClick = { context.launchDirections(hospital) }
-        )
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.AutoMirrored.Filled.Chat,
-            label = strings.actionInquiry,
-            backgroundColor = Color(0xFFF2F2F2),
-            iconTint = TextSecondary,
-            enabled = hasPhoneNumber,
-            onClick = { context.smsInquiry(hospital, strings) }
-        )
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.Share,
-            label = strings.actionShare,
-            backgroundColor = Color(0xFFF2F2F2),
-            iconTint = TextSecondary,
-            onClick = { context.shareHospital(hospital) }
-        )
-    }
-}
-
-@Composable
-private fun ActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    backgroundColor: Color,
-    iconTint: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
-) {
-    val contentAlpha = if (enabled) 1f else 0.4f
-    Column(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(backgroundColor.copy(alpha = contentAlpha))
-                .padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // clickable()이 이 Column 전체를 하나의 접근성 노드로 묶기 때문에, 아이콘에도
-            // label과 같은 contentDescription을 달면 바로 아래 Text(label)와 겹쳐 "통화, 통화"처럼
-            // 두 번 읽힌다 — 장식용으로 뺀다(MapScreen의 FilterPillButton과 같은 이유).
-            Icon(imageVector = icon, contentDescription = null, tint = iconTint.copy(alpha = contentAlpha), modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextPrimary.copy(alpha = contentAlpha))
-    }
-}
 
 // 웰니스 프로그램의 스파 앱다운 톤을 위해 각 정보 구획을 옅은 분홍 배경 위에 뜬 흰 카드로
 // 감싼다(Soft UI: 은은한 그림자 + 넉넉한 라운드 코너). InfoSection은 제목+본문을 카드 안에
@@ -571,11 +685,13 @@ private fun SectionCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
+            // Home의 SectionCardContainer(HomeScreen.kt)와 동일한 그림자 톤 — 사진 캐러셀을
+            // 제외한 타이틀/소개/기본정보 등 흰 카드 영역 전부가 이 SectionCard를 공유해서 쓴다.
             .shadow(
-                elevation = 2.dp,
+                elevation = 8.dp,
                 shape = MaterialTheme.shapes.large,
-                ambientColor = Color.Black.copy(alpha = 0.05f),
-                spotColor = Color.Black.copy(alpha = 0.05f)
+                ambientColor = Color.Black.copy(alpha = 0.4f),
+                spotColor = Color.Black.copy(alpha = 0.4f)
             )
             .clip(MaterialTheme.shapes.large)
             .background(Color.White)
@@ -585,16 +701,20 @@ private fun SectionCard(
 }
 
 @Composable
-private fun BasicInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+private fun BasicInfoRow(iconRes: Int, label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(30.dp).clip(CircleShape).background(CoralPrimaryContainer),
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .border(width = 1.dp, color = DividerColor, shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(15.dp))
+            Image(painter = painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(22.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
@@ -656,8 +776,18 @@ private fun LocationMiniMap(hospital: Hospital, onExpandClick: () -> Unit, strin
     }
 }
 
+// 트레일링 슬롯을 교체 가능하게 열어둬서, 기본 ">" 화살표 대신 다른 트리거(전화 아이콘 등)를
+// 써야 하는 줄(예: "전화 문의하기")도 같은 높이(20/16dp 패딩)를 그대로 재사용한다 — 별도
+// 컴포저블을 두면 IconButton의 48dp 최소 터치 영역 때문에 줄 높이가 달라지는 문제가 있었다.
+// 왼쪽 아이콘 없이 텍스트만 왼쪽 정렬한다.
 @Composable
-private fun QuickLinkRow(label: String, onClick: () -> Unit) {
+private fun QuickLinkRow(
+    label: String,
+    onClick: () -> Unit,
+    trailingIcon: @Composable () -> Unit = {
+        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
+    }
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -666,60 +796,8 @@ private fun QuickLinkRow(label: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.MedicalServices, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-        }
-        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
-    }
-}
-
-@Composable
-private fun BottomActionBar(
-    isFavorite: Boolean,
-    onToggleFavorite: () -> Unit,
-    onCallClick: () -> Unit,
-    callEnabled: Boolean,
-    strings: HospitalDetailStrings,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth().wrapContentHeight(),
-        color = Color.White,
-        shadowElevation = 12.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .border(width = 1.dp, color = DividerColor, shape = CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                FavoriteHeartButton(isFavorite = isFavorite, onClick = onToggleFavorite, size = 32.dp)
-            }
-            Button(
-                onClick = onCallClick,
-                enabled = callEnabled,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
-            ) {
-                Text(
-                    text = if (callEnabled) strings.callButton else strings.callButtonDisabled,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+        trailingIcon()
     }
 }
 

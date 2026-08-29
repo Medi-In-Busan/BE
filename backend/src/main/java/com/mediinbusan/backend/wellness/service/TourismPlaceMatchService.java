@@ -103,7 +103,7 @@ public class TourismPlaceMatchService {
         }
         return new TourismPlaceMatchResponse(true, new TourismCatalogItemResponse(
             item.id(), item.title(), item.subtitle(), item.address(), item.imageUrl(),
-            item.latitude(), item.longitude(), extra
+            item.latitude(), item.longitude(), item.categoryCode(), extra
         ));
     }
 

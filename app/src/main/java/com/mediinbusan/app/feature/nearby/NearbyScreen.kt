@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,7 +79,13 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.BrandTopAppBar
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.InitialCardRevealCount
+import com.mediinbusan.app.core.ui.ShimmerSkeleton
+import com.mediinbusan.app.core.ui.rememberCardRevealProgress
+import com.mediinbusan.app.core.ui.rememberRevealedCount
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.HospitalWellnessRoute
@@ -90,9 +97,8 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 fun NearbyScreen(
     hospitalId: String,
     onSelectTourismItem: () -> Unit,
-    onNavigateToNearbyMap: () -> Unit,
     onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: NearbyViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -111,9 +117,9 @@ fun NearbyScreen(
             viewModel.selectTourismItem(category, item)
             onSelectTourismItem()
         },
-        onNavigateToNearbyMap = onNavigateToNearbyMap,
         onNavigateToTourismCatalog = onNavigateToTourismCatalog,
-        onBack = onBack,
+        onNavigateToSettings = onNavigateToSettings,
+        onLanguageSelected = viewModel::onLanguageSelected,
         onRetry = { viewModel.load(hospitalId) }
     )
 }
@@ -124,27 +130,18 @@ private fun NearbyContent(
     uiState: NearbyUiState,
     onSelectHotPlace: (TourismHotPlace) -> Unit,
     onSelectCatalogItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
-    onNavigateToNearbyMap: () -> Unit,
     onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
-    onBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onLanguageSelected: (String) -> Unit,
     onRetry: () -> Unit
 ) {
     Scaffold(
         containerColor = HomeBackgroundPink,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
-                title = { Text(text = "관광·웰니스") },
-                actions = {
-                    IconButton(onClick = onNavigateToNearbyMap) {
-                        Icon(imageVector = Icons.Default.Map, contentDescription = "병원 주변 지도 보기")
-                    }
-                }
+            BrandTopAppBar(
+                onSettingsClick = onNavigateToSettings,
+                currentLanguageCode = uiState.selectedLanguage,
+                onLanguageSelected = onLanguageSelected
             )
         }
     ) { innerPadding ->
@@ -181,7 +178,12 @@ private fun NearbyLoadedContent(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, top = 14.dp, end = 20.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            top = 14.dp,
+            end = 20.dp,
+            bottom = BottomNavBarHeight + 32.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         item {
@@ -246,6 +248,7 @@ private fun TourismPlaceSlider(
     onSeeAll: (TourismCatalogCategory) -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { items.size.coerceAtLeast(1) })
+    val revealedCount = rememberRevealedCount(itemsKey = items, itemCount = items.size)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
@@ -274,11 +277,13 @@ private fun TourismPlaceSlider(
             if (item == null) {
                 TourismPlaceEmptyCard()
             } else {
-                TourismPlacePreviewCard(
-                    item = item,
-                    accent = accent,
-                    onClick = { onSelectItem(category, item) }
-                )
+                TourismRevealContent(index = page, revealedCount = revealedCount, modifier = Modifier.fillMaxSize()) {
+                    TourismPlacePreviewCard(
+                        item = item,
+                        accent = accent,
+                        onClick = { onSelectItem(category, item) }
+                    )
+                }
             }
         }
         if (items.size > 1) {
@@ -437,6 +442,7 @@ private fun HotTourismTopFiveSection(
     onSelectHotPlace: (TourismHotPlace) -> Unit,
     onSeeAll: () -> Unit
 ) {
+    val revealedCount = rememberRevealedCount(itemsKey = hotPlaces, itemCount = hotPlaces.size)
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -456,15 +462,10 @@ private fun HotTourismTopFiveSection(
                 )
             }
             Text(
-                text = "부산에서 지금\n가장 뜨거운 5곳",
+                text = "부산 핫플레이스 TOP5",
                 style = MaterialTheme.typography.headlineMedium,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "관광 혼잡도 데이터를 바탕으로 순위를 보여드려요.",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
             )
         }
         when {
@@ -480,19 +481,26 @@ private fun HotTourismTopFiveSection(
                 Text("현재 표시할 혼잡도 순위가 없습니다.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                HotPlaceFeaturedCard(
-                    hotPlace = hotPlaces.first(),
-                    onClick = { onSelectHotPlace(hotPlaces.first()) }
-                )
+                TourismRevealContent(index = 0, revealedCount = revealedCount) {
+                    HotPlaceFeaturedCard(
+                        hotPlace = hotPlaces.first(),
+                        onClick = { onSelectHotPlace(hotPlaces.first()) }
+                    )
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     hotPlaces.drop(1).take(2).forEachIndexed { index, hotPlace ->
-                        HotPlaceGridCard(
-                            rank = index + 2,
-                            hotPlace = hotPlace,
-                            onClick = { onSelectHotPlace(hotPlace) },
+                        TourismRevealContent(
+                            index = index + 1,
+                            revealedCount = revealedCount,
                             modifier = Modifier.weight(1f)
-                        )
+                        ) {
+                            HotPlaceGridCard(
+                                rank = index + 2,
+                                hotPlace = hotPlace,
+                                onClick = { onSelectHotPlace(hotPlace) }
+                            )
+                        }
                     }
                 }
 
@@ -509,11 +517,13 @@ private fun HotTourismTopFiveSection(
                                 if (index > 0) {
                                     androidx.compose.material3.HorizontalDivider(color = DividerColor)
                                 }
-                                HotPlaceCompactRow(
-                                    rank = index + 4,
-                                    hotPlace = hotPlace,
-                                    onClick = { onSelectHotPlace(hotPlace) }
-                                )
+                                TourismRevealContent(index = index + 3, revealedCount = revealedCount) {
+                                    HotPlaceCompactRow(
+                                        rank = index + 4,
+                                        hotPlace = hotPlace,
+                                        onClick = { onSelectHotPlace(hotPlace) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -525,6 +535,32 @@ private fun HotTourismTopFiveSection(
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = CoralPrimary, modifier = Modifier.size(16.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TourismRevealContent(
+    index: Int,
+    revealedCount: Int,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val isAnimated = index < InitialCardRevealCount
+    val revealProgress = rememberCardRevealProgress(isAnimated, index < revealedCount)
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = revealProgress
+                    translationY = (1f - revealProgress) * 10.dp.toPx()
+                }
+        ) {
+            content()
+        }
+        if (isAnimated && revealProgress < 1f) {
+            ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())
         }
     }
 }

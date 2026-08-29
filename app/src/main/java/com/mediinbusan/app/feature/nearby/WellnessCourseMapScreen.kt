@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,7 +38,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +57,7 @@ import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
@@ -75,19 +80,16 @@ fun WellnessCourseMapScreen(
     viewModel: WellnessCourseMapViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var mapFocusRequestId by remember { mutableIntStateOf(0) }
     LaunchedEffect(hospitalId, courseIndex) { viewModel.load(hospitalId, courseIndex) }
 
     Scaffold(
         containerColor = WellnessCourseCanvas,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
-                title = { Text("추천 웰니스 코스") }
+            BackOnlyNavigationBar(
+                onBack = onBack,
+                background = WellnessCourseCanvas,
+                onMapDetailsClick = uiState.route?.let { { mapFocusRequestId++ } }
             )
         }
     ) { innerPadding ->
@@ -104,6 +106,7 @@ fun WellnessCourseMapScreen(
                 travelMode = uiState.travelMode,
                 isRouteRefreshing = uiState.isRouteRefreshing,
                 routeErrorMessage = uiState.routeErrorMessage,
+                mapFocusRequestId = mapFocusRequestId,
                 onSelect = viewModel::select,
                 onTravelModeSelect = viewModel::selectTravelMode,
                 modifier = Modifier.padding(innerPadding)
@@ -119,10 +122,13 @@ private fun WellnessRouteContent(
     travelMode: TravelMode,
     isRouteRefreshing: Boolean,
     routeErrorMessage: String?,
+    mapFocusRequestId: Int,
     onSelect: (String) -> Unit,
     onTravelModeSelect: (TravelMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+    var isMapInteractionActive by remember { mutableStateOf(false) }
     val pins = remember(route, selectedId) {
         buildList {
             add(
@@ -157,8 +163,14 @@ private fun WellnessRouteContent(
         )
     }
 
+    LaunchedEffect(mapFocusRequestId) {
+        if (mapFocusRequestId > 0) listState.animateScrollToItem(COURSE_MAP_ITEM_INDEX)
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
+        userScrollEnabled = !isMapInteractionActive,
         contentPadding = PaddingValues(bottom = 36.dp)
     ) {
         item {
@@ -216,6 +228,7 @@ private fun WellnessRouteContent(
                     pins = pins,
                     routePaths = routePath,
                     onPinClick = onSelect,
+                    onMapInteractionChange = { isMapInteractionActive = it },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -248,6 +261,8 @@ private fun WellnessRouteContent(
         }
     }
 }
+
+private const val COURSE_MAP_ITEM_INDEX = 2
 
 @Composable
 private fun TravelModeSelector(

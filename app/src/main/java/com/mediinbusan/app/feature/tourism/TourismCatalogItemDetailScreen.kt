@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,6 +49,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,10 +75,13 @@ import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
-import com.mediinbusan.app.core.ui.RoundIconButton
+import com.mediinbusan.app.core.ui.KakaoMapView
+import com.mediinbusan.app.core.ui.MapPin
+import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
@@ -84,11 +91,13 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 @Composable
 fun TourismCatalogItemDetailScreen(
     onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
     viewModel: TourismCatalogItemDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val context = LocalContext.current
+    var mapFocusRequestId by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(uiState.consumed, uiState.selectedTitle) {
         if (uiState.consumed && uiState.selectedTitle == null) onBack()
@@ -98,16 +107,30 @@ fun TourismCatalogItemDetailScreen(
     val item = uiState.item
     val category = uiState.category
     if (item != null && category != null) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(HomeBackgroundPink)
         ) {
+            BackOnlyNavigationBar(
+                onBack = onBack,
+                background = HomeBackgroundPink,
+                onHomeClick = onNavigateHome,
+                onMapDetailsClick = if (
+                    category != TourismCatalogCategory.CROWDING &&
+                    item.latitude != null &&
+                    item.longitude != null
+                ) {
+                    { mapFocusRequestId++ }
+                } else {
+                    null
+                }
+            )
             TourismDetailLoaded(
                 item = item,
                 category = category,
-                onBack = onBack,
-                modifier = Modifier.fillMaxSize(),
+                mapFocusRequestId = mapFocusRequestId,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 onOpenMap = {
                     context.launchExternalDirections(
                         latitude = item.latitude,
@@ -127,14 +150,10 @@ fun TourismCatalogItemDetailScreen(
     Scaffold(
         containerColor = HomeBackgroundPink,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.tourism.backContentDescription)
-                    }
-                },
-                title = { Text(strings.tourism.catalogDefaultTitle) }
+            BackOnlyNavigationBar(
+                onBack = onBack,
+                background = HomeBackgroundPink,
+                onHomeClick = onNavigateHome
             )
         }
     ) { innerPadding ->
@@ -157,26 +176,55 @@ fun TourismCatalogItemDetailScreen(
 private fun TourismDetailLoaded(
     item: TourismCatalogItem,
     category: TourismCatalogCategory,
-    onBack: () -> Unit,
+    mapFocusRequestId: Int,
     onOpenMap: () -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
+    val listState = rememberLazyListState()
     val sectionLabels = strings.language.detailSectionLabels()
     val externalLinkUrl = item.details["homepage"]
         ?: item.details.values.firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
     val labeledDetails = item.details.entries.mapNotNull { (key, value) ->
         strings.tourism.detailFieldLabels[key]?.let { label -> DetailValue(key, label, value) }
     }
+    val mapPin = remember(item.id, item.latitude, item.longitude) {
+        val latitude = item.latitude
+        val longitude = item.longitude
+        if (latitude != null && longitude != null) {
+            MapPin(item.id, latitude, longitude, MapPinType.TOURIST, selected = true)
+        } else {
+            null
+        }
+    }
+
+    LaunchedEffect(mapFocusRequestId) {
+        if (mapFocusRequestId > 0 && mapPin != null) {
+            listState.animateScrollToItem(TOURISM_DETAIL_MAP_ITEM_INDEX)
+        }
+    }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item { TourismHero(item = item, onBack = onBack) }
+        item { TourismHero(item = item) }
         item { TourismSummaryCard(item = item, category = category) }
+        mapPin?.let { pin ->
+            item {
+                KakaoMapView(
+                    pins = listOf(pin),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .height(260.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                )
+            }
+        }
         item.subtitle?.takeIf { it.isNotBlank() }?.let { description ->
             item { DescriptionCard(title = sectionLabels.introduction, description = description) }
         }
@@ -211,8 +259,10 @@ private fun TourismDetailLoaded(
     }
 }
 
+private const val TOURISM_DETAIL_MAP_ITEM_INDEX = 2
+
 @Composable
-private fun TourismHero(item: TourismCatalogItem, onBack: () -> Unit) {
+private fun TourismHero(item: TourismCatalogItem) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -240,13 +290,6 @@ private fun TourismHero(item: TourismCatalogItem, onBack: () -> Unit) {
                 }
             }
         }
-        RoundIconButton(
-            icon = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = LocalAppStrings.current.tourism.backContentDescription,
-            onClick = onBack,
-            modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-            size = 36.dp
-        )
     }
 }
 

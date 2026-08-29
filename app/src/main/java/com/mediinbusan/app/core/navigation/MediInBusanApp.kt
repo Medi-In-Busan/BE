@@ -9,14 +9,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocalHospital
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -38,6 +38,8 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.core.ui.BottomNavBar
 import com.mediinbusan.app.core.ui.BottomNavTabUiModel
+import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
+import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -116,7 +118,18 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?, mapSelection
             backStackEntry.toRoute<Route.MapView>().hospitalId == null && !mapSelectionActive
         }
         destination.hasRoute(Route.DocumentScan::class) -> true
+        destination.hasRoute(Route.Nearby::class) -> true
         destination.hasRoute(Route.RecommendedTourismCourse::class) -> true
+        // 무장애 관광·부산 관광지(언어별 PLACES_KO/EN/JA/ZH) 리스트업 화면만 병원 목록(S-04)과
+        // 동일하게 하단 탭바를 노출한다 — 다른 관광 카테고리는 여전히 자체 뒤로가기 버튼이 있는
+        // 일반 push 화면(TourismCatalogScreen.kt 참고). 바텀탭 5개 중 이 화면들에 대응하는 탭은
+        // 없어 이 경우 어떤 탭도 활성 표시되지 않는다.
+        destination.hasRoute(Route.TourismCatalog::class) -> {
+            val category = runCatching {
+                TourismCatalogCategory.valueOf(backStackEntry.toRoute<Route.TourismCatalog>().category)
+            }.getOrNull()
+            category == TourismCatalogCategory.ACCESSIBLE || category?.isLanguageVariant == true
+        }
         // Settings/알림설정/즐겨찾기/최근본항목/정보 상세는 전부 공용 탑바 없이 자체 뒤로가기
         // 버튼이 있는 일반 push 화면이라 하단 탭바를 안 보여준다(SettingsScreen.kt 참고).
         else -> false
@@ -132,6 +145,7 @@ private fun bottomNavTabs(
     currentDestination: NavDestination?
 ): List<BottomNavTabUiModel> {
     val strings = LocalAppStrings.current.common
+    val homeStrings = LocalAppStrings.current.home
     return listOf(
         BottomNavTabUiModel(
             label = strings.bottomNavHomeLabel,
@@ -144,8 +158,7 @@ private fun bottomNavTabs(
             label = strings.bottomNavHospitalLabel,
             icon = Icons.Outlined.LocalHospital,
             selectedIcon = Icons.Filled.LocalHospital,
-            selected = currentDestination.isRouteSelected<Route.HospitalSearchList>() ||
-                currentDestination.isRouteSelected<Route.RecommendedTourismCourse>(),
+            selected = currentDestination.isRouteSelected<Route.HospitalSearchList>(),
             onClick = { navController.navigateToTab(Route.HospitalSearchList) }
         ),
         BottomNavTabUiModel(
@@ -162,12 +175,16 @@ private fun bottomNavTabs(
             selected = currentDestination.isRouteSelected<Route.MapView>(),
             onClick = { navController.navigateToTab(Route.MapView()) }
         ),
+        // 문서스캔 탭을 추천 웰니스로 교체 — 문서스캔 자체는 Home의 FAB(AiChatFab 위 문서스캔
+        // 아이콘)으로 계속 접근 가능하다. 웰니스 메인은 다른 루트 탭과 동일하게 저장된 상태를
+        // 복원하고 중복 목적지를 쌓지 않도록 navigateToTab을 쓴다.
         BottomNavTabUiModel(
-            label = strings.bottomNavDocumentScanLabel,
-            icon = Icons.Outlined.CameraAlt,
-            selectedIcon = Icons.Filled.CameraAlt,
-            selected = currentDestination.isRouteSelected<Route.DocumentScan>(),
-            onClick = { navController.navigateToTab(Route.DocumentScan) }
+            label = homeStrings.quickLinkWellness,
+            icon = Icons.Outlined.Spa,
+            selectedIcon = Icons.Filled.Spa,
+            selected = currentDestination.isRouteSelected<Route.Nearby>() ||
+                currentDestination.isRouteSelected<Route.RecommendedTourismCourse>(),
+            onClick = { navController.navigateToTab(Route.Nearby(hospitalId = "14")) }
         )
     )
 }

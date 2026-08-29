@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +61,7 @@ import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -84,20 +87,17 @@ fun RecommendedCourseScreen(
     viewModel: RecommendedCourseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var mapFocusRequestId by remember { mutableIntStateOf(0) }
     val strings = uiState.language.courseStrings()
     LaunchedEffect(categoryName, districtName) { viewModel.load(categoryName, districtName) }
 
     Scaffold(
         containerColor = HomeBackgroundPink,
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = HomeBackgroundPink),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
-                    }
-                },
-                title = { Text(strings.topBarTitle) }
+            BackOnlyNavigationBar(
+                onBack = onBack,
+                background = HomeBackgroundPink,
+                onMapDetailsClick = uiState.course?.let { { mapFocusRequestId++ } }
             )
         }
     ) { innerPadding ->
@@ -122,6 +122,7 @@ fun RecommendedCourseScreen(
                 isRouteRefreshing = uiState.isRouteRefreshing,
                 routeErrorMessage = uiState.routeErrorMessage,
                 strings = strings,
+                mapFocusRequestId = mapFocusRequestId,
                 onSelectStop = viewModel::selectStop,
                 onTravelModeSelect = viewModel::selectTravelMode
             )
@@ -140,11 +141,14 @@ private fun CourseContent(
     isRouteRefreshing: Boolean,
     routeErrorMessage: String?,
     strings: CourseStrings,
+    mapFocusRequestId: Int,
     onSelectStop: (String) -> Unit,
     onTravelModeSelect: (TravelMode) -> Unit
 ) {
+    val listState = rememberLazyListState()
     var zoomInRequestId by remember { mutableIntStateOf(0) }
     var zoomOutRequestId by remember { mutableIntStateOf(0) }
+    var isMapInteractionActive by remember { mutableStateOf(false) }
     val pins = remember(course, selectedStopId) {
         course.stops.map { stop ->
             MapPin(
@@ -166,8 +170,14 @@ private fun CourseContent(
         )
     }
 
+    LaunchedEffect(mapFocusRequestId) {
+        if (mapFocusRequestId > 0) listState.animateScrollToItem(COURSE_MAP_ITEM_INDEX)
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
+        userScrollEnabled = !isMapInteractionActive,
         contentPadding = PaddingValues(bottom = BottomNavBarHeight + 36.dp)
     ) {
         item {
@@ -226,6 +236,7 @@ private fun CourseContent(
                     onPinClick = onSelectStop,
                     zoomInRequestId = zoomInRequestId,
                     zoomOutRequestId = zoomOutRequestId,
+                    onMapInteractionChange = { isMapInteractionActive = it },
                     modifier = Modifier.fillMaxSize()
                 )
                 MapZoomControls(
@@ -264,6 +275,8 @@ private fun CourseContent(
         }
     }
 }
+
+private const val COURSE_MAP_ITEM_INDEX = 2
 
 @Composable
 private fun MapZoomControls(

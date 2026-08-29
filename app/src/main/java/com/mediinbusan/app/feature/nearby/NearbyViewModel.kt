@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.common.PendingTourismCatalogItem
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.domain.course.GetRecommendedHospitalWellnessRouteUseCase
 import com.mediinbusan.app.domain.nearby.GetNearbyPlacesSortedByDistanceUseCase
 import com.mediinbusan.app.data.place.WellnessTourismRepository
@@ -27,6 +28,7 @@ import javax.inject.Inject
 /** F-011 병원 주변 관광·웰니스 추천. */
 @HiltViewModel
 class NearbyViewModel @Inject constructor(
+    private val userPreferencesRepository: UserPreferencesRepository,
     private val getNearbyPlacesSortedByDistance: GetNearbyPlacesSortedByDistanceUseCase,
     private val getRecommendedRoute: GetRecommendedHospitalWellnessRouteUseCase,
     private val wellnessTourismRepository: WellnessTourismRepository,
@@ -37,6 +39,18 @@ class NearbyViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(NearbyUiState())
     val uiState: StateFlow<NearbyUiState> = _uiState
+
+    init {
+        viewModelScope.launch {
+            userPreferencesRepository.userPreferences.collect { preferences ->
+                _uiState.update { it.copy(selectedLanguage = preferences.languageCode) }
+            }
+        }
+    }
+
+    fun onLanguageSelected(languageCode: String) {
+        viewModelScope.launch { userPreferencesRepository.setLanguageCode(languageCode) }
+    }
 
     fun selectHotPlace(hotPlace: TourismHotPlace) {
         pendingTourismCatalogItem.setHotPlace(hotPlace)

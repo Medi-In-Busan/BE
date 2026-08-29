@@ -187,6 +187,7 @@ public class TourismCatalogService {
                     secureImageUrl(item.imageUrl()),
                     item.latitude(),
                     item.longitude(),
+                    item.categoryCode(),
                     item.details()
                 ))
                 .toList();
@@ -277,7 +278,7 @@ public class TourismCatalogService {
             if (match == null) {
                 return new TourismCatalogItemResponse(
                     item.id(), item.title(), item.subtitle(), item.address(), item.imageUrl(),
-                    item.latitude(), item.longitude(), details
+                    item.latitude(), item.longitude(), item.categoryCode(), details
                 );
             }
             return new TourismCatalogItemResponse(
@@ -288,6 +289,7 @@ public class TourismCatalogService {
                 match.imageUrl(),
                 match.latitude(),
                 match.longitude(),
+                item.categoryCode(),
                 details
             );
         }).toList();
@@ -387,6 +389,7 @@ public class TourismCatalogService {
             item.imageUrl(),
             item.latitude(),
             item.longitude(),
+            item.categoryCode(),
             item.details()
         );
     }
@@ -423,6 +426,10 @@ public class TourismCatalogService {
             secureImageUrl(first(item, "firstimage", "firstimage2", "galWebImageUrl", "imageUrl")),
             number(item, "mapy", "mapY", "latitude", "lat"),
             number(item, "mapx", "mapX", "longitude", "lng"),
+            // contenttypeid(12=관광지, 14=문화시설, 25=여행코스, 28=레포츠, 32=숙박, 38=쇼핑,
+            // 39=음식점) — PLACES_KO/ACCESSIBLE 카테고리 필터 칩에 쓴다. scalarDetails()의 8개
+            // 캡에 걸려 누락될 수 있어 별도 필드로 명시적으로 뽑는다.
+            first(item, "contenttypeid"),
             scalarDetails(item)
         );
     }
@@ -453,7 +460,7 @@ public class TourismCatalogService {
             case "contentid", "contentId", "title", "tAtsNm", "hubTatsNm", "rlteTatsNm", "courseName",
                 "galTitle", "name", "addr1", "baseAddr", "address", "roadAddr", "firstimage", "firstimage2",
                 "galWebImageUrl", "imageUrl", "mapx", "mapX", "mapy", "mapY", "latitude", "longitude",
-                "cnctrRate",
+                "cnctrRate", "contenttypeid",
                 // WALKING(Durunubi courseList) 전용: crsIdx/crsKorNm/crsSummary/sigun은 이미
                 // id/title/subtitle/address로 뽑혀서 details에 또 나올 필요가 없고, crsContents·
                 // crsTourInfo·travelerinfo·routeIdx·brdDiv는 장문 텍스트/내부 코드라 details 8개
