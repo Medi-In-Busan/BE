@@ -40,17 +40,17 @@ fun TourismCatalogDto.toDomain(): TourismCatalog = TourismCatalog(
     description = description,
     source = source,
     retrievedAt = retrievedAt,
-    items = items.map { item ->
-        TourismCatalogItem(
-            id = item.id,
-            title = item.title,
-            subtitle = item.subtitle,
-            address = item.address,
-            imageUrl = item.imageUrl,
-            latitude = item.latitude,
-            longitude = item.longitude,
-            categoryCode = item.categoryCode,
-            details = item.details
-        )
-    }
+    items = items.map { it.toDomain() }
+)
+
+fun TourismCatalogItemDto.toDomain(): TourismCatalogItem = TourismCatalogItem(
+    id = id,
+    title = title,
+    subtitle = subtitle,
+    address = address,
+    imageUrl = imageUrl,
+    latitude = latitude,
+    longitude = longitude,
+    categoryCode = categoryCode,
+    details = details
 )

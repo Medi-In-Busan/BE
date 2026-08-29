@@ -57,8 +57,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -103,6 +101,8 @@ import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.foundation.shape.CircleShape
 
 @Composable
 fun TourismCatalogScreen(
@@ -1052,7 +1052,7 @@ private fun CrowdingRankCard(item: TourismCatalogItem, rank: Int, onClick: () ->
                     .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
+                Icon(imageVector = Icons.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
                 Surface(
                     modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
                     shape = CircleShape,
