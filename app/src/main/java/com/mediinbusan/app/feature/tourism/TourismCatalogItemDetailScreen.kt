@@ -51,12 +51,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.designsystem.BadgeText
@@ -64,14 +64,17 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
+import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
@@ -92,6 +95,35 @@ fun TourismCatalogItemDetailScreen(
     }
     if (uiState.selectedTitle == null) return
 
+    val item = uiState.item
+    val category = uiState.category
+    if (item != null && category != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(HomeBackgroundPink)
+        ) {
+            TourismDetailLoaded(
+                item = item,
+                category = category,
+                onBack = onBack,
+                modifier = Modifier.fillMaxSize(),
+                onOpenMap = {
+                    context.launchExternalDirections(
+                        latitude = item.latitude,
+                        longitude = item.longitude,
+                        label = item.title,
+                        fallbackAddress = item.address.orEmpty()
+                    )
+                },
+                onOpenLink = { url ->
+                    context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            )
+        }
+        return
+    }
+
     Scaffold(
         containerColor = HomeBackgroundPink,
         topBar = {
@@ -99,20 +131,10 @@ fun TourismCatalogItemDetailScreen(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = strings.tourism.backContentDescription
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.tourism.backContentDescription)
                     }
                 },
-                title = {
-                    Text(
-                        text = uiState.category?.translatedLabel(strings.language)
-                            ?: strings.tourism.catalogDefaultTitle,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                title = { Text(strings.tourism.catalogDefaultTitle) }
             )
         }
     ) { innerPadding ->
@@ -127,22 +149,6 @@ fun TourismCatalogItemDetailScreen(
                 strings.tourism.placeMatchNotFoundMessage,
                 Modifier.padding(innerPadding)
             )
-            uiState.item != null && uiState.category != null -> TourismDetailLoaded(
-                item = uiState.item!!,
-                category = uiState.category!!,
-                modifier = Modifier.padding(innerPadding),
-                onOpenMap = {
-                    context.launchExternalDirections(
-                        latitude = uiState.item!!.latitude,
-                        longitude = uiState.item!!.longitude,
-                        label = uiState.item!!.title,
-                        fallbackAddress = uiState.item!!.address.orEmpty()
-                    )
-                },
-                onOpenLink = { url ->
-                    context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                }
-            )
         }
     }
 }
@@ -151,11 +157,13 @@ fun TourismCatalogItemDetailScreen(
 private fun TourismDetailLoaded(
     item: TourismCatalogItem,
     category: TourismCatalogCategory,
+    onBack: () -> Unit,
     onOpenMap: () -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
+    val sectionLabels = strings.language.detailSectionLabels()
     val externalLinkUrl = item.details["homepage"]
         ?: item.details.values.firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
     val labeledDetails = item.details.entries.mapNotNull { (key, value) ->
@@ -164,11 +172,14 @@ private fun TourismDetailLoaded(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item { TourismHero(item = item, category = category) }
-        item.address?.let { address -> item { AddressCard(address) } }
+        item { TourismHero(item = item, onBack = onBack) }
+        item { TourismSummaryCard(item = item, category = category) }
+        item.subtitle?.takeIf { it.isNotBlank() }?.let { description ->
+            item { DescriptionCard(title = sectionLabels.introduction, description = description) }
+        }
         item.details["congestionRate"]?.let { congestionRate ->
             item {
                 CongestionCard(
@@ -179,82 +190,83 @@ private fun TourismDetailLoaded(
                 )
             }
         }
-        item {
-            ActionButtons(
-                canOpenMap = item.latitude != null && item.longitude != null || item.address != null,
-                externalLinkUrl = externalLinkUrl,
-                category = category,
-                onOpenMap = onOpenMap,
-                onOpenLink = onOpenLink
-            )
-        }
-        item.subtitle?.takeIf { it.isNotBlank() }?.let { description ->
-            item { DescriptionCard(description) }
-        }
         val secondaryDetails = labeledDetails.filterNot { it.key in setOf("congestionRate", "baseYmd") }
-        if (secondaryDetails.isNotEmpty()) item { DetailInfoCard(secondaryDetails) }
+        if (secondaryDetails.isNotEmpty()) {
+            item { DetailInfoCard(title = sectionLabels.visitInformation, details = secondaryDetails) }
+        }
+        item {
+            DetailSurface {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(sectionLabels.directions, style = SectionTitleStyle, color = TextPrimary)
+                    ActionButtons(
+                        canOpenMap = item.latitude != null && item.longitude != null || item.address != null,
+                        externalLinkUrl = externalLinkUrl,
+                        category = category,
+                        onOpenMap = onOpenMap,
+                        onOpenLink = onOpenLink
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun TourismHero(item: TourismCatalogItem, category: TourismCatalogCategory) {
+private fun TourismHero(item: TourismCatalogItem, onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(258.dp)
+            .padding(start = 20.dp, top = 10.dp, end = 20.dp)
+            .height(260.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF))))
     ) {
         if (item.imageUrl != null) {
             AsyncImageBox(item.imageUrl, item.title, Modifier.fillMaxSize())
+        } else {
             Box(
                 modifier = Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
-                        listOf(Color.Black.copy(alpha = 0.04f), Color.Black.copy(alpha = 0.76f))
+                        listOf(CoralPrimaryContainer.copy(alpha = 0.6f), Color(0xFFEDEDF2))
                     )
-                )
-            )
-        } else {
-            Icon(
-                Icons.Default.LocationOn,
-                contentDescription = null,
-                tint = CoralPrimary.copy(alpha = 0.24f),
-                modifier = Modifier.align(Alignment.Center).size(86.dp)
-            )
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.LocationOn, null, tint = CoralPrimary, modifier = Modifier.size(32.dp))
+                }
+            }
         }
-        Surface(
-            modifier = Modifier.align(Alignment.TopStart).padding(18.dp),
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.94f)
-        ) {
-            Text(
-                category.translatedLabel(LocalAppStrings.current.language),
-                style = MaterialTheme.typography.labelMedium,
-                color = CoralPrimary,
-                modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp)
-            )
-        }
-        Column(
-            modifier = Modifier.align(Alignment.BottomStart).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            val onImage = item.imageUrl != null
-            Text(
-                item.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (onImage) Color.White else TextPrimary
-            )
-        }
+        RoundIconButton(
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = LocalAppStrings.current.tourism.backContentDescription,
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+            size = 36.dp
+        )
     }
 }
 
 @Composable
-private fun AddressCard(address: String) {
+private fun TourismSummaryCard(item: TourismCatalogItem, category: TourismCatalogCategory) {
     DetailSurface {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Default.LocationOn, null, tint = CoralPrimary, modifier = Modifier.size(22.dp))
-            Text(address, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, modifier = Modifier.weight(1f))
+        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Text(
+                category.translatedLabel(LocalAppStrings.current.language),
+                style = MaterialTheme.typography.labelMedium,
+                color = CoralPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(item.title, style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+            item.address?.let { address ->
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.LocationOn, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                    Text(address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -265,7 +277,7 @@ private fun CongestionCard(label: String, value: String, dateLabel: String?, dat
         shape = MaterialTheme.shapes.large,
         color = CoralPrimaryContainer,
         border = BorderStroke(1.dp, Color.White),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -337,19 +349,20 @@ private fun ActionButtons(
 }
 
 @Composable
-private fun DescriptionCard(description: String) {
+private fun DescriptionCard(title: String, description: String) {
     DetailSurface {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Default.Info, null, tint = CoralPrimary, modifier = Modifier.size(22.dp))
-            Text(description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, modifier = Modifier.weight(1f))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = SectionTitleStyle, color = TextPrimary)
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
         }
     }
 }
 
 @Composable
-private fun DetailInfoCard(details: List<DetailValue>) {
+private fun DetailInfoCard(title: String, details: List<DetailValue>) {
     DetailSurface {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(title, style = SectionTitleStyle, color = TextPrimary)
             details.forEachIndexed { index, detail ->
                 if (index > 0) HorizontalDivider(color = DividerColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
@@ -366,15 +379,35 @@ private fun DetailInfoCard(details: List<DetailValue>) {
 
 @Composable
 private fun DetailSurface(content: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = Color.White,
-        border = BorderStroke(1.dp, DividerColor),
-        shadowElevation = 1.dp
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .shadow(
+                elevation = 2.dp,
+                shape = MaterialTheme.shapes.large,
+                ambientColor = Color.Black.copy(alpha = 0.05f),
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            )
+            .clip(MaterialTheme.shapes.large)
+            .background(Color.White)
+            .padding(20.dp)
     ) {
-        Box(modifier = Modifier.padding(16.dp)) { content() }
+        content()
     }
+}
+
+private data class DetailSectionLabels(
+    val introduction: String,
+    val visitInformation: String,
+    val directions: String
+)
+
+private fun SupportedLanguage.detailSectionLabels(): DetailSectionLabels = when (this) {
+    SupportedLanguage.KO -> DetailSectionLabels("장소 소개", "방문 정보", "위치 및 이동")
+    SupportedLanguage.EN -> DetailSectionLabels("About this place", "Visitor information", "Location and directions")
+    SupportedLanguage.JA -> DetailSectionLabels("スポット紹介", "訪問情報", "位置・アクセス")
+    SupportedLanguage.ZH -> DetailSectionLabels("景点介绍", "访问信息", "位置与交通")
 }
 
 private data class DetailValue(val key: String, val label: String, val value: String) {

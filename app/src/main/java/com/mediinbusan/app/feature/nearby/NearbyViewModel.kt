@@ -42,6 +42,10 @@ class NearbyViewModel @Inject constructor(
         pendingTourismCatalogItem.setHotPlace(hotPlace)
     }
 
+    fun selectTourismItem(category: TourismCatalogCategory, item: TourismCatalogItem) {
+        pendingTourismCatalogItem.set(category, item)
+    }
+
     fun load(hospitalId: String) {
         loadHotPlaces()
         loadCatalogPreviews()
@@ -74,29 +78,37 @@ class NearbyViewModel @Inject constructor(
     private fun loadHotPlaces() {
         viewModelScope.launch {
             _uiState.update { it.copy(isHotPlacesLoading = true, hotPlacesError = null) }
-            val catalogs = supervisorScope {
-                BusanDistrict.entries.map { district ->
-                    async {
-                        when (
-                            val result = tourismCatalogRepository
-                                .getCatalog(TourismCatalogCategory.CROWDING, district)
-                                .first { it !is Result.Loading }
-                        ) {
-                            is Result.Success -> district to result.data
-                            is Result.Error, Result.Loading -> null
-                        }
-                    }
-                }.awaitAll().filterNotNull()
-            }
+            val catalogResult = tourismCatalogRepository
+                .getCatalog(TourismCatalogCategory.CROWDING, null)
+                .first { it !is Result.Loading }
+            val catalogs = (catalogResult as? Result.Success)
+                ?.data
+                ?.let(::splitCrowdingCatalogByDistrict)
+                .orEmpty()
             val hotPlaces = rankHotPlaces(catalogs, HOT_PLACE_LIMIT)
             _uiState.update {
                 it.copy(
                     hotPlaces = hotPlaces,
                     isHotPlacesLoading = false,
-                    hotPlacesError = if (hotPlaces.isEmpty()) "예상 혼잡 정보를 불러오지 못했습니다." else null
+                    hotPlacesError = if (hotPlaces.isEmpty()) "혼잡도 API 데이터를 불러오지 못했습니다." else null
                 )
             }
         }
+    }
+
+    private fun splitCrowdingCatalogByDistrict(catalog: com.mediinbusan.app.domain.tourism.TourismCatalog) =
+        catalog.items
+            .groupBy(::districtForItem)
+            .map { (district, items) -> district to catalog.copy(items = items) }
+
+    private fun districtForItem(item: TourismCatalogItem): BusanDistrict {
+        val districtText = listOfNotNull(
+            item.details["signguNm"],
+            item.details["signguName"],
+            item.address
+        ).joinToString(" ")
+        return BusanDistrict.entries.firstOrNull { districtText.contains(it.label) }
+            ?: BusanDistrict.HAEUNDAE
     }
 
     private fun loadCatalogPreviews() {
@@ -128,6 +140,6 @@ class NearbyViewModel @Inject constructor(
 
     private companion object {
         const val HOT_PLACE_LIMIT = 5
-        const val PREVIEW_LIMIT = 3
+        const val PREVIEW_LIMIT = 6
     }
 }

@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface WellnessExternalSnapshotRepository extends JpaRepository<WellnessExternalSnapshot, Long> {
     Optional<WellnessExternalSnapshot> findBySnapshotKey(String snapshotKey);
+
+    Optional<WellnessExternalSnapshot> findTopBySourceAndScopeOrderBySyncedAtDesc(String source, String scope);
 }

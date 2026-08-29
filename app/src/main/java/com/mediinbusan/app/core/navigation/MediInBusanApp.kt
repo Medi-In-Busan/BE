@@ -116,6 +116,7 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?, mapSelection
             backStackEntry.toRoute<Route.MapView>().hospitalId == null && !mapSelectionActive
         }
         destination.hasRoute(Route.DocumentScan::class) -> true
+        destination.hasRoute(Route.RecommendedTourismCourse::class) -> true
         // Settings/알림설정/즐겨찾기/최근본항목/정보 상세는 전부 공용 탑바 없이 자체 뒤로가기
         // 버튼이 있는 일반 push 화면이라 하단 탭바를 안 보여준다(SettingsScreen.kt 참고).
         else -> false
@@ -143,7 +144,8 @@ private fun bottomNavTabs(
             label = strings.bottomNavHospitalLabel,
             icon = Icons.Outlined.LocalHospital,
             selectedIcon = Icons.Filled.LocalHospital,
-            selected = currentDestination.isRouteSelected<Route.HospitalSearchList>(),
+            selected = currentDestination.isRouteSelected<Route.HospitalSearchList>() ||
+                currentDestination.isRouteSelected<Route.RecommendedTourismCourse>(),
             onClick = { navController.navigateToTab(Route.HospitalSearchList) }
         ),
         BottomNavTabUiModel(

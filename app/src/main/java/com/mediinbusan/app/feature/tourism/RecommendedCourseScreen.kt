@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +59,7 @@ import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.KakaoMapView
@@ -91,7 +91,7 @@ fun RecommendedCourseScreen(
         containerColor = HomeBackgroundPink,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = HomeBackgroundPink),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
@@ -168,39 +168,25 @@ private fun CourseContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 36.dp)
+        contentPadding = PaddingValues(bottom = BottomNavBarHeight + 36.dp)
     ) {
         item {
-            Box(
+            Column(
                 modifier = Modifier
-                    .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 12.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFFFFE7E9), Color(0xFFFFF8F8), Color(0xFFEAF5FF))
-                        )
-                    )
-                    .padding(22.dp)
+                    .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(
-                        strings.courseTitle,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(strings.subtitle(districtLabel), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                    Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.9f)) {
-                        Text(
-                            text = strings.summary(course.stops.size, route, travelMode),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = CoralPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                districtLabel?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 }
+                Text(
+                    text = strings.summary(course.stops.size, route, travelMode),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CoralPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 9.dp).height(1.dp).background(DividerColor))
             }
         }
         item {
@@ -443,9 +429,7 @@ private fun CourseStopRow(stop: RecommendedTourismStop, selected: Boolean, onCli
 private data class CourseStrings(
     val back: String,
     val topBarTitle: String,
-    val courseTitle: String,
     val notEnoughPlaces: String,
-    val subtitle: (String?) -> String,
     val summary: (Int, DrivingRoute, TravelMode) -> String,
     val transfer: (Int, Double) -> String,
     val modeLabel: (TravelMode) -> String,
@@ -456,9 +440,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     SupportedLanguage.KO -> CourseStrings(
         back = "뒤로가기",
         topBarTitle = "추천 웰니스 코스",
-        courseTitle = "나를 위한 부산 회복 코스",
         notEnoughPlaces = "코스를 만들 수 있는 위치 정보가 충분하지 않습니다.",
-        subtitle = { district -> "${district ?: "부산"}에서 추천 점수와 이동 부담을 함께 고려했어요." },
         summary = { stops, route, mode -> "${stops}곳 · ${if (mode == TravelMode.DRIVING) "차량" else "도보"} 이동 약 ${durationKo(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "약 ${minutes}분 · ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "자동차" else "도보" },
@@ -467,9 +449,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     SupportedLanguage.EN -> CourseStrings(
         back = "Back",
         topBarTitle = "Recommended route",
-        courseTitle = "Your Busan recovery course",
         notEnoughPlaces = "There are not enough places with location data to build a course.",
-        subtitle = { district -> "Balanced for recommendation fit and travel effort around ${district ?: "Busan"}." },
         summary = { stops, route, mode -> "$stops stops · ${if (mode == TravelMode.DRIVING) "driving" else "walking"} about ${durationEn(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "About $minutes min · ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "Car" else "Walk" },
@@ -478,9 +458,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     SupportedLanguage.JA -> CourseStrings(
         back = "戻る",
         topBarTitle = "おすすめルート",
-        courseTitle = "釜山リカバリーコース",
         notEnoughPlaces = "コース作成に必要な位置情報が不足しています。",
-        subtitle = { district -> "${district ?: "釜山"}でおすすめ度と移動負担を考慮しました。" },
         summary = { stops, route, mode -> "$stops\u304b\u6240 \u00b7 ${if (mode == TravelMode.DRIVING) "\u8eca" else "\u5f92\u6b69"}\u3067\u7d04${durationJa(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "\u7d04${minutes}\u5206 \u00b7 ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "\u81ea\u52d5\u8eca" else "\u5f92\u6b69" },
@@ -489,9 +467,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     SupportedLanguage.ZH -> CourseStrings(
         back = "返回",
         topBarTitle = "推荐路线",
-        courseTitle = "釜山疗愈路线",
         notEnoughPlaces = "没有足够的地点位置信息来生成路线。",
-        subtitle = { district -> "综合考虑了${district ?: "釜山"}的推荐度和移动距离。" },
         summary = { stops, route, mode -> "$stops\u5904 \u00b7 ${if (mode == TravelMode.DRIVING) "\u9a7e\u8f66" else "\u6b65\u884c"}\u7ea6${durationZh(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "\u7ea6${minutes}\u5206\u949f \u00b7 ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "\u6c7d\u8f66" else "\u6b65\u884c" },
