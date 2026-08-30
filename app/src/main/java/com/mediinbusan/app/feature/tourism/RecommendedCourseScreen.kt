@@ -1,5 +1,9 @@
 package com.mediinbusan.app.feature.tourism
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
@@ -120,7 +126,12 @@ fun RecommendedCourseScreen(
                 modifier = Modifier.padding(innerPadding),
                 course = requireNotNull(uiState.course),
                 route = requireNotNull(uiState.route),
-                districtLabel = uiState.district?.label,
+                courseTitle = recommendedCourseTitle(
+                    course = requireNotNull(uiState.course),
+                    districtLabel = uiState.district?.translatedLabel(uiState.language),
+                    language = uiState.language
+                ),
+                districtLabel = uiState.district?.translatedLabel(uiState.language),
                 selectedStopId = uiState.selectedStopId,
                 travelMode = uiState.travelMode,
                 isRouteRefreshing = uiState.isRouteRefreshing,
@@ -139,6 +150,7 @@ private fun CourseContent(
     modifier: Modifier,
     course: RecommendedTourismCourse,
     route: DrivingRoute,
+    courseTitle: String,
     districtLabel: String?,
     selectedStopId: String?,
     travelMode: TravelMode,
@@ -185,23 +197,16 @@ private fun CourseContent(
         contentPadding = PaddingValues(bottom = BottomNavBarHeight + 36.dp)
     ) {
         item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                districtLabel?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                }
-                Text(
-                    text = strings.summary(course.stops.size, route, travelMode),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CoralPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Box(modifier = Modifier.fillMaxWidth().padding(top = 9.dp).height(1.dp).background(DividerColor))
-            }
+            TourismCourseHero(
+                course = course,
+                route = route,
+                courseTitle = courseTitle,
+                districtLabel = districtLabel,
+                selectedStopId = selectedStopId,
+                travelMode = travelMode,
+                strings = strings,
+                onSelectStop = onSelectStop
+            )
         }
         item {
             TravelModeSelector(
@@ -281,6 +286,190 @@ private fun CourseContent(
 }
 
 private const val COURSE_MAP_ITEM_INDEX = 2
+
+@Composable
+private fun TourismCourseHero(
+    course: RecommendedTourismCourse,
+    route: DrivingRoute,
+    courseTitle: String,
+    districtLabel: String?,
+    selectedStopId: String?,
+    travelMode: TravelMode,
+    strings: CourseStrings,
+    onSelectStop: (String) -> Unit
+) {
+    val selectedStop = course.stops.firstOrNull { it.item.id == selectedStopId }
+        ?: course.stops.first()
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(26.dp),
+                ambientColor = Color.Black.copy(alpha = 0.16f),
+                spotColor = Color.Black.copy(alpha = 0.16f)
+            ),
+        shape = RoundedCornerShape(26.dp),
+        color = Color.White
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(310.dp)
+                    .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
+                    .background(CoralPrimaryContainer)
+            ) {
+                AnimatedContent(
+                    targetState = selectedStop.item,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "tourism-course-stop-image",
+                    modifier = Modifier.fillMaxSize()
+                ) { item ->
+                    if (item.imageUrl != null) {
+                        AsyncImageBox(
+                            model = item.imageUrl,
+                            contentDescription = item.title,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(CoralPrimaryContainer, Color(0xFFEAF7FF))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.12f),
+                                    Color.Black.copy(alpha = 0.8f)
+                                )
+                            )
+                        )
+                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    districtLabel?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                    Text(
+                        text = courseTitle,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${selectedStop.order}. ${selectedStop.item.title}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.94f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    selectedStop.item.address?.takeIf { it.isNotBlank() }?.let { address ->
+                        Text(
+                            text = address,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.72f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = strings.summary(course.stops.size, route, travelMode),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CoralPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                TourismCourseStopSelector(
+                    stops = course.stops,
+                    selectedStopId = selectedStop.item.id,
+                    onSelectStop = onSelectStop
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TourismCourseStopSelector(
+    stops: List<RecommendedTourismStop>,
+    selectedStopId: String,
+    onSelectStop: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(38.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(DividerColor)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            stops.forEach { stop ->
+                val selected = stop.item.id == selectedStopId
+                Box(
+                    modifier = Modifier
+                        .size(if (selected) 36.dp else 30.dp)
+                        .clip(CircleShape)
+                        .background(if (selected) CoralPrimary else Color(0xFFF1EFEC))
+                        .clickable { onSelectStop(stop.item.id) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stop.order.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (selected) Color.White else TextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun MapZoomControls(
@@ -506,3 +695,96 @@ private fun durationZh(minutes: Int): String = if (minutes >= 60) "${minutes / 6
 private fun formatKm(distanceKm: Double): String = String.format(Locale.US, "%.1fkm", distanceKm)
 private fun DrivingRoute.durationMinutes(): Int = kotlin.math.ceil(durationSeconds / 60.0).toInt().coerceAtLeast(1)
 private fun DrivingRoute.distanceKm(): Double = distanceMeters / 1_000.0
+
+private fun recommendedCourseTitle(
+    course: RecommendedTourismCourse,
+    districtLabel: String?,
+    language: SupportedLanguage
+): String {
+    val region = districtLabel ?: when (language) {
+        SupportedLanguage.KO -> "부산"
+        SupportedLanguage.EN -> "Busan"
+        SupportedLanguage.JA -> "釜山"
+        SupportedLanguage.ZH -> "釜山"
+    }
+    val themes = course.stops
+        .mapNotNull { stop -> courseTheme(stop.item.categoryCode, stop.item.title, language) }
+        .distinct()
+        .take(2)
+    if (themes.isEmpty()) {
+        val firstPlace = course.stops.first().item.title
+        return when (language) {
+            SupportedLanguage.KO -> "$region $firstPlace 중심 코스"
+            SupportedLanguage.EN -> "$region route featuring $firstPlace"
+            SupportedLanguage.JA -> "$region・${firstPlace}中心コース"
+            SupportedLanguage.ZH -> "$region · 以${firstPlace}为中心的路线"
+        }
+    }
+    return when (language) {
+        SupportedLanguage.KO -> "$region ${themes.joinToString("·")} 코스"
+        SupportedLanguage.EN -> "$region ${themes.joinToString(" & ")} route"
+        SupportedLanguage.JA -> "$region・${themes.joinToString("・")}コース"
+        SupportedLanguage.ZH -> "$region · ${themes.joinToString("·")}路线"
+    }
+}
+
+private fun courseTheme(
+    categoryCode: String?,
+    title: String,
+    language: SupportedLanguage
+): String? {
+    val theme = when (categoryCode) {
+        "12" -> attractionTheme(title)
+        "14" -> CourseTheme.CULTURE
+        "15" -> CourseTheme.FESTIVAL
+        "25" -> CourseTheme.WALK
+        "28" -> CourseTheme.ACTIVITY
+        "32" -> CourseTheme.REST
+        "38" -> CourseTheme.SHOPPING
+        "39" -> CourseTheme.FOOD
+        else -> null
+    } ?: return null
+    return when (language) {
+        SupportedLanguage.KO -> theme.ko
+        SupportedLanguage.EN -> theme.en
+        SupportedLanguage.JA -> theme.ja
+        SupportedLanguage.ZH -> theme.zh
+    }
+}
+
+private fun attractionTheme(title: String): CourseTheme {
+    val normalized = title.lowercase()
+    return when {
+        COAST_KEYWORDS.any(normalized::contains) -> CourseTheme.COAST
+        WALK_KEYWORDS.any(normalized::contains) -> CourseTheme.WALK
+        CULTURE_KEYWORDS.any(normalized::contains) -> CourseTheme.CULTURE
+        else -> CourseTheme.LANDMARK
+    }
+}
+
+private enum class CourseTheme(
+    val ko: String,
+    val en: String,
+    val ja: String,
+    val zh: String
+) {
+    COAST("바다", "coast", "海辺", "海滨"),
+    WALK("산책", "walking", "散策", "漫步"),
+    CULTURE("문화", "culture", "文化", "文化"),
+    FESTIVAL("축제", "festival", "祭り", "节庆"),
+    ACTIVITY("액티비티", "activities", "アクティビティ", "体验"),
+    REST("휴식", "relaxation", "休息", "休闲"),
+    SHOPPING("쇼핑", "shopping", "ショッピング", "购物"),
+    FOOD("미식", "food", "グルメ", "美食"),
+    LANDMARK("명소", "landmarks", "名所", "名胜")
+}
+
+private val COAST_KEYWORDS = listOf(
+    "해수욕장", "해변", "바다", "beach", "coast", "海水浴場", "海辺", "海滩", "海滨"
+)
+private val WALK_KEYWORDS = listOf(
+    "공원", "산", "숲", "둘레길", "산책", "park", "mountain", "forest", "trail", "公園", "公园", "森林", "散策"
+)
+private val CULTURE_KEYWORDS = listOf(
+    "박물관", "미술관", "문화", "책방", "기념관", "사(", "museum", "gallery", "temple", "文化", "博物館", "博物馆", "美術館", "美术馆"
+)
