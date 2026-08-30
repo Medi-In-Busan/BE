@@ -1,10 +1,14 @@
 package com.mediinbusan.app.domain.course
 
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.data.place.PlaceRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -22,16 +26,19 @@ data class WellnessCourse(
  * OpenAPI 실제 연동 전에는 주변 장소의 유형과 거리 데이터를 이용해 데모 가능한 회복형 코스를 만든다.
  */
 class AssembleWellnessCourseUseCase @Inject constructor(
-    private val placeRepository: PlaceRepository
+    private val placeRepository: PlaceRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) {
-    operator fun invoke(hospitalId: String): Flow<Result<List<WellnessCourse>>> =
-        placeRepository.getNearbyPlaces(hospitalId).map { result ->
+    operator fun invoke(hospitalId: String): Flow<Result<List<WellnessCourse>>> = flow {
+        val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+        emitAll(placeRepository.getNearbyPlaces(hospitalId, languageCode).map { result ->
             when (result) {
                 is Result.Success -> Result.Success(result.data.toWellnessCourses())
                 is Result.Error -> result
                 is Result.Loading -> result
             }
-        }
+        })
+    }
 }
 
 private fun List<Place>.toWellnessCourses(): List<WellnessCourse> {

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentRepository
@@ -53,13 +54,18 @@ class RecommendedCourseViewModel @Inject constructor(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val preferences = userPreferencesRepository.userPreferences.first()
             val requestedCategory = runCatching { TourismCatalogCategory.valueOf(categoryName) }.getOrNull()
             if (requestedCategory == null) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "지원하지 않는 관광 데이터입니다.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = appStringsFor(preferences.languageCode).tourism.unsupportedDataError
+                    )
+                }
                 return@launch
             }
 
-            val preferences = userPreferencesRepository.userPreferences.first()
             val language = SupportedLanguage.entries.find { it.code == preferences.languageCode }
                 ?: SupportedLanguage.DEFAULT
             val category = if (requestedCategory.isLanguageVariant) {
@@ -83,7 +89,8 @@ class RecommendedCourseViewModel @Inject constructor(
                         category = category,
                         district = district,
                         isLoading = false,
-                        errorMessage = (result as? Result.Error)?.message ?: "관광 데이터를 불러오지 못했습니다."
+                        errorMessage = (result as? Result.Error)?.message
+                            ?: appStringsFor(language).tourism.catalogLoadError
                     )
                 }
                 return@launch
@@ -143,7 +150,7 @@ class RecommendedCourseViewModel @Inject constructor(
                 travelMode = TravelMode.DRIVING,
                 isLoading = false,
                 errorMessage = if (route == null) {
-                    (routeResult as? Result.Error)?.message ?: "실제 이동 경로를 불러오지 못했습니다."
+                    (routeResult as? Result.Error)?.message ?: appStringsFor(language).nearby.routeLoadError
                 } else {
                     null
                 }
@@ -159,6 +166,7 @@ class RecommendedCourseViewModel @Inject constructor(
         val course = recommendedCourse ?: return
         if (_uiState.value.travelMode == mode || _uiState.value.isRouteRefreshing) return
         viewModelScope.launch {
+            val strings = appStringsFor(_uiState.value.language).nearby
             _uiState.update { it.copy(isRouteRefreshing = true, routeErrorMessage = null) }
             val result = getRoute(course, mode)
             val route = (result as? Result.Success)?.data?.takeIf { course.isValidRoute(it) }
@@ -166,7 +174,7 @@ class RecommendedCourseViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isRouteRefreshing = false,
-                        routeErrorMessage = (result as? Result.Error)?.message ?: "이동 경로를 변경하지 못했습니다."
+                        routeErrorMessage = (result as? Result.Error)?.message ?: strings.routeChangeError
                     )
                 }
             } else {

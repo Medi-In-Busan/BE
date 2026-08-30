@@ -7,6 +7,7 @@ import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentRepository
@@ -28,7 +29,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -93,6 +93,7 @@ class TourismHubViewModel @Inject constructor(
                     }
                 )
             }.collect { preferencesState ->
+                val languageChanged = _uiState.value.language != preferencesState.language
                 _uiState.update { current ->
                     preferencesState.copy(
                         hotPlaces = current.hotPlaces,
@@ -101,12 +102,13 @@ class TourismHubViewModel @Inject constructor(
                         highlightsError = current.highlightsError
                     )
                 }
+                if (languageChanged) loadHighlights(force = true)
             }
         }
         loadHighlights()
     }
 
-    fun retryHighlights() = loadHighlights()
+    fun retryHighlights() = loadHighlights(force = true)
 
     fun selectHotPlace(hotPlace: TourismHotPlace) {
         pendingTourismCatalogItem.setHotPlace(hotPlace)
@@ -114,7 +116,8 @@ class TourismHubViewModel @Inject constructor(
 
     private var highlightsJob: Job? = null
 
-    private fun loadHighlights() {
+    private fun loadHighlights(force: Boolean = false) {
+        if (force) highlightsJob?.cancel()
         if (highlightsJob?.isActive == true) return
         highlightsJob = viewModelScope.launch {
             _uiState.update { it.copy(isHighlightsLoading = true, highlightsError = null) }
@@ -122,14 +125,11 @@ class TourismHubViewModel @Inject constructor(
                 val accessibleDeferred = async {
                     catalogRepository.awaitCatalog(TourismCatalogCategory.ACCESSIBLE, null)
                 }
-                val crowdingDeferred = BusanDistrict.entries.map { district ->
-                    async {
-                        catalogRepository.awaitCatalog(TourismCatalogCategory.CROWDING, district)
-                            ?.let { district to it }
-                    }
+                val crowdingDeferred = async {
+                    catalogRepository.awaitCatalog(TourismCatalogCategory.CROWDING, null)
                 }
                 val accessible = accessibleDeferred.await()
-                val crowding = crowdingDeferred.awaitAll().filterNotNull()
+                val crowding = crowdingDeferred.await()?.let(::splitCrowdingCatalogByDistrict).orEmpty()
                 val hotPlaces = rankHotPlaces(crowding)
                 val accessiblePlaces = accessible?.items.orEmpty().take(HIGHLIGHT_LIMIT)
                 val hasNoData = hotPlaces.isEmpty() && accessiblePlaces.isEmpty()
@@ -138,7 +138,9 @@ class TourismHubViewModel @Inject constructor(
                         hotPlaces = hotPlaces,
                         accessiblePlaces = accessiblePlaces,
                         isHighlightsLoading = false,
-                        highlightsError = if (hasNoData) "관광 추천 정보를 불러오지 못했습니다." else null
+                        highlightsError = if (hasNoData) {
+                            appStringsFor(it.language).tourism.recommendationLoadError
+                        } else null
                     )
                 }
             }
@@ -153,6 +155,16 @@ class TourismHubViewModel @Inject constructor(
         is Result.Error -> null
         Result.Loading -> null
     }
+
+    private fun splitCrowdingCatalogByDistrict(catalog: TourismCatalog): List<Pair<BusanDistrict, TourismCatalog>> =
+        catalog.items.groupBy { item ->
+            val districtText = listOfNotNull(
+                item.details["signguNm"],
+                item.details["signguName"],
+                item.address
+            ).joinToString(" ")
+            BusanDistrict.entries.firstOrNull { districtText.contains(it.label) } ?: BusanDistrict.HAEUNDAE
+        }.map { (district, items) -> district to catalog.copy(items = items) }
 
     private fun recommendationScore(
         category: TourismCatalogCategory,

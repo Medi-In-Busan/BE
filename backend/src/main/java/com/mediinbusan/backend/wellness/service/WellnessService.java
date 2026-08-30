@@ -24,18 +24,24 @@ public class WellnessService {
 
     private final WellnessPlaceRepository wellnessPlaceRepository;
     private final HospitalRepository hospitalRepository;
+    private final WellnessPlaceTranslationService translationService;
 
-    public WellnessService(WellnessPlaceRepository wellnessPlaceRepository, HospitalRepository hospitalRepository) {
+    public WellnessService(
+        WellnessPlaceRepository wellnessPlaceRepository,
+        HospitalRepository hospitalRepository,
+        WellnessPlaceTranslationService translationService
+    ) {
         this.wellnessPlaceRepository = wellnessPlaceRepository;
         this.hospitalRepository = hospitalRepository;
+        this.translationService = translationService;
     }
 
-    public List<WellnessPlaceResponse> getNearbyPlaces(String hospitalRegNo, Double radiusMeters) {
+    public List<WellnessPlaceResponse> getNearbyPlaces(String hospitalRegNo, Double radiusMeters, String language) {
         Hospital hospital = hospitalRepository.findByRegNo(hospitalRegNo)
             .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "병원을 찾을 수 없습니다: " + hospitalRegNo));
         double effectiveRadius = radiusMeters != null ? radiusMeters : DEFAULT_RADIUS_METERS;
 
-        return wellnessPlaceRepository.findAll().stream()
+        List<WellnessPlaceResponse> places = wellnessPlaceRepository.findAll().stream()
             .map(place -> new PlaceDistance(place, GeoDistance.meters(hospital.getCoordinates(), place.getCoordinates())))
             .filter(item -> item.distance == null || item.distance <= effectiveRadius)
             .sorted(Comparator.comparing(
@@ -44,12 +50,21 @@ public class WellnessService {
             ).thenComparing(item -> item.place.getId()))
             .map(item -> WellnessDtoMapper.toPlaceResponse(item.place, item.distance))
             .toList();
+        return translationService.localizeAll(places, language);
+    }
+
+    public List<WellnessPlaceResponse> getNearbyPlaces(String hospitalRegNo, Double radiusMeters) {
+        return getNearbyPlaces(hospitalRegNo, radiusMeters, "ko");
+    }
+
+    public WellnessPlaceResponse getPlaceDetail(String contentId, String language) {
+        WellnessPlace place = wellnessPlaceRepository.findByContentId(contentId)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "웰니스 장소를 찾을 수 없습니다: " + contentId));
+        return translationService.localize(WellnessDtoMapper.toPlaceResponse(place, null), language);
     }
 
     public WellnessPlaceResponse getPlaceDetail(String contentId) {
-        WellnessPlace place = wellnessPlaceRepository.findByContentId(contentId)
-            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "웰니스 장소를 찾을 수 없습니다: " + contentId));
-        return WellnessDtoMapper.toPlaceResponse(place, null);
+        return getPlaceDetail(contentId, "ko");
     }
 
     private record PlaceDistance(WellnessPlace place, Double distance) {

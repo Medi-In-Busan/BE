@@ -10,10 +10,10 @@ class PlaceRepositoryImpl @Inject constructor(
     private val tourismApi: TourismApi
 ) : PlaceRepository {
 
-    override fun getNearbyPlaces(hospitalId: String): Flow<Result<List<Place>>> = flow {
+    override fun getNearbyPlaces(hospitalId: String, languageCode: String): Flow<Result<List<Place>>> = flow {
         emit(Result.Loading)
         try {
-            emit(Result.Success(tourismApi.getNearbyWellnessPlaces(hospitalId).map { it.toDomain() }))
+            emit(Result.Success(tourismApi.getNearbyWellnessPlaces(hospitalId, language = languageCode).map { it.toDomain() }))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -21,10 +21,10 @@ class PlaceRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getPlaceDetail(placeId: String): Flow<Result<Place>> = flow {
+    override fun getPlaceDetail(placeId: String, languageCode: String): Flow<Result<Place>> = flow {
         emit(Result.Loading)
         try {
-            emit(Result.Success(tourismApi.getPlaceDetail(placeId).toDomain()))
+            emit(Result.Success(tourismApi.getPlaceDetail(placeId, languageCode).toDomain()))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

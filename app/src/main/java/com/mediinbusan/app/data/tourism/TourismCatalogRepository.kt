@@ -12,6 +12,8 @@ interface TourismCatalogRepository {
 
     fun getCatalog(
         category: TourismCatalogCategory,
-        district: BusanDistrict? = null
+        district: BusanDistrict? = null,
+        page: Int = 1,
+        pageSize: Int = 20
     ): Flow<Result<TourismCatalog>>
 }

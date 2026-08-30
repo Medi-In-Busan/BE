@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,23 +48,25 @@ fun BackOnlyNavigationBar(
             )
         }
         Spacer(modifier = Modifier.weight(1f))
-        onHomeClick?.let { onClick ->
-            IconButton(onClick = onClick) {
-                Image(
-                    painter = painterResource(id = R.drawable.hospital_detail_home),
-                    contentDescription = LocalAppStrings.current.common.bottomNavHomeLabel,
-                    modifier = Modifier.size(26.dp)
-                )
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 42.dp) {
+            onHomeClick?.let { onClick ->
+                IconButton(onClick = onClick) {
+                    Image(
+                        painter = painterResource(id = R.drawable.hospital_detail_home),
+                        contentDescription = LocalAppStrings.current.common.bottomNavHomeLabel,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
-        }
-        onMapDetailsClick?.let { onClick ->
-            IconButton(onClick = onClick) {
-                Icon(
-                    imageVector = Icons.Default.Map,
-                    contentDescription = "앱 지도에서 보기",
-                    tint = CoralPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
+            onMapDetailsClick?.let { onClick ->
+                IconButton(onClick = onClick) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = "앱 지도에서 보기",
+                        tint = CoralPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.domain.course.GetRecommendedHospitalWellnessRouteUseCase
 import com.mediinbusan.app.domain.nearby.GetNearbyPlacesSortedByDistanceUseCase
 import com.mediinbusan.app.data.place.WellnessTourismRepository
@@ -14,11 +15,13 @@ import com.mediinbusan.app.domain.tourism.RankTourismHotPlacesUseCase
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
+import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
@@ -39,6 +42,11 @@ class NearbyViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(NearbyUiState())
     val uiState: StateFlow<NearbyUiState> = _uiState
+    private var placesJob: Job? = null
+    private var routeJob: Job? = null
+    private var walkingJob: Job? = null
+    private var hotPlacesJob: Job? = null
+    private var previewsJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -60,27 +68,34 @@ class NearbyViewModel @Inject constructor(
         pendingTourismCatalogItem.set(category, item)
     }
 
-    fun load(hospitalId: String) {
+    fun load(hospitalId: String, languageCode: String? = null) {
         loadHotPlaces()
-        loadCatalogPreviews()
-        viewModelScope.launch {
-            getNearbyPlacesSortedByDistance(hospitalId).collect { result ->
+        val resolvedLanguage = languageCode ?: _uiState.value.selectedLanguage
+        loadCatalogPreviews(resolvedLanguage)
+        placesJob?.cancel()
+        placesJob = viewModelScope.launch {
+            getNearbyPlacesSortedByDistance(hospitalId, resolvedLanguage).collect { result ->
                 _uiState.update { state ->
                     when (result) {
                         is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
                         is Result.Success -> state.copy(isLoading = false, places = result.data, errorMessage = null)
-                        is Result.Error -> state.copy(isLoading = false, errorMessage = result.message ?: "오류가 발생했습니다.")
+                        is Result.Error -> state.copy(
+                            isLoading = false,
+                            errorMessage = result.message ?: appStringsFor(resolvedLanguage).nearby.genericErrorMessage
+                        )
                     }
                 }
             }
         }
-        viewModelScope.launch {
+        routeJob?.cancel()
+        routeJob = viewModelScope.launch {
             when (val result = getRecommendedRoute.getRoutes(hospitalId)) {
                 is Result.Success -> _uiState.update { it.copy(recommendedRoutes = result.data) }
                 is Result.Error, Result.Loading -> Unit
             }
         }
-        viewModelScope.launch {
+        walkingJob?.cancel()
+        walkingJob = viewModelScope.launch {
             wellnessTourismRepository.getWalkingCourses().collect { result ->
                 if (result is Result.Success) {
                     _uiState.update { it.copy(walkingCourses = result.data) }
@@ -90,7 +105,8 @@ class NearbyViewModel @Inject constructor(
     }
 
     private fun loadHotPlaces() {
-        viewModelScope.launch {
+        hotPlacesJob?.cancel()
+        hotPlacesJob = viewModelScope.launch {
             _uiState.update { it.copy(isHotPlacesLoading = true, hotPlacesError = null) }
             val catalogResult = tourismCatalogRepository
                 .getCatalog(TourismCatalogCategory.CROWDING, null)
@@ -104,7 +120,9 @@ class NearbyViewModel @Inject constructor(
                 it.copy(
                     hotPlaces = hotPlaces,
                     isHotPlacesLoading = false,
-                    hotPlacesError = if (hotPlaces.isEmpty()) "혼잡도 API 데이터를 불러오지 못했습니다." else null
+                    hotPlacesError = if (hotPlaces.isEmpty()) {
+                        appStringsFor(_uiState.value.selectedLanguage).nearby.crowdingLoadError
+                    } else null
                 )
             }
         }
@@ -125,10 +143,12 @@ class NearbyViewModel @Inject constructor(
             ?: BusanDistrict.HAEUNDAE
     }
 
-    private fun loadCatalogPreviews() {
-        viewModelScope.launch {
+    private fun loadCatalogPreviews(languageCode: String) {
+        previewsJob?.cancel()
+        previewsJob = viewModelScope.launch {
+            val tourismCategory = tourismCategoryForLanguage(languageCode)
             val previews = supervisorScope {
-                listOf(TourismCatalogCategory.PLACES_KO, TourismCatalogCategory.ACCESSIBLE).map { category ->
+                listOf(tourismCategory, TourismCatalogCategory.ACCESSIBLE).map { category ->
                     async {
                         val result = tourismCatalogRepository
                             .getCatalog(category, BusanDistrict.HAEUNDAE)
@@ -139,7 +159,7 @@ class NearbyViewModel @Inject constructor(
             }
             _uiState.update {
                 it.copy(
-                    tourismPreviews = previews[TourismCatalogCategory.PLACES_KO].toPreviewItems(),
+                    tourismPreviews = previews[tourismCategory].toPreviewItems(),
                     accessiblePreviews = previews[TourismCatalogCategory.ACCESSIBLE].toPreviewItems()
                 )
             }

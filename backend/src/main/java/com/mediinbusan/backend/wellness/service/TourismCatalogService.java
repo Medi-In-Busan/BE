@@ -36,14 +36,17 @@ public class TourismCatalogService {
 
     private final WellnessTourismGatewayService gateway;
     private final WellnessExternalSnapshotRepository snapshotRepository;
+    private final TourismCatalogTranslationService translationService;
     private final ObjectMapper objectMapper;
 
     public TourismCatalogService(
         WellnessTourismGatewayService gateway,
-        WellnessExternalSnapshotRepository snapshotRepository
+        WellnessExternalSnapshotRepository snapshotRepository,
+        TourismCatalogTranslationService translationService
     ) {
         this.gateway = gateway;
         this.snapshotRepository = snapshotRepository;
+        this.translationService = translationService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -52,18 +55,31 @@ public class TourismCatalogService {
         BusanTourismCodes.District district,
         String baseYm
     ) {
+        return getCatalog(category, district, baseYm, 1, 50, "ko");
+    }
+
+    public TourismCatalogResponse getCatalog(
+        TourismCatalogCategory category,
+        BusanTourismCodes.District district,
+        String baseYm,
+        int page,
+        int pageSize,
+        String language
+    ) {
         if (category == TourismCatalogCategory.CROWDING && district == null) {
-            return getBusanCrowdingCatalog();
+            return translationService.localize(getBusanCrowdingCatalog(), language);
         }
         BusanTourismCodes.District resolvedDistrict = district == null ? BusanTourismCodes.District.HAEUNDAE : district;
         String resolvedBaseYm = hasText(baseYm) ? baseYm : YearMonth.now().minusMonths(2).format(DateTimeFormatter.ofPattern("yyyyMM"));
+        int resolvedPage = Math.max(page, 1);
+        int resolvedPageSize = Math.max(1, Math.min(pageSize, 50));
 
         TourismExternalResponse external = switch (category) {
-            case PLACES_KO -> gateway.places(WellnessTourismGatewayService.Language.KO, district, null);
-            case PLACES_EN -> gateway.places(WellnessTourismGatewayService.Language.EN, district, null);
-            case PLACES_JA -> gateway.places(WellnessTourismGatewayService.Language.JA, district, null);
-            case PLACES_ZH -> gateway.places(WellnessTourismGatewayService.Language.ZH, district, null);
-            case ACCESSIBLE -> gateway.accessibility(district);
+            case PLACES_KO -> gateway.places(WellnessTourismGatewayService.Language.KO, district, null, resolvedPage, resolvedPageSize);
+            case PLACES_EN -> gateway.places(WellnessTourismGatewayService.Language.EN, district, null, resolvedPage, resolvedPageSize);
+            case PLACES_JA -> gateway.places(WellnessTourismGatewayService.Language.JA, district, null, resolvedPage, resolvedPageSize);
+            case PLACES_ZH -> gateway.places(WellnessTourismGatewayService.Language.ZH, district, null, resolvedPage, resolvedPageSize);
+            case ACCESSIBLE -> gateway.accessibility(district, resolvedPage, resolvedPageSize);
             case RELATED -> gateway.related(resolvedDistrict, resolvedBaseYm);
             case HUBS -> gateway.hubs(resolvedDistrict, resolvedBaseYm);
             case CROWDING -> gateway.crowding(resolvedDistrict);
@@ -76,14 +92,14 @@ public class TourismCatalogService {
         if (category == TourismCatalogCategory.CROWDING) {
             items = todayCrowdingItems(items, LocalDate.now());
         }
-        return new TourismCatalogResponse(
+        return translationService.localize(new TourismCatalogResponse(
             category,
             category.title(),
             category.description(),
             external.source(),
             external.retrievedAt(),
             items
-        );
+        ), language);
     }
 
     private synchronized TourismCatalogResponse getBusanCrowdingCatalog() {

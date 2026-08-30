@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,7 +20,14 @@ import static org.mockito.Mockito.when;
 class TourismCatalogCrowdingCacheTest {
     private final WellnessTourismGatewayService gateway = mock(WellnessTourismGatewayService.class);
     private final WellnessExternalSnapshotRepository snapshotRepository = mock(WellnessExternalSnapshotRepository.class);
-    private final TourismCatalogService service = new TourismCatalogService(gateway, snapshotRepository);
+    private final TourismCatalogTranslationService translationService = passThroughTranslationService();
+    private final TourismCatalogService service = new TourismCatalogService(gateway, snapshotRepository, translationService);
+
+    private static TourismCatalogTranslationService passThroughTranslationService() {
+        TourismCatalogTranslationService service = mock(TourismCatalogTranslationService.class);
+        when(service.localize(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+        return service;
+    }
 
     @Test
     void todaySnapshotSkipsExternalCrowdingApi() {

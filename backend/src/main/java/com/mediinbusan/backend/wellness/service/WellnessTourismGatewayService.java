@@ -21,13 +21,36 @@ public class WellnessTourismGatewayService {
     }
 
     public TourismExternalResponse places(Language language, BusanTourismCodes.District district, String contentTypeId) {
-        Map<String, Object> params = tourismParams(district);
+        return places(language, district, contentTypeId, 1, 50);
+    }
+
+    public TourismExternalResponse places(
+        Language language,
+        BusanTourismCodes.District district,
+        String contentTypeId,
+        int pageNo,
+        int pageSize
+    ) {
+        Map<String, Object> params = tourismParams(district, pageNo, pageSize);
         params.put("contentTypeId", contentTypeId);
         return request("tourism-" + language.name().toLowerCase(), language.baseUrl(properties), "areaBasedList2", params);
     }
 
     public TourismExternalResponse accessibility(BusanTourismCodes.District district) {
-        return request("accessible-tourism", properties.accessibleTourismBaseUrl(), "areaBasedList2", tourismParams(district));
+        return accessibility(district, 1, 50);
+    }
+
+    public TourismExternalResponse accessibility(
+        BusanTourismCodes.District district,
+        int pageNo,
+        int pageSize
+    ) {
+        return request(
+            "accessible-tourism",
+            properties.accessibleTourismBaseUrl(),
+            "areaBasedList2",
+            tourismParams(district, pageNo, pageSize)
+        );
     }
 
     public TourismExternalResponse searchPlaces(String keyword, BusanTourismCodes.District district, int pageNo) {
@@ -102,7 +125,17 @@ public class WellnessTourismGatewayService {
     }
 
     private static Map<String, Object> tourismParams(BusanTourismCodes.District district) {
+        return tourismParams(district, 1, 50);
+    }
+
+    private static Map<String, Object> tourismParams(
+        BusanTourismCodes.District district,
+        int pageNo,
+        int pageSize
+    ) {
         Map<String, Object> params = pageParams();
+        params.put("pageNo", pageNo);
+        params.put("numOfRows", pageSize);
         params.put("MobileOS", MOBILE_OS);
         params.put("MobileApp", MOBILE_APP);
         params.put("lDongRegnCd", BusanTourismCodes.LDONG_REGN_CD);

@@ -12,11 +12,13 @@ interface TourismApi {
     @GET("api/wellness/hospitals/{hospitalRegNo}/places")
     suspend fun getNearbyWellnessPlaces(
         @Path("hospitalRegNo") hospitalRegNo: String,
-        @Query("radiusMeters") radiusMeters: Double? = null
+        @Query("radiusMeters") radiusMeters: Double? = null,
+        @Query("language") language: String = "ko"
     ): List<PlaceDto>
 
     @GET("api/wellness/places/{contentId}")
     suspend fun getPlaceDetail(
-        @Path("contentId") contentId: String
+        @Path("contentId") contentId: String,
+        @Query("language") language: String = "ko"
     ): PlaceDto
 }

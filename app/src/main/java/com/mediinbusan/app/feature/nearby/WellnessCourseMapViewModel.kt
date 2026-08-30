@@ -3,6 +3,8 @@ package com.mediinbusan.app.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.route.DrivingRoute
 import com.mediinbusan.app.data.route.DrivingRoutePoint
 import com.mediinbusan.app.data.route.DrivingRouteRepository
@@ -14,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.ceil
@@ -21,7 +24,8 @@ import kotlin.math.ceil
 @HiltViewModel
 class WellnessCourseMapViewModel @Inject constructor(
     private val getRecommendedRoute: GetRecommendedHospitalWellnessRouteUseCase,
-    private val drivingRouteRepository: DrivingRouteRepository
+    private val drivingRouteRepository: DrivingRouteRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WellnessCourseMapUiState())
     val uiState: StateFlow<WellnessCourseMapUiState> = _uiState
@@ -29,6 +33,7 @@ class WellnessCourseMapViewModel @Inject constructor(
 
     fun load(hospitalId: String, courseIndex: Int = 0) {
         viewModelScope.launch {
+            val strings = appStringsFor(userPreferencesRepository.userPreferences.first().languageCode).nearby
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val recommendationResult = getRecommendedRoute(hospitalId, courseIndex)
             val recommendation = (recommendationResult as? Result.Success)?.data
@@ -37,7 +42,7 @@ class WellnessCourseMapViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         errorMessage = (recommendationResult as? Result.Error)?.message
-                            ?: "추천 코스를 불러오지 못했습니다."
+                            ?: strings.courseLoadError
                     )
                 }
                 return@launch
@@ -51,7 +56,7 @@ class WellnessCourseMapViewModel @Inject constructor(
                 selectedId = recommendation.hospital.id,
                 travelMode = TravelMode.DRIVING,
                 errorMessage = if (route == null) {
-                    (routeResult as? Result.Error)?.message ?: "실제 이동 경로를 불러오지 못했습니다."
+                    (routeResult as? Result.Error)?.message ?: strings.routeLoadError
                 } else {
                     null
                 }
@@ -67,6 +72,7 @@ class WellnessCourseMapViewModel @Inject constructor(
         val recommendation = recommendedRoute ?: return
         if (_uiState.value.travelMode == mode || _uiState.value.isRouteRefreshing) return
         viewModelScope.launch {
+            val strings = appStringsFor(userPreferencesRepository.userPreferences.first().languageCode).nearby
             _uiState.update { it.copy(isRouteRefreshing = true, routeErrorMessage = null) }
             val result = getRoute(recommendation, mode)
             val route = (result as? Result.Success)?.data?.let { recommendation.withActualRoute(it) }
@@ -74,7 +80,7 @@ class WellnessCourseMapViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isRouteRefreshing = false,
-                        routeErrorMessage = (result as? Result.Error)?.message ?: "이동 경로를 변경하지 못했습니다."
+                        routeErrorMessage = (result as? Result.Error)?.message ?: strings.routeChangeError
                     )
                 }
             } else {
