@@ -749,7 +749,7 @@ private fun SectionCardContainer(modifier: Modifier = Modifier, content: @Compos
     }
 }
 
-// "AI 진단하기" 챗봇 진입점. 온보딩 강제 흐름에서 빠진 준비 유형 진단(챗봇)은 이제 여기서만
+// "AI 준비체크" 챗봇 진입점. 온보딩 강제 흐름에서 빠진 준비 유형 체크(챗봇)는 이제 여기서만
 // 접근한다(MediInBusanNavHost.kt의 Route.SelfDiagnosis 배선 참고). Scaffold의 floatingActionButton
 // 슬롯에 얹혀있어 스크롤과 무관하게 항상 같은 자리(바텀바 바로 위)에 떠 있다.
 @Composable
@@ -766,7 +766,7 @@ private fun AiChatFab(hazeState: HazeState, modifier: Modifier = Modifier, onCli
 }
 
 // 문서 스캔(OCR·번역) 바로가기 — AiChatFab과 동일한 유리(frosted glass) 원형 카드 패턴을 그대로
-// 써서 AI진단 버튼 바로 위에 쌓는다. 지금은 UI만 붙인 상태라 클릭 시 실제 문서스캔 화면으로
+// 써서 AI 준비체크 버튼 바로 위에 쌓는다. 지금은 UI만 붙인 상태라 클릭 시 실제 문서스캔 화면으로
 // 이동하는 배선은 아직 없다(호출부의 TODO 참고) — 하단 탭바에 이미 있는 문서스캔 탭과 라벨
 // 문구(bottomNavDocumentScanLabel)를 그대로 재사용해 새 문자열을 만들지 않았다.
 @Composable

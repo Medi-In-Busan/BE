@@ -69,6 +69,15 @@ class GeminiClientTest {
     }
 
     @Test
+    void Gemini가_429를_반환하면_사용량_한도_초과_예외를_던진다() {
+        server.expect(requestTo(EXPECTED_URI))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("{}").contentType(MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.extractSlots("system instruction", "hi"))
+            .isInstanceOf(GeminiRateLimitExceededException.class);
+    }
+
+    @Test
     void Gemini가_5xx를_반환하면_API_예외를_던진다() {
         server.expect(requestTo(EXPECTED_URI)).andRespond(withServerError());
 
