@@ -26,7 +26,11 @@ data class MapUiState(
     val isSearchingArea: Boolean = false,
     // MedicalCategory.label(한국어) 값의 집합 — HospitalSearchListUiState의 SearchFilterChip과 같은
     // 식별자 규칙을 따른다. 비어있으면 진료과목으로 거르지 않는다(필터 미적용).
-    val selectedSpecialties: Set<String> = emptySet()
+    val selectedSpecialties: Set<String> = emptySet(),
+    // "번역된 장소만" 필터 — 켜져 있으면 visiblePlaces에서 Place.isTranslated == false인 장소를
+    // 숨긴다(병원은 이름·주소가 번역 대상이 아니라 영향 없음). 한국어일 땐 의미가 없어(전부
+    // isTranslated=true) MapScreen에서 토글 자체를 숨긴다.
+    val languageFilterEnabled: Boolean = false
 ) {
     val visibleHospitals: List<Hospital>
         get() {
@@ -56,7 +60,8 @@ data class MapUiState(
                 MapCategory.FOOD -> allPlaces.filter { it.type == PlaceType.RESTAURANT }
                 MapCategory.HOSPITAL -> emptyList()
             }
-            return if (searchQuery.isBlank()) byCategory else byCategory.filter { it.name.contains(searchQuery, ignoreCase = true) }
+            val byQuery = if (searchQuery.isBlank()) byCategory else byCategory.filter { it.name.contains(searchQuery, ignoreCase = true) }
+            return if (languageFilterEnabled) byQuery.filter { it.isTranslated } else byQuery
         }
 
     // visibleHospitals와 달리 "관광"/"음식" 탭에서는 병원을 숨긴다 — visiblePlaces가 이미 카테고리별로
