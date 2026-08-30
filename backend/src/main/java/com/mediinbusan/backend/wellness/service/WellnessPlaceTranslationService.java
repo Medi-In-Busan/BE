@@ -171,7 +171,7 @@ public class WellnessPlaceTranslationService {
     private static WellnessPlaceResponse translatedResponse(WellnessPlaceResponse source, WellnessPlaceTranslation translation) {
         return new WellnessPlaceResponse(source.contentId(), translation.name(), source.contentTypeId(), translation.address(),
             source.latitude(), source.longitude(), source.imageUrl(), translation.description(), source.phoneNumber(),
-            source.modifiedDate(), source.distanceFromHospitalMeters());
+            source.modifiedDate(), source.distanceFromHospitalMeters(), true);
     }
 
     private record PendingTranslation(

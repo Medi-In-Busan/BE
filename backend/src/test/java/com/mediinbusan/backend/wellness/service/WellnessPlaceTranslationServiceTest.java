@@ -54,7 +54,7 @@ class WellnessPlaceTranslationServiceTest {
         );
         WellnessPlaceResponse korean = new WellnessPlaceResponse(
             "place-1", "해운대 해수욕장", "TOURIST_ATTRACTION", "부산 해운대구", 35.1, 129.1,
-            null, "바닷가 산책 장소", null, "2026-08-30", 100.0
+            null, "바닷가 산책 장소", null, "2026-08-30", 100.0, true
         );
 
         when(repository.findByContentIdAndLanguageCode("place-1", "en")).thenReturn(Optional.empty());
@@ -68,7 +68,7 @@ class WellnessPlaceTranslationServiceTest {
     private static WellnessPlaceResponse place(String id, String name) {
         return new WellnessPlaceResponse(
             id, name, "TOURIST_ATTRACTION", "부산", 35.1, 129.1,
-            null, "바닷가 산책 장소", null, "2026-08-30", 100.0
+            null, "바닷가 산책 장소", null, "2026-08-30", 100.0, true
         );
     }
 }

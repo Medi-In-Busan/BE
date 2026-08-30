@@ -76,7 +76,8 @@ public class WellnessService {
             )
             .map(item -> WellnessDtoMapper.toPlaceResponse(
                 item.place,
-                item.distance
+                item.distance,
+                language
             ))
             .toList();
 
@@ -116,7 +117,8 @@ public class WellnessService {
                 .map(place ->
                     WellnessDtoMapper.toPlaceResponse(
                         place,
-                        null
+                        null,
+                        language
                     )
                 )
                 .toList();
@@ -159,7 +161,8 @@ public class WellnessService {
             )
             .map(item -> WellnessDtoMapper.toPlaceResponse(
                 item.place,
-                item.distance
+                item.distance,
+                language
             ))
             .toList();
 
@@ -183,7 +186,8 @@ public class WellnessService {
         WellnessPlaceResponse response =
             WellnessDtoMapper.toPlaceResponse(
                 place,
-                null
+                null,
+                language
             );
 
         return translationService.localize(
