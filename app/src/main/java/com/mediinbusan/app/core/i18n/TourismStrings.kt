@@ -12,6 +12,7 @@ data class TourismStrings(
     val hubHeroLanguageBadgeFormat: String,
     val catalogDefaultTitle: String,
     val districtSectionTitle: String,
+    val categorySectionTitle: String,
     val resultCountFormat: String,
     val sourceCountFormat: String,
     val emptyResultMessage: String,
@@ -38,6 +39,15 @@ data class TourismStrings(
     val placesSummaryFormat: String,
     val emptyPlaceFilterMessage: String,
     val resetFilterLabel: String,
+    val catalogSearchPlaceholder: String,
+    // 무장애 관광(TourismCatalogCategory.ACCESSIBLE) 전용 리스트업 화면의 검색 플레이스홀더.
+    val accessibleCatalogSearchPlaceholder: String,
+    // 무장애 관광 리스트업 화면의 결과 개수 라벨 — 숫자(코랄) 뒤에 붙는 단위 텍스트.
+    // "%d개 결과"처럼 숫자가 맨 앞에 오는 어순이라 resultCountFormat과 달리 포맷 문자열이 아니다.
+    val resultCountUnitLabel: String,
+    // "부산 관광지" 리스트업 화면의 두 섹션 헤더 — 개인화 추천 섹션과 그 아래 전체 목록 섹션.
+    val recommendedPlacesSectionTitle: String,
+    val allPlacesSectionTitle: String,
     val sourceLabels: Map<String, String>,
     val detailFieldLabels: Map<String, String>
 ) {
@@ -49,6 +59,7 @@ data class TourismStrings(
             hubHeroLanguageBadgeFormat = "%s 관광정보 적용 중",
             catalogDefaultTitle = "관광 데이터",
             districtSectionTitle = "지역 선택",
+            categorySectionTitle = "카테고리",
             resultCountFormat = "%d개 결과",
             sourceCountFormat = "%d개 제공",
             emptyResultMessage = "현재 제공되는 관광 데이터가 없습니다.",
@@ -75,6 +86,11 @@ data class TourismStrings(
             placesSummaryFormat = "%d곳 둘러보기",
             emptyPlaceFilterMessage = "선택한 조건의 장소가 없습니다.",
             resetFilterLabel = "전체 장소 보기",
+            catalogSearchPlaceholder = "장소 이름으로 검색",
+            accessibleCatalogSearchPlaceholder = "이동 편의 관광지·시설 이름으로 검색",
+            resultCountUnitLabel = "개 결과",
+            recommendedPlacesSectionTitle = "회원님을 위한 추천 장소",
+            allPlacesSectionTitle = "부산 관광지 전체",
             sourceLabels = mapOf(
                 "tourism-ko" to "국문 TourAPI",
                 "tourism-en" to "영문 TourAPI",
@@ -114,6 +130,7 @@ data class TourismStrings(
             hubHeroLanguageBadgeFormat = "Showing %s tourism info",
             catalogDefaultTitle = "Tourism Data",
             districtSectionTitle = "Select district",
+            categorySectionTitle = "Category",
             resultCountFormat = "%d results",
             sourceCountFormat = "%d listings",
             emptyResultMessage = "No tourism data is available right now.",
@@ -140,6 +157,11 @@ data class TourismStrings(
             placesSummaryFormat = "%d places to explore",
             emptyPlaceFilterMessage = "No places match this filter.",
             resetFilterLabel = "Show all places",
+            catalogSearchPlaceholder = "Search by place name",
+            accessibleCatalogSearchPlaceholder = "Search accessible places or facilities",
+            resultCountUnitLabel = " results",
+            recommendedPlacesSectionTitle = "Recommended for you",
+            allPlacesSectionTitle = "All Busan attractions",
             sourceLabels = mapOf(
                 "tourism-ko" to "TourAPI (Korean)",
                 "tourism-en" to "TourAPI (English)",
@@ -175,6 +197,7 @@ data class TourismStrings(
             hubHeroLanguageBadgeFormat = "正在显示%s旅游信息",
             catalogDefaultTitle = "旅游数据",
             districtSectionTitle = "选择地区",
+            categorySectionTitle = "分类",
             resultCountFormat = "%d个结果",
             sourceCountFormat = "提供%d个",
             emptyResultMessage = "目前没有可提供的旅游数据。",
@@ -201,6 +224,11 @@ data class TourismStrings(
             placesSummaryFormat = "共%d处可游览",
             emptyPlaceFilterMessage = "没有符合所选条件的场所。",
             resetFilterLabel = "查看全部场所",
+            catalogSearchPlaceholder = "按场所名称搜索",
+            accessibleCatalogSearchPlaceholder = "按无障碍景点·设施名称搜索",
+            resultCountUnitLabel = "个结果",
+            recommendedPlacesSectionTitle = "为您推荐的场所",
+            allPlacesSectionTitle = "釜山景点全部",
             sourceLabels = mapOf(
                 "tourism-ko" to "韩文 TourAPI",
                 "tourism-en" to "英文 TourAPI",
@@ -236,6 +264,7 @@ data class TourismStrings(
             hubHeroLanguageBadgeFormat = "%sの観光情報を表示中",
             catalogDefaultTitle = "観光データ",
             districtSectionTitle = "地域を選択",
+            categorySectionTitle = "カテゴリー",
             resultCountFormat = "%d件の結果",
             sourceCountFormat = "%d件提供",
             emptyResultMessage = "現在提供できる観光データがありません。",
@@ -262,6 +291,11 @@ data class TourismStrings(
             placesSummaryFormat = "%d件を巡る",
             emptyPlaceFilterMessage = "選択した条件のスポットがありません。",
             resetFilterLabel = "すべてのスポットを見る",
+            catalogSearchPlaceholder = "スポット名で検索",
+            accessibleCatalogSearchPlaceholder = "バリアフリー観光地・施設名で検索",
+            resultCountUnitLabel = "件の結果",
+            recommendedPlacesSectionTitle = "あなたへのおすすめスポット",
+            allPlacesSectionTitle = "釜山観光地すべて",
             sourceLabels = mapOf(
                 "tourism-ko" to "韓国語 TourAPI",
                 "tourism-en" to "英語 TourAPI",

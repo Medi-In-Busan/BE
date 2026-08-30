@@ -78,4 +78,12 @@ public class WellnessExternalSnapshot {
         this.payload = payload;
         this.syncedAt = Instant.now();
     }
+
+    public String payload() {
+        return payload;
+    }
+
+    public Instant syncedAt() {
+        return syncedAt;
+    }
 }

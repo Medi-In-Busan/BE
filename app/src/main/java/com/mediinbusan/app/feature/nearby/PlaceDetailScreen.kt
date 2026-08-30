@@ -142,12 +142,8 @@ private fun PlaceDetailContent(
     // 가려지거나 반대로 그 사이에 빈 여백이 남지 않고 정확히 맞닿게 한다(HospitalDetailScreen과 동일).
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
 
-    // HospitalDetailScreen이 실제로 쓰는 공통 컴포넌트 구성을 그대로 따른다: 뒤로가기는 사진 위
-    // 원형 오버레이가 아니라 고정 상단바(PlaceDetailTopBar)의 코랄 ChevronLeft로, 즐겨찾기/공유는
-    // 사진이 아니라 타이틀 줄(PlaceTitleSection)에 얹은 일반 IconButton으로 옮긴다.
-    Column(modifier = Modifier.fillMaxSize()) {
-        PlaceDetailTopBar(onBack = onBack)
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -227,22 +223,10 @@ private fun PlaceDetailContent(
                     }
             )
         }
-    }
-}
-
-// HospitalDetailTopBar(HospitalDetailScreen.kt)와 같은 톤 — 뒤로가기 화살표(줄+화살촉)가 아니라
-// 단순 꺾쇠 ChevronLeft를 코랄로 tint한, 캔버스 배경의 얇은 고정 바. 사진 위에 얹던 원형 버튼과
-// 달리 스크롤해도 항상 같은 자리에 남아있다.
-@Composable
-private fun PlaceDetailTopBar(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PlaceDetailCanvas)
-            .statusBarsPadding(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding()
+        ) {
             Icon(
                 imageVector = Icons.Default.ChevronLeft,
                 contentDescription = LocalAppStrings.current.common.backContentDescription,

@@ -44,7 +44,16 @@ class BuildRecommendedTourismCourseUseCaseTest {
             listOf(
                 item("one", 35.1, 129.1),
                 item("two", 35.2, 129.2),
-                TourismCatalogItem("no-coordinate", "좌표 없음", null, null, null, null, null, emptyMap())
+                TourismCatalogItem(
+                    id = "no-coordinate",
+                    title = "좌표 없음",
+                    subtitle = null,
+                    address = null,
+                    imageUrl = null,
+                    latitude = null,
+                    longitude = null,
+                    details = emptyMap()
+                )
             )
         )
 

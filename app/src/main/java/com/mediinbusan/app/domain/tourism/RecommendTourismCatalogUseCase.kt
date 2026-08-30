@@ -198,16 +198,16 @@ class RecommendTourismCatalogUseCase @Inject constructor() {
     )
 
     private companion object {
-        val INTERACTION_HALF_LIFE_MILLIS = TimeUnit.DAYS.toMillis(14).toDouble()
-        const val DIRECT_SELECTION_SCORE = 60.0
-        const val EVENT_KEYWORD_SCORE = 7.0
-        const val LEGACY_SELECTION_SCORE = 20.0
-        const val LEGACY_KEYWORD_SCORE = 6.0
-        const val RECENT_PLACE_SCORE = 4.0
+        val INTERACTION_HALF_LIFE_MILLIS = TimeUnit.DAYS.toMillis(21).toDouble()
+        const val DIRECT_SELECTION_SCORE = 110.0
+        const val EVENT_KEYWORD_SCORE = 14.0
+        const val LEGACY_SELECTION_SCORE = 35.0
+        const val LEGACY_KEYWORD_SCORE = 9.0
+        const val RECENT_PLACE_SCORE = 9.0
         const val MEDICAL_PURPOSE_SCORE = 5.0
-        const val MAX_DISTANCE_SCORE = 36.0
+        const val MAX_DISTANCE_SCORE = 55.0
         const val DISTANCE_DECAY_KM = 3.0
-        const val DIVERSITY_PENALTY = 18.0
+        const val DIVERSITY_PENALTY = 40.0
         const val EARTH_RADIUS_KM = 6371.0
 
         val RESTFUL_KEYWORDS = setOf(

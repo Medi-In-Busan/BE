@@ -17,6 +17,9 @@ data class TourismCatalogItem(
     val imageUrl: String?,
     val latitude: Double?,
     val longitude: Double?,
+    // TourAPI contenttypeid(12=관광지, 14=문화시설, 25=여행코스, 28=레포츠, 32=숙박, 38=쇼핑,
+    // 39=음식점). core/i18n/TourismCategoryStrings.kt의 translatedLabel로 화면에 그린다.
+    val categoryCode: String? = null,
     val details: Map<String, String>
 )
 

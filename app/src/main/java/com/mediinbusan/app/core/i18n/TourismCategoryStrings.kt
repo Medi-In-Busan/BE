@@ -107,6 +107,57 @@ fun TourismCatalogCategory.translatedDescription(language: SupportedLanguage): S
     }
 }
 
+/**
+ * TourismCatalogItem.categoryCode는 TourAPI contenttypeid 원본 값이다(12=관광지, 14=문화시설,
+ * 25=여행코스, 28=레포츠, 32=숙박, 38=쇼핑, 39=음식점) — PLACES_KO/ACCESSIBLE 리스트업 화면의
+ * 카테고리 필터 칩에 쓴다. 매핑에 없는 코드(예: 15=축제/공연/행사)는 null을 반환해 필터 칩에서 제외한다.
+ */
+fun String.translatedTourismItemCategoryLabel(language: SupportedLanguage): String? = when (this) {
+    "12" -> when (language) {
+        SupportedLanguage.KO -> "관광지"
+        SupportedLanguage.EN -> "Attractions"
+        SupportedLanguage.ZH -> "景点"
+        SupportedLanguage.JA -> "観光地"
+    }
+    "14" -> when (language) {
+        SupportedLanguage.KO -> "문화시설"
+        SupportedLanguage.EN -> "Culture"
+        SupportedLanguage.ZH -> "文化设施"
+        SupportedLanguage.JA -> "文化施設"
+    }
+    "25" -> when (language) {
+        SupportedLanguage.KO -> "여행코스"
+        SupportedLanguage.EN -> "Courses"
+        SupportedLanguage.ZH -> "旅游路线"
+        SupportedLanguage.JA -> "旅行コース"
+    }
+    "28" -> when (language) {
+        SupportedLanguage.KO -> "레포츠"
+        SupportedLanguage.EN -> "Activities"
+        SupportedLanguage.ZH -> "休闲运动"
+        SupportedLanguage.JA -> "レジャースポーツ"
+    }
+    "32" -> when (language) {
+        SupportedLanguage.KO -> "숙박"
+        SupportedLanguage.EN -> "Lodging"
+        SupportedLanguage.ZH -> "住宿"
+        SupportedLanguage.JA -> "宿泊"
+    }
+    "38" -> when (language) {
+        SupportedLanguage.KO -> "쇼핑"
+        SupportedLanguage.EN -> "Shopping"
+        SupportedLanguage.ZH -> "购物"
+        SupportedLanguage.JA -> "ショッピング"
+    }
+    "39" -> when (language) {
+        SupportedLanguage.KO -> "음식점"
+        SupportedLanguage.EN -> "Restaurants"
+        SupportedLanguage.ZH -> "餐厅"
+        SupportedLanguage.JA -> "飲食店"
+    }
+    else -> null
+}
+
 fun TourismCatalogGroup.translatedLabel(language: SupportedLanguage): String = when (language) {
     SupportedLanguage.KO -> when (this) {
         TourismCatalogGroup.PLACES -> "관광지 탐색"

@@ -2,6 +2,7 @@ package com.mediinbusan.backend.wellness.service;
 
 import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
 import com.mediinbusan.backend.wellness.dto.TourismPlaceMatchResponse;
+import com.mediinbusan.backend.wellness.repository.WellnessExternalSnapshotRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -22,7 +23,8 @@ import static org.mockito.Mockito.when;
 
 class TourismPlaceMatchServiceTest {
     private final WellnessTourismGatewayService gateway = mock(WellnessTourismGatewayService.class);
-    private final TourismCatalogService catalogService = new TourismCatalogService(gateway);
+    private final WellnessExternalSnapshotRepository snapshotRepository = mock(WellnessExternalSnapshotRepository.class);
+    private final TourismCatalogService catalogService = new TourismCatalogService(gateway, snapshotRepository);
     private final TourismPlaceMatchService service = new TourismPlaceMatchService(gateway, catalogService);
 
     @Test

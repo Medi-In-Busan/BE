@@ -157,7 +157,7 @@ private fun HotPlacesSection(
     onRetry: () -> Unit
 ) {
     HighlightSectionHeader(
-        title = "현재 부산 핫 플레이스",
+        title = "현재 부산 핫플레이스",
         description = "관광 혼잡도 지수가 높은 장소를 먼저 보여드려요.",
         showSeeAll = hotPlaces.isNotEmpty(),
         onSeeAll = onSeeAll
