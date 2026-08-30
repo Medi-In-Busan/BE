@@ -33,7 +33,7 @@ class GetRecommendedHospitalWellnessRouteUseCase @Inject constructor(
         val preferences = userPreferencesRepository.userPreferences.first()
         val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, preferences.languageCode)
             .first { it !is Result.Loading }
-        val placesResult = placeRepository.getNearbyPlaces(hospitalId)
+        val placesResult = placeRepository.getNearbyPlaces(hospitalId, preferences.languageCode)
             .first { it !is Result.Loading }
         val hospital = (hospitalResult as? Result.Success)?.data
         val places = (placesResult as? Result.Success)?.data

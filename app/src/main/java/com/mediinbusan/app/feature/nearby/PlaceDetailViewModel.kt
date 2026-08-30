@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -13,6 +14,7 @@ import com.mediinbusan.app.data.recent.RecentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,7 +24,8 @@ import javax.inject.Inject
 class PlaceDetailViewModel @Inject constructor(
     private val placeRepository: PlaceRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val recentRepository: RecentRepository
+    private val recentRepository: RecentRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlaceDetailUiState())
@@ -30,7 +33,8 @@ class PlaceDetailViewModel @Inject constructor(
 
     fun load(placeId: String) {
         viewModelScope.launch {
-            placeRepository.getPlaceDetail(placeId).collect { result ->
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+            placeRepository.getPlaceDetail(placeId, languageCode).collect { result ->
                 _uiState.update { state ->
                     when (result) {
                         is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
