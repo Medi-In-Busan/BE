@@ -16,6 +16,15 @@ interface TourismApi {
         @Query("language") language: String = "ko"
     ): List<PlaceDto>
 
+    /** 병원에 종속되지 않은 전체 웰니스 장소 조회. */
+    @GET("api/wellness/places")
+    suspend fun getPlaces(
+        @Query("latitude") latitude: Double? = null,
+        @Query("longitude") longitude: Double? = null,
+        @Query("radiusMeters") radiusMeters: Double? = null,
+        @Query("language") language: String = "ko"
+    ): List<PlaceDto>
+
     @GET("api/wellness/places/{contentId}")
     suspend fun getPlaceDetail(
         @Path("contentId") contentId: String,

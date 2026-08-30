@@ -28,13 +28,19 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 interface RepositoryModule {
+    // HospitalRepositoryImpl/PlaceRepositoryImpl은 인메모리 TTL 캐시(TtlCache)를 인스턴스 필드로
+    // 들고 있다 — @Singleton이 없으면 화면을 오갈 때(ViewModel 재생성)마다 새 인스턴스가 만들어져
+    // 캐시가 매번 비워진다. @Binds로 노출하는 이 메서드에도 스코프를 똑같이 선언해야 한다.
+    @Singleton
     @Binds
     fun bindHospitalRepository(impl: HospitalRepositoryImpl): HospitalRepository
 
+    @Singleton
     @Binds
     fun bindPlaceRepository(impl: PlaceRepositoryImpl): PlaceRepository
 

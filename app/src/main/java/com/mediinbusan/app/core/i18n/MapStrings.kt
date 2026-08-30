@@ -27,7 +27,10 @@ data class MapStrings(
     val courseNotFoundMessage: String,
     // 코스 동선 지도 위 화살표 경로선(외부 카카오맵 앱 연동 없이 우리 지도 안에서 방향을 표시,
     // core/ui/KakaoMapView.kt의 renderRoute 참고)이 뭘 뜻하는지 짚어주는 짧은 안내 문구.
-    val routeArrowHintLabel: String
+    val routeArrowHintLabel: String,
+    // "번역된 장소만" 토글(MapUiState.languageFilterEnabled) — 한국어 UI에서는 이 토글 자체를
+    // 숨기므로(MapScreen.kt BrowseMap 참고) 항상 안 쓰이지만, 다른 필드와 같은 규칙으로 Ko도 채운다.
+    val languageFilterLabel: String
 ) {
     companion object {
         val Ko = MapStrings(
@@ -48,7 +51,8 @@ data class MapStrings(
             specialtyFilterSectionLabel = "진료과목",
             courseDurationPrefix = "예상 소요 ",
             courseNotFoundMessage = "코스 정보를 불러올 수 없습니다.",
-            routeArrowHintLabel = "지도의 화살표를 따라 이동 순서를 확인하세요"
+            routeArrowHintLabel = "지도의 화살표를 따라 이동 순서를 확인하세요",
+            languageFilterLabel = "번역된 곳만"
         )
         val En = MapStrings(
             searchPlaceholder = "Search on map...",
@@ -68,7 +72,8 @@ data class MapStrings(
             specialtyFilterSectionLabel = "Specialty",
             courseDurationPrefix = "Est. ",
             courseNotFoundMessage = "Couldn't load course details.",
-            routeArrowHintLabel = "Follow the arrows on the map to see the visiting order"
+            routeArrowHintLabel = "Follow the arrows on the map to see the visiting order",
+            languageFilterLabel = "Translated only"
         )
         val Zh = MapStrings(
             searchPlaceholder = "在地图上搜索...",
@@ -88,7 +93,8 @@ data class MapStrings(
             specialtyFilterSectionLabel = "诊疗科目",
             courseDurationPrefix = "预计所需 ",
             courseNotFoundMessage = "无法加载课程信息。",
-            routeArrowHintLabel = "请沿地图上的箭头查看移动顺序"
+            routeArrowHintLabel = "请沿地图上的箭头查看移动顺序",
+            languageFilterLabel = "仅显示已翻译"
         )
         val Ja = MapStrings(
             searchPlaceholder = "地図で検索...",
@@ -108,7 +114,8 @@ data class MapStrings(
             specialtyFilterSectionLabel = "診療科目",
             courseDurationPrefix = "所要時間目安 ",
             courseNotFoundMessage = "コース情報を読み込めません。",
-            routeArrowHintLabel = "地図の矢印に沿って移動順序をご確認ください"
+            routeArrowHintLabel = "地図の矢印に沿って移動順序をご確認ください",
+            languageFilterLabel = "翻訳済みのみ"
         )
     }
 }

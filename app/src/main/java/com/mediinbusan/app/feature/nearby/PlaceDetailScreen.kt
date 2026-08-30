@@ -248,7 +248,7 @@ private fun PlaceHeroSection(place: Place) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp)
+            .padding(start = 20.dp, top = 10.dp, end = 20.dp)
             .height(240.dp)
             .clip(RoundedCornerShape(28.dp))
     ) {

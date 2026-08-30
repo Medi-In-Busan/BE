@@ -160,9 +160,11 @@ fun MapScreen(
             onMarkerSelected = viewModel::onMarkerSelected,
             onToggleFavorite = viewModel::onToggleFavorite,
             onSelectHospital = onSelectHospital,
+            onSelectPlace = onSelectPlace,
             onSearchThisArea = viewModel::searchThisArea,
             onSpecialtyFilterToggled = viewModel::onSpecialtyFilterToggled,
-            onSpecialtyFiltersCleared = viewModel::onSpecialtyFiltersCleared
+            onSpecialtyFiltersCleared = viewModel::onSpecialtyFiltersCleared,
+            onLanguageFilterToggled = viewModel::onLanguageFilterToggled
         )
     }
 }
@@ -362,9 +364,11 @@ private fun BrowseMap(
     onMarkerSelected: (String?) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onSelectHospital: (String) -> Unit,
+    onSelectPlace: (String) -> Unit,
     onSearchThisArea: (latitude: Double, longitude: Double) -> Unit,
     onSpecialtyFilterToggled: (String) -> Unit,
-    onSpecialtyFiltersCleared: () -> Unit
+    onSpecialtyFiltersCleared: () -> Unit,
+    onLanguageFilterToggled: () -> Unit
 ) {
     val mapStrings = LocalAppStrings.current.map
     val language = LocalAppStrings.current.language
@@ -462,6 +466,17 @@ private fun BrowseMap(
             }
             Spacer(modifier = Modifier.height(12.dp))
             CategoryTabsRow(strings = mapStrings, selected = uiState.selectedCategory, onSelected = onCategorySelected)
+            // 한국어 UI에서는 모든 장소가 원문(한국어)이라 이 필터가 아무것도 안 걸러 의미가 없다 —
+            // 다른 언어일 때만, 그리고 장소(Place)가 나오는 카테고리에서만 보여준다(병원 이름·주소는
+            // 번역 대상이 아니라 항상 그대로 나오므로 HOSPITAL 탭에는 안 띄운다).
+            if (language != SupportedLanguage.KO && uiState.selectedCategory != MapCategory.HOSPITAL) {
+                Spacer(modifier = Modifier.height(10.dp))
+                FilterChipPill(
+                    label = mapStrings.languageFilterLabel,
+                    selected = uiState.languageFilterEnabled,
+                    onClick = onLanguageFilterToggled
+                )
+            }
             if (uiState.selectedCategory == MapCategory.HOSPITAL || uiState.selectedCategory == MapCategory.ALL) {
                 Spacer(modifier = Modifier.height(8.dp))
                 SearchThisAreaButton(
@@ -553,7 +568,11 @@ private fun BrowseMap(
                             onFavoriteClick = { onToggleFavorite(selectedHospital.id) },
                             onDetailClick = { onSelectHospital(selectedHospital.id) }
                         )
-                        key.startsWith("place:") && selectedPlace != null -> SelectedPlaceCard(place = selectedPlace)
+                        key.startsWith("place:") && selectedPlace != null -> SelectedPlaceCard(
+                            place = selectedPlace,
+                            detailButtonLabel = mapStrings.detailButtonLabel,
+                            onDetailClick = { onSelectPlace(selectedPlace.id) }
+                        )
                         key == "list" -> EntryCardRow(entries = entries, onCardClick = { onMarkerSelected(it) })
                         key == "empty_hospital" -> EmptyResultCard(message = mapStrings.emptyHospitalMessage)
                         else -> EmptyResultCard(message = mapStrings.emptyPlaceMessage)
@@ -931,9 +950,15 @@ private fun SelectedHospitalCard(
     }
 }
 
-// Place는 아직 전용 상세 진입 동선이 지도에 배선되어 있지 않아, 병원 카드와 달리 정보 표시만 한다.
+// SelectedHospitalCard와 완전히 같은 구성으로 맞춘다: 설명 전문을 그대로 뿌리던 텍스트 카드 대신
+// 썸네일 + 이름 + 주소(메타 한 줄)만 보여주고, "상세보기"를 눌러야 설명 등 나머지 정보를 보게 한다 —
+// 마커를 눌렀을 때 병원과 장소가 같은 느낌으로 보이도록.
 @Composable
-private fun SelectedPlaceCard(place: Place) {
+private fun SelectedPlaceCard(
+    place: Place,
+    detailButtonLabel: String,
+    onDetailClick: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color.White,
@@ -941,15 +966,39 @@ private fun SelectedPlaceCard(place: Place) {
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text(text = place.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = place.address, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            place.description?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = it, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PlaceThumbnail(
+                    place = place,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(DividerColor)
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = place.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = place.address, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onDetailClick,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
+            ) {
+                Text(text = detailButtonLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
+}
+
+// HospitalThumbnail과 같은 역할 — place.imageUrl이 없는 장소도 많아(EntryCardRow의 InfoMiniCard와
+// 동일하게) 실패해도 크래시 없이 빈 배경만 남는 AsyncImageBox(model=null)로 그냥 둔다.
+@Composable
+private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
+    AsyncImageBox(model = place.imageUrl, contentDescription = place.name, modifier = modifier)
 }
 
 @Composable

@@ -69,6 +69,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
@@ -642,11 +643,16 @@ private fun PlacesFilterDropdownRow(
 // 드롭다운 화살표를 아래 박스에 둔다. fillMaxWidth를 안 줘서 내용 크기만큼만 차지한다(한 줄을
 // 다 채우는 큰 박스가 아니라 작은 칩형 선택 버튼). content는 BrandDropdownMenu 안에 그릴 항목들 —
 // 항목 클릭 시 collapse()를 불러 메뉴를 닫는다(BrandDropdownMenuItem의 onClick 안에서 호출).
+// 카테고리·지역 둘 다 항목 수와 무관하게 펼침 높이를 5줄(약 240dp)로 고정해 두 드롭다운이 같은
+// 크기로 보이게 한다 — 항목이 적으면 그만큼만 차지하고, 지역처럼 16개면 안에서 스크롤된다.
+private val FilterDropdownMenuMaxHeight = 240.dp
+
 @Composable
 private fun TourismFilterDropdown(
     label: String,
     selectedLabel: String,
     modifier: Modifier = Modifier,
+    menuMaxHeight: Dp = FilterDropdownMenuMaxHeight,
     content: @Composable ColumnScope.(collapse: () -> Unit) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -686,7 +692,7 @@ private fun TourismFilterDropdown(
                     modifier = Modifier.size(18.dp)
                 )
             }
-            BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, maxHeight = menuMaxHeight) {
                 content { expanded = false }
             }
         }
@@ -1079,7 +1085,7 @@ private fun TourismCardBody(item: TourismCatalogItem, distanceLabel: String?) {
         }
         item.address?.let { address ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = SkyBlue, modifier = Modifier.height(16.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = TextSecondary, modifier = Modifier.height(16.dp))
                 Spacer(Modifier.width(5.dp))
                 Text(address, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }

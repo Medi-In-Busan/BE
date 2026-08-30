@@ -11,7 +11,9 @@ data class Place(
     val description: String?,
     val phoneNumber: String?,
     val distanceFromHospitalMeters: Double? = null,
-    val lastModified: String? = null
+    val lastModified: String? = null,
+    // 현재 조회 언어로 실제 번역된 이름인지(한국어일 땐 항상 true) — 지도 "번역된 장소만" 필터가 쓴다.
+    val isTranslated: Boolean = true
 )
 
 enum class PlaceType {

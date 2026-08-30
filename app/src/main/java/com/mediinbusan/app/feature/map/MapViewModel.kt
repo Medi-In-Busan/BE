@@ -84,7 +84,7 @@ class MapViewModel @Inject constructor(
 
             val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
                 .first { it !is Result.Loading }
-            val coursesResult = assembleWellnessCourse(hospitalId)
+            val coursesResult = assembleWellnessCourse(hospitalId, languageCode)
                 .first { it !is Result.Loading }
 
             val hospital = (hospitalResult as? Result.Success)?.data
@@ -109,7 +109,7 @@ class MapViewModel @Inject constructor(
 
             val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
                 .first { it !is Result.Loading }
-            val placesResult = placeRepository.getNearbyPlaces(hospitalId)
+            val placesResult = placeRepository.getNearbyPlaces(hospitalId, languageCode)
                 .first { it !is Result.Loading }
 
             val hospital = (hospitalResult as? Result.Success)?.data
@@ -136,11 +136,10 @@ class MapViewModel @Inject constructor(
                 .first { it !is Result.Loading }
             val hospitals = (hospitalsResult as? Result.Success)?.data.orEmpty()
 
-            // PlaceRepositoryImpl은 지금 hospitalId와 무관하게 같은 샘플 목록을 반환하는 mock이라,
-            // 전체 브라우징 모드에서는 대표로 한 번만 조회해 관광/음식 카테고리를 채운다.
-            val placesResult = hospitals.firstOrNull()?.let { hospital ->
-                placeRepository.getNearbyPlaces(hospital.id).first { it !is Result.Loading }
-            }
+            // 예전엔 병원 목록 맨 앞 병원 하나의 반경 3km(getNearbyPlaces)만 빌려써서, 그 반경 밖
+            // 장소(다른 구에 upsert된 부산맛집 데이터 등)가 지도에 아예 안 떴다 — 병원 비종속 전체
+            // 조회(getAllPlaces, GET /api/wellness/places)로 바꿔 부산 전역 장소가 다 보이게 한다.
+            val placesResult = placeRepository.getAllPlaces(languageCode).first { it !is Result.Loading }
             val places = (placesResult as? Result.Success)?.data.orEmpty()
 
             _uiState.update {
@@ -199,6 +198,12 @@ class MapViewModel @Inject constructor(
 
     fun onSpecialtyFiltersCleared() {
         _uiState.update { it.copy(selectedSpecialties = emptySet()) }
+    }
+
+    // 이미 받아둔 allPlaces에서 MapUiState.visiblePlaces가 Place.isTranslated로 클라이언트 필터링만
+    // 한다 — 진료과목 필터와 같은 패턴, 서버 재요청 없음.
+    fun onLanguageFilterToggled() {
+        _uiState.update { it.copy(languageFilterEnabled = !it.languageFilterEnabled) }
     }
 
     fun onMarkerSelected(hospitalId: String?) {
