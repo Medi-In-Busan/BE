@@ -1,5 +1,9 @@
 package com.mediinbusan.app.feature.nearby
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -103,6 +108,7 @@ fun WellnessCourseMapScreen(
             )
             uiState.route != null -> WellnessRouteContent(
                 route = requireNotNull(uiState.route),
+                courseIndex = courseIndex,
                 selectedId = uiState.selectedId,
                 travelMode = uiState.travelMode,
                 isRouteRefreshing = uiState.isRouteRefreshing,
@@ -119,6 +125,7 @@ fun WellnessCourseMapScreen(
 @Composable
 private fun WellnessRouteContent(
     route: HospitalWellnessRoute,
+    courseIndex: Int,
     selectedId: String?,
     travelMode: TravelMode,
     isRouteRefreshing: Boolean,
@@ -175,31 +182,13 @@ private fun WellnessRouteContent(
         contentPadding = PaddingValues(bottom = 36.dp)
     ) {
         item {
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "${route.hospital.name}에서 시작하는 코스",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = LocalAppStrings.current.nearby.courseMapDescription,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-                Surface(shape = CircleShape, color = CoralPrimaryContainer) {
-                    Text(
-                        text = "${LocalAppStrings.current.nearby.stopCountFormat.format(route.stops.size)} · ${travelMode.summaryLabel()} ${durationLabel(route.estimatedDurationMinutes)} · ${distanceLabel(route.totalDistanceKm)}",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = CoralPrimary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
+            CourseHero(
+                route = route,
+                courseIndex = courseIndex,
+                selectedId = selectedId,
+                travelMode = travelMode,
+                onSelect = onSelect
+            )
         }
         item {
             TravelModeSelector(
@@ -264,6 +253,207 @@ private fun WellnessRouteContent(
 }
 
 private const val COURSE_MAP_ITEM_INDEX = 2
+
+@Composable
+private fun CourseHero(
+    route: HospitalWellnessRoute,
+    courseIndex: Int,
+    selectedId: String?,
+    travelMode: TravelMode,
+    onSelect: (String) -> Unit
+) {
+    val selectedStop = route.stops.firstOrNull { it.place.id == selectedId }
+        ?: route.stops.first()
+    val courseTitle = LocalAppStrings.current.nearby.courseTitles.getOrElse(courseIndex) {
+        LocalAppStrings.current.nearby.courseTitles.last()
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        shape = RoundedCornerShape(26.dp),
+        color = Color.White,
+        shadowElevation = 4.dp
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(310.dp)
+                    .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
+                    .background(CoralPrimaryContainer)
+            ) {
+                AnimatedContent(
+                    targetState = selectedStop.place,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "course-stop-image",
+                    modifier = Modifier.fillMaxSize()
+                ) { place ->
+                    if (place.imageUrl != null) {
+                        AsyncImageBox(
+                            model = place.imageUrl,
+                            contentDescription = place.name,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(CoralPrimaryContainer, Color(0xFFEAF7FF))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = place.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.12f),
+                                    Color.Black.copy(alpha = 0.78f)
+                                )
+                            )
+                        )
+                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        text = selectedStop.place.type.label(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.82f)
+                    )
+                    Text(
+                        text = courseTitle,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${selectedStop.order}. ${selectedStop.place.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.92f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (selectedStop.place.address.isNotBlank()) {
+                        Text(
+                            text = selectedStop.place.address,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.72f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = LocalAppStrings.current.nearby.stopCountFormat.format(route.stops.size),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        text = durationLabel(route.estimatedDurationMinutes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        text = distanceLabel(route.totalDistanceKm),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = travelMode.summaryLabel(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = CoralPrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                CourseStopSelector(
+                    stops = route.stops,
+                    selectedId = selectedStop.place.id,
+                    onSelect = onSelect
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseStopSelector(
+    stops: List<HospitalWellnessStop>,
+    selectedId: String,
+    onSelect: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(38.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(DividerColor)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            stops.forEach { stop ->
+                val selected = stop.place.id == selectedId
+                Box(
+                    modifier = Modifier
+                        .size(if (selected) 36.dp else 30.dp)
+                        .clip(CircleShape)
+                        .background(if (selected) CoralPrimary else Color(0xFFF1EFEC))
+                        .clickable { onSelect(stop.place.id) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stop.order.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (selected) Color.White else TextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun TravelModeSelector(

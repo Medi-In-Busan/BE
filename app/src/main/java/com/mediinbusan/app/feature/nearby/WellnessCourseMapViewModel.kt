@@ -53,7 +53,7 @@ class WellnessCourseMapViewModel @Inject constructor(
             _uiState.value = WellnessCourseMapUiState(
                 isLoading = false,
                 route = route,
-                selectedId = recommendation.hospital.id,
+                selectedId = recommendation.stops.firstOrNull()?.place?.id,
                 travelMode = TravelMode.DRIVING,
                 errorMessage = if (route == null) {
                     (routeResult as? Result.Error)?.message ?: strings.routeLoadError
