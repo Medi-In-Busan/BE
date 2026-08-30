@@ -24,8 +24,8 @@ data class WellnessCourse(
 class AssembleWellnessCourseUseCase @Inject constructor(
     private val placeRepository: PlaceRepository
 ) {
-    operator fun invoke(hospitalId: String): Flow<Result<List<WellnessCourse>>> =
-        placeRepository.getNearbyPlaces(hospitalId).map { result ->
+    operator fun invoke(hospitalId: String, languageCode: String): Flow<Result<List<WellnessCourse>>> =
+        placeRepository.getNearbyPlaces(hospitalId, languageCode).map { result ->
             when (result) {
                 is Result.Success -> Result.Success(result.data.toWellnessCourses())
                 is Result.Error -> result

@@ -64,7 +64,8 @@ class NearbyViewModel @Inject constructor(
         loadHotPlaces()
         loadCatalogPreviews()
         viewModelScope.launch {
-            getNearbyPlacesSortedByDistance(hospitalId).collect { result ->
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+            getNearbyPlacesSortedByDistance(hospitalId, languageCode).collect { result ->
                 _uiState.update { state ->
                     when (result) {
                         is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
