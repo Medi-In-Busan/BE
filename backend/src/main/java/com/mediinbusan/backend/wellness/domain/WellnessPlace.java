@@ -49,6 +49,36 @@ public class WellnessPlace {
     @Column(name = "modified_date")
     private LocalDate modifiedDate;
 
+    // 부산맛집정보(getFoodEn/getFoodJa/getFoodZhs) 등 다국어 소스로 채워지는 번역 — 없으면 null이고
+    // WellnessDtoMapper가 name/address/description(한국어 원문)으로 폴백한다. Hospital의
+    // descriptionEn/Zh/Ja(HospitalDtoMapper 참고)와 같은 규칙.
+    @Column(name = "name_en", length = 200)
+    private String nameEn;
+
+    @Column(name = "name_zh", length = 200)
+    private String nameZh;
+
+    @Column(name = "name_ja", length = 200)
+    private String nameJa;
+
+    @Column(name = "address_en", length = 300)
+    private String addressEn;
+
+    @Column(name = "address_zh", length = 300)
+    private String addressZh;
+
+    @Column(name = "address_ja", length = 300)
+    private String addressJa;
+
+    @Column(name = "description_en", columnDefinition = "TEXT")
+    private String descriptionEn;
+
+    @Column(name = "description_zh", columnDefinition = "TEXT")
+    private String descriptionZh;
+
+    @Column(name = "description_ja", columnDefinition = "TEXT")
+    private String descriptionJa;
+
     protected WellnessPlace() {
     }
 
@@ -112,6 +142,73 @@ public class WellnessPlace {
 
     public LocalDate getModifiedDate() {
         return modifiedDate;
+    }
+
+    public String getNameEn() {
+        return nameEn;
+    }
+
+    public String getNameZh() {
+        return nameZh;
+    }
+
+    public String getNameJa() {
+        return nameJa;
+    }
+
+    public String getAddressEn() {
+        return addressEn;
+    }
+
+    public String getAddressZh() {
+        return addressZh;
+    }
+
+    public String getAddressJa() {
+        return addressJa;
+    }
+
+    public String getDescriptionEn() {
+        return descriptionEn;
+    }
+
+    public String getDescriptionZh() {
+        return descriptionZh;
+    }
+
+    public String getDescriptionJa() {
+        return descriptionJa;
+    }
+
+    /**
+     * 다국어 소스(예: 부산맛집정보 getFoodEn/getFoodJa/getFoodZhs) 한 건을 이 장소에 반영한다.
+     * 빈 값은 무시한다 — 이번 응답이 비어 있다고 해서 이전에 저장해둔 번역을 지우지 않는다.
+     */
+    public void applyTranslation(String lang, String name, String address, String description) {
+        switch (lang) {
+            case "en" -> {
+                if (hasText(name)) this.nameEn = name;
+                if (hasText(address)) this.addressEn = address;
+                if (hasText(description)) this.descriptionEn = description;
+            }
+            case "zh" -> {
+                if (hasText(name)) this.nameZh = name;
+                if (hasText(address)) this.addressZh = address;
+                if (hasText(description)) this.descriptionZh = description;
+            }
+            case "ja" -> {
+                if (hasText(name)) this.nameJa = name;
+                if (hasText(address)) this.addressJa = address;
+                if (hasText(description)) this.descriptionJa = description;
+            }
+            default -> {
+                // ko는 name/address/description(원문) 필드가 이미 담당한다.
+            }
+        }
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     public void updateFrom(

@@ -61,13 +61,18 @@ public class WellnessController {
         this.routeService = routeService;
     }
 
-    @Operation(summary = "병원 주변 웰니스 장소 조회", description = "병원 좌표 기준 반경 내 웰니스 장소를 거리순으로 반환한다.")
+    @Operation(
+        summary = "병원 주변 웰니스 장소 조회",
+        description = "병원 좌표 기준 반경 내 웰니스 장소를 거리순으로 반환한다. "
+            + "lang(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환하고, 해당 언어 번역이 없으면 ko로 폴백한다."
+    )
     @GetMapping("/hospitals/{hospitalRegNo}/places")
     public List<WellnessPlaceResponse> getNearbyPlaces(
         @PathVariable String hospitalRegNo,
-        @Parameter(description = "검색 반경(m). 기본값 3000m") @RequestParam(required = false) Double radiusMeters
+        @Parameter(description = "검색 반경(m). 기본값 3000m") @RequestParam(required = false) Double radiusMeters,
+        @RequestParam(defaultValue = "ko") String lang
     ) {
-        return wellnessService.getNearbyPlaces(hospitalRegNo, radiusMeters);
+        return wellnessService.getNearbyPlaces(hospitalRegNo, radiusMeters, lang);
     }
 
     @Operation(summary = "병원 출발 웰니스 코스 경로", description = "Kakao 자동차·도보 길찾기로 4~5개 장소의 실제 이동 경로를 반환한다.")
@@ -76,13 +81,35 @@ public class WellnessController {
         return routeService.route(request);
     }
 
-    @Operation(summary = "웰니스 장소 상세 조회")
-    @GetMapping("/places/{contentId}")
-    public WellnessPlaceResponse getPlaceDetail(@PathVariable String contentId) {
-        return wellnessService.getPlaceDetail(contentId);
+    @Operation(
+        summary = "웰니스 장소 목록 조회(병원 비종속)",
+        description = "latitude/longitude를 넘기면 반경(radiusMeters, 기본 3000m) 내 장소를 거리순으로, "
+            + "안 넘기면 전체 장소를 반환한다. 지도 '전체 브라우징' 화면처럼 특정 병원에 종속되지 않은 조회에 쓴다. "
+            + "lang(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환하고, 해당 언어 번역이 없으면 ko로 폴백한다."
+    )
+    @GetMapping("/places")
+    public List<WellnessPlaceResponse> getPlaces(
+        @Parameter(description = "기준 위도(선택)") @RequestParam(required = false) Double latitude,
+        @Parameter(description = "기준 경도(선택)") @RequestParam(required = false) Double longitude,
+        @Parameter(description = "검색 반경(m). 기본값 3000m — latitude/longitude가 있을 때만 적용") @RequestParam(required = false) Double radiusMeters,
+        @RequestParam(defaultValue = "ko") String lang
+    ) {
+        return wellnessService.findPlaces(latitude, longitude, radiusMeters, lang);
     }
 
-    @Operation(summary = "TourAPI/Kakao Local 웰니스 장소 적재", description = "환경변수의 공식 API 키로 부산 웰니스 장소를 수집해 DB에 upsert한다.")
+    @Operation(
+        summary = "웰니스 장소 상세 조회",
+        description = "lang(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환한다. 해당 언어 번역이 없으면 ko로 폴백한다."
+    )
+    @GetMapping("/places/{contentId}")
+    public WellnessPlaceResponse getPlaceDetail(
+        @PathVariable String contentId,
+        @RequestParam(defaultValue = "ko") String lang
+    ) {
+        return wellnessService.getPlaceDetail(contentId, lang);
+    }
+
+    @Operation(summary = "TourAPI/부산맛집정보 웰니스 장소 적재", description = "환경변수의 공식 API 키로 부산 웰니스 장소를 수집해 DB에 upsert한다. 카카오 로컬 검색 소스(kakao-*)는 더 이상 수집하지 않고, 과거 데이터도 이 호출로 정리된다.")
     @PostMapping("/ingest")
     public WellnessIngestionResponse ingest() {
         return wellnessIngestionService.ingest();

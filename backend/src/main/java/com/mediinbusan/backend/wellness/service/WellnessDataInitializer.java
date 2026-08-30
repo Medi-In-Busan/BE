@@ -32,7 +32,10 @@ public class WellnessDataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (placeRepository.count() > 0 || (!properties.hasTourApiKey() && !properties.hasKakaoKey())) {
+        // 카카오 로컬 검색은 더 이상 웰니스 장소 수집 소스가 아니다(WellnessIngestionService 참고) —
+        // hasKakaoKey()는 여기 포함하지 않는다.
+        boolean hasAnyKey = properties.hasTourApiKey() || properties.hasBusanFoodApiKey();
+        if (placeRepository.count() > 0 || !hasAnyKey) {
             return;
         }
 
