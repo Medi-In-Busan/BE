@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -39,10 +41,13 @@ class PlaceDetailViewModel @Inject constructor(
                     when (result) {
                         is Result.Loading -> state.copy(isLoading = true, errorMessage = null)
                         is Result.Success -> {
-                            recordView(result.data)
+                            recordView(result.data, languageCode)
                             state.copy(isLoading = false, place = result.data, errorMessage = null)
                         }
-                        is Result.Error -> state.copy(isLoading = false, errorMessage = result.message ?: "오류가 발생했습니다.")
+                        is Result.Error -> state.copy(
+                            isLoading = false,
+                            errorMessage = result.message ?: appStringsFor(languageCode).nearby.genericErrorMessage
+                        )
                     }
                 }
             }
@@ -54,14 +59,14 @@ class PlaceDetailViewModel @Inject constructor(
         }
     }
 
-    private fun recordView(place: Place) {
+    private fun recordView(place: Place, languageCode: String) {
         viewModelScope.launch {
             recentRepository.recordView(
                 itemId = place.id,
                 itemName = place.name,
                 itemType = FavoriteItemType.PLACE,
                 imageUrl = place.imageUrl,
-                subtitle = place.type.label,
+                subtitle = place.type.localizedLabel(languageCode),
                 address = place.address,
                 latitude = place.latitude,
                 longitude = place.longitude
@@ -72,6 +77,7 @@ class PlaceDetailViewModel @Inject constructor(
     fun onToggleFavorite() {
         val place = _uiState.value.place ?: return
         viewModelScope.launch {
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
             favoriteRepository.toggleFavorite(
                 Favorite(
                     itemId = place.id,
@@ -79,7 +85,7 @@ class PlaceDetailViewModel @Inject constructor(
                     name = place.name,
                     imageUrl = place.imageUrl,
                     savedAt = System.currentTimeMillis(),
-                    subtitle = place.type.label,
+                    subtitle = place.type.localizedLabel(languageCode),
                     address = place.address,
                     latitude = place.latitude,
                     longitude = place.longitude
@@ -91,13 +97,5 @@ class PlaceDetailViewModel @Inject constructor(
 
 // 즐겨찾기/최근 본 항목 카드의 태그 자리에 쓰는 장소 종류 한글 라벨. PlaceDetailScreen의 같은 이름
 // private 확장과 동일한 매핑이다(ViewModel에는 Composable LocalAppStrings가 없어 별도로 둔다).
-private val PlaceType.label: String
-    get() = when (this) {
-        PlaceType.TOURIST_ATTRACTION -> "관광지"
-        PlaceType.RESTAURANT -> "카페·맛집"
-        PlaceType.SHOPPING -> "쇼핑"
-        PlaceType.LODGING -> "숙소"
-        PlaceType.SPA -> "스파"
-        PlaceType.WALK -> "산책"
-        PlaceType.OTHER -> "기타"
-    }
+private fun PlaceType.localizedLabel(languageCode: String): String =
+    appStringsFor(languageCode).nearby.placeTypeLabels[name].orEmpty()

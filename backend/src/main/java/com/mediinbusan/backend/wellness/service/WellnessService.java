@@ -25,65 +25,183 @@ public class WellnessService {
 
     private final WellnessPlaceRepository wellnessPlaceRepository;
     private final HospitalRepository hospitalRepository;
+    private final WellnessPlaceTranslationService translationService;
 
-    public WellnessService(WellnessPlaceRepository wellnessPlaceRepository, HospitalRepository hospitalRepository) {
+    public WellnessService(
+        WellnessPlaceRepository wellnessPlaceRepository,
+        HospitalRepository hospitalRepository,
+        WellnessPlaceTranslationService translationService
+    ) {
         this.wellnessPlaceRepository = wellnessPlaceRepository;
         this.hospitalRepository = hospitalRepository;
+        this.translationService = translationService;
     }
 
-    public List<WellnessPlaceResponse> getNearbyPlaces(String hospitalRegNo, Double radiusMeters, String lang) {
+    public List<WellnessPlaceResponse> getNearbyPlaces(
+        String hospitalRegNo,
+        Double radiusMeters,
+        String language
+    ) {
         Hospital hospital = hospitalRepository.findByRegNo(hospitalRegNo)
-            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "병원을 찾을 수 없습니다: " + hospitalRegNo));
-        double effectiveRadius = radiusMeters != null ? radiusMeters : DEFAULT_RADIUS_METERS;
+            .orElseThrow(() -> new ResponseStatusException(
+                NOT_FOUND,
+                "병원을 찾을 수 없습니다: " + hospitalRegNo
+            ));
 
-        return wellnessPlaceRepository.findAll().stream()
-            .map(place -> new PlaceDistance(place, GeoDistance.meters(hospital.getCoordinates(), place.getCoordinates())))
-            .filter(item -> item.distance == null || item.distance <= effectiveRadius)
-            .sorted(Comparator.comparing(
-                PlaceDistance::distanceForSort,
-                Comparator.nullsLast(Comparator.naturalOrder())
-            ).thenComparing(item -> item.place.getId()))
-            .map(item -> WellnessDtoMapper.toPlaceResponse(item.place, item.distance, lang))
+        double effectiveRadius = radiusMeters != null
+            ? radiusMeters
+            : DEFAULT_RADIUS_METERS;
+
+        List<WellnessPlaceResponse> places = wellnessPlaceRepository
+            .findAll()
+            .stream()
+            .map(place -> new PlaceDistance(
+                place,
+                GeoDistance.meters(
+                    hospital.getCoordinates(),
+                    place.getCoordinates()
+                )
+            ))
+            .filter(item ->
+                item.distance == null ||
+                    item.distance <= effectiveRadius
+            )
+            .sorted(
+                Comparator.comparing(
+                    PlaceDistance::distanceForSort,
+                    Comparator.nullsLast(
+                        Comparator.naturalOrder()
+                    )
+                ).thenComparing(item -> item.place.getId())
+            )
+            .map(item -> WellnessDtoMapper.toPlaceResponse(
+                item.place,
+                item.distance
+            ))
             .toList();
+
+        return translationService.localizeAll(
+            places,
+            language
+        );
+    }
+
+    public List<WellnessPlaceResponse> getNearbyPlaces(
+        String hospitalRegNo,
+        Double radiusMeters
+    ) {
+        return getNearbyPlaces(
+            hospitalRegNo,
+            radiusMeters,
+            "ko"
+        );
     }
 
     /**
-     * 특정 병원에 종속되지 않은 웰니스 장소 조회 — 지도 "전체 브라우징" 화면(하단 탭 '지도', 병원
-     * 미지정 진입)이 쓴다. 예전엔 이 화면이 병원 목록 맨 앞 병원 하나의 반경 3km(getNearbyPlaces)만
-     * 빌려써서, 그 반경 밖에 있는 장소(예: 새로 upsert된 다른 구의 부산맛집 데이터)는 지도에 아예
-     * 나타나지 않았다. latitude/longitude를 안 넘기면 전체를, 넘기면 기존 getNearbyPlaces와 같은
-     * 방식(반경 필터 + 거리순 정렬)으로 반환한다.
+     * 병원에 종속되지 않은 웰니스 장소를 조회한다.
+     * 좌표가 없으면 전체 장소를 반환하고, 좌표가 있으면 반경 내 장소를 거리순으로 반환한다.
      */
-    public List<WellnessPlaceResponse> findPlaces(Double latitude, Double longitude, Double radiusMeters, String lang) {
-        List<WellnessPlace> places = wellnessPlaceRepository.findAll();
+    public List<WellnessPlaceResponse> findPlaces(
+        Double latitude,
+        Double longitude,
+        Double radiusMeters,
+        String language
+    ) {
+        List<WellnessPlace> places =
+            wellnessPlaceRepository.findAll();
 
         if (latitude == null || longitude == null) {
-            return places.stream()
-                .map(place -> WellnessDtoMapper.toPlaceResponse(place, null, lang))
+            List<WellnessPlaceResponse> responses = places
+                .stream()
+                .map(place ->
+                    WellnessDtoMapper.toPlaceResponse(
+                        place,
+                        null
+                    )
+                )
                 .toList();
+
+            return translationService.localizeAll(
+                responses,
+                language
+            );
         }
 
-        Coordinates origin = new Coordinates(latitude, longitude);
-        double effectiveRadius = radiusMeters != null ? radiusMeters : DEFAULT_RADIUS_METERS;
+        Coordinates origin = new Coordinates(
+            latitude,
+            longitude
+        );
 
-        return places.stream()
-            .map(place -> new PlaceDistance(place, GeoDistance.meters(origin, place.getCoordinates())))
-            .filter(item -> item.distance == null || item.distance <= effectiveRadius)
-            .sorted(Comparator.comparing(
-                PlaceDistance::distanceForSort,
-                Comparator.nullsLast(Comparator.naturalOrder())
-            ).thenComparing(item -> item.place.getId()))
-            .map(item -> WellnessDtoMapper.toPlaceResponse(item.place, item.distance, lang))
+        double effectiveRadius = radiusMeters != null
+            ? radiusMeters
+            : DEFAULT_RADIUS_METERS;
+
+        List<WellnessPlaceResponse> responses = places
+            .stream()
+            .map(place -> new PlaceDistance(
+                place,
+                GeoDistance.meters(
+                    origin,
+                    place.getCoordinates()
+                )
+            ))
+            .filter(item ->
+                item.distance == null ||
+                    item.distance <= effectiveRadius
+            )
+            .sorted(
+                Comparator.comparing(
+                    PlaceDistance::distanceForSort,
+                    Comparator.nullsLast(
+                        Comparator.naturalOrder()
+                    )
+                ).thenComparing(item -> item.place.getId())
+            )
+            .map(item -> WellnessDtoMapper.toPlaceResponse(
+                item.place,
+                item.distance
+            ))
             .toList();
+
+        return translationService.localizeAll(
+            responses,
+            language
+        );
     }
 
-    public WellnessPlaceResponse getPlaceDetail(String contentId, String lang) {
-        WellnessPlace place = wellnessPlaceRepository.findByContentId(contentId)
-            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "웰니스 장소를 찾을 수 없습니다: " + contentId));
-        return WellnessDtoMapper.toPlaceResponse(place, null, lang);
+    public WellnessPlaceResponse getPlaceDetail(
+        String contentId,
+        String language
+    ) {
+        WellnessPlace place = wellnessPlaceRepository
+            .findByContentId(contentId)
+            .orElseThrow(() -> new ResponseStatusException(
+                NOT_FOUND,
+                "웰니스 장소를 찾을 수 없습니다: " + contentId
+            ));
+
+        WellnessPlaceResponse response =
+            WellnessDtoMapper.toPlaceResponse(
+                place,
+                null
+            );
+
+        return translationService.localize(
+            response,
+            language
+        );
     }
 
-    private record PlaceDistance(WellnessPlace place, Double distance) {
+    public WellnessPlaceResponse getPlaceDetail(
+        String contentId
+    ) {
+        return getPlaceDetail(contentId, "ko");
+    }
+
+    private record PlaceDistance(
+        WellnessPlace place,
+        Double distance
+    ) {
         Double distanceForSort() {
             return distance;
         }

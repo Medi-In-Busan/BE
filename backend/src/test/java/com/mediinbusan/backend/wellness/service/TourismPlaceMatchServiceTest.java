@@ -14,6 +14,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -24,8 +25,15 @@ import static org.mockito.Mockito.when;
 class TourismPlaceMatchServiceTest {
     private final WellnessTourismGatewayService gateway = mock(WellnessTourismGatewayService.class);
     private final WellnessExternalSnapshotRepository snapshotRepository = mock(WellnessExternalSnapshotRepository.class);
-    private final TourismCatalogService catalogService = new TourismCatalogService(gateway, snapshotRepository);
+    private final TourismCatalogTranslationService translationService = passThroughTranslationService();
+    private final TourismCatalogService catalogService = new TourismCatalogService(gateway, snapshotRepository, translationService);
     private final TourismPlaceMatchService service = new TourismPlaceMatchService(gateway, catalogService);
+
+    private static TourismCatalogTranslationService passThroughTranslationService() {
+        TourismCatalogTranslationService service = mock(TourismCatalogTranslationService.class);
+        when(service.localize(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+        return service;
+    }
 
     @Test
     void exactNameAndDistrictReturnTourismDetailInsteadOfCrowdingItem() {

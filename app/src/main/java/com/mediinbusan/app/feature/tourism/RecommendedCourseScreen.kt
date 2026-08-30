@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.datastore.SupportedLanguage
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
@@ -89,7 +90,10 @@ fun RecommendedCourseScreen(
     val uiState by viewModel.uiState.collectAsState()
     var mapFocusRequestId by remember { mutableIntStateOf(0) }
     val strings = uiState.language.courseStrings()
-    LaunchedEffect(categoryName, districtName) { viewModel.load(categoryName, districtName) }
+    val currentLanguage = LocalAppStrings.current.language
+    LaunchedEffect(categoryName, districtName, currentLanguage) {
+        viewModel.load(categoryName, districtName)
+    }
 
     Scaffold(
         containerColor = HomeBackgroundPink,
@@ -284,6 +288,7 @@ private fun MapZoomControls(
     onZoomOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current.language.courseStrings()
     Surface(
         modifier = modifier.shadow(
             elevation = 5.dp,
@@ -296,11 +301,11 @@ private fun MapZoomControls(
     ) {
         Column {
             IconButton(onClick = onZoomIn, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Default.Add, contentDescription = "지도 확대", tint = TextPrimary)
+                Icon(Icons.Default.Add, contentDescription = strings.zoomIn, tint = TextPrimary)
             }
             Box(modifier = Modifier.width(42.dp).height(1.dp).background(DividerColor))
             IconButton(onClick = onZoomOut, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Default.Remove, contentDescription = "지도 축소", tint = TextPrimary)
+                Icon(Icons.Default.Remove, contentDescription = strings.zoomOut, tint = TextPrimary)
             }
         }
     }
@@ -446,7 +451,9 @@ private data class CourseStrings(
     val summary: (Int, DrivingRoute, TravelMode) -> String,
     val transfer: (Int, Double) -> String,
     val modeLabel: (TravelMode) -> String,
-    val routeDisclaimer: (TravelMode) -> String
+    val routeDisclaimer: (TravelMode) -> String,
+    val zoomIn: String,
+    val zoomOut: String
 )
 
 private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
@@ -457,7 +464,8 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         summary = { stops, route, mode -> "${stops}곳 · ${if (mode == TravelMode.DRIVING) "차량" else "도보"} 이동 약 ${durationKo(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "약 ${minutes}분 · ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "자동차" else "도보" },
-        routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다." else "Kakao 도보 편안한 길 기준이며 현장 보행 환경에 따라 이동 시간이 달라질 수 있습니다." }
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다." else "Kakao 도보 편안한 길 기준이며 현장 보행 환경에 따라 이동 시간이 달라질 수 있습니다." },
+        zoomIn = "지도 확대", zoomOut = "지도 축소"
     )
     SupportedLanguage.EN -> CourseStrings(
         back = "Back",
@@ -466,7 +474,8 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         summary = { stops, route, mode -> "$stops stops · ${if (mode == TravelMode.DRIVING) "driving" else "walking"} about ${durationEn(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "About $minutes min · ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "Car" else "Walk" },
-        routeDisclaimer = { if (it == TravelMode.DRIVING) "Based on a Kakao Mobility recommended route; traffic may affect travel time." else "Based on Kakao's comfortable walking route; actual walking conditions may vary." }
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "Based on a Kakao Mobility recommended route; traffic may affect travel time." else "Based on Kakao's comfortable walking route; actual walking conditions may vary." },
+        zoomIn = "Zoom in", zoomOut = "Zoom out"
     )
     SupportedLanguage.JA -> CourseStrings(
         back = "戻る",
@@ -475,7 +484,8 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         summary = { stops, route, mode -> "$stops\u304b\u6240 \u00b7 ${if (mode == TravelMode.DRIVING) "\u8eca" else "\u5f92\u6b69"}\u3067\u7d04${durationJa(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "\u7d04${minutes}\u5206 \u00b7 ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "\u81ea\u52d5\u8eca" else "\u5f92\u6b69" },
-        routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility\u306e\u63a8\u5968\u30eb\u30fc\u30c8\u3067\u3001\u4ea4\u901a\u72b6\u6cc1\u306b\u3088\u308a\u6240\u8981\u6642\u9593\u304c\u5909\u308f\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" else "Kakao\u306e\u6b69\u884c\u30eb\u30fc\u30c8\u3067\u3001\u73fe\u5730\u306e\u6b69\u884c\u74b0\u5883\u306b\u3088\u308a\u7570\u306a\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" }
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility\u306e\u63a8\u5968\u30eb\u30fc\u30c8\u3067\u3001\u4ea4\u901a\u72b6\u6cc1\u306b\u3088\u308a\u6240\u8981\u6642\u9593\u304c\u5909\u308f\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" else "Kakao\u306e\u6b69\u884c\u30eb\u30fc\u30c8\u3067\u3001\u73fe\u5730\u306e\u6b69\u884c\u74b0\u5883\u306b\u3088\u308a\u7570\u306a\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" },
+        zoomIn = "地図を拡大", zoomOut = "地図を縮小"
     )
     SupportedLanguage.ZH -> CourseStrings(
         back = "返回",
@@ -484,7 +494,8 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         summary = { stops, route, mode -> "$stops\u5904 \u00b7 ${if (mode == TravelMode.DRIVING) "\u9a7e\u8f66" else "\u6b65\u884c"}\u7ea6${durationZh(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "\u7ea6${minutes}\u5206\u949f \u00b7 ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "\u6c7d\u8f66" else "\u6b65\u884c" },
-        routeDisclaimer = { if (it == TravelMode.DRIVING) "\u57fa\u4e8e Kakao Mobility \u63a8\u8350\u8def\u7ebf\uff0c\u4ea4\u901a\u72b6\u51b5\u53ef\u80fd\u5f71\u54cd\u65f6\u95f4\u3002" else "\u57fa\u4e8e Kakao \u8212\u9002\u6b65\u884c\u8def\u7ebf\uff0c\u5b9e\u9645\u6b65\u884c\u73af\u5883\u53ef\u80fd\u6709\u6240\u4e0d\u540c\u3002" }
+        routeDisclaimer = { if (it == TravelMode.DRIVING) "\u57fa\u4e8e Kakao Mobility \u63a8\u8350\u8def\u7ebf\uff0c\u4ea4\u901a\u72b6\u51b5\u53ef\u80fd\u5f71\u54cd\u65f6\u95f4\u3002" else "\u57fa\u4e8e Kakao \u8212\u9002\u6b65\u884c\u8def\u7ebf\uff0c\u5b9e\u9645\u6b65\u884c\u73af\u5883\u53ef\u80fd\u6709\u6240\u4e0d\u540c\u3002" },
+        zoomIn = "放大地图", zoomOut = "缩小地图"
     )
 }
 

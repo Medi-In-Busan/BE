@@ -23,7 +23,7 @@ class PlaceRepositoryImpl @Inject constructor(
     override fun getNearbyPlaces(hospitalId: String, languageCode: String): Flow<Result<List<Place>>> = flow {
         emit(Result.Loading)
         try {
-            emit(Result.Success(tourismApi.getNearbyWellnessPlaces(hospitalId, lang = languageCode).map { it.toDomain() }))
+            emit(Result.Success(tourismApi.getNearbyWellnessPlaces(hospitalId, language = languageCode).map { it.toDomain() }))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -34,7 +34,7 @@ class PlaceRepositoryImpl @Inject constructor(
     override fun getPlaceDetail(placeId: String, languageCode: String): Flow<Result<Place>> = flow {
         emit(Result.Loading)
         try {
-            emit(Result.Success(tourismApi.getPlaceDetail(placeId, lang = languageCode).toDomain()))
+            emit(Result.Success(tourismApi.getPlaceDetail(placeId, languageCode).toDomain()))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -49,7 +49,7 @@ class PlaceRepositoryImpl @Inject constructor(
         }
         emit(Result.Loading)
         try {
-            val places = tourismApi.getPlaces(lang = languageCode).map { it.toDomain() }
+            val places = tourismApi.getPlaces(language = languageCode).map { it.toDomain() }
             allPlacesCache.put(languageCode, places)
             emit(Result.Success(places))
         } catch (e: CancellationException) {

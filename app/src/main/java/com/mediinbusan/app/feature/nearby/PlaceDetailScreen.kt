@@ -102,8 +102,9 @@ fun PlaceDetailScreen(
     viewModel: PlaceDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val language = LocalAppStrings.current.language
 
-    LaunchedEffect(placeId) {
+    LaunchedEffect(placeId, language) {
         viewModel.load(placeId)
     }
 

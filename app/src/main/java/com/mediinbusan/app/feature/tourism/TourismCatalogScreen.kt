@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.draw.clip
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -55,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -105,6 +108,8 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.foundation.shape.CircleShape
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @Composable
 fun TourismCatalogScreen(
@@ -115,7 +120,8 @@ fun TourismCatalogScreen(
     viewModel: TourismCatalogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    LaunchedEffect(categoryName) { viewModel.load(categoryName) }
+    val language = LocalAppStrings.current.language
+    LaunchedEffect(categoryName, language) { viewModel.load(categoryName) }
 
     if (uiState.category == TourismCatalogCategory.ACCESSIBLE) {
         // 무장애 관광 리스트업 화면만 병원 목록(S-04)과 비슷한 톤의 전용 헤더·검색 UX를 쓴다 — 다른
@@ -123,6 +129,7 @@ fun TourismCatalogScreen(
         AccessibleTourismCatalogContent(
             uiState = uiState,
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
+            onLoadMore = viewModel::loadNextPage,
             onItemSelected = { item ->
                 viewModel.selectItem(item)
                 onSelectItem()
@@ -142,6 +149,7 @@ fun TourismCatalogScreen(
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onCategoryFilterSelected = viewModel::onCategoryFilterSelected,
             onResetFilters = viewModel::onResetFilters,
+            onLoadMore = viewModel::loadNextPage,
             onItemSelected = { item ->
                 viewModel.selectItem(item)
                 onSelectItem()
@@ -201,13 +209,18 @@ private fun TourismCatalogContent(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.tourism.backContentDescription)
                         }
                     },
-                    title = { Text(uiState.category?.label ?: "관광 데이터") },
+                    title = {
+                        Text(
+                            uiState.category?.translatedLabel(strings.language)
+                                ?: strings.tourism.catalogDefaultTitle
+                        )
+                    },
                     actions = {
                         val canBuildCourse = uiState.catalog?.items?.count {
                             it.latitude != null && it.longitude != null
                         }?.let { it >= 3 } == true
                         IconButton(onClick = onNavigateToCourse, enabled = canBuildCourse) {
-                            Icon(Icons.Default.Map, contentDescription = "추천 장소 동선 보기")
+                            Icon(Icons.Default.Map, contentDescription = strings.tourism.openMapLabel)
                         }
                     }
                 )
@@ -325,6 +338,7 @@ private fun TourismCatalogContent(
 private fun AccessibleTourismCatalogContent(
     uiState: TourismCatalogUiState,
     onSearchQueryChanged: (String) -> Unit,
+    onLoadMore: () -> Unit,
     onItemSelected: (TourismCatalogItem) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit
@@ -358,7 +372,15 @@ private fun AccessibleTourismCatalogContent(
                 // 병원 목록(SearchResultList)과 같은 "시그널 리빌" — 새 목록이 도착할 때마다 앞
                 // 6개까지 순차로 스켈레톤→카드 페이드인. core/ui/CardRevealAnimation.kt 참고.
                 val revealedCount = rememberRevealedCount(itemsKey = uiState.visibleItems, itemCount = uiState.visibleItems.size)
+                val listState = rememberLazyListState()
+                LoadNextTourismPageEffect(
+                    listState = listState,
+                    hasNextPage = uiState.hasNextPage,
+                    isLoadingMore = uiState.isLoadingMore,
+                    onLoadMore = onLoadMore
+                )
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.padding(top = contentPadding.calculateTopPadding()).fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 20.dp,
@@ -390,6 +412,9 @@ private fun AccessibleTourismCatalogContent(
                                 isRevealed = index < revealedCount
                             )
                         }
+                        if (uiState.isLoadingMore) {
+                            item { TourismPageLoadingIndicator() }
+                        }
                     }
                 }
             }
@@ -410,6 +435,7 @@ private fun RecommendedPlacesCatalogContent(
     onSearchQueryChanged: (String) -> Unit,
     onCategoryFilterSelected: (String?) -> Unit,
     onResetFilters: () -> Unit,
+    onLoadMore: () -> Unit,
     onItemSelected: (TourismCatalogItem) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit
@@ -451,7 +477,15 @@ private fun RecommendedPlacesCatalogContent(
                     itemsKey = uiState.recommendedItems to uiState.visibleItems,
                     itemCount = combinedCount
                 )
+                val listState = rememberLazyListState()
+                LoadNextTourismPageEffect(
+                    listState = listState,
+                    hasNextPage = uiState.hasNextPage,
+                    isLoadingMore = uiState.isLoadingMore,
+                    onLoadMore = onLoadMore
+                )
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.padding(top = contentPadding.calculateTopPadding()).fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 20.dp,
@@ -510,10 +544,47 @@ private fun RecommendedPlacesCatalogContent(
                                 )
                             }
                         }
+                        if (uiState.isLoadingMore) {
+                            item { TourismPageLoadingIndicator() }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LoadNextTourismPageEffect(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    hasNextPage: Boolean,
+    isLoadingMore: Boolean,
+    onLoadMore: () -> Unit
+) {
+    LaunchedEffect(listState, hasNextPage, isLoadingMore) {
+        if (!hasNextPage || isLoadingMore) return@LaunchedEffect
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            layoutInfo.totalItemsCount > 0 && lastVisibleIndex >= layoutInfo.totalItemsCount - 4
+        }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect { onLoadMore() }
+    }
+}
+
+@Composable
+private fun TourismPageLoadingIndicator() {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(28.dp),
+            color = CoralPrimary,
+            strokeWidth = 3.dp
+        )
     }
 }
 
@@ -1129,7 +1200,7 @@ private fun CrowdingRankCard(
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        item.details["signguNm"] ?: item.address ?: "부산 관광지",
+                        item.details["signguNm"] ?: item.address ?: strings.tourism.catalogDefaultTitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,

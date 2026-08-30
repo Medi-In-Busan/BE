@@ -70,9 +70,9 @@ public class WellnessController {
     public List<WellnessPlaceResponse> getNearbyPlaces(
         @PathVariable String hospitalRegNo,
         @Parameter(description = "검색 반경(m). 기본값 3000m") @RequestParam(required = false) Double radiusMeters,
-        @RequestParam(defaultValue = "ko") String lang
+        @RequestParam(defaultValue = "ko") String language
     ) {
-        return wellnessService.getNearbyPlaces(hospitalRegNo, radiusMeters, lang);
+        return wellnessService.getNearbyPlaces(hospitalRegNo, radiusMeters, language);
     }
 
     @Operation(summary = "병원 출발 웰니스 코스 경로", description = "Kakao 자동차·도보 길찾기로 4~5개 장소의 실제 이동 경로를 반환한다.")
@@ -104,9 +104,9 @@ public class WellnessController {
     @GetMapping("/places/{contentId}")
     public WellnessPlaceResponse getPlaceDetail(
         @PathVariable String contentId,
-        @RequestParam(defaultValue = "ko") String lang
+        @RequestParam(defaultValue = "ko") String language
     ) {
-        return wellnessService.getPlaceDetail(contentId, lang);
+        return wellnessService.getPlaceDetail(contentId, language);
     }
 
     @Operation(summary = "TourAPI/부산맛집정보 웰니스 장소 적재", description = "환경변수의 공식 API 키로 부산 웰니스 장소를 수집해 DB에 upsert한다. 카카오 로컬 검색 소스(kakao-*)는 더 이상 수집하지 않고, 과거 데이터도 이 호출로 정리된다.")
@@ -126,9 +126,12 @@ public class WellnessController {
     public TourismCatalogResponse getTourismCatalog(
         @PathVariable TourismCatalogCategory category,
         @RequestParam(required = false) BusanTourismCodes.District district,
-        @RequestParam(required = false) String baseYm
+        @RequestParam(required = false) String baseYm,
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "20") int pageSize,
+        @RequestParam(defaultValue = "ko") String language
     ) {
-        return tourismCatalogService.getCatalog(category, district, baseYm);
+        return tourismCatalogService.getCatalog(category, district, baseYm, page, pageSize, language);
     }
 
     @Operation(summary = "관광공사 외부 API 스냅샷 적재", description = "부산 전 구역 관광 데이터를 wellness_external_snapshot에 upsert한다.")

@@ -56,6 +56,7 @@ import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.ErrorState
@@ -185,13 +186,13 @@ private fun WellnessRouteContent(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "병원 주변 추천 장소를 이동 부담이 적은 순서로 연결했어요.",
+                    text = LocalAppStrings.current.nearby.courseMapDescription,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
                 Surface(shape = CircleShape, color = CoralPrimaryContainer) {
                     Text(
-                        text = "${route.stops.size}곳 · ${travelMode.summaryLabel()} 약 ${durationLabel(route.estimatedDurationMinutes)} · ${distanceLabel(route.totalDistanceKm)}",
+                        text = "${LocalAppStrings.current.nearby.stopCountFormat.format(route.stops.size)} · ${travelMode.summaryLabel()} ${durationLabel(route.estimatedDurationMinutes)} · ${distanceLabel(route.totalDistanceKm)}",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = CoralPrimary,
@@ -338,7 +339,11 @@ private fun HospitalOriginRow(route: HospitalWellnessRoute, selected: Boolean, o
                 Icon(Icons.Default.LocalHospital, contentDescription = null, tint = Color.White, modifier = Modifier.size(21.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("출발 · ${route.hospital.name}", style = CardTitleStyle, color = TextPrimary)
+                Text(
+                    LocalAppStrings.current.nearby.departureFormat.format(route.hospital.name),
+                    style = CardTitleStyle,
+                    color = TextPrimary
+                )
                 Text(route.hospital.address, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -361,7 +366,10 @@ private fun TransferRow(stop: HospitalWellnessStop, travelMode: TravelMode) {
         )
         Spacer(Modifier.width(7.dp))
         Text(
-            "약 ${stop.transferMinutes}분 · ${distanceLabel(stop.distanceFromPreviousKm)}",
+            LocalAppStrings.current.nearby.transferFormat.format(
+                stop.transferMinutes,
+                distanceLabel(stop.distanceFromPreviousKm)
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
         )
@@ -405,29 +413,25 @@ private fun WellnessStopRow(stop: HospitalWellnessStop, selected: Boolean, onCli
     }
 }
 
-private fun PlaceType.label(): String = when (this) {
-    PlaceType.TOURIST_ATTRACTION -> "관광"
-    PlaceType.RESTAURANT -> "음식"
-    PlaceType.SHOPPING -> "쇼핑"
-    PlaceType.LODGING -> "숙박"
-    PlaceType.SPA -> "스파·휴식"
-    PlaceType.WALK -> "산책"
-    PlaceType.OTHER -> "웰니스"
-}
+@Composable
+private fun PlaceType.label(): String = LocalAppStrings.current.nearby.placeTypeLabels[name].orEmpty()
 
-private fun durationLabel(minutes: Int): String =
-    if (minutes >= 60) "${minutes / 60}시간 ${minutes % 60}분" else "${minutes}분"
+@Composable
+private fun durationLabel(minutes: Int): String {
+    val strings = LocalAppStrings.current.tourism
+    return if (minutes >= 60) "${minutes / 60}${strings.walkingHourUnit} ${minutes % 60}${strings.walkingMinuteUnit}"
+    else "${minutes}${strings.walkingMinuteUnit}"
+}
 
 private fun distanceLabel(distanceKm: Double): String = String.format(Locale.US, "%.1fkm", distanceKm)
 
-private fun TravelMode.buttonLabel(): String = if (this == TravelMode.DRIVING) "자동차" else "도보"
+@Composable
+private fun TravelMode.buttonLabel(): String = if (this == TravelMode.DRIVING) LocalAppStrings.current.nearby.drivingLabel else LocalAppStrings.current.nearby.walkingLabel
 
-private fun TravelMode.summaryLabel(): String = if (this == TravelMode.DRIVING) "차량 이동" else "도보 이동"
+@Composable
+private fun TravelMode.summaryLabel(): String = if (this == TravelMode.DRIVING) LocalAppStrings.current.nearby.drivingSummaryLabel else LocalAppStrings.current.nearby.walkingSummaryLabel
 
-private fun TravelMode.disclaimer(): String = if (this == TravelMode.DRIVING) {
-    "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다."
-} else {
-    "Kakao 도보 편안한 길 기준이며 현장 보행 환경에 따라 이동 시간이 달라질 수 있습니다."
-}
+@Composable
+private fun TravelMode.disclaimer(): String = if (this == TravelMode.DRIVING) LocalAppStrings.current.nearby.drivingDisclaimer else LocalAppStrings.current.nearby.walkingDisclaimer
 
 private val WellnessCourseCanvas = Color(0xFFFFFAF7)

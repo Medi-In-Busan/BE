@@ -48,6 +48,27 @@ data class TourismStrings(
     // "부산 관광지" 리스트업 화면의 두 섹션 헤더 — 개인화 추천 섹션과 그 아래 전체 목록 섹션.
     val recommendedPlacesSectionTitle: String,
     val allPlacesSectionTitle: String,
+    val recoveryScheduleTitle: String,
+    val recoveryScheduleDescription: String,
+    val beforeTripTitle: String,
+    val beforeTripDescription: String,
+    val currentHotPlacesTitle: String,
+    val currentHotPlacesDescription: String,
+    val crowdingAdvice: String,
+    val accessibleFeatureTitle: String,
+    val accessibleFeatureDescription: String,
+    val accessibilityFallback: String,
+    val seeAllLabel: String,
+    val retryLabel: String,
+    val hubLanguageDescription: String,
+    val publicDataCredit: String,
+    val visitDisclaimer: String,
+    val concentrationIndexFormat: String,
+    val featuredHeroTitle: String,
+    val languageTourismFormat: String,
+    val unsupportedDataError: String,
+    val catalogLoadError: String,
+    val recommendationLoadError: String,
     val sourceLabels: Map<String, String>,
     val detailFieldLabels: Map<String, String>
 ) {
@@ -91,6 +112,7 @@ data class TourismStrings(
             resultCountUnitLabel = "개 결과",
             recommendedPlacesSectionTitle = "회원님을 위한 추천 장소",
             allPlacesSectionTitle = "부산 관광지 전체",
+            recoveryScheduleTitle = "회복 일정에 맞춰", recoveryScheduleDescription = "이동 부담과 활동 강도를 고려해 골라보세요.", beforeTripTitle = "여행 전에 확인", beforeTripDescription = "함께 둘러볼 곳과 예상 혼잡도를 확인해요.", currentHotPlacesTitle = "현재 부산 핫플레이스", currentHotPlacesDescription = "관광 혼잡도 지수가 높은 장소를 먼저 보여드려요.", crowdingAdvice = "혼잡도를 확인하고 방문 시간을 조정해 보세요.", accessibleFeatureTitle = "편안하게 즐기는 무장애 관광", accessibleFeatureDescription = "이동 편의 정보가 제공되는 부산 관광지를 모았어요.", accessibilityFallback = "이동 편의 정보 제공", seeAllLabel = "전체보기", retryLabel = "다시 시도", hubLanguageDescription = "지금 설정된 언어로 부산의 관광지와 쉬어가기 좋은 장소를 찾아보세요.", publicDataCredit = "한국관광공사 공공데이터 활용", visitDisclaimer = "운영 정보와 혼잡도는 실제 방문 전에 공식 안내를 함께 확인해 주세요.", concentrationIndexFormat = "지수 %s", featuredHeroTitle = "회복 사이,\n부산 한 걸음", languageTourismFormat = "%s 관광정보", unsupportedDataError = "지원하지 않는 관광 데이터입니다.", catalogLoadError = "관광 데이터를 불러오지 못했습니다.", recommendationLoadError = "관광 추천 정보를 불러오지 못했습니다.",
             sourceLabels = mapOf(
                 "tourism-ko" to "국문 TourAPI",
                 "tourism-en" to "영문 TourAPI",
@@ -162,6 +184,7 @@ data class TourismStrings(
             resultCountUnitLabel = " results",
             recommendedPlacesSectionTitle = "Recommended for you",
             allPlacesSectionTitle = "All Busan attractions",
+            recoveryScheduleTitle = "Match your recovery schedule", recoveryScheduleDescription = "Choose with travel effort and activity level in mind.", beforeTripTitle = "Check before your trip", beforeTripDescription = "Review nearby attractions and forecast crowding.", currentHotPlacesTitle = "Busan hot places now", currentHotPlacesDescription = "Places with higher tourism crowding are shown first.", crowdingAdvice = "Check crowding and adjust your visit time.", accessibleFeatureTitle = "Comfortable accessible tourism", accessibleFeatureDescription = "Explore Busan attractions with accessibility information.", accessibilityFallback = "Accessibility information available", seeAllLabel = "See all", retryLabel = "Try again", hubLanguageDescription = "Find Busan attractions and restful places in your selected language.", publicDataCredit = "Powered by Korea Tourism Organization open data", visitDisclaimer = "Check official information before visiting for current hours and crowding.", concentrationIndexFormat = "Index %s", featuredHeroTitle = "A restful step\nthrough Busan", languageTourismFormat = "%s tourism", unsupportedDataError = "This tourism data is not supported.", catalogLoadError = "Unable to load tourism data.", recommendationLoadError = "Unable to load tourism recommendations.",
             sourceLabels = mapOf(
                 "tourism-ko" to "TourAPI (Korean)",
                 "tourism-en" to "TourAPI (English)",
@@ -229,6 +252,7 @@ data class TourismStrings(
             resultCountUnitLabel = "个结果",
             recommendedPlacesSectionTitle = "为您推荐的场所",
             allPlacesSectionTitle = "釜山景点全部",
+            recoveryScheduleTitle = "根据康复日程选择", recoveryScheduleDescription = "请综合考虑移动负担和活动强度。", beforeTripTitle = "出行前确认", beforeTripDescription = "查看周边景点和预计拥挤度。", currentHotPlacesTitle = "当前釜山热门地点", currentHotPlacesDescription = "优先显示旅游拥挤度较高的场所。", crowdingAdvice = "请确认拥挤度并调整访问时间。", accessibleFeatureTitle = "舒适畅游无障碍景点", accessibleFeatureDescription = "汇集提供无障碍信息的釜山景点。", accessibilityFallback = "提供无障碍信息", seeAllLabel = "查看全部", retryLabel = "重试", hubLanguageDescription = "使用当前设置的语言查找釜山景点和休憩场所。", publicDataCredit = "使用韩国旅游发展局公共数据", visitDisclaimer = "营业信息和拥挤度请在访问前同时确认官方公告。", concentrationIndexFormat = "指数 %s", featuredHeroTitle = "康复间隙，\n漫步釜山", languageTourismFormat = "%s旅游信息", unsupportedDataError = "不支持此旅游数据。", catalogLoadError = "无法加载旅游数据。", recommendationLoadError = "无法加载旅游推荐。",
             sourceLabels = mapOf(
                 "tourism-ko" to "韩文 TourAPI",
                 "tourism-en" to "英文 TourAPI",
@@ -296,6 +320,7 @@ data class TourismStrings(
             resultCountUnitLabel = "件の結果",
             recommendedPlacesSectionTitle = "あなたへのおすすめスポット",
             allPlacesSectionTitle = "釜山観光地すべて",
+            recoveryScheduleTitle = "回復スケジュールに合わせて", recoveryScheduleDescription = "移動負担と活動強度を考慮して選びましょう。", beforeTripTitle = "旅行前に確認", beforeTripDescription = "周辺スポットと予想混雑度を確認できます。", currentHotPlacesTitle = "現在の釜山ホットプレイス", currentHotPlacesDescription = "観光混雑度の高いスポットから表示します。", crowdingAdvice = "混雑度を確認して訪問時間を調整しましょう。", accessibleFeatureTitle = "快適に楽しむバリアフリー観光", accessibleFeatureDescription = "移動支援情報のある釜山の観光地を集めました。", accessibilityFallback = "移動支援情報あり", seeAllLabel = "すべて見る", retryLabel = "再試行", hubLanguageDescription = "設定中の言語で釜山の観光地や休憩に適したスポットを探しましょう。", publicDataCredit = "韓国観光公社の公共データを活用", visitDisclaimer = "営業時間と混雑度は訪問前に公式案内もご確認ください。", concentrationIndexFormat = "指数 %s", featuredHeroTitle = "回復の合間に、\n釜山を一歩", languageTourismFormat = "%s観光情報", unsupportedDataError = "対応していない観光データです。", catalogLoadError = "観光データを読み込めませんでした。", recommendationLoadError = "観光のおすすめ情報を読み込めませんでした。",
             sourceLabels = mapOf(
                 "tourism-ko" to "韓国語 TourAPI",
                 "tourism-en" to "英語 TourAPI",

@@ -1,10 +1,14 @@
 package com.mediinbusan.app.domain.course
 
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.place.Place
-import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.data.place.PlaceRepository
+import com.mediinbusan.app.data.place.PlaceType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -22,28 +26,56 @@ data class WellnessCourse(
  * OpenAPI 실제 연동 전에는 주변 장소의 유형과 거리 데이터를 이용해 데모 가능한 회복형 코스를 만든다.
  */
 class AssembleWellnessCourseUseCase @Inject constructor(
-    private val placeRepository: PlaceRepository
+    private val placeRepository: PlaceRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) {
-    operator fun invoke(hospitalId: String, languageCode: String): Flow<Result<List<WellnessCourse>>> =
-        placeRepository.getNearbyPlaces(hospitalId, languageCode).map { result ->
-            when (result) {
-                is Result.Success -> Result.Success(result.data.toWellnessCourses())
-                is Result.Error -> result
-                is Result.Loading -> result
+    operator fun invoke(
+        hospitalId: String,
+        languageCode: String? = null
+    ): Flow<Result<List<WellnessCourse>>> = flow {
+        val resolvedLanguageCode = languageCode
+            ?: userPreferencesRepository.userPreferences.first().languageCode
+
+        emitAll(
+            placeRepository.getNearbyPlaces(
+                hospitalId,
+                resolvedLanguageCode
+            ).map { result ->
+                when (result) {
+                    is Result.Success -> {
+                        Result.Success(result.data.toWellnessCourses())
+                    }
+
+                    is Result.Error -> result
+                    is Result.Loading -> result
+                }
             }
-        }
+        )
+    }
 }
 
 private fun List<Place>.toWellnessCourses(): List<WellnessCourse> {
     if (isEmpty()) return emptyList()
 
-    val byDistance = sortedBy { it.distanceFromHospitalMeters ?: Double.MAX_VALUE }
+    val byDistance = sortedBy {
+        it.distanceFromHospitalMeters ?: Double.MAX_VALUE
+    }
+
     val lightRecoveryPlaces = byDistance.filter {
-        it.type == PlaceType.WALK || it.type == PlaceType.SPA || it.type == PlaceType.RESTAURANT
-    }.ifEmpty { byDistance.take(3) }
+        it.type == PlaceType.WALK ||
+            it.type == PlaceType.SPA ||
+            it.type == PlaceType.RESTAURANT
+    }.ifEmpty {
+        byDistance.take(3)
+    }
+
     val shortVisitPlaces = byDistance.filter {
-        it.type == PlaceType.TOURIST_ATTRACTION || it.type == PlaceType.SHOPPING || it.type == PlaceType.RESTAURANT
-    }.ifEmpty { byDistance.take(2) }
+        it.type == PlaceType.TOURIST_ATTRACTION ||
+            it.type == PlaceType.SHOPPING ||
+            it.type == PlaceType.RESTAURANT
+    }.ifEmpty {
+        byDistance.take(2)
+    }
 
     return listOf(
         WellnessCourse(
@@ -62,5 +94,7 @@ private fun List<Place>.toWellnessCourses(): List<WellnessCourse> {
             recommendationReason = "대기 시간이나 진료 전후 짧은 여유 시간에 맞춰 방문하기 쉬운 장소입니다.",
             caution = null
         )
-    ).filter { it.places.isNotEmpty() }
+    ).filter {
+        it.places.isNotEmpty()
+    }
 }

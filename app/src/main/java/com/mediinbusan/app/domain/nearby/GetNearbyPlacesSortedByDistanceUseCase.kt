@@ -13,6 +13,6 @@ import javax.inject.Inject
 class GetNearbyPlacesSortedByDistanceUseCase @Inject constructor(
     private val placeRepository: PlaceRepository
 ) {
-    operator fun invoke(hospitalId: String, languageCode: String): Flow<Result<List<Place>>> =
+    operator fun invoke(hospitalId: String, languageCode: String = "ko"): Flow<Result<List<Place>>> =
         placeRepository.getNearbyPlaces(hospitalId, languageCode)
 }

@@ -14,6 +14,9 @@ interface TourismCatalogApi {
     @GET("api/wellness/tourism/catalog/{category}")
     suspend fun getCatalog(
         @Path("category") category: String,
-        @Query("district") district: String? = null
+        @Query("district") district: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+        @Query("language") language: String = "ko"
     ): TourismCatalogDto
 }

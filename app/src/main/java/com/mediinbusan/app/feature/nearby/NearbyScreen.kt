@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -76,6 +78,8 @@ import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.AsyncImageBox
@@ -92,6 +96,7 @@ import com.mediinbusan.app.domain.course.HospitalWellnessRoute
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 
 @Composable
 fun NearbyScreen(
@@ -102,9 +107,10 @@ fun NearbyScreen(
     viewModel: NearbyViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val languageCode = LocalAppStrings.current.language.code
 
-    LaunchedEffect(hospitalId) {
-        viewModel.load(hospitalId)
+    LaunchedEffect(hospitalId, languageCode) {
+        viewModel.load(hospitalId, languageCode)
     }
 
     NearbyContent(
@@ -154,7 +160,7 @@ private fun NearbyContent(
                 onRetry = onRetry
             )
             uiState.places.isEmpty() -> EmptyState(
-                message = "주변 장소 정보가 없습니다.",
+                message = LocalAppStrings.current.nearby.emptyNearbyMessage,
                 modifier = Modifier.padding(innerPadding)
             )
             else -> NearbyLoadedContent(
@@ -215,19 +221,20 @@ private fun TourismCatalogEntrySection(
     onSelectItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
     onNavigate: (TourismCatalogCategory) -> Unit
 ) {
+    val tourismCategory = tourismCategoryForLanguage(LocalAppStrings.current.language.code)
     Column(verticalArrangement = Arrangement.spacedBy(26.dp)) {
         TourismPlaceSlider(
-            title = "부산 관광",
-            description = "관광지·음식점·쇼핑·숙박 정보를 확인해요.",
-            category = TourismCatalogCategory.PLACES_KO,
+            title = LocalAppStrings.current.nearby.busanTourismTitle,
+            description = LocalAppStrings.current.nearby.busanTourismDescription,
+            category = tourismCategory,
             items = tourismPreviews,
             accent = SkyBlue,
             onSelectItem = onSelectItem,
             onSeeAll = onNavigate
         )
         TourismPlaceSlider(
-            title = "무장애 관광",
-            description = "이동 편의 정보가 있는 관광지를 모았어요.",
+            title = LocalAppStrings.current.nearby.accessibleTourismTitle,
+            description = LocalAppStrings.current.nearby.accessibleTourismDescription,
             category = TourismCatalogCategory.ACCESSIBLE,
             items = accessiblePreviews,
             accent = CoralPrimary,
@@ -255,16 +262,24 @@ private fun TourismPlaceSlider(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
                 Text(text = title, style = SectionTitleStyle, color = TextPrimary)
                 Text(text = description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             Text(
-                text = "전체 →",
+                text = LocalAppStrings.current.nearby.seeAllLabel,
                 style = MaterialTheme.typography.labelLarge,
                 color = CoralPrimary,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable { onSeeAll(category) }.padding(6.dp)
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier
+                    .widthIn(min = 84.dp)
+                    .clickable { onSeeAll(category) }
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
             )
         }
         HorizontalPager(
@@ -320,13 +335,13 @@ private fun TourismPlacePreviewCard(item: TourismCatalogItem, accent: Color, onC
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Text(item.title, style = SettingsItemTitleStyle, color = SettingsPrimaryText, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                item.address ?: item.subtitle ?: "부산 관광 정보",
+                item.address ?: item.subtitle ?: LocalAppStrings.current.nearby.tourismFallbackLabel,
                 style = SettingsDescriptionStyle,
                 color = SettingsSecondaryText,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Text("상세 보기 →", style = MaterialTheme.typography.labelLarge, color = accent, fontWeight = FontWeight.SemiBold)
+            Text(LocalAppStrings.current.nearby.detailLabel, style = MaterialTheme.typography.labelLarge, color = accent, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -335,7 +350,7 @@ private fun TourismPlacePreviewCard(item: TourismCatalogItem, accent: Color, onC
 private fun TourismPlaceEmptyCard() {
     Surface(modifier = Modifier.fillMaxSize().padding(vertical = 4.dp), shape = RoundedCornerShape(18.dp), color = Color.White) {
         Box(contentAlignment = Alignment.Center) {
-            Text("관광 정보를 불러오는 중입니다.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+            Text(LocalAppStrings.current.nearby.tourismLoadingMessage, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
         }
     }
 }
@@ -383,21 +398,23 @@ private fun WellnessTourHero(hospitalName: String?, placeCount: Int, courseCount
                 Icon(Icons.Default.Spa, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(23.dp))
             }
             Text(
-                text = "진료 전후,\n부산에서 편안하게",
+                text = LocalAppStrings.current.nearby.heroTitle,
                 style = MaterialTheme.typography.headlineSmall,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = hospitalName?.let { "$it 주변의 회복 친화적인 장소와 동선을 추천해요." }
-                    ?: "병원 주변의 회복 친화적인 장소와 동선을 추천해요.",
+                text = hospitalName?.let { LocalAppStrings.current.nearby.nearbyHospitalHeroFormat.format(it) }
+                    ?: LocalAppStrings.current.nearby.nearbyHeroDescription,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 modifier = Modifier.fillMaxWidth(0.82f)
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                HeroBadge("추천 ${placeCount}곳")
-                if (courseCount > 0) HeroBadge("맞춤 코스 ${courseCount}개")
+                HeroBadge(LocalAppStrings.current.nearby.recommendedCountFormat.format(placeCount))
+                if (courseCount > 0) {
+                    HeroBadge(LocalAppStrings.current.nearby.personalizedCourseCountFormat.format(courseCount))
+                }
             }
         }
     }
@@ -456,13 +473,13 @@ private fun HotTourismTopFiveSection(
                     )
                 }
                 Text(
-                    text = "향후 30일 예상 혼잡도 기준",
+                    text = LocalAppStrings.current.nearby.crowdingForecastLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
             }
             Text(
-                text = "부산 핫플레이스 TOP5",
+                text = LocalAppStrings.current.nearby.hotPlaceTopFiveTitle,
                 style = MaterialTheme.typography.headlineMedium,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
@@ -478,7 +495,7 @@ private fun HotTourismTopFiveSection(
                 Text(errorMessage, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             hotPlaces.isEmpty() -> WellnessSectionCard {
-                Text("현재 표시할 혼잡도 순위가 없습니다.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(LocalAppStrings.current.nearby.emptyHotPlaceMessage, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 TourismRevealContent(index = 0, revealedCount = revealedCount) {
@@ -530,7 +547,7 @@ private fun HotTourismTopFiveSection(
                 }
 
                 OutlinedButton(onClick = onSeeAll, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("전체 순위 보기", color = TextPrimary)
+                    Text(LocalAppStrings.current.nearby.allRanksLabel, color = TextPrimary)
                     Spacer(Modifier.width(6.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = CoralPrimary, modifier = Modifier.size(16.dp))
                 }
@@ -570,7 +587,7 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(224.dp)
+            .heightIn(min = 224.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color.White)))
             .clickable(onClick = onClick)
@@ -597,19 +614,21 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
             )
         }
         Column(
-            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, top = 16.dp, end = 64.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text("부산 ${hotPlace.district.label}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.78f))
+            Text(LocalAppStrings.current.nearby.busanDistrictFormat.format(hotPlace.district.translatedLabel(LocalAppStrings.current.language)), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.78f))
             Text(
                 text = hotPlace.item.title,
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
             Surface(shape = CircleShape, color = Color.White) {
                 Text(
-                    text = "혼잡도 ${hotPlace.congestionRate.toHotPlaceLevel()}",
+                    text = LocalAppStrings.current.nearby.crowdingLabelFormat.format(hotPlace.congestionRate.toHotPlaceLevel()),
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = CoralPrimary,
@@ -624,7 +643,7 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "상세 보기",
+                contentDescription = LocalAppStrings.current.nearby.detailContentDescription,
                 tint = TextPrimary,
                 modifier = Modifier.padding(10.dp).size(18.dp)
             )
@@ -641,7 +660,7 @@ private fun HotPlaceGridCard(
 ) {
     Column(
         modifier = modifier
-            .height(200.dp)
+            .heightIn(min = 200.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White)
             .clickable(onClick = onClick)
@@ -673,9 +692,9 @@ private fun HotPlaceGridCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Text("부산 ${hotPlace.district.label}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(LocalAppStrings.current.nearby.busanDistrictFormat.format(hotPlace.district.translatedLabel(LocalAppStrings.current.language)), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             Text(
-                "혼잡도 ${hotPlace.congestionRate.toHotPlaceLevel()}",
+                LocalAppStrings.current.nearby.crowdingLabelFormat.format(hotPlace.congestionRate.toHotPlaceLevel()),
                 style = MaterialTheme.typography.labelSmall,
                 color = CoralPrimary
             )
@@ -700,11 +719,11 @@ private fun HotPlaceCompactRow(rank: Int, hotPlace: TourismHotPlace, onClick: ()
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(hotPlace.item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("부산 ${hotPlace.district.label}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(LocalAppStrings.current.nearby.busanDistrictFormat.format(hotPlace.district.translatedLabel(LocalAppStrings.current.language)), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
         Surface(shape = CircleShape, color = CoralPrimaryContainer) {
             Text(
-                "혼잡도 ${hotPlace.congestionRate.toHotPlaceLevel()}",
+                LocalAppStrings.current.nearby.crowdingLabelFormat.format(hotPlace.congestionRate.toHotPlaceLevel()),
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                 style = MaterialTheme.typography.labelSmall,
                 color = CoralPrimary
@@ -714,11 +733,12 @@ private fun HotPlaceCompactRow(rank: Int, hotPlace: TourismHotPlace, onClick: ()
     }
 }
 
+@Composable
 private fun Double.toHotPlaceLevel(): String = when {
-    this >= 80.0 -> "매우 높음"
-    this >= 60.0 -> "높음"
-    this >= 40.0 -> "보통"
-    else -> "여유"
+    this >= 80.0 -> LocalAppStrings.current.nearby.crowdingVeryHigh
+    this >= 60.0 -> LocalAppStrings.current.nearby.crowdingHigh
+    this >= 40.0 -> LocalAppStrings.current.nearby.crowdingNormal
+    else -> LocalAppStrings.current.nearby.crowdingRelaxed
 }
 
 private fun Double.toHotPlaceRate(): String = if (this % 1.0 == 0.0) {
@@ -740,9 +760,9 @@ private fun EmptyPlaceFilter(onReset: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(text = "선택한 조건의 장소가 없습니다.", style = CardTitleStyle, color = TextPrimary)
+            Text(text = LocalAppStrings.current.nearby.emptyFilterMessage, style = CardTitleStyle, color = TextPrimary)
             OutlinedButton(onClick = onReset) {
-                Text(text = "전체 장소 보기")
+                Text(text = LocalAppStrings.current.nearby.resetPlacesLabel)
             }
         }
     }
@@ -752,7 +772,7 @@ private fun EmptyPlaceFilter(onReset: () -> Unit) {
 private fun RecommendedRouteSection(routes: List<HospitalWellnessRoute>, onClick: (Int) -> Unit) {
     val pagerState = rememberPagerState(pageCount = { routes.size })
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(text = "추천 웰니스 코스", style = SectionTitleStyle, color = TextPrimary)
+        Text(text = LocalAppStrings.current.nearby.recommendedCourseTitle, style = SectionTitleStyle, color = TextPrimary)
         HorizontalPager(
             state = pagerState,
             contentPadding = PaddingValues(end = 28.dp),
@@ -830,7 +850,7 @@ private fun RecommendedRouteCard(route: HospitalWellnessRoute, title: String, on
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    RouteBadge(text = "${route.stops.size}곳")
+                    RouteBadge(text = LocalAppStrings.current.nearby.stopCountFormat.format(route.stops.size))
                     RouteBadge(text = durationLabel(route.estimatedDurationMinutes))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -847,11 +867,9 @@ private fun RecommendedRouteCard(route: HospitalWellnessRoute, title: String, on
     }
 }
 
-private fun courseTitle(index: Int): String = when (index) {
-    0 -> "나를 위한 부산 회복 코스"
-    1 -> "가볍게 쉬어가는 웰니스 코스"
-    2 -> "산책과 관광을 잇는 회복 코스"
-    else -> "부산의 맛과 휴식을 담은 코스"
+@Composable
+private fun courseTitle(index: Int): String = LocalAppStrings.current.nearby.courseTitles.getOrElse(index) {
+    LocalAppStrings.current.nearby.courseTitles.last()
 }
 
 @Composable
@@ -913,13 +931,13 @@ private fun PlaceFilterSection(
     onTypeSelected: (PlaceType?) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(text = "주변 추천 장소", style = SectionTitleStyle, color = TextPrimary)
+        Text(text = LocalAppStrings.current.nearby.nearbyPlacesTitle, style = SectionTitleStyle, color = TextPrimary)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 FilterChip(
                     selected = selectedType == null,
                     onClick = { onTypeSelected(null) },
-                    label = { Text(text = "전체") },
+                    label = { Text(text = LocalAppStrings.current.nearby.allLabel) },
                     colors = nearbyFilterChipColors()
                 )
             }
@@ -927,7 +945,7 @@ private fun PlaceFilterSection(
                 FilterChip(
                     selected = selectedType == type,
                     onClick = { onTypeSelected(type) },
-                    label = { Text(text = type.label) },
+                    label = { Text(text = type.localizedLabel()) },
                     colors = nearbyFilterChipColors()
                 )
             }
@@ -977,7 +995,7 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
                             .background(place.type.tint.copy(alpha = 0.12f))
                             .padding(horizontal = 9.dp, vertical = 4.dp)
                     ) {
-                        Text(text = place.type.label, style = MaterialTheme.typography.labelSmall, color = place.type.tint, fontWeight = FontWeight.SemiBold)
+                        Text(text = place.type.localizedLabel(), style = MaterialTheme.typography.labelSmall, color = place.type.tint, fontWeight = FontWeight.SemiBold)
                     }
                     Text(
                         text = place.address,
@@ -988,7 +1006,7 @@ private fun PlaceRecommendationCard(place: Place, onClick: () -> Unit) {
                     )
                 }
                 Text(
-                    text = place.description?.takeUnless { it.startsWith("http") } ?: "상세 정보를 확인해 방문 동선을 조정하세요.",
+                    text = place.description?.takeUnless { it.startsWith("http") } ?: LocalAppStrings.current.nearby.placeDescriptionFallback,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     maxLines = 2,
@@ -1071,16 +1089,8 @@ private fun nearbyFilterChipColors() = FilterChipDefaults.filterChipColors(
     containerColor = Color.White
 )
 
-private val PlaceType.label: String
-    get() = when (this) {
-        PlaceType.TOURIST_ATTRACTION -> "관광지"
-        PlaceType.RESTAURANT -> "카페·맛집"
-        PlaceType.SHOPPING -> "쇼핑"
-        PlaceType.LODGING -> "숙소"
-        PlaceType.SPA -> "스파"
-        PlaceType.WALK -> "산책"
-        PlaceType.OTHER -> "기타"
-    }
+@Composable
+private fun PlaceType.localizedLabel(): String = LocalAppStrings.current.nearby.placeTypeLabels[name].orEmpty()
 
 private val PlaceType.shortLabel: String
     get() = when (this) {
@@ -1110,5 +1120,12 @@ private fun Double.toDistanceLabel(): String =
 private fun Double.formatDistance(): String =
     if (this % 1.0 == 0.0) toInt().toString() else String.format("%.1f", this)
 
-private fun durationLabel(minutes: Int): String =
-    if (minutes >= 60) "${minutes / 60}시간 ${minutes % 60}분" else "${minutes}분"
+@Composable
+private fun durationLabel(minutes: Int): String {
+    val strings = LocalAppStrings.current.tourism
+    return if (minutes >= 60) {
+        "${minutes / 60}${strings.walkingHourUnit} ${minutes % 60}${strings.walkingMinuteUnit}"
+    } else {
+        "${minutes}${strings.walkingMinuteUnit}"
+    }
+}

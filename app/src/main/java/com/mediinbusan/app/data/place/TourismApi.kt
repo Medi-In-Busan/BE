@@ -13,21 +13,21 @@ interface TourismApi {
     suspend fun getNearbyWellnessPlaces(
         @Path("hospitalRegNo") hospitalRegNo: String,
         @Query("radiusMeters") radiusMeters: Double? = null,
-        @Query("lang") lang: String
+        @Query("language") language: String = "ko"
     ): List<PlaceDto>
 
-    /** 병원에 종속되지 않은 웰니스 장소 조회. 좌표를 안 넘기면 전체를 반환한다(지도 '전체 브라우징'용). */
+    /** 병원에 종속되지 않은 전체 웰니스 장소 조회. */
     @GET("api/wellness/places")
     suspend fun getPlaces(
         @Query("latitude") latitude: Double? = null,
         @Query("longitude") longitude: Double? = null,
         @Query("radiusMeters") radiusMeters: Double? = null,
-        @Query("lang") lang: String
+        @Query("language") language: String = "ko"
     ): List<PlaceDto>
 
     @GET("api/wellness/places/{contentId}")
     suspend fun getPlaceDetail(
         @Path("contentId") contentId: String,
-        @Query("lang") lang: String
+        @Query("language") language: String = "ko"
     ): PlaceDto
 }
