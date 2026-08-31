@@ -124,10 +124,29 @@ jobs:
             export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             export IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
             export DOMAIN CERTBOT_EMAIL
+
+            # 커밋 SHA 태그로 배포하므로 단순 `image prune`만으로는 과거 태그 이미지가 지워지지
+            # 않는다. pull 전에 현재 컨테이너가 사용하지 않는 이미지와 빌드 캐시를 정리해 작은
+            # EC2 디스크가 가득 차는 것을 방지한다. named volume(MySQL/인증서)은 삭제하지 않는다.
+            echo "=== Disk usage before Docker cleanup ==="
+            df -h /
+            docker system df || true
+            docker container prune -f
+            docker image prune -af
+            docker builder prune -af
+            docker network prune -f
+            echo "=== Disk usage after Docker cleanup ==="
+            df -h /
+
             docker compose -f docker-compose.prod.yml pull
             # 인증서가 아직 없는 최초 배포에서만 실제로 발급을 수행한다(idempotent) —
             # nginx가 뜨기 전에 먼저 실행해야 standalone 모드로 80번 포트를 쓸 수 있다.
             chmod +x nginx/init-letsencrypt.sh
             ./nginx/init-letsencrypt.sh
             docker compose -f docker-compose.prod.yml up -d
-            docker image prune -f
+
+            # 새 컨테이너 전환 뒤 이전 SHA 태그 이미지는 더 이상 사용되지 않는다. 다음 배포까지
+            # 디스크를 차지하지 않도록 태그 유무와 관계없이 미사용 이미지를 제거한다.
+            docker image prune -af
+            docker builder prune -af
+            docker system df
