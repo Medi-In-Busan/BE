@@ -23,7 +23,11 @@ class PrivacyPolicyControllerTest {
             .andExpect(status().isOk())
             .andExpect(header().string("Content-Type", containsString("text/html")))
             .andExpect(content().string(containsString("개인정보처리방침")))
+            .andExpect(content().string(containsString("MADIN BUSAN")))
             .andExpect(content().string(containsString("Privacy inquiries")))
+            .andExpect(content().string(containsString("选择语言")))
+            .andExpect(content().string(containsString("言語を選択")))
+            .andExpect(content().string(containsString("language-select")))
             .andExpect(content().string(containsString("support@medinbusan.kr")));
     }
 }
