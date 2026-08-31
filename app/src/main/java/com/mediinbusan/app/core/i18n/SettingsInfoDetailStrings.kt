@@ -9,14 +9,12 @@ data class InfoContentText(val intro: String, val sections: List<InfoSectionText
  * 제목(usageGuideTitle 등)은 SettingsStrings와 중복되지 않도록 여기 두지 않고 재사용한다.
  */
 data class SettingsInfoDetailStrings(
-    val draftNotice: String,
     val usageGuide: InfoContentText,
     val privacyPolicy: InfoContentText,
     val terms: InfoContentText
 ) {
     companion object {
         val Ko = SettingsInfoDetailStrings(
-            draftNotice = "본 내용은 정식 서비스 오픈 전 작성된 초안이며, 정식 법률 검토를 거쳐 대체될 수 있습니다.",
             usageGuide = InfoContentText(
                 intro = "메디인부산(MediIn Busan)은 부산을 방문하는 외국인 의료관광객이 자신의 의료 목적에 맞는 부산 의료기관을 탐색하고, 의료 이용 절차와 병원 주변 관광·웰니스 정보를 함께 확인할 수 있도록 돕는 정보 제공형 서비스입니다.",
                 sections = listOf(
@@ -47,7 +45,7 @@ data class SettingsInfoDetailStrings(
                 sections = listOf(
                     InfoSectionText(
                         "수집하는 개인정보 항목",
-                        "서비스는 회원가입 절차 없이 이용 가능하며, 선택한 언어 설정·의료 목적 카테고리·즐겨찾기 및 최근 본 항목 목록만을 기기 내부에 저장합니다. 위 정보는 이용자의 기기에만 저장되며, 서비스 서버로 전송되지 않습니다."
+                        "서비스는 회원가입 절차 없이 이용 가능하며, 선택한 언어 설정·의료 목적 카테고리·즐겨찾기 및 최근 본 항목 목록은 이용자의 기기 내부에만 저장되고 서비스 서버로 전송되지 않습니다.\n\n다만 다음 두 기능을 이용하는 경우에는 입력·촬영한 내용이 처리 목적으로 외부에 전송됩니다.\n· AI 준비체크(챗봇) 대화창에 입력한 내용은 응답 생성을 위해 당사 서버를 거쳐 AI 처리업체(Google Gemini API)로 전송되어 처리됩니다.\n· 문서 스캔 기능에서 촬영하거나 선택한 이미지와 인식된 텍스트는 문자 인식 및 번역을 위해 당사 서버를 거쳐 처리업체(네이버클라우드 CLOVA OCR, Papago 번역)로 전송되어 처리됩니다."
                     ),
                     InfoSectionText(
                         "수집하지 않는 정보",
@@ -55,15 +53,15 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "개인정보의 이용 목적",
-                        "저장된 언어·의료목적 설정은 다음 방문 시 동일한 환경을 제공하기 위한 목적으로만 사용됩니다."
+                        "저장된 언어·의료목적 설정은 다음 방문 시 동일한 환경을 제공하기 위한 목적으로만 사용됩니다. AI 준비체크 대화 내용과 문서 스캔 이미지·텍스트는 각각 준비 유형 안내 생성, 문서 텍스트 인식·번역이라는 처리 목적으로만 일시적으로 사용됩니다."
                     ),
                     InfoSectionText(
                         "개인정보의 보유 및 파기",
-                        "기기 내부에 저장된 정보는 이용자가 앱을 삭제하거나 설정에서 직접 초기화할 때까지 보관되며, 별도의 서버에 보관되지 않으므로 앱 삭제 시 함께 파기됩니다."
+                        "기기 내부에 저장된 정보는 이용자가 앱을 삭제하거나 설정에서 직접 초기화할 때까지 보관되며, 별도의 서버에 보관되지 않으므로 앱 삭제 시 함께 파기됩니다. AI 준비체크 대화 내용과 문서 스캔 이미지·인식 텍스트는 당사 서버에 별도로 저장하지 않고 처리 즉시 폐기합니다."
                     ),
                     InfoSectionText(
                         "제3자 제공",
-                        "서비스는 이용자의 정보를 제3자에게 제공하지 않습니다. 다만 의료기관·관광 정보는 한국관광공사가 제공하는 공공데이터(OpenAPI)를 통해 조회됩니다."
+                        "서비스는 이용자의 정보를 원칙적으로 제3자에게 제공하지 않습니다. 다만 위 'AI 준비체크'와 '문서 스캔' 기능을 이용하면 입력·촬영한 내용이 해당 기능의 처리를 위해 다음 업체로 전송됩니다: Google(Gemini API, 대화 응답 생성), 네이버클라우드(CLOVA OCR·Papago 번역, 문자 인식 및 번역). 전송된 내용은 각 업체가 처리 목적 달성 후 자체 정책에 따라 처리하며, 당사 서버에는 별도로 저장되지 않습니다. 그 외 의료기관·관광 정보는 한국관광공사가 제공하는 공공데이터(OpenAPI)를 통해 조회됩니다."
                     ),
                     InfoSectionText(
                         "문의처",
@@ -99,7 +97,6 @@ data class SettingsInfoDetailStrings(
         )
 
         val En = SettingsInfoDetailStrings(
-            draftNotice = "This content is a draft written before the official service launch and may be replaced after formal legal review.",
             usageGuide = InfoContentText(
                 intro = "MediIn Busan is an information service that helps foreign medical tourists visiting Busan explore Busan hospitals matching their medical purpose, and check the medical process along with tourism and wellness information near the hospital.",
                 sections = listOf(
@@ -130,7 +127,7 @@ data class SettingsInfoDetailStrings(
                 sections = listOf(
                     InfoSectionText(
                         "Personal information collected",
-                        "The Service can be used without a sign-up process, and only stores your selected language setting, medical purpose category, and favorites/recently viewed list on your device. This information is stored only on your device and is not transmitted to the Service's servers."
+                        "The Service can be used without a sign-up process. Your selected language setting, medical purpose category, and favorites/recently viewed list are stored only on your device and are not transmitted to the Service's servers.\n\nHowever, using the following two features does send what you enter or capture to outside processors for that purpose:\n· Text you enter in the AI Prep Check (chatbot) conversation is sent through our server to an AI processor (Google Gemini API) to generate a reply.\n· Images you capture or select in the document scan feature, and the text recognized from them, are sent through our server to processors (Naver Cloud CLOVA OCR, Papago Translation) for text recognition and translation."
                     ),
                     InfoSectionText(
                         "Information not collected",
@@ -138,15 +135,15 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "Purpose of use",
-                        "The stored language and medical purpose settings are used only to provide the same environment on your next visit."
+                        "The stored language and medical purpose settings are used only to provide the same environment on your next visit. AI Prep Check conversation text and document scan images/text are used only temporarily, for the sole purpose of generating preparation-type guidance and recognizing/translating document text, respectively."
                     ),
                     InfoSectionText(
                         "Retention and destruction",
-                        "Information stored on the device is kept until you delete the app or reset it directly in Settings, and is not stored on any separate server, so it is destroyed together when the app is deleted."
+                        "Information stored on the device is kept until you delete the app or reset it directly in Settings, and is not stored on any separate server, so it is destroyed together when the app is deleted. AI Prep Check conversation text and document scan images/recognized text are not separately stored on our servers and are discarded immediately after processing."
                     ),
                     InfoSectionText(
                         "Disclosure to third parties",
-                        "The Service does not disclose your information to third parties. However, hospital and tourism information is retrieved via public data (OpenAPI) provided by the Korea Tourism Organization."
+                        "The Service does not disclose your information to third parties as a general rule. However, using the 'AI Prep Check' and 'document scan' features above sends what you enter or capture to the following processors for that feature's processing: Google (Gemini API, to generate chat replies) and Naver Cloud (CLOVA OCR / Papago Translation, for text recognition and translation). Once each processor has served its purpose, it handles the data under its own policy, and it is not separately stored on our servers. Aside from this, hospital and tourism information is retrieved via public data (OpenAPI) provided by the Korea Tourism Organization."
                     ),
                     InfoSectionText(
                         "Contact",
@@ -182,7 +179,6 @@ data class SettingsInfoDetailStrings(
         )
 
         val Zh = SettingsInfoDetailStrings(
-            draftNotice = "本内容为正式服务上线前编写的草案，可能会在正式法律审核后被替换。",
             usageGuide = InfoContentText(
                 intro = "MediIn Busan 是一项信息提供型服务，帮助来访釜山的外国医疗旅游者查找符合自身医疗目的的釜山医疗机构，并同时了解医疗利用流程及医院周边的观光·养生信息。",
                 sections = listOf(
@@ -213,7 +209,7 @@ data class SettingsInfoDetailStrings(
                 sections = listOf(
                     InfoSectionText(
                         "收集的个人信息项目",
-                        "本服务无需注册即可使用，仅在设备内部保存您选择的语言设置、医疗目的类别、收藏及最近浏览列表。上述信息仅保存在用户设备中，不会传输至本服务的服务器。"
+                        "本服务无需注册即可使用，您选择的语言设置、医疗目的类别、收藏及最近浏览列表仅保存在您的设备中，不会传输至本服务的服务器。\n\n但使用以下两项功能时，您输入或拍摄的内容会为处理目的传输至外部。\n· 在“AI准备检查”（聊天机器人）对话窗口中输入的内容，会经由本公司服务器传输至AI处理商（Google Gemini API）以生成回复。\n· 在文档扫描功能中拍摄或选择的图片及识别出的文字，会经由本公司服务器传输至处理商（Naver Cloud CLOVA OCR、Papago翻译）以进行文字识别与翻译。"
                     ),
                     InfoSectionText(
                         "不收集的信息",
@@ -221,15 +217,15 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "个人信息的使用目的",
-                        "保存的语言·医疗目的设置仅用于在下次访问时提供相同的使用环境。"
+                        "保存的语言·医疗目的设置仅用于在下次访问时提供相同的使用环境。AI准备检查对话内容及文档扫描图片·文字，分别仅出于生成准备类型指南、识别与翻译文档文字的处理目的被临时使用。"
                     ),
                     InfoSectionText(
                         "个人信息的保留及销毁",
-                        "保存在设备内部的信息将保留至用户删除应用或在设置中直接重置为止，且不会保存在独立服务器中，因此在删除应用时会一并销毁。"
+                        "保存在设备内部的信息将保留至用户删除应用或在设置中直接重置为止，且不会保存在独立服务器中，因此在删除应用时会一并销毁。AI准备检查对话内容及文档扫描图片·识别文字不会另外保存在本公司服务器中，处理完成后立即销毁。"
                     ),
                     InfoSectionText(
                         "向第三方提供",
-                        "本服务不会向第三方提供用户信息。但医疗机构·观光信息是通过韩国观光公社提供的公共数据（OpenAPI）进行查询的。"
+                        "本服务原则上不会向第三方提供用户信息。但使用上述“AI准备检查”与“文档扫描”功能时，您输入或拍摄的内容会为该功能的处理传输至以下企业：Google（Gemini API，用于生成对话回复）、Naver Cloud（CLOVA OCR·Papago翻译，用于文字识别及翻译）。传输的内容在达成处理目的后由各企业按其自身政策处理，不会另外保存在本公司服务器中。除此之外，医疗机构·观光信息是通过韩国观光公社提供的公共数据（OpenAPI）进行查询的。"
                     ),
                     InfoSectionText(
                         "咨询方式",
@@ -265,7 +261,6 @@ data class SettingsInfoDetailStrings(
         )
 
         val Ja = SettingsInfoDetailStrings(
-            draftNotice = "本内容は正式サービス開始前に作成された草案であり、正式な法的検討を経て差し替えられる場合があります。",
             usageGuide = InfoContentText(
                 intro = "メディインブサン（MediIn Busan）は、釜山を訪れる外国人医療観光客が自身の医療目的に合った釜山の医療機関を探し、医療利用の手続きや病院周辺の観光・ウェルネス情報を併せて確認できるよう支援する情報提供型サービスです。",
                 sections = listOf(
@@ -296,7 +291,7 @@ data class SettingsInfoDetailStrings(
                 sections = listOf(
                     InfoSectionText(
                         "収集する個人情報項目",
-                        "本サービスは会員登録手続きなしで利用可能で、選択した言語設定・医療目的カテゴリー・お気に入りおよび最近見た項目リストのみを端末内部に保存します。上記の情報は利用者の端末にのみ保存され、サービスのサーバーには送信されません。"
+                        "本サービスは会員登録手続きなしで利用可能で、選択した言語設定・医療目的カテゴリー・お気に入りおよび最近見た項目リストは端末内部にのみ保存され、サービスのサーバーには送信されません。\n\nただし、次の2つの機能を利用する場合は、入力・撮影した内容が処理目的で外部に送信されます。\n・「AI準備チェック」（チャットボット）の会話欄に入力した内容は、応答生成のため当社サーバーを経由してAI処理事業者（Google Gemini API）に送信され処理されます。\n・書類スキャン機能で撮影または選択した画像および認識されたテキストは、文字認識と翻訳のため当社サーバーを経由して処理事業者（NAVER Cloud CLOVA OCR、Papago翻訳）に送信され処理されます。"
                     ),
                     InfoSectionText(
                         "収集しない情報",
@@ -304,15 +299,15 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "個人情報の利用目的",
-                        "保存された言語・医療目的の設定は、次回訪問時に同じ環境を提供する目的にのみ使用されます。"
+                        "保存された言語・医療目的の設定は、次回訪問時に同じ環境を提供する目的にのみ使用されます。AI準備チェックの会話内容および書類スキャンの画像・テキストは、それぞれ準備タイプ案内の生成、書類テキストの認識・翻訳という処理目的にのみ一時的に使用されます。"
                     ),
                     InfoSectionText(
                         "個人情報の保有および破棄",
-                        "端末内部に保存された情報は、利用者がアプリを削除するか設定で直接初期化するまで保管され、別途サーバーには保管されないため、アプリ削除時に併せて破棄されます。"
+                        "端末内部に保存された情報は、利用者がアプリを削除するか設定で直接初期化するまで保管され、別途サーバーには保管されないため、アプリ削除時に併せて破棄されます。AI準備チェックの会話内容および書類スキャンの画像・認識テキストは当社サーバーに別途保存されず、処理後直ちに破棄されます。"
                     ),
                     InfoSectionText(
                         "第三者提供",
-                        "本サービスは利用者の情報を第三者に提供しません。ただし、医療機関・観光情報は韓国観光公社が提供する公共データ（OpenAPI）を通じて照会されます。"
+                        "本サービスは原則として利用者の情報を第三者に提供しません。ただし、上記の「AI準備チェック」および「書類スキャン」機能を利用すると、入力・撮影した内容が当該機能の処理のため次の事業者に送信されます：Google（Gemini API、会話応答の生成）、NAVER Cloud（CLOVA OCR・Papago翻訳、文字認識および翻訳）。送信された内容は各事業者が処理目的の達成後、自社の方針に従って取り扱い、当社サーバーには別途保存されません。それ以外の医療機関・観光情報は、韓国観光公社が提供する公共データ（OpenAPI）を通じて照会されます。"
                     ),
                     InfoSectionText(
                         "お問い合わせ先",

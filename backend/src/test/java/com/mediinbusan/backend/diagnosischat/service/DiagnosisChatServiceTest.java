@@ -2,6 +2,7 @@ package com.mediinbusan.backend.diagnosischat.service;
 
 import com.mediinbusan.backend.diagnosischat.client.GeminiApiException;
 import com.mediinbusan.backend.diagnosischat.client.GeminiClient;
+import com.mediinbusan.backend.diagnosischat.client.GeminiRateLimitExceededException;
 import com.mediinbusan.backend.diagnosischat.client.GeminiStructuredOutput;
 import com.mediinbusan.backend.diagnosischat.dto.DiagnosisChatRequest;
 import com.mediinbusan.backend.diagnosischat.dto.DiagnosisChatResponse;
@@ -11,12 +12,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -133,11 +136,67 @@ class DiagnosisChatServiceTest {
     }
 
     @Test
+    void 칩_탭이_보낸_정확한_enum_값은_Gemini_호출없이_정적_응답으로_처리된다() {
+        service = new DiagnosisChatService(geminiClient);
+
+        DiagnosisChatResponse response = service.converse(
+            new DiagnosisChatRequest("ko", "SKIN_BEAUTY", DiagnosisSlotsDto.empty())
+        );
+
+        assertThat(response.slots().visitPurpose()).isEqualTo("SKIN_BEAUTY");
+        assertThat(response.reply()).isNotBlank();
+        assertThat(response.resultType()).isNull();
+        verifyNoInteractions(geminiClient);
+    }
+
+    @Test
+    void 칩_탭만으로_네개_필수_슬롯이_채워지면_Gemini_호출없이_resultType까지_계산된다() {
+        service = new DiagnosisChatService(geminiClient);
+        DiagnosisSlotsDto previousSlots = new DiagnosisSlotsDto("SKIN_BEAUTY", "DAYS_4_7", "SEARCHING", null, List.of());
+
+        DiagnosisChatResponse response = service.converse(
+            new DiagnosisChatRequest("ko", "NOT_NEEDED", previousSlots)
+        );
+
+        assertThat(response.slots().interpretationNeed()).isEqualTo("NOT_NEEDED");
+        assertThat(response.resultType()).isEqualTo("TYPE_A");
+        verifyNoInteractions(geminiClient);
+    }
+
+    @Test
+    void 다른_슬롯의_enum_이름이_잘못_와도_안전하게_Gemini_경로로_폴백한다() {
+        service = new DiagnosisChatService(geminiClient);
+        // targetSlot은 reservationStatus인데 InterpretationNeed 쪽 상수명(NOT_NEEDED와 겹치지 않는 값)이 온 경우.
+        when(geminiClient.extractSlots(any(), any())).thenReturn(new GeminiStructuredOutput(
+            "죄송해요, 잘 이해하지 못했어요.",
+            new DiagnosisSlotsDto(null, null, null, null, List.of())
+        ));
+        DiagnosisSlotsDto previousSlots = new DiagnosisSlotsDto("SKIN_BEAUTY", "DAYS_4_7", null, null, List.of());
+
+        DiagnosisChatResponse response = service.converse(
+            new DiagnosisChatRequest("ko", "WANT_TO_CHECK_SUPPORTED_LANGUAGE", previousSlots)
+        );
+
+        // ReservationStatus에는 WANT_TO_CHECK_SUPPORTED_LANGUAGE가 없으므로 파싱 실패 -> Gemini 경로로 폴백.
+        assertThat(response.slots().reservationStatus()).isNull();
+    }
+
+    @Test
     void Gemini_호출_실패는_502_예외로_변환된다() {
         service = new DiagnosisChatService(geminiClient);
         when(geminiClient.extractSlots(any(), any())).thenThrow(new GeminiApiException("호출 실패"));
 
         assertThatThrownBy(() -> service.converse(new DiagnosisChatRequest("ko", "hi", DiagnosisSlotsDto.empty())))
             .isInstanceOf(DiagnosisChatFailedException.class);
+    }
+
+    @Test
+    void Gemini_사용량_한도_초과는_429_예외로_변환된다() {
+        service = new DiagnosisChatService(geminiClient);
+        when(geminiClient.extractSlots(any(), any())).thenThrow(new GeminiRateLimitExceededException("한도 초과"));
+
+        assertThatThrownBy(() -> service.converse(new DiagnosisChatRequest("ko", "hi", DiagnosisSlotsDto.empty())))
+            .isInstanceOf(DiagnosisChatFailedException.class)
+            .satisfies(e -> assertThat(((DiagnosisChatFailedException) e).getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS));
     }
 }
