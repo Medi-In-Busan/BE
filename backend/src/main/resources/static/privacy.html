@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="메디인부산 개인정보처리방침 및 MediInBusan Privacy Policy">
-    <title>개인정보처리방침 | MediInBusan</title>
+    <meta name="description" content="MADIN BUSAN 개인정보처리방침 및 Privacy Policy">
+    <title>개인정보처리방침 | MADIN BUSAN</title>
     <style>
         :root {
             --ink: #191827;
@@ -105,28 +105,61 @@
             font-weight: 700;
         }
 
-        nav {
+        .language-picker {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 10px;
             margin: 24px 0;
-            padding: 8px;
+            padding: 12px 14px;
             border: 1px solid var(--line);
             border-radius: 18px;
             background: rgba(255, 255, 255, .8);
         }
 
-        nav a {
-            flex: 1;
-            padding: 10px;
-            border-radius: 12px;
+        .language-picker label {
             color: var(--ink);
             font-weight: 800;
-            text-align: center;
-            text-decoration: none;
         }
 
-        nav a:first-child { background: #fff0f2; color: #d84258; }
-        nav a:last-child { background: #edf3ff; color: #285fb9; }
+        .select-wrap { position: relative; min-width: min(220px, 58vw); }
+
+        .select-wrap::after {
+            content: "⌄";
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            color: var(--coral);
+            font-size: 20px;
+            font-weight: 900;
+            pointer-events: none;
+            transform: translateY(-58%);
+        }
+
+        select {
+            width: 100%;
+            padding: 11px 42px 11px 14px;
+            border: 1px solid #e4dfe4;
+            border-radius: 12px;
+            outline: none;
+            appearance: none;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        select:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255, 99, 117, .14); }
+
+        .language-panel[hidden] { display: none; }
+
+        noscript p {
+            padding: 14px;
+            border-radius: 14px;
+            background: #fff;
+            text-align: center;
+        }
 
         article {
             margin-top: 24px;
@@ -189,32 +222,42 @@
             .shell { width: min(100% - 20px, 900px); padding-top: 24px; }
             header, article { border-radius: 24px; }
             .summary { font-size: 15px; }
+            .language-picker { align-items: stretch; flex-direction: column; }
+            .select-wrap { width: 100%; min-width: 0; }
             th, td { min-width: 140px; }
         }
     </style>
 </head>
 <body>
 <main class="shell">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"></span> MEDIIN BUSAN</div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span> MADIN BUSAN</div>
 
     <header>
         <p class="eyebrow">Your data, clearly explained</p>
-        <h1>개인정보처리방침</h1>
-        <p class="summary">메디인부산은 의료관광 정보를 안심하고 이용할 수 있도록 필요한 정보만 처리하고, 사용 목적과 외부 처리 과정을 투명하게 안내합니다.</p>
+        <h1 id="page-title">개인정보처리방침</h1>
+        <p class="summary" id="page-summary">MADIN BUSAN은 의료관광 정보를 안심하고 이용할 수 있도록 필요한 정보만 처리하고, 사용 목적과 외부 처리 과정을 투명하게 안내합니다.</p>
         <div class="meta">
             <span class="pill">시행일 2026. 09. 01.</span>
             <span class="pill">Effective September 1, 2026</span>
         </div>
     </header>
 
-    <nav aria-label="언어 선택">
-        <a href="#ko">한국어</a>
-        <a href="#en" lang="en">English</a>
-    </nav>
+    <div class="language-picker">
+        <label for="language-select" id="language-label">언어 선택</label>
+        <div class="select-wrap">
+            <select id="language-select" aria-labelledby="language-label">
+                <option value="ko">한국어</option>
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+            </select>
+        </div>
+    </div>
+    <noscript><p><a href="#ko">한국어</a> · <a href="#en">English</a> · <a href="#zh">中文</a> · <a href="#ja">日本語</a></p></noscript>
 
-    <article id="ko">
+    <article id="ko" class="language-panel" data-language="ko">
         <h2>한국어</h2>
-        <p>메디인부산(이하 “서비스”)은 관련 법령과 Google Play 정책을 준수하며 이용자의 개인정보와 민감정보를 안전하게 처리하기 위해 노력합니다.</p>
+        <p>MADIN BUSAN(이하 “서비스”)은 관련 법령과 Google Play 정책을 준수하며 이용자의 개인정보와 민감정보를 안전하게 처리하기 위해 노력합니다.</p>
 
         <div class="notice"><strong>중요:</strong> 서비스는 의료기관 및 관광·웰니스 정보를 제공하는 정보 서비스이며, 의료기기가 아니고 진단·치료·처방 또는 의료 전문가의 판단을 대체하지 않습니다.</div>
 
@@ -271,9 +314,9 @@
         <p>개인정보 관련 문의: <a href="mailto:support@medinbusan.kr">support@medinbusan.kr</a></p>
     </article>
 
-    <article id="en" lang="en">
+    <article id="en" class="language-panel" data-language="en" lang="en" hidden>
         <h2>English</h2>
-        <p>MediInBusan (the “Service”) strives to process personal and sensitive information safely and transparently in accordance with applicable laws and Google Play policies.</p>
+        <p>MADIN BUSAN (the “Service”) strives to process personal and sensitive information safely and transparently in accordance with applicable laws and Google Play policies.</p>
 
         <div class="notice"><strong>Important:</strong> The Service provides medical institution, tourism, and wellness information. It is not a medical device and does not replace diagnosis, treatment, prescriptions, or professional medical judgment.</div>
 
@@ -330,7 +373,181 @@
         <p>Privacy inquiries: <a href="mailto:support@medinbusan.kr">support@medinbusan.kr</a></p>
     </article>
 
-    <footer>© 2026 MediInBusan. This page is publicly available without signing in.</footer>
+    <article id="zh" class="language-panel" data-language="zh" lang="zh-CN" hidden>
+        <h2>中文</h2>
+        <p>MADIN BUSAN（以下简称“本服务”）遵守相关法律法规及 Google Play 政策，致力于安全、透明地处理用户的个人信息和敏感信息。</p>
+
+        <div class="notice"><strong>重要提示：</strong>本服务提供医疗机构、旅游及健康休养信息，并非医疗器械，不能替代诊断、治疗、处方或专业医务人员的判断。</div>
+
+        <h3>1. 我们处理的信息</h3>
+        <ul>
+            <li><strong>设备内信息：</strong>所选语言、医疗目的、收藏、最近浏览项目、搜索记录以及用于旅游推荐的使用行为评分</li>
+            <li><strong>AI 准备检查：</strong>用户在对话框中主动输入的回答和问题</li>
+            <li><strong>文档扫描：</strong>用户拍摄或选择的诊断书、处方等图片，以及识别文字和翻译结果</li>
+            <li><strong>自动生成的信息：</strong>为保障安全和排查故障，服务器日志可能记录 IP 地址、访问时间、请求路径及错误信息。</li>
+        </ul>
+        <p>本服务无需注册账户，也不收集姓名、联系方式、支付信息或实时 GPS 位置信息。</p>
+
+        <h3>2. 信息处理目的</h3>
+        <ul>
+            <li>根据用户选择的语言和关注内容提供应用环境及推荐</li>
+            <li>生成 AI 准备检查的回复</li>
+            <li>识别并翻译医疗文档中的文字</li>
+            <li>防止滥用、分析错误、保护服务并提升稳定性</li>
+        </ul>
+
+        <h3>3. 外部处理服务商</h3>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>服务商</th><th>传输的信息</th><th>处理目的</th></tr></thead>
+                <tbody>
+                <tr><td>Google Gemini API</td><td>用户在 AI 准备检查中输入的内容</td><td>生成对话回复</td></tr>
+                <tr><td>Naver Cloud CLOVA OCR</td><td>用户提交的文档图片</td><td>文字识别</td></tr>
+                <tr><td>Naver Cloud Papago</td><td>识别出的文档文字及待翻译文字</td><td>多语言翻译</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p>仅当用户使用相关功能时，必要信息才会通过本服务的服务器传输给上述服务商。各服务商依据其隐私政策和合同条款处理信息。</p>
+
+        <h3>4. 保存与删除</h3>
+        <ul>
+            <li>语言、医疗目的、收藏和最近浏览项目等本地信息，会在清除应用数据或卸载应用时删除。</li>
+            <li>AI 准备检查输入、文档图片及识别文字仅在生成回复、执行 OCR 和翻译期间使用，不会另行保存至本服务数据库。</li>
+            <li>安全及故障排查日志仅在实现相关目的所需的期间内保存，之后予以删除。</li>
+        </ul>
+
+        <h3>5. 权限</h3>
+        <p>相机权限仅在用户主动使用文档扫描功能拍摄文档时使用。用户可以拒绝或撤回该权限。本服务不会请求位置权限。</p>
+
+        <h3>6. 用户的选择与权利</h3>
+        <p>用户可在应用设置中重置本地保存的信息，也可在设备设置中撤回相机权限。如对个人信息处理有疑问或希望提出删除请求，请通过下方邮箱联系我们。</p>
+
+        <h3>7. 儿童个人信息</h3>
+        <p>本服务并非主要面向儿童，也不会在需要监护人同意的情况下故意收集儿童的个人信息。</p>
+
+        <h3>8. 安全措施与政策变更</h3>
+        <p>本服务采取 HTTPS 通信和访问控制等合理保护措施。如本政策发生变更，我们将更新生效日期，并通过应用或服务页面告知重大变更。</p>
+
+        <h3>9. 联系方式</h3>
+        <p>个人信息相关咨询：<a href="mailto:support@medinbusan.kr">support@medinbusan.kr</a></p>
+    </article>
+
+    <article id="ja" class="language-panel" data-language="ja" lang="ja" hidden>
+        <h2>日本語</h2>
+        <p>MADIN BUSAN（以下「本サービス」）は、関連法令および Google Play ポリシーを遵守し、利用者の個人情報および機微情報を安全かつ透明に取り扱うよう努めます。</p>
+
+        <div class="notice"><strong>重要：</strong>本サービスは医療機関、観光、ウェルネスに関する情報を提供するものであり、医療機器ではありません。診断、治療、処方、または医療専門家の判断に代わるものではありません。</div>
+
+        <h3>1. 取り扱う情報</h3>
+        <ul>
+            <li><strong>端末内の情報：</strong>選択言語、医療目的、お気に入り、最近閲覧した項目、検索履歴、観光推薦に使用する行動スコア</li>
+            <li><strong>AI 準備チェック：</strong>利用者がチャット画面に直接入力した回答および質問</li>
+            <li><strong>文書スキャン：</strong>利用者が撮影または選択した診断書・処方箋などの画像、認識された文字、翻訳結果</li>
+            <li><strong>自動生成情報：</strong>セキュリティおよび障害対応のため、IP アドレス、アクセス時刻、リクエストパス、エラー情報がサーバーログに記録される場合があります。</li>
+        </ul>
+        <p>本サービスはアカウント登録を求めず、氏名、連絡先、決済情報、リアルタイムの GPS 位置情報を収集しません。</p>
+
+        <h3>2. 利用目的</h3>
+        <ul>
+            <li>選択した言語や関心に合わせたアプリ環境および推薦の提供</li>
+            <li>AI 準備チェックの回答生成</li>
+            <li>医療文書の文字認識および翻訳</li>
+            <li>不正利用の防止、エラー分析、サービス保護および安定性向上</li>
+        </ul>
+
+        <h3>3. 外部処理事業者</h3>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>事業者</th><th>送信される情報</th><th>目的</th></tr></thead>
+                <tbody>
+                <tr><td>Google Gemini API</td><td>AI 準備チェックに入力した内容</td><td>チャット回答の生成</td></tr>
+                <tr><td>Naver Cloud CLOVA OCR</td><td>利用者が提出した文書画像</td><td>文字認識</td></tr>
+                <tr><td>Naver Cloud Papago</td><td>認識された文書テキストおよび翻訳対象テキスト</td><td>多言語翻訳</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p>関連機能を利用した場合に限り、処理に必要な情報が本サービスのサーバーを経由して上記事業者に送信されます。各事業者は、それぞれのプライバシーポリシーおよび契約条件に基づいて情報を処理します。</p>
+
+        <h3>4. 保管および削除</h3>
+        <ul>
+            <li>言語、医療目的、お気に入り、最近閲覧した項目などのローカル情報は、アプリデータの消去またはアプリの削除時に削除されます。</li>
+            <li>AI 準備チェックの入力、文書画像、認識テキストは、回答生成、OCR、翻訳処理中にのみ使用され、本サービスのデータベースに別途保存されません。</li>
+            <li>セキュリティおよび障害対応のためのログは、目的達成に必要な期間のみ保管し、その後削除します。</li>
+        </ul>
+
+        <h3>5. 権限</h3>
+        <p>カメラ権限は、利用者が文書スキャン機能で文書を撮影する場合にのみ使用します。権限は拒否または取り消すことができます。本サービスは位置情報の権限を要求しません。</p>
+
+        <h3>6. 利用者の選択と権利</h3>
+        <p>利用者はアプリ設定で端末内に保存された情報を初期化し、端末設定でカメラ権限を取り消すことができます。個人情報の取り扱いに関するお問い合わせや削除のご依頼は、下記メールアドレスまでご連絡ください。</p>
+
+        <h3>7. 子どもの個人情報</h3>
+        <p>本サービスは主として子どもを対象としたものではなく、保護者の同意が必要な子どもの個人情報を意図的に収集しません。</p>
+
+        <h3>8. セキュリティおよびポリシーの変更</h3>
+        <p>本サービスは HTTPS 通信やアクセス制御など、合理的な保護措置を講じます。本ポリシーを変更する場合は施行日を更新し、重要な変更をアプリまたはサービス画面でお知らせします。</p>
+
+        <h3>9. お問い合わせ</h3>
+        <p>個人情報に関するお問い合わせ：<a href="mailto:support@medinbusan.kr">support@medinbusan.kr</a></p>
+    </article>
+
+    <footer>© 2026 MADIN BUSAN. This page is publicly available without signing in.</footer>
 </main>
+<script>
+    (() => {
+        const copy = {
+            ko: {
+                title: "개인정보처리방침",
+                summary: "MADIN BUSAN은 의료관광 정보를 안심하고 이용할 수 있도록 필요한 정보만 처리하고, 사용 목적과 외부 처리 과정을 투명하게 안내합니다.",
+                label: "언어 선택",
+                documentTitle: "개인정보처리방침 | MADIN BUSAN"
+            },
+            en: {
+                title: "Privacy Policy",
+                summary: "MADIN BUSAN processes only the information needed to provide trusted medical-tourism services and explains how it is used and handled.",
+                label: "Language",
+                documentTitle: "Privacy Policy | MADIN BUSAN"
+            },
+            zh: {
+                title: "隐私政策",
+                summary: "MADIN BUSAN 仅处理提供安心医疗旅游服务所需的信息，并透明说明信息的使用目的及外部处理流程。",
+                label: "选择语言",
+                documentTitle: "隐私政策 | MADIN BUSAN"
+            },
+            ja: {
+                title: "プライバシーポリシー",
+                summary: "MADIN BUSANは、安心して医療観光情報をご利用いただくために必要な情報のみを取り扱い、その利用目的と外部処理を明確にご案内します。",
+                label: "言語を選択",
+                documentTitle: "プライバシーポリシー | MADIN BUSAN"
+            }
+        };
+        const languageSelect = document.getElementById("language-select");
+        const panels = document.querySelectorAll(".language-panel");
+
+        function activateLanguage(language, updateUrl) {
+            const selected = copy[language] ? language : "ko";
+            panels.forEach((panel) => { panel.hidden = panel.dataset.language !== selected; });
+            languageSelect.value = selected;
+            document.documentElement.lang = selected === "zh" ? "zh-CN" : selected;
+            document.getElementById("page-title").textContent = copy[selected].title;
+            document.getElementById("page-summary").textContent = copy[selected].summary;
+            document.getElementById("language-label").textContent = copy[selected].label;
+            document.title = copy[selected].documentTitle;
+            if (updateUrl) history.replaceState(null, "", `#${selected}`);
+        }
+
+        const hashLanguage = window.location.hash.slice(1);
+        const browserLanguage = navigator.language.toLowerCase();
+        const preferredLanguage = copy[hashLanguage]
+            ? hashLanguage
+            : browserLanguage.startsWith("zh") ? "zh"
+                : browserLanguage.startsWith("ja") ? "ja"
+                    : browserLanguage.startsWith("en") ? "en" : "ko";
+
+        languageSelect.addEventListener("change", (event) => activateLanguage(event.target.value, true));
+        window.addEventListener("hashchange", () => activateLanguage(window.location.hash.slice(1), false));
+        activateLanguage(preferredLanguage, false);
+    })();
+</script>
 </body>
 </html>
