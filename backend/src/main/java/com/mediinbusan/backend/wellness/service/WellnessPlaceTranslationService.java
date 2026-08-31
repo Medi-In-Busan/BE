@@ -9,6 +9,7 @@ import com.mediinbusan.backend.wellness.repository.WellnessPlaceTranslationRepos
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -37,12 +38,16 @@ public class WellnessPlaceTranslationService {
         this.quotaGuard = quotaGuard;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public WellnessPlaceResponse localize(WellnessPlaceResponse source, String requestedLanguage) {
         return localizeAll(List.of(source), requestedLanguage).getFirst();
     }
 
-    @Transactional
+    // WellnessService는 readOnly=true 트랜잭션에서 이 메서드를 호출한다.
+    // REQUIRED(기본값)로 두면 그 읽기전용 트랜잭션에 그대로 합류해 캐시 미스 시의
+    // insert/update가 "Connection is read-only"로 실패한다(MySQL에서만 강제됨, H2는 무시함) —
+    // 항상 새로운 쓰기 가능한 트랜잭션을 열도록 REQUIRES_NEW로 분리한다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public synchronized List<WellnessPlaceResponse> localizeAll(
         List<WellnessPlaceResponse> sources,
         String requestedLanguage
