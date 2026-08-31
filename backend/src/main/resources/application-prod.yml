@@ -2,6 +2,13 @@
 # application.yml(기본, H2 파일 DB)의 datasource/jpa/flyway 값만 MySQL 기준으로 덮어쓴다 —
 # wellness/document/papago 등 나머지 섹션은 이미 base application.yml에서 ${VAR:} 형태로
 # 환경변수를 읽으므로 여기서 다시 선언할 필요가 없다.
+server:
+  # nginx 리버스 프록시(HTTPS 종료) 뒤에서 동작하므로 X-Forwarded-* 헤더를 신뢰해서
+  # 스킴/호스트를 재구성한다 — 안 하면 Swagger UI 등이 내부 스킴(http)/포트(8080) 기준으로
+  # URL을 만들어버린다. nginx가 유일한 진입점(backend는 8080을 호스트에 공개하지 않음)이라
+  # 헤더 위조 우려가 없다.
+  forward-headers-strategy: framework
+
 spring:
   datasource:
     url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${MYSQL_DATABASE}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8

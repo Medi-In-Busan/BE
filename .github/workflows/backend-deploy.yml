@@ -12,6 +12,10 @@ on:
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/mediinbusan-backend
+  # nginx/Let's Encrypt용 도메인·이메일. 민감정보가 아니라서 Secrets 대신 여기 평문으로 둔다.
+  # 도메인의 DNS A 레코드가 EC2_HOST(시크릿)를 가리키도록 사전에 설정돼 있어야 한다(수동, 1회).
+  DOMAIN: weddingpick.store
+  CERTBOT_EMAIL: gwa7417@gmail.com
 
 jobs:
   # 1) 테스트: 여기서 실패하면 이미지 빌드/배포로 진행하지 않는다.
@@ -69,13 +73,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: docker-compose.prod.yml을 EC2로 동기화
+      - name: docker-compose.prod.yml + nginx 설정을 EC2로 동기화
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "backend/docker-compose.prod.yml"
+          source: "backend/docker-compose.prod.yml,backend/nginx/**"
           target: "~/mediinbusan-deploy"
           strip_components: 1
 
@@ -92,11 +96,13 @@ jobs:
           CLOVA_OCR_SECRET_KEY: ${{ secrets.CLOVA_OCR_SECRET_KEY }}
           PAPAGO_TRANSLATION_CLIENT_ID: ${{ secrets.PAPAGO_TRANSLATION_CLIENT_ID }}
           PAPAGO_TRANSLATION_CLIENT_SECRET: ${{ secrets.PAPAGO_TRANSLATION_CLIENT_SECRET }}
+          DOMAIN: ${{ env.DOMAIN }}
+          CERTBOT_EMAIL: ${{ env.CERTBOT_EMAIL }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,TOURISM_API_SERVICE_KEY,KAKAO_REST_API_KEY,CLOVA_OCR_API_URL,CLOVA_OCR_SECRET_KEY,PAPAGO_TRANSLATION_CLIENT_ID,PAPAGO_TRANSLATION_CLIENT_SECRET
+          envs: MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,TOURISM_API_SERVICE_KEY,KAKAO_REST_API_KEY,CLOVA_OCR_API_URL,CLOVA_OCR_SECRET_KEY,PAPAGO_TRANSLATION_CLIENT_ID,PAPAGO_TRANSLATION_CLIENT_SECRET,DOMAIN,CERTBOT_EMAIL
           script: |
             set -e
             cd ~/mediinbusan-deploy
@@ -112,9 +118,16 @@ jobs:
             CLOVA_OCR_SECRET_KEY=$CLOVA_OCR_SECRET_KEY
             PAPAGO_TRANSLATION_CLIENT_ID=$PAPAGO_TRANSLATION_CLIENT_ID
             PAPAGO_TRANSLATION_CLIENT_SECRET=$PAPAGO_TRANSLATION_CLIENT_SECRET
+            DOMAIN=$DOMAIN
+            CERTBOT_EMAIL=$CERTBOT_EMAIL
             EOF
             export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
             export IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+            export DOMAIN CERTBOT_EMAIL
             docker compose -f docker-compose.prod.yml pull
+            # 인증서가 아직 없는 최초 배포에서만 실제로 발급을 수행한다(idempotent) —
+            # nginx가 뜨기 전에 먼저 실행해야 standalone 모드로 80번 포트를 쓸 수 있다.
+            chmod +x nginx/init-letsencrypt.sh
+            ./nginx/init-letsencrypt.sh
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
