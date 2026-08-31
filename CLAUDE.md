@@ -127,7 +127,7 @@ Kakao Map은 실제로 렌더링된다(`core/ui/KakaoMapView.kt`) — `KAKAO_NAT
 
 `local.properties`(gitignore됨)에 다음을 넣는다:
 - `TOURISM_API_SERVICE_KEY`, `KAKAO_NATIVE_APP_KEY` — `app/build.gradle.kts`가 읽어 `BuildConfig` 필드와 매니페스트 `${KAKAO_NATIVE_APP_KEY}` 플레이스홀더로 주입. 값이 없으면 빈 문자열로 폴백해 클론 직후에도 빌드는 된다.
-- `MEDIINBUSAN_API_BASE_URL` — 자체 백엔드 주소. 기본값은 `http://10.0.2.2:8080/`(Android 에뮬레이터에서 호스트 PC의 localhost를 가리키는 별칭)이라 에뮬레이터 + 로컬 `bootRun`이면 별도 설정 없이 동작한다. **실기기(USB/같은 Wi-Fi)로 테스트할 땐 PC의 실제 LAN IP로 덮어써야 한다** (`MEDIINBUSAN_API_BASE_URL=http://<PC LAN IP>:8080/`).
+- `MEDIINBUSAN_API_BASE_URL` — 자체 백엔드 주소. debug 기본값은 `http://10.0.2.2:8080/`(Android 에뮬레이터에서 호스트 PC의 localhost를 가리키는 별칭), release 기본값은 `https://ownrefrigerator.site/`이다. 실기기에서 로컬 서버를 테스트하거나 다른 서버를 사용할 때만 `local.properties` 또는 환경변수로 덮어쓴다. 끝의 `/`는 빌드 설정에서 자동 보정한다.
 
 **절대 키를 코드/매니페스트에 하드코딩하지 말 것.**
 

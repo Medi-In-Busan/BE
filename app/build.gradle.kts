@@ -21,11 +21,39 @@ fun secret(key: String): String = localProperties.getProperty(key)
     ?: System.getenv(key)
     ?: ""
 
+fun normalizedBaseUrl(value: String): String = value.trim().let { url ->
+    if (url.endsWith('/')) url else "$url/"
+}
+
+val configuredBackendBaseUrl = secret("MEDIINBUSAN_API_BASE_URL")
+    .takeIf(String::isNotBlank)
+    ?.let(::normalizedBaseUrl)
+
+val signingPropertiesFile = rootProject.file("keystore.properties")
+val signingProperties = Properties().apply {
+    if (signingPropertiesFile.exists()) {
+        signingPropertiesFile.inputStream().use { load(it) }
+    }
+}
+val releaseSigningConfigured = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { !signingProperties.getProperty(it).isNullOrBlank() }
+
 android {
     namespace = "com.mediinbusan.app"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
+        }
+    }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = rootProject.file(signingProperties.getProperty("storeFile"))
+                storePassword = signingProperties.getProperty("storePassword")
+                keyAlias = signingProperties.getProperty("keyAlias")
+                keyPassword = signingProperties.getProperty("keyPassword")
+            }
         }
     }
 
@@ -49,15 +77,17 @@ android {
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"${secret("KAKAO_NATIVE_APP_KEY")}\"")
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = secret("KAKAO_NATIVE_APP_KEY")
 
-        // 자체 백엔드(backend/) 주소. 10.0.2.2는 에뮬레이터에서 호스트 PC의 localhost를 가리키는 값이라
-        // 별도 설정 없이 기본값만으로 동작한다. 실기기로 테스트할 땐 local.properties에
-        // MEDIINBUSAN_API_BASE_URL=http://<PC의 LAN IP>:8080/ 로 덮어쓴다.
-        val backendBaseUrl = localProperties.getProperty("MEDIINBUSAN_API_BASE_URL") ?: "http://10.0.2.2:8080/"
-        buildConfigField("String", "MEDIINBUSAN_API_BASE_URL", "\"$backendBaseUrl\"")
     }
 
     buildTypes {
+        debug {
+            val backendBaseUrl = configuredBackendBaseUrl ?: "http://10.0.2.2:8080/"
+            buildConfigField("String", "MEDIINBUSAN_API_BASE_URL", "\"$backendBaseUrl\"")
+        }
         release {
+            val backendBaseUrl = configuredBackendBaseUrl ?: "https://ownrefrigerator.site/"
+            buildConfigField("String", "MEDIINBUSAN_API_BASE_URL", "\"$backendBaseUrl\"")
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -72,6 +102,16 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+tasks.configureEach {
+    if (name == "bundleRelease" || name == "assembleRelease") {
+        doFirst {
+            check(releaseSigningConfigured) {
+                "Release signing is not configured. Create the ignored keystore.properties file first."
+            }
+        }
     }
 }
 
