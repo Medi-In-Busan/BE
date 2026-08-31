@@ -10,6 +10,7 @@ import com.mediinbusan.backend.diagnosischat.domain.StayDuration;
 import com.mediinbusan.backend.diagnosischat.domain.VisitPurpose;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -38,7 +39,12 @@ public class GeminiClient {
     private final GeminiProperties properties;
     private final ObjectMapper objectMapper;
 
-    public GeminiClient(RestClient.Builder restClientBuilder, GeminiProperties properties) {
+    // "geminiRestClientBuilder" 빈(GeminiClientConfig)은 이미 타임아웃이 설정된 RestClient.Builder를
+    // 준다 — 여기서 requestFactory를 다시 만들어 덮어쓰지 않는다. 그렇게 하면 GeminiClientTest의
+    // MockRestServiceServer가 builder에 심어둔 모의 factory가 지워져 테스트가 실제 네트워크로 나가버린다
+    // (한 번 겪은 실수라 남겨둠). @Qualifier로 이 빈을 지정해 다른 외부 API 클라이언트들이 쓰는 공용
+    // restClientBuilder 빈(RestClientConfig, 타임아웃 없음)과 섞이지 않게 한다.
+    public GeminiClient(@Qualifier("geminiRestClientBuilder") RestClient.Builder restClientBuilder, GeminiProperties properties) {
         this.restClient = restClientBuilder.build();
         this.properties = properties;
         this.objectMapper = new ObjectMapper();
@@ -62,6 +68,9 @@ public class GeminiClient {
                 .retrieve()
                 .onStatus(status -> status.value() == 401 || status.value() == 403, (req, res) -> {
                     throw new GeminiAuthenticationException("Gemini 인증에 실패했습니다. HTTP " + res.getStatusCode());
+                })
+                .onStatus(status -> status.value() == 429, (req, res) -> {
+                    throw new GeminiRateLimitExceededException("Gemini 호출이 사용량 한도(429)를 초과했습니다.");
                 })
                 .onStatus(HttpStatusCode::isError, (req, res) -> {
                     throw new GeminiApiException("Gemini 호출이 실패했습니다. HTTP " + res.getStatusCode());

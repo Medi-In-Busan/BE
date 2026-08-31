@@ -7,6 +7,7 @@ import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentRepository
@@ -53,15 +54,21 @@ class TourismCatalogViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TourismCatalogUiState())
     val uiState: StateFlow<TourismCatalogUiState> = _uiState
     private var loadJob: Job? = null
+    private var loadMoreJob: Job? = null
 
     fun load(categoryName: String) {
         viewModelScope.launch {
+            val preferences = userPreferencesRepository.userPreferences.first()
             val requestedCategory = runCatching { TourismCatalogCategory.valueOf(categoryName) }.getOrNull()
             if (requestedCategory == null) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "지원하지 않는 관광 데이터입니다.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = appStringsFor(preferences.languageCode).tourism.unsupportedDataError
+                    )
+                }
                 return@launch
             }
-            val preferences = userPreferencesRepository.userPreferences.first()
             val category = if (requestedCategory.isLanguageVariant) {
                 tourismCategoryForLanguage(preferences.languageCode)
             } else {
@@ -85,6 +92,13 @@ class TourismCatalogViewModel @Inject constructor(
     fun retry() {
         val category = _uiState.value.category ?: return
         loadCatalog(category, _uiState.value.selectedDistrict)
+    }
+
+    fun loadNextPage() {
+        val state = _uiState.value
+        val category = state.category ?: return
+        if (!supportsInfiniteScroll(category) || state.isLoading || state.isLoadingMore || !state.hasNextPage) return
+        loadCatalog(category, state.selectedDistrict, page = state.currentPage + 1, append = true)
     }
 
     fun selectItem(item: TourismCatalogItem) {
@@ -118,23 +132,57 @@ class TourismCatalogViewModel @Inject constructor(
         applyClientFilters()
     }
 
-    private fun loadCatalog(category: TourismCatalogCategory, district: BusanDistrict?) {
-        loadJob?.cancel()
-        loadJob = viewModelScope.launch {
-            interactionRepository.recordCategoryView(category)
-            repository.getCatalog(category, district).collect { result ->
+    private fun loadCatalog(
+        category: TourismCatalogCategory,
+        district: BusanDistrict?,
+        page: Int = 1,
+        append: Boolean = false
+    ) {
+        if (append) {
+            loadMoreJob?.cancel()
+        } else {
+            loadJob?.cancel()
+            loadMoreJob?.cancel()
+        }
+        val job = viewModelScope.launch {
+            if (!append) interactionRepository.recordCategoryView(category)
+            repository.getCatalog(category, district, page, PAGE_SIZE).collect { result ->
                 when (result) {
                     Result.Loading -> _uiState.update { state ->
-                        state.copy(category = category, selectedDistrict = district, isLoading = true, errorMessage = null)
+                        if (append) {
+                            state.copy(isLoadingMore = true)
+                        } else {
+                            state.copy(
+                                category = category,
+                                selectedDistrict = district,
+                                isLoading = true,
+                                isLoadingMore = false,
+                                currentPage = 0,
+                                hasNextPage = true,
+                                errorMessage = null
+                            )
+                        }
                     }
                     is Result.Success -> {
+                        val mergedCatalog = if (append) {
+                            val current = _uiState.value.catalog
+                            if (current == null) {
+                                result.data
+                            } else {
+                                current.copy(
+                                    items = (current.items + result.data.items).distinctBy { it.id }
+                                )
+                            }
+                        } else {
+                            result.data
+                        }
                         // "부산 관광지"만 개인화 점수로 재정렬 — 점수>0인 상위 항목이 추천 섹션으로
                         // 상단에 뜨고(applyClientFilters), 나머지는 그 아래 일반 섹션에 남는다.
                         val (catalog, personalizedItemIds) = if (category.isLanguageVariant) {
-                            val recommendation = recommendPlaces(result.data)
+                            val recommendation = recommendPlaces(mergedCatalog)
                             recommendation.catalog to recommendation.personalizedItemIds
                         } else {
-                            result.data to emptySet()
+                            mergedCatalog to emptySet()
                         }
                         _uiState.update { state ->
                             state.copy(
@@ -143,23 +191,40 @@ class TourismCatalogViewModel @Inject constructor(
                                 catalog = catalog,
                                 personalizedItemIds = personalizedItemIds,
                                 isLoading = false,
+                                isLoadingMore = false,
+                                currentPage = page,
+                                hasNextPage = supportsInfiniteScroll(category) && result.data.items.size >= PAGE_SIZE,
                                 errorMessage = null
                             )
                         }
                         applyClientFilters()
                     }
-                    is Result.Error -> _uiState.update { state ->
-                        state.copy(
-                            category = category,
-                            selectedDistrict = district,
-                            isLoading = false,
-                            errorMessage = result.message ?: "관광 데이터를 불러오지 못했습니다."
-                        )
+                    is Result.Error -> {
+                        val fallbackMessage = appStringsFor(
+                            userPreferencesRepository.userPreferences.first().languageCode
+                        ).tourism.catalogLoadError
+                        _uiState.update { state ->
+                            if (append) {
+                                state.copy(isLoadingMore = false, hasNextPage = false)
+                            } else {
+                                state.copy(
+                                    category = category,
+                                    selectedDistrict = district,
+                                    isLoading = false,
+                                    isLoadingMore = false,
+                                    errorMessage = result.message ?: fallbackMessage
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
+        if (append) loadMoreJob = job else loadJob = job
     }
+
+    private fun supportsInfiniteScroll(category: TourismCatalogCategory): Boolean =
+        category == TourismCatalogCategory.ACCESSIBLE || category.isLanguageVariant
 
     // RecommendedCourseViewModel과 같은 신호 소스(즐겨찾기 장소명·최근 본 장소명·의료목적·최근 본
     // 병원 위치)로 개인화 점수를 매긴다. 신호가 하나도 없으면(신규 사용자 등) 전부 점수 0이라
@@ -232,5 +297,9 @@ class TourismCatalogViewModel @Inject constructor(
         }
 
         _uiState.update { it.copy(recommendedItems = emptyList(), visibleItems = sorted) }
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 20
     }
 }

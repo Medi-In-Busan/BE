@@ -39,7 +39,7 @@ class WellnessServiceTest {
         wellnessPlaceRepository.save(place("near", "가까운 장소", new Coordinates(35.1689, 129.1296)));
         wellnessPlaceRepository.save(place("far", "먼 장소", new Coordinates(35.1587, 129.1604)));
 
-        List<WellnessPlaceResponse> result = wellnessService.getNearbyPlaces("H-1", 5_000.0);
+        List<WellnessPlaceResponse> result = wellnessService.getNearbyPlaces("H-1", 5_000.0, "ko");
 
         assertThat(result).extracting(WellnessPlaceResponse::contentId).containsExactly("near", "far");
         assertThat(result.getFirst().distanceFromHospitalMeters()).isLessThan(result.get(1).distanceFromHospitalMeters());
@@ -51,7 +51,7 @@ class WellnessServiceTest {
         wellnessPlaceRepository.save(place("near", "가까운 장소", new Coordinates(35.1689, 129.1296)));
         wellnessPlaceRepository.save(place("far", "먼 장소", new Coordinates(35.1587, 129.1604)));
 
-        List<WellnessPlaceResponse> result = wellnessService.getNearbyPlaces("H-1", 100.0);
+        List<WellnessPlaceResponse> result = wellnessService.getNearbyPlaces("H-1", 100.0, "ko");
 
         assertThat(result).extracting(WellnessPlaceResponse::contentId).containsExactly("near");
     }
@@ -60,10 +60,32 @@ class WellnessServiceTest {
     void 웰니스_상세는_contentId로_조회한다() {
         wellnessPlaceRepository.save(place("place-1", "해운대 해수욕장", new Coordinates(35.1587, 129.1604)));
 
-        WellnessPlaceResponse result = wellnessService.getPlaceDetail("place-1");
+        WellnessPlaceResponse result = wellnessService.getPlaceDetail("place-1", "ko");
 
         assertThat(result.name()).isEqualTo("해운대 해수욕장");
         assertThat(result.distanceFromHospitalMeters()).isNull();
+    }
+
+    @Test
+    void 요청_언어에_번역이_있으면_번역된_이름_주소_설명을_반환한다() {
+        WellnessPlace place = place("place-2", "해운대 해수욕장", new Coordinates(35.1587, 129.1604));
+        place.applyTranslation("en", "Haeundae Beach", "Haeundae-gu, Busan", "A famous beach in Busan.");
+        wellnessPlaceRepository.save(place);
+
+        WellnessPlaceResponse result = wellnessService.getPlaceDetail("place-2", "en");
+
+        assertThat(result.name()).isEqualTo("Haeundae Beach");
+        assertThat(result.address()).isEqualTo("Haeundae-gu, Busan");
+        assertThat(result.description()).isEqualTo("A famous beach in Busan.");
+    }
+
+    @Test
+    void 요청_언어에_번역이_없으면_한국어로_폴백한다() {
+        wellnessPlaceRepository.save(place("place-3", "해운대 해수욕장", new Coordinates(35.1587, 129.1604)));
+
+        WellnessPlaceResponse result = wellnessService.getPlaceDetail("place-3", "en");
+
+        assertThat(result.name()).isEqualTo("해운대 해수욕장");
     }
 
     private Hospital hospital(String regNo, Coordinates coordinates) {

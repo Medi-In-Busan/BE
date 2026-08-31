@@ -52,7 +52,7 @@ data class HomeStrings(
             quickLinkGuide = "의료 이용 가이드",
             quickLinkWellness = "추천 웰니스",
             quickLinkMap = "지도에서 보기",
-            quickLinkSelfDiagnosis = "진단하기",
+            quickLinkSelfDiagnosis = "준비체크",
             quickLinkFavorite = "즐겨찾기"
         )
         val En = HomeStrings(
@@ -79,7 +79,7 @@ data class HomeStrings(
             quickLinkGuide = "Medical guide",
             quickLinkWellness = "Recommended wellness",
             quickLinkMap = "View on map",
-            quickLinkSelfDiagnosis = "Self diagnosis",
+            quickLinkSelfDiagnosis = "Prep Check",
             quickLinkFavorite = "Favorites"
         )
         val Zh = HomeStrings(
@@ -106,7 +106,7 @@ data class HomeStrings(
             quickLinkGuide = "医疗指南",
             quickLinkWellness = "推荐养生",
             quickLinkMap = "在地图查看",
-            quickLinkSelfDiagnosis = "自我诊断",
+            quickLinkSelfDiagnosis = "准备检查",
             quickLinkFavorite = "收藏"
         )
         val Ja = HomeStrings(
@@ -133,7 +133,7 @@ data class HomeStrings(
             quickLinkGuide = "医療利用ガイド",
             quickLinkWellness = "おすすめウェルネス",
             quickLinkMap = "地図で見る",
-            quickLinkSelfDiagnosis = "セルフ診断",
+            quickLinkSelfDiagnosis = "準備チェック",
             quickLinkFavorite = "お気に入り"
         )
     }

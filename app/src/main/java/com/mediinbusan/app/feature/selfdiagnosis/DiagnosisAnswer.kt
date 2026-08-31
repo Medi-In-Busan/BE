@@ -36,6 +36,18 @@ sealed interface DiagnosisAnswerOption {
     }
 }
 
+/** 서버(diagnosischat 백엔드)와 공유하는 enum 상수명. sealed interface 타입으로는 각 하위 enum의
+ *  [Enum.name]에 정적으로 접근할 수 없어 별도 extension으로 노출한다 — SelfDiagnosisViewModel이 칩 탭을
+ *  네트워크 요청 바디에 실을 때 이 값을 쓴다(화면에 보여줄 [label]과는 별개). */
+val DiagnosisAnswerOption.wireName: String
+    get() = when (this) {
+        is DiagnosisAnswerOption.VisitPurpose -> name
+        is DiagnosisAnswerOption.StayDuration -> name
+        is DiagnosisAnswerOption.ReservationStatus -> name
+        is DiagnosisAnswerOption.InterpretationNeed -> name
+        is DiagnosisAnswerOption.EntryStayCondition -> name
+    }
+
 fun DiagnosisAnswerOption.label(strings: DiagnosisAnswerOptionStrings): String = when (this) {
     DiagnosisAnswerOption.VisitPurpose.SKIN_BEAUTY -> strings.visitPurposeSkinBeauty
     DiagnosisAnswerOption.VisitPurpose.HEALTH_CHECKUP -> strings.visitPurposeHealthCheckup

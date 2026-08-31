@@ -8,6 +8,8 @@ import android.graphics.Typeface
 import android.view.MotionEvent
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -24,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -212,7 +216,25 @@ fun KakaoMapView(
     // 더 앞당길 수는 없으므로, 그 구간에 스피너를 띄워 "정상적으로 불러오는 중"이라는 걸 명확히
     // 알려준다 — View.INVISIBLE로 지도 서페이스를 가려두는 것도 유지해 그 구간 동안 준비 안 된
     // 프레임이 새어 나오지 않게 한다.
-    Box(modifier = modifier) {
+    Box(
+        modifier = modifier.pointerInput(currentInteractive) {
+            if (!currentInteractive) return@pointerInput
+            awaitEachGesture {
+                awaitFirstDown(
+                    requireUnconsumed = false,
+                    pass = PointerEventPass.Initial
+                )
+                currentOnMapInteractionChange(true)
+                try {
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Final)
+                    } while (event.changes.any { it.pressed })
+                } finally {
+                    currentOnMapInteractionChange(false)
+                }
+            }
+        }
+    ) {
         Box(modifier = Modifier.fillMaxSize().background(MapPlaceholderBackground)) {
             if (!isMapVisuallyReady) {
                 LoadingState(modifier = Modifier.fillMaxSize())

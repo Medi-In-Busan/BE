@@ -11,6 +11,8 @@ public record WellnessPlaceResponse(
     String description,
     String phoneNumber,
     String modifiedDate,
-    Double distanceFromHospitalMeters
+    Double distanceFromHospitalMeters,
+    // 요청한 lang의 이름 번역이 실제로 있는지(ko는 항상 true) — WellnessDtoMapper.isTranslated 참고.
+    boolean translated
 ) {
 }

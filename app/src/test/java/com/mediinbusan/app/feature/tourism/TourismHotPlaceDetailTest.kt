@@ -165,7 +165,9 @@ class TourismHotPlaceDetailTest {
 
         override fun getCatalog(
             category: TourismCatalogCategory,
-            district: BusanDistrict?
+            district: BusanDistrict?,
+            page: Int,
+            pageSize: Int
         ): Flow<Result<TourismCatalog>> = flowOf(Result.Error())
     }
 }

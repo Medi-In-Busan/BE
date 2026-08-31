@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -121,16 +122,16 @@ fun TourismHubScreen(
             }
             item {
                 JourneySection(
-                    title = "회복 일정에 맞춰",
-                    description = "이동 부담과 활동 강도를 고려해 골라보세요.",
+                    title = strings.tourism.recoveryScheduleTitle,
+                    description = strings.tourism.recoveryScheduleDescription,
                     categories = uiState.recoveryCategories,
                     onSelectCategory = onSelectCategory
                 )
             }
             item {
                 JourneySection(
-                    title = "여행 전에 확인",
-                    description = "함께 둘러볼 곳과 예상 혼잡도를 확인해요.",
+                    title = strings.tourism.beforeTripTitle,
+                    description = strings.tourism.beforeTripDescription,
                     categories = uiState.planningCategories,
                     onSelectCategory = onSelectCategory
                 )
@@ -157,8 +158,8 @@ private fun HotPlacesSection(
     onRetry: () -> Unit
 ) {
     HighlightSectionHeader(
-        title = "현재 부산 핫플레이스",
-        description = "관광 혼잡도 지수가 높은 장소를 먼저 보여드려요.",
+        title = LocalAppStrings.current.tourism.currentHotPlacesTitle,
+        description = LocalAppStrings.current.tourism.currentHotPlacesDescription,
         showSeeAll = hotPlaces.isNotEmpty(),
         onSeeAll = onSeeAll
     )
@@ -226,13 +227,15 @@ private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Un
                         )
                     }
                     Text(
-                        text = "부산 ${hotPlace.district.label}",
+                        text = LocalAppStrings.current.nearby.busanDistrictFormat.format(
+                            hotPlace.district.translatedLabel(LocalAppStrings.current.language)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
                 }
                 Text(
-                    text = "혼잡도를 확인하고 방문 시간을 조정해 보세요.",
+                    text = LocalAppStrings.current.tourism.crowdingAdvice,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     maxLines = 1,
@@ -283,8 +286,8 @@ private fun AccessibleTourismSection(
     onSeeAll: () -> Unit
 ) {
     HighlightSectionHeader(
-        title = "편안하게 즐기는 무장애 관광",
-        description = "이동 편의 정보가 제공되는 부산 관광지를 모았어요.",
+        title = LocalAppStrings.current.tourism.accessibleFeatureTitle,
+        description = LocalAppStrings.current.tourism.accessibleFeatureDescription,
         showSeeAll = places.isNotEmpty(),
         onSeeAll = onSeeAll
     )
@@ -345,7 +348,7 @@ private fun AccessiblePlaceCard(place: TourismCatalogItem, onClick: () -> Unit) 
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
-                    text = place.address ?: "이동 편의 정보 제공",
+                    text = place.address ?: LocalAppStrings.current.tourism.accessibilityFallback,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     maxLines = 2,
@@ -369,8 +372,17 @@ private fun HighlightSectionHeader(
             Text(description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
         if (showSeeAll) {
-            TextButton(onClick = onSeeAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text("전체보기", color = CoralPrimary)
+            TextButton(
+                onClick = onSeeAll,
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                modifier = Modifier.widthIn(min = 76.dp)
+            ) {
+                Text(
+                    LocalAppStrings.current.tourism.seeAllLabel,
+                    color = CoralPrimary,
+                    maxLines = 1,
+                    softWrap = false
+                )
             }
         }
     }
@@ -403,22 +415,24 @@ private fun HighlightErrorCard(message: String, onRetry: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            TextButton(onClick = onRetry) { Text("다시 시도", color = CoralPrimary) }
+            TextButton(onClick = onRetry) { Text(LocalAppStrings.current.tourism.retryLabel, color = CoralPrimary) }
         }
     }
 }
 
-private fun Double.toDisplayRate(): String = if (this % 1.0 == 0.0) {
-    "지수 ${toInt()}"
-} else {
-    "지수 ${"%.1f".format(this)}"
-}
+@Composable
+private fun Double.toDisplayRate(): String = LocalAppStrings.current.tourism.concentrationIndexFormat.format(
+    if (this % 1.0 == 0.0) toInt().toString() else "%.1f".format(this)
+)
 
-private fun Double.toCongestionLabel(): String = when {
-    this >= 80.0 -> "매우 혼잡"
-    this >= 60.0 -> "혼잡"
-    this >= 40.0 -> "보통"
-    else -> "여유"
+@Composable
+private fun Double.toCongestionLabel(): String = with(LocalAppStrings.current.nearby) {
+    when {
+        this@toCongestionLabel >= 80.0 -> crowdingVeryHigh
+        this@toCongestionLabel >= 60.0 -> crowdingHigh
+        this@toCongestionLabel >= 40.0 -> crowdingNormal
+        else -> crowdingRelaxed
+    }
 }
 
 private const val HOT_PLACE_CARD_LIMIT = 5
@@ -461,18 +475,18 @@ private fun FeaturedExploreBanner(
                 )
             }
             Text(
-                text = "회복 사이,\n부산 한 걸음",
+                text = LocalAppStrings.current.tourism.featuredHeroTitle,
                 style = MaterialTheme.typography.headlineMedium,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "지금 설정된 언어로 부산의 관광지와 쉬어가기 좋은 장소를 찾아보세요.",
+                text = LocalAppStrings.current.tourism.hubLanguageDescription,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
             Text(
-                text = "$languageName 관광정보",
+                text = LocalAppStrings.current.tourism.languageTourismFormat.format(languageName),
                 style = MaterialTheme.typography.labelLarge,
                 color = CoralPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -486,7 +500,7 @@ private fun FeaturedExploreBanner(
                 ),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
             ) {
-                Text(category.label, fontWeight = FontWeight.SemiBold)
+                Text(category.translatedLabel(LocalAppStrings.current.language), fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForward,
@@ -558,8 +572,8 @@ private fun TourismJourneyRow(
             )
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(category.label, style = CardTitleStyle, color = TextPrimary)
-            Text(category.shortDescription, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(category.translatedLabel(LocalAppStrings.current.language), style = CardTitleStyle, color = TextPrimary)
+            Text(category.translatedDescription(LocalAppStrings.current.language), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
         Icon(
             Icons.AutoMirrored.Filled.ArrowForward,
@@ -577,13 +591,13 @@ private fun TourismSourceNotice() {
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Text(
-            text = "한국관광공사 공공데이터 활용",
+            text = LocalAppStrings.current.tourism.publicDataCredit,
             style = MaterialTheme.typography.labelMedium,
             color = TextSecondary,
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "운영 정보와 혼잡도는 실제 방문 전에 공식 안내를 함께 확인해 주세요.",
+            text = LocalAppStrings.current.tourism.visitDisclaimer,
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
         )

@@ -310,7 +310,7 @@ private fun ChatContent(
             ) {
                 items(suggestedOptions) { option ->
                     val label = option.label(optionStrings)
-                    SuggestedReplyChip(label = label, onClick = { onIntent(SelfDiagnosisIntent.TapSuggestedReply(label)) })
+                    SuggestedReplyChip(label = label, onClick = { onIntent(SelfDiagnosisIntent.TapSuggestedReply(option, label)) })
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))

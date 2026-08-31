@@ -52,18 +52,23 @@ wellness:
     japanese-tourism-base-url: https://apis.data.go.kr/B551011/JpnService2
     chinese-tourism-base-url: https://apis.data.go.kr/B551011/ChsService2
     tour-api-service-key: ${TOURISM_API_SERVICE_KEY:}
+    # kakao-local-base-url/kakao-navi-base-url/kakao-rest-api-key는 카카오 로컬 키워드 검색으로
+    # 웰니스 장소를 수집하는 데는 더 이상 쓰이지 않는다(상세 내용이 빈약해서 제외 — WellnessIngestionService
+    # 참고). 카카오 길찾기(KakaoMobilityRouteService)가 여전히 쓰므로 값은 남겨둔다.
     kakao-local-base-url: https://dapi.kakao.com
     kakao-navi-base-url: https://apis-navi.kakaomobility.com
     kakao-rest-api-key: ${KAKAO_REST_API_KEY:}
-    tour-api-rows-per-type: 30
-    kakao-rows-per-keyword: 10
-    kakao-keywords:
-      - 해운대 카페
-      - 해운대 스파
-      - 해운대 마사지
-      - 부산 온천
-      - 부산 산책 공원
-      - 부산 웰니스
+    # 부산광역시_부산맛집정보 서비스(공공데이터포털, 관광공사 TourAPI와는 별개 서비스키가 필요하다).
+    busan-food-api-base-url: https://apis.data.go.kr/6260000/FoodService
+    busan-food-api-service-key: ${BUSAN_FOOD_API_SERVICE_KEY:}
+    # areaBasedList2는 예전엔 1페이지(pageNo=1)만 불러서 타입당 이 값이 사실상 상한이었다 — 지금은
+    # 부산맛집정보처럼 끝까지 페이지네이션하므로 이건 "페이지당 건수"일 뿐이고, 전체 수집량은 실제
+    # 보유량(부산 기준 실측 약 2,000건)만큼 그대로 늘어난다.
+    tour-api-rows-per-page: 100
+    # detailCommon2 하나당 호출 1건 — areaBasedList2 페이지네이션과 별개의 일일 트래픽(개발계정 1,000/일)을
+    # 쓰므로 넉넉히 잡지 않는다. 늘리려면 공공데이터포털에서 이 오퍼레이션 트래픽을 별도로 올려야 한다.
+    tour-api-detail-fetch-limit: 300
+    busan-food-rows-per-page: 100
 
 clova:
   ocr:

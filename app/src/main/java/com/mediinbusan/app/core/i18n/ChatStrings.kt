@@ -1,7 +1,7 @@
 package com.mediinbusan.app.core.i18n
 
 /**
- * 준비 유형 진단 챗봇(SelfDiagnosis 채팅 화면) 정적 UI 문구. "다시 진단하기" 버튼 라벨 등
+ * 준비 유형 체크 챗봇(SelfDiagnosis 채팅 화면) 정적 UI 문구. "다시 체크하기" 버튼 라벨 등
  * 결과 화면 쪽 문구는 이미 SelfDiagnosisStrings에 있으므로(DiagnosisResultContent가 그대로 재사용)
  * 여기서는 채팅 입력 UI에만 필요한 문구를 다룬다.
  */
@@ -19,7 +19,7 @@ data class ChatStrings(
     companion object {
         val Ko = ChatStrings(
             chatBubbleLabel = "챗봇",
-            aiDiagnosisLabel = "AI진단",
+            aiDiagnosisLabel = "AI 준비체크",
             greetingMessage = "안녕하세요! 준비 유형 안내까지만 도와드리는 챗봇이에요(그 외 문의는 support@medinbusan.kr로 부탁드려요). " +
                 "먼저, 이번엔 어떤 목적으로 방문을 고려하고 계신가요?",
             inputPlaceholder = "방문 목적, 체류 기간 등을 입력해 주세요",
@@ -30,7 +30,7 @@ data class ChatStrings(
         )
         val En = ChatStrings(
             chatBubbleLabel = "Chat",
-            aiDiagnosisLabel = "AI Diagnosis",
+            aiDiagnosisLabel = "AI Prep Check",
             greetingMessage = "Hi! I can only help you find your preparation type (for anything else, please email support@medinbusan.kr). " +
                 "First, what's the purpose of your visit this time?",
             inputPlaceholder = "e.g. purpose of visit, length of stay",
@@ -41,7 +41,7 @@ data class ChatStrings(
         )
         val Zh = ChatStrings(
             chatBubbleLabel = "聊天",
-            aiDiagnosisLabel = "AI诊断",
+            aiDiagnosisLabel = "AI准备检查",
             greetingMessage = "您好！本聊天机器人仅能帮您确认准备类型（其他咨询请发送邮件至support@medinbusan.kr）。" +
                 "首先，您这次访问的目的是什么？",
             inputPlaceholder = "请输入访问目的、停留时间等",
@@ -52,7 +52,7 @@ data class ChatStrings(
         )
         val Ja = ChatStrings(
             chatBubbleLabel = "チャット",
-            aiDiagnosisLabel = "AI診断",
+            aiDiagnosisLabel = "AI準備チェック",
             greetingMessage = "こんにちは！このチャットボットは準備タイプの確認のみお手伝いできます（それ以外のお問い合わせはsupport@medinbusan.krまで）。" +
                 "まず、今回はどのような目的で訪問を検討していますか？",
             inputPlaceholder = "訪問目的や滞在期間などを入力してください",

@@ -102,8 +102,9 @@ fun PlaceDetailScreen(
     viewModel: PlaceDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val language = LocalAppStrings.current.language
 
-    LaunchedEffect(placeId) {
+    LaunchedEffect(placeId, language) {
         viewModel.load(placeId)
     }
 
@@ -247,7 +248,7 @@ private fun PlaceHeroSection(place: Place) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp)
+            .padding(start = 20.dp, top = 10.dp, end = 20.dp)
             .height(240.dp)
             .clip(RoundedCornerShape(28.dp))
     ) {

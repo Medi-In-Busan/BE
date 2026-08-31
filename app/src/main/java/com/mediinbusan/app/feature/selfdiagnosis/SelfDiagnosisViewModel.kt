@@ -38,8 +38,8 @@ class SelfDiagnosisViewModel @Inject constructor(
     fun onIntent(intent: SelfDiagnosisIntent) {
         when (intent) {
             is SelfDiagnosisIntent.UpdateInputText -> _uiState.update { it.copy(inputText = intent.text) }
-            is SelfDiagnosisIntent.SendMessage -> sendMessage(intent.text)
-            is SelfDiagnosisIntent.TapSuggestedReply -> sendMessage(intent.label)
+            is SelfDiagnosisIntent.SendMessage -> sendMessage(displayText = intent.text, networkMessage = intent.text)
+            is SelfDiagnosisIntent.TapSuggestedReply -> sendMessage(displayText = intent.label, networkMessage = intent.option.wireName)
             SelfDiagnosisIntent.Restart -> _uiState.update { SelfDiagnosisUiState() }
             is SelfDiagnosisIntent.ClickCta -> emitEvent(SelfDiagnosisEvent.NavigateToCtaTarget(intent.target))
             SelfDiagnosisIntent.ClickBack -> emitEvent(SelfDiagnosisEvent.NavigateBack)
@@ -47,9 +47,13 @@ class SelfDiagnosisViewModel @Inject constructor(
         }
     }
 
-    private fun sendMessage(text: String) {
-        val trimmed = text.trim()
-        if (trimmed.isEmpty() || _uiState.value.isLoading) return
+    /** [displayText]는 사용자 말풍선에 그대로 보여줄 텍스트, [networkMessage]는 서버에 실어 보낼 원문이다.
+     *  자유 텍스트 전송은 둘이 같고, 칩 탭은 화면엔 번역된 라벨을 보여주되 서버에는 enum 상수명을
+     *  보내 정적 응답 경로(Gemini 미호출)를 타게 한다 — TapSuggestedReply/wireName 참고. */
+    private fun sendMessage(displayText: String, networkMessage: String) {
+        val trimmedDisplay = displayText.trim()
+        val trimmedNetwork = networkMessage.trim()
+        if (trimmedDisplay.isEmpty() || trimmedNetwork.isEmpty() || _uiState.value.isLoading) return
 
         // 챗봇 응답 자리를 미리 잡아두는 로딩 말풍선. Gemini 응답이 오면 새 메시지를 추가하는
         // 대신 이 pendingMessage와 같은 id를 가진 항목의 내용만 채운다 — 그래야 LazyColumn이
@@ -59,7 +63,7 @@ class SelfDiagnosisViewModel @Inject constructor(
 
         _uiState.update {
             it.copy(
-                messages = it.messages + ChatMessage(ChatMessageRole.USER, trimmed) + pendingMessage,
+                messages = it.messages + ChatMessage(ChatMessageRole.USER, trimmedDisplay) + pendingMessage,
                 inputText = "",
                 isLoading = true,
                 hasError = false
@@ -69,7 +73,7 @@ class SelfDiagnosisViewModel @Inject constructor(
         viewModelScope.launch {
             val language = userPreferencesRepository.userPreferences.first().languageCode
             val slots = _uiState.value.slots
-            diagnosisChatRepository.sendMessage(language, trimmed, slots).collect { result ->
+            diagnosisChatRepository.sendMessage(language, trimmedNetwork, slots).collect { result ->
                 when (result) {
                     Result.Loading -> Unit
                     is Result.Success -> _uiState.update { state ->

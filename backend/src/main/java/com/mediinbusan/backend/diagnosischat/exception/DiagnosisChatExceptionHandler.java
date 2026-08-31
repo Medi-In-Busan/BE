@@ -3,6 +3,7 @@ package com.mediinbusan.backend.diagnosischat.exception;
 import com.mediinbusan.backend.diagnosischat.dto.DiagnosisChatErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,6 +23,15 @@ public class DiagnosisChatExceptionHandler {
         log.error("자가진단 챗봇 처리 실패: status={}", e.getStatus(), e.getCause());
         return ResponseEntity.status(e.getStatus())
             .body(new DiagnosisChatErrorResponse("DIAGNOSIS_CHAT_FAILED", "자가진단 챗봇 처리에 실패했습니다."));
+    }
+
+    @ExceptionHandler(DiagnosisChatRateLimitExceededException.class)
+    public ResponseEntity<DiagnosisChatErrorResponse> handleRateLimitExceeded(DiagnosisChatRateLimitExceededException e) {
+        // Gemini 쪽 사용량 초과(DiagnosisChatFailedException, HttpStatus.TOO_MANY_REQUESTS)와는 원인이
+        // 달라서(우리 서버가 IP당 호출 빈도 자체를 막은 것) 별도 코드로 로그/응답을 구분한다.
+        log.warn("자가진단 챗봇 IP 레이트리밋 초과: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(new DiagnosisChatErrorResponse("RATE_LIMITED", "요청이 너무 잦습니다. 잠시 후 다시 시도해주세요."));
     }
 
     @ExceptionHandler(Exception.class)

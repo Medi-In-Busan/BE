@@ -11,7 +11,8 @@ fun PlaceDto.toDomain(): Place = Place(
     description = description,
     phoneNumber = phoneNumber,
     distanceFromHospitalMeters = distanceFromHospitalMeters,
-    lastModified = modifiedDate
+    lastModified = modifiedDate,
+    isTranslated = translated
 )
 
 private fun String?.toPlaceType(): PlaceType = when (this) {

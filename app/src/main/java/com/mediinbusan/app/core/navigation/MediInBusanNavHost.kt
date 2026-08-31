@@ -108,7 +108,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 // 웰니스는 바텀 탭 목적지이므로 다른 진입점과 동일한 백스택 저장/복원 규칙을 쓴다.
                 onNavigateToWellness = { navController.navigateToTab(Route.Nearby(hospitalId = "14")) },
                 onNavigateToRecommendedCourse = { category, district ->
-                    navController.navigate(Route.RecommendedTourismCourse(category, district))
+                    navController.navigateToTab(Route.RecommendedTourismCourse(category, district))
                 },
                 // 의료목적 선택/검색바 진입점이 전부 여기 하나로 모인다. purpose/포커스 요청은 Route
                 // 인자가 아니라 HomeViewModel이 PendingHospitalSearchEntry에 미리 심어두고,
