@@ -169,14 +169,25 @@ class MapViewModel @Inject constructor(
                     isSearchingArea = false,
                     allHospitals = hospitals,
                     selectedMarkerId = null,
+                    markersActivated = true,
                     errorMessage = if (result is Result.Error) "이 위치 주변 병원을 불러오지 못했습니다." else null
                 )
             }
         }
     }
 
+    /**
+     * 카테고리 탭은 토글이다 — 이미 켜져 있는 탭을 다시 누르면 마커를 전부 감추고(markersActivated
+     * = false) 선택도 푼다. 화면에서는 하단 목록 시트도 같이 내려가 지도만 남는다.
+     */
     fun onCategorySelected(category: MapCategory) {
-        _uiState.update { it.copy(selectedCategory = category, selectedMarkerId = null) }
+        _uiState.update {
+            if (it.markersActivated && it.selectedCategory == category) {
+                it.copy(markersActivated = false, selectedMarkerId = null)
+            } else {
+                it.copy(selectedCategory = category, markersActivated = true, selectedMarkerId = null)
+            }
+        }
     }
 
     fun onSearchQueryChanged(query: String) {

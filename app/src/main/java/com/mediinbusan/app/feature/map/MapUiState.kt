@@ -19,6 +19,11 @@ data class MapUiState(
     val allHospitals: List<Hospital> = emptyList(),
     val allPlaces: List<Place> = emptyList(),
     val selectedCategory: MapCategory = MapCategory.HOSPITAL,
+    // 카테고리 탭(전체/병원/관광/음식)이나 "이 위치에서 검색"을 직접 누르기 전까지는 마커를 하나도
+    // 그리지 않는다(첫 진입에 마커가 지도를 다 덮는 걸 막는다). 켜져 있는 탭을 한 번 더 누르면 다시
+    // false가 되어 마커와 하단 목록 시트가 함께 사라진다. 화면 상태(remember)가 아니라 여기 두는
+    // 이유는, 마커→상세화면→뒤로가기로 돌아왔을 때 골라둔 카테고리가 그대로 남아있어야 하기 때문이다.
+    val markersActivated: Boolean = false,
     val searchQuery: String = "",
     val selectedMarkerId: String? = null,
     val favoriteHospitalIds: Set<String> = emptySet(),

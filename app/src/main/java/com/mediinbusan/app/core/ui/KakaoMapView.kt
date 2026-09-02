@@ -57,7 +57,6 @@ import com.kakao.vectormap.route.RouteLineStyle
 import com.kakao.vectormap.route.RouteLineStyles
 import com.kakao.vectormap.route.RouteLineStylesSet
 import com.mediinbusan.app.R
-import com.mediinbusan.app.core.common.DefaultSearchOrigin
 import com.mediinbusan.app.core.designsystem.TextSecondary
 
 enum class MapPinType { HOSPITAL, TOURIST, FOOD }
@@ -80,12 +79,15 @@ data class MapRoutePath(
 )
 
 /**
- * 서면(부전동) 좌표. 시드 데이터(V2__seed_hospitals.sql)의 병원 대다수가 서면 일대에 몰려 있어
- * 좌표 하나 없이 지도를 열어야 할 때 쓰는 화면 기본 중심점으로 삼는다.
+ * 지도를 좌표 없이 열 때 쓰는 화면 기본 중심점 — 부산광역시 부산진구 가야대로 767(부전동,
+ * 정근안과병원). 시드 데이터(V2__seed_hospitals.sql / hospitals.json의 regNo 111)에 있는 그 병원의
+ * 좌표를 그대로 쓴다. 시드 병원 대다수가 이 서면 일대에 몰려 있어 첫 화면 기준점으로 적합하다.
  * 사용자의 실제 위치가 아니다 — 이 앱은 위치 권한을 요청하지 않는다(CLAUDE.md §1 참고).
- * core/common/GeoDistance.kt의 DefaultSearchOrigin과 같은 좌표(검색 결과 "가까운순" 정렬 기준점)를 가리키는 단일 소스.
+ *
+ * core/common/GeoDistance.kt의 DefaultSearchOrigin(검색 결과 "가까운순" 정렬 기준점)과는 이제
+ * 400m쯤 떨어진 다른 좌표다 — 정렬 기준까지 같이 흔들지 않으려고 일부러 분리했다.
  */
-val BusanDefaultCenter: LatLng = LatLng.from(DefaultSearchOrigin.LATITUDE, DefaultSearchOrigin.LONGITUDE)
+val BusanDefaultCenter: LatLng = LatLng.from(35.158010742858025, 129.05550558993514)
 
 /**
  * KakaoMapSdk.init() 성공 여부를 기록하는 플래그. Android Vector Map SDK v2의 공개 API에는
@@ -592,7 +594,9 @@ private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
         }
     }
 
-private const val DEFAULT_ZOOM_LEVEL = 12
+// 12는 부산 전역이 한눈에 들어오는 대신 개별 건물이 안 보이는 배율이었다 — 첫 화면에서
+// BusanDefaultCenter(정근안과병원)가 실제로 식별되는 배율까지 당긴다(값이 클수록 확대).
+private const val DEFAULT_ZOOM_LEVEL = 17
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
 private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 48f
