@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -58,6 +59,8 @@ import com.kakao.vectormap.route.RouteLineStyles
 import com.kakao.vectormap.route.RouteLineStylesSet
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import kotlin.math.floor
+import kotlin.math.pow
 
 enum class MapPinType { HOSPITAL, TOURIST, FOOD }
 
@@ -67,7 +70,10 @@ data class MapPin(
     val longitude: Double,
     val type: MapPinType,
     val selected: Boolean = false,
-    val sequenceNumber: Int? = null
+    val sequenceNumber: Int? = null,
+    // clusterPins=true인 화면에서 여러 핀이 한 셀로 묶였을 때의 개수. null이면 낱개 핀이다.
+    // 이 값이 있으면 아이콘 대신 개수를 쓴 원형 배지로 그리고(clusterPinBitmap), 누르면 확대된다.
+    val clusterCount: Int? = null
 )
 
 data class MapRoutePoint(val latitude: Double, val longitude: Double)
@@ -148,7 +154,13 @@ fun KakaoMapView(
     // 동작(길찾기/지도 화면 이동)으로 이어지는 지도)에서 쓴다 — 그런 자리에서까지 기본 팬/핀치
     // 제스처가 살아있으면 사용자가 실수로 카메라를 옮겨버릴 수 있다(코드리뷰 지적).
     interactive: Boolean = true,
-    onMapInteractionChange: (Boolean) -> Unit = {}
+    onMapInteractionChange: (Boolean) -> Unit = {},
+    // true면 배율이 낮아 핀이 서로 겹칠 때 가까운 핀들을 하나의 "개수 배지" 마커로 묶는다
+    // (지도 브라우징 화면 전용 — 핀이 몇 개뿐인 상세/코스 지도는 기본값 false 그대로 둔다).
+    clusterPins: Boolean = false,
+    // 카메라가 멈출 때마다(그리고 최초 위치 이동 직후) 화면 중심 좌표를 알려준다 — 하단 목록을
+    // "지금 보고 있는 지점"에서 가까운 순으로 정렬하는 데 쓴다.
+    onCameraMove: (latitude: Double, longitude: Double) -> Unit = { _, _ -> }
 ) {
     // libK3fAndroid.so는 arm64-v8a/armeabi-v7a로만 배포되어 x86_64 에뮬레이터에서는
     // KakaoMapSdk.init()이 실패한다(MediInBusanApp.onCreate() 참고). 그 경우 MapView를 만들지
@@ -185,6 +197,12 @@ fun KakaoMapView(
     // 시점에 더 가깝다.
     var isMapVisuallyReady by remember { mutableStateOf(false) }
     var mapErrorMessage by remember { mutableStateOf<String?>(null) }
+    // 현재 카메라 배율. 클러스터링은 "지금 얼마나 축소돼 있는지"에 따라 묶는 범위가 달라져서
+    // 이 값이 바뀔 때마다 다시 계산해야 한다. 카메라가 멈출 때마다 갱신된다.
+    var zoomLevel by remember { mutableIntStateOf(DEFAULT_ZOOM_LEVEL) }
+    // 콜백은 매 recomposition마다 새 람다라 LaunchedEffect 키로 쓰면 리스너를 계속 다시 등록하게
+    // 된다 — 최신 값만 참조하도록 감싸둔다(currentOnMapInteractionChange와 같은 이유).
+    val currentOnCameraMove by rememberUpdatedState(onCameraMove)
     // pinId -> 현재 그 자리에 떠 있는 Label과, 그 Label이 마지막으로 반영한 MapPin 상태.
     // 선택 여부만 바뀐 마커를 매번 layer.removeAll()+addLabels()로 다시 그리면 관련 없는 다른
     // 라벨까지 전부 깜빡여 부자연스럽다 — 대신 바뀐 라벨만 Label.changeStyles(..., animate=true)로
@@ -296,9 +314,15 @@ fun KakaoMapView(
 
     // isMapVisuallyReady 문서 참고 — 이 초기 moveCamera가 끝나는 시점을 스피너를 끄는 신호로 쓴다.
     // 한 번 true가 되면 이후 recenter 등으로 다시 불려도(값 그대로 true) 상관없다.
+    // 같은 리스너에서 배율(클러스터링 기준)과 화면 중심(목록 거리순 정렬 기준)도 같이 갱신한다 —
+    // 리스너는 하나만 등록할 수 있어서 세 가지 용도를 여기 모은다.
     LaunchedEffect(kakaoMap) {
         val map = kakaoMap ?: return@LaunchedEffect
-        map.setOnCameraMoveEndListener { _, _, _ -> isMapVisuallyReady = true }
+        map.setOnCameraMoveEndListener { _, cameraPosition, _ ->
+            isMapVisuallyReady = true
+            zoomLevel = cameraPosition.zoomLevel
+            currentOnCameraMove(cameraPosition.position.latitude, cameraPosition.position.longitude)
+        }
     }
 
     // interactive=false(미니 미리보기 지도)면 팬/줌/회전/틸트 등 카메라를 움직이는 제스처를 전부
@@ -311,9 +335,14 @@ fun KakaoMapView(
         GestureType.values().forEach { gesture -> map.setGestureEnable(gesture, interactive) }
     }
 
-    LaunchedEffect(kakaoMap, pins) {
+    // clusterPins=true면 배율이 낮을 때 겹치는 핀들을 묶어서 그린다 — 배율이 바뀔 때마다 묶음이
+    // 달라지므로 zoomLevel도 키에 넣는다(false면 zoomLevel이 바뀌어도 다시 그리지 않는다).
+    val renderedPins = remember(pins, clusterPins, zoomLevel) {
+        if (clusterPins) clusterPins(pins, zoomLevel) else pins
+    }
+    LaunchedEffect(kakaoMap, renderedPins) {
         val map = kakaoMap ?: return@LaunchedEffect
-        renderPins(context, map, pins, onPinClick, fitCameraToPins, trackedLabels)
+        renderPins(context, map, renderedPins, onPinClick, fitCameraToPins, trackedLabels)
     }
 
     LaunchedEffect(kakaoMap, routePaths) {
@@ -429,8 +458,17 @@ private fun renderPins(
         }
     }
 
-    map.setOnLabelClickListener { _, _, label ->
-        onPinClick(label.labelId)
+    map.setOnLabelClickListener { clickedMap, _, label ->
+        // 묶음 마커는 상세로 보낼 대상이 하나로 정해지지 않는다 — 대신 그 자리를 두 단계 확대해서
+        // 묶음이 풀리게 한다(지도 앱들의 일반적인 클러스터 동작).
+        if (label.labelId.startsWith(CLUSTER_ID_PREFIX)) {
+            val target = label.position
+            val nextZoom = ((clickedMap.cameraPosition?.zoomLevel ?: DEFAULT_ZOOM_LEVEL) + CLUSTER_ZOOM_IN_STEP)
+                .coerceAtMost(MAX_ZOOM_LEVEL)
+            clickedMap.moveCamera(CameraUpdateFactory.newCenterPosition(target, nextZoom))
+        } else {
+            onPinClick(label.labelId)
+        }
         true
     }
 
@@ -501,8 +539,48 @@ private fun MapPin.iconRes(): Int = when (type) {
 
 private fun MapPin.toLabelStyle(context: Context): LabelStyle =
     LabelStyle.from(
-        sequenceNumber?.let { context.numberedPinBitmap(it, selected) } ?: context.pinIconBitmap(iconRes(), selected)
+        when {
+            clusterCount != null -> context.clusterPinBitmap(clusterCount, type)
+            sequenceNumber != null -> context.numberedPinBitmap(sequenceNumber, selected)
+            else -> context.pinIconBitmap(iconRes(), selected)
+        }
     ).setIconTransition(PinSelectTransition)
+
+/**
+ * 배율이 낮아 핀이 서로 겹칠 때 가까운 핀들을 하나의 개수 배지 마커로 묶는다.
+ *
+ * 화면 픽셀 기준으로 일정 크기(약 [CLUSTER_CELL_TILE_RATIO] × 256px)가 되는 위경도 격자를 만들어
+ * 같은 칸에 들어간 핀을 한 묶음으로 본다. 배율이 [CLUSTER_MIN_ZOOM_LEVEL] 이상이면(충분히 확대돼
+ * 겹치지 않으면) 원본을 그대로 돌려준다. 선택된 핀이 들어있는 칸도 묶지 않는다 — 선택한 마커는
+ * 항상 낱개로 보여야 하단 카드와 짝이 맞는다.
+ */
+private fun clusterPins(pins: List<MapPin>, zoomLevel: Int): List<MapPin> {
+    if (zoomLevel >= CLUSTER_MIN_ZOOM_LEVEL || pins.size < 2) return pins
+    val cellSize = 360.0 / 2.0.pow(zoomLevel.toDouble()) * CLUSTER_CELL_TILE_RATIO
+    if (cellSize <= 0.0) return pins
+    return pins
+        .groupBy { pin -> floor(pin.latitude / cellSize).toInt() to floor(pin.longitude / cellSize).toInt() }
+        .flatMap { (cell, group) ->
+            if (group.size < 2 || group.any { it.selected }) {
+                group
+            } else {
+                val (cellY, cellX) = cell
+                // "전체" 탭에서는 한 칸에 병원·관광·음식이 섞일 수 있다 — 가장 많은 종류의 색을
+                // 따라가서, 묶음이 그 동네에서 주로 뭐가 모여 있는지를 색으로 먼저 알려주게 한다.
+                val dominantType = group.groupingBy { it.type }.eachCount().maxBy { it.value }.key
+                listOf(
+                    MapPin(
+                        // 개수·종류까지 id에 넣어야 묶음이 바뀔 때 renderPins의 diff가 새 라벨로 인식한다.
+                        id = "$CLUSTER_ID_PREFIX$cellY:$cellX:${group.size}:$dominantType",
+                        latitude = group.sumOf { it.latitude } / group.size,
+                        longitude = group.sumOf { it.longitude } / group.size,
+                        type = dominantType,
+                        clusterCount = group.size
+                    )
+                )
+            }
+        }
+}
 
 private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
     val manager = map.routeLineManager ?: return
@@ -594,9 +672,113 @@ private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
         }
     }
 
+/**
+ * 묶음 마커. 낱개 핀 애셋(map_*maker.webp)이 "색 링 + 흰 속 + 색 글리프" 구성이라, 묶음도 같은
+ * 문법으로 그린다 — 흰 속에 그 카테고리 색으로 개수를 쓰고 같은 색 링을 두른다. 색을 카테고리에서
+ * 가져오는 게 핵심이다(예전엔 관광·음식 묶음까지 전부 코랄이라 파란/주황 핀들 사이에서 혼자 튀었다).
+ *
+ * 개수에 따라 지름이 세 단계로 커져서, 숫자를 읽기 전에 밀집도가 먼저 눈에 들어온다.
+ */
+private val clusterPinBitmapCache = mutableMapOf<Pair<Int, MapPinType>, Bitmap>()
+
+private fun Context.clusterPinBitmap(count: Int, type: MapPinType): Bitmap =
+    clusterPinBitmapCache.getOrPut(count to type) {
+        val density = resources.displayMetrics.density
+        val accent = type.clusterColor()
+        // 100개가 넘어가면 "99+"로 줄여서 원이 계속 커지지 않게 한다.
+        val label = if (count > CLUSTER_MAX_DISPLAY_COUNT) "$CLUSTER_MAX_DISPLAY_COUNT+" else count.toString()
+        val diameterDp = when {
+            count >= CLUSTER_LARGE_THRESHOLD -> CLUSTER_DIAMETER_LARGE_DP
+            count >= CLUSTER_MEDIUM_THRESHOLD -> CLUSTER_DIAMETER_MEDIUM_DP
+            else -> CLUSTER_DIAMETER_SMALL_DP
+        } + (label.length - 1) * CLUSTER_SIZE_PER_EXTRA_CHAR_DP
+        // 그림자와 바깥 링이 잘리지 않도록 비트맵을 지름보다 조금 크게 잡는다.
+        val padding = CLUSTER_HALO_PADDING_DP * density
+        val diameter = diameterDp * density
+        val size = (diameter + padding * 2).toInt().coerceAtLeast(1)
+        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+            val canvas = Canvas(bitmap)
+            val center = size / 2f
+            val radius = diameter / 2f
+
+            // 1) 같은 색 옅은 헤일로 — 지도 타일 위에서 묶음이 "번져 보이게" 해서 낱개 핀과 구분된다.
+            canvas.drawCircle(
+                center,
+                center,
+                radius + padding * 0.8f,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = (accent and 0x00FFFFFF) or CLUSTER_HALO_ALPHA
+                    style = Paint.Style.FILL
+                }
+            )
+            // 2) 흰 원 + 부드러운 그림자 — 이 앱의 떠 있는 컨트롤(검색바/버튼)과 같은 톤.
+            canvas.drawCircle(
+                center,
+                center,
+                radius,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.WHITE
+                    style = Paint.Style.FILL
+                    setShadowLayer(3f * density, 0f, 1.5f * density, 0x40000000)
+                }
+            )
+            // 3) 카테고리 색 링 — 낱개 핀의 색 테두리와 같은 역할.
+            canvas.drawCircle(
+                center,
+                center,
+                radius - CLUSTER_RING_WIDTH_DP * density / 2f,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = accent
+                    style = Paint.Style.STROKE
+                    strokeWidth = CLUSTER_RING_WIDTH_DP * density
+                }
+            )
+            // 4) 개수 — 흰 속에 카테고리 색으로 쓴다(핀의 색 글리프와 같은 자리).
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = accent
+                textAlign = Paint.Align.CENTER
+                textSize = diameterDp * CLUSTER_TEXT_SIZE_RATIO * density
+                typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+            }
+            val baseline = center - (textPaint.ascent() + textPaint.descent()) / 2f
+            canvas.drawText(label, center, baseline, textPaint)
+        }
+    }
+
+// 낱개 핀 애셋(map_hospitalmaker/map_travelmaker/map_foodmaker.webp)에서 실제로 쓰이는 색과
+// 같은 값 — 묶음이 그 핀들 사이에 섞였을 때 같은 종류로 읽히게 한다.
+private fun MapPinType.clusterColor(): Int = when (this) {
+    MapPinType.HOSPITAL -> 0xFFFB5364.toInt()
+    MapPinType.TOURIST -> 0xFF326BF6.toInt()
+    MapPinType.FOOD -> 0xFFFAA85C.toInt()
+}
+
 // 12는 부산 전역이 한눈에 들어오는 대신 개별 건물이 안 보이는 배율이었다 — 첫 화면에서
 // BusanDefaultCenter(정근안과병원)가 실제로 식별되는 배율까지 당긴다(값이 클수록 확대).
 private const val DEFAULT_ZOOM_LEVEL = 17
+// 이 배율 이상으로 확대돼 있으면 핀이 서로 겹치지 않아 묶지 않는다.
+private const val CLUSTER_MIN_ZOOM_LEVEL = 16
+// 격자 한 칸을 타일(256px)의 몇 배로 잡을지 — 0.38이면 화면에서 약 97px 간격으로, 묶음 마커
+// 지름(최대 40dp)보다 넉넉해서 이웃한 묶음끼리 겹쳐 보이지 않는다.
+private const val CLUSTER_CELL_TILE_RATIO = 0.38
+private const val CLUSTER_ID_PREFIX = "cluster:"
+private const val CLUSTER_ZOOM_IN_STEP = 3
+private const val MAX_ZOOM_LEVEL = 20
+private const val CLUSTER_MAX_DISPLAY_COUNT = 99
+// 개수 구간별 지름(dp) — 숫자를 읽기 전에 밀집도가 먼저 보이게 하는 3단계.
+private const val CLUSTER_MEDIUM_THRESHOLD = 10
+private const val CLUSTER_LARGE_THRESHOLD = 50
+// 낱개 핀이 24dp(PIN_ICON_SIZE_DP)라 묶음은 그보다 한 단계씩만 크게 잡는다 — 더 키우면 지도를
+// 덮어버려서 정작 어디가 밀집 지역인지 안 보인다(실기기에서 확인하고 줄인 값).
+private const val CLUSTER_DIAMETER_SMALL_DP = 26
+private const val CLUSTER_DIAMETER_MEDIUM_DP = 30
+private const val CLUSTER_DIAMETER_LARGE_DP = 34
+// 자릿수가 늘면 숫자가 링에 닿지 않게 지름을 조금씩 넓힌다.
+private const val CLUSTER_SIZE_PER_EXTRA_CHAR_DP = 3
+private const val CLUSTER_RING_WIDTH_DP = 2.5f
+private const val CLUSTER_HALO_PADDING_DP = 3f
+private const val CLUSTER_HALO_ALPHA = 0x1F000000
+private const val CLUSTER_TEXT_SIZE_RATIO = 0.44f
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
 private const val ROUTE_ARROW_PATTERN_DISTANCE_PX = 48f

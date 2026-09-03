@@ -1,11 +1,18 @@
 package com.mediinbusan.app.feature.map
 
+import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.WellnessCourse
 
 enum class MapCategory { ALL, HOSPITAL, TOURIST, FOOD }
+
+/** "이 위치에서 검색"의 기준 좌표. 지도 카메라 중심이지 기기 GPS가 아니다(CLAUDE.md §1). */
+data class MapPoint(val latitude: Double, val longitude: Double)
+
+/** "이 위치에서 검색"으로 장소 목록을 좁힐 반경. 병원 쪽 서버 조회 반경과 비슷한 감각으로 맞췄다. */
+private const val AREA_SEARCH_RADIUS_METERS = 5_000.0
 
 data class MapUiState(
     val isLoading: Boolean = true,
@@ -27,6 +34,12 @@ data class MapUiState(
     val searchQuery: String = "",
     val selectedMarkerId: String? = null,
     val favoriteHospitalIds: Set<String> = emptySet(),
+    val favoritePlaceIds: Set<String> = emptySet(),
+    // "이 위치에서 검색"으로 좁힌 기준점. 병원은 이 좌표로 서버를 다시 조회하고(searchThisArea),
+    // 장소는 서버에 좌표 기반 조회 API가 없어(PlaceRepository 참고) 이미 받아둔 전체 목록을
+    // 이 좌표 반경으로 거른다 — 어느 탭에서 눌러도 "이 주변만 보기"라는 같은 뜻이 되게 한다.
+    // 카테고리를 바꾸면 해제된다.
+    val areaCenter: MapPoint? = null,
     // "이 위치에서 검색" 버튼 눌러서 allHospitals를 갱신하는 중일 때만 true. isLoading과 달리 지도/마커를 가리지 않는다.
     val isSearchingArea: Boolean = false,
     // MedicalCategory.label(한국어) 값의 집합 — HospitalSearchListUiState의 SearchFilterChip과 같은
@@ -66,7 +79,15 @@ data class MapUiState(
                 MapCategory.HOSPITAL -> emptyList()
             }
             val byQuery = if (searchQuery.isBlank()) byCategory else byCategory.filter { it.name.contains(searchQuery, ignoreCase = true) }
-            return if (languageFilterEnabled) byQuery.filter { it.isTranslated } else byQuery
+            val byLanguage = if (languageFilterEnabled) byQuery.filter { it.isTranslated } else byQuery
+            // "이 위치에서 검색"을 누른 뒤에는 그 지점 반경 안의 장소만 남긴다(병원은 서버 조회
+            // 자체가 그 지점 기준이라 이 필터가 필요 없다).
+            val center = areaCenter ?: return byLanguage
+            return byLanguage.filter { place ->
+                val lat = place.latitude ?: return@filter false
+                val lng = place.longitude ?: return@filter false
+                haversineDistanceMeters(center.latitude, center.longitude, lat, lng) <= AREA_SEARCH_RADIUS_METERS
+            }
         }
 
     // visibleHospitals와 달리 "관광"/"음식" 탭에서는 병원을 숨긴다 — visiblePlaces가 이미 카테고리별로

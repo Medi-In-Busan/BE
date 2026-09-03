@@ -46,7 +46,11 @@ class MapViewModel @Inject constructor(
                     .filter { it.itemType == FavoriteItemType.HOSPITAL }
                     .map { it.itemId }
                     .toSet()
-                _uiState.update { it.copy(favoriteHospitalIds = hospitalIds) }
+                val placeIds = favorites
+                    .filter { it.itemType == FavoriteItemType.PLACE }
+                    .map { it.itemId }
+                    .toSet()
+                _uiState.update { it.copy(favoriteHospitalIds = hospitalIds, favoritePlaceIds = placeIds) }
             }
         }
         // selectedMarkerId를 건드리는 지점(onMarkerSelected/onCategorySelected/searchThisArea/
@@ -159,7 +163,9 @@ class MapViewModel @Inject constructor(
      */
     fun searchThisArea(latitude: Double, longitude: Double) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSearchingArea = true, errorMessage = null) }
+            // 장소(관광/음식)는 좌표 기반 서버 조회가 없어 이 좌표를 필터 기준으로만 쓴다
+            // (MapUiState.areaCenter 참고) — 병원은 아래에서 실제로 서버를 다시 조회한다.
+            _uiState.update { it.copy(isSearchingArea = true, errorMessage = null, areaCenter = MapPoint(latitude, longitude)) }
             val result = hospitalRepository.getNearbyHospitals(latitude = latitude, longitude = longitude)
                 .first { it !is Result.Loading }
             val hospitals = (result as? Result.Success)?.data.orEmpty()
@@ -183,9 +189,11 @@ class MapViewModel @Inject constructor(
     fun onCategorySelected(category: MapCategory) {
         _uiState.update {
             if (it.markersActivated && it.selectedCategory == category) {
-                it.copy(markersActivated = false, selectedMarkerId = null)
+                it.copy(markersActivated = false, selectedMarkerId = null, areaCenter = null)
             } else {
-                it.copy(selectedCategory = category, markersActivated = true, selectedMarkerId = null)
+                // 탭을 바꾸면 "이 위치에서 검색"으로 좁혀둔 범위는 푼다 — 새 카테고리를 고른 건
+                // 다시 전체에서 보겠다는 뜻에 가깝다.
+                it.copy(selectedCategory = category, markersActivated = true, selectedMarkerId = null, areaCenter = null)
             }
         }
     }
@@ -237,6 +245,28 @@ class MapViewModel @Inject constructor(
                     address = hospital.address,
                     latitude = hospital.latitude,
                     longitude = hospital.longitude
+                )
+            )
+        }
+    }
+
+    /** 장소도 상세화면과 즐겨찾기 화면에서 이미 즐겨찾기 대상이다 — 지도 선택 카드에서도 같이 쓴다. */
+    fun onTogglePlaceFavorite(placeId: String) {
+        val place = _uiState.value.allPlaces.firstOrNull { it.id == placeId }
+            ?: _uiState.value.nearbyPlaces.firstOrNull { it.id == placeId }
+            ?: return
+        viewModelScope.launch {
+            favoriteRepository.toggleFavorite(
+                Favorite(
+                    itemId = place.id,
+                    itemType = FavoriteItemType.PLACE,
+                    name = place.name,
+                    imageUrl = place.imageUrl,
+                    savedAt = System.currentTimeMillis(),
+                    subtitle = place.type.name,
+                    address = place.address,
+                    latitude = place.latitude,
+                    longitude = place.longitude
                 )
             )
         }

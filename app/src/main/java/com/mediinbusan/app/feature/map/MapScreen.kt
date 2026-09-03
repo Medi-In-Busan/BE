@@ -52,14 +52,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -105,6 +108,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.common.resolveHospitalThumbnailRes
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
@@ -122,6 +126,7 @@ import com.mediinbusan.app.core.i18n.MapStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
+import com.mediinbusan.app.core.ui.BusanDefaultCenter
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FavoriteHeartButton
 import com.mediinbusan.app.core.ui.FilterChipPill
@@ -182,6 +187,7 @@ fun MapScreen(
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onMarkerSelected = viewModel::onMarkerSelected,
             onToggleFavorite = viewModel::onToggleFavorite,
+            onTogglePlaceFavorite = viewModel::onTogglePlaceFavorite,
             onSelectHospital = onSelectHospital,
             onSelectPlace = onSelectPlace,
             onSearchThisArea = viewModel::searchThisArea,
@@ -392,6 +398,7 @@ private fun BrowseMap(
     onSearchQueryChanged: (String) -> Unit,
     onMarkerSelected: (String?) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    onTogglePlaceFavorite: (String) -> Unit,
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
     onSearchThisArea: (latitude: Double, longitude: Double) -> Unit,
@@ -404,6 +411,9 @@ private fun BrowseMap(
     // "필터" 버튼을 누르면 진료과목 칩 줄을 펼쳤다 접었다 한다 — 예전엔 버튼만 있고 실제 필터
     // 기능이 없는 자리표시자였다.
     var showSpecialtyFilters by remember { mutableStateOf(false) }
+    // 진료과목 필터가 실제로 뭔가를 거르는 탭인지 — 병원이 목록에 나오는 탭(병원/전체)뿐이다.
+    val specialtyFilterApplies = uiState.selectedCategory == MapCategory.HOSPITAL ||
+        uiState.selectedCategory == MapCategory.ALL
     // 카드영역: 기본은 "미리보기"(손잡이 + 리스트 첫 항목만 66% 노출) 상태로 접혀있고, 손잡이를
     // 위로 드래그(또는 탭)하면 검색바까지 덮는 전체 리스트 페이지로 펼쳐진다. 마커를 새로 선택하면
     // 그 항목을 미리보기로 보여주면 되므로, 펼쳐져 있었어도 미리보기로 되돌아간다.
@@ -412,12 +422,22 @@ private fun BrowseMap(
     LaunchedEffect(uiState.selectedMarkerId) {
         if (uiState.selectedMarkerId != null) isListExpanded = false
     }
-    val hospitalPins = remember(uiState.visibleHospitals, uiState.selectedMarkerId) {
-        uiState.visibleHospitals.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
+    // visibleHospitals/visiblePlaces/categoryHospitals는 MapUiState의 계산 프로퍼티라 읽을 때마다
+    // 전체 목록을 다시 거른다 — 한 번의 recomposition에서 핀/목록/선택 조회로 네댓 번씩 반복됐고,
+    // 시트를 드래그하는 동안엔 매 프레임 그 비용을 다시 냈다. uiState가 바뀔 때만 한 번 계산해서
+    // 아래 전부가 같은 결과를 나눠 쓰게 한다.
+    val categoryHospitals = remember(uiState) { uiState.categoryHospitals }
+    val visibleHospitals = remember(uiState) { uiState.visibleHospitals }
+    val visiblePlaces = remember(uiState) { uiState.visiblePlaces }
+    val hospitalPins = remember(visibleHospitals, uiState.selectedMarkerId) {
+        visibleHospitals.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
     }
-    val placePins = remember(uiState.visiblePlaces, uiState.selectedMarkerId) {
-        uiState.visiblePlaces.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
+    val placePins = remember(visiblePlaces, uiState.selectedMarkerId) {
+        visiblePlaces.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
     }
+    // 지도 카메라가 멈출 때마다 갱신되는 화면 중심 — 하단 목록을 "지금 보고 있는 지점"에서
+    // 가까운 순으로 정렬하는 기준이다(초기값은 지도가 처음 열리는 자리와 같다).
+    var mapCenter by remember { mutableStateOf(MapPoint(BusanDefaultCenter.latitude, BusanDefaultCenter.longitude)) }
     // 마커를 그릴지 여부는 MapUiState가 들고 있다(MapUiState.markersActivated 주석 참고) — 화면
     // 로컬 상태로 두면 상세화면에 갔다 돌아올 때마다 초기화돼서 골라둔 카테고리가 풀렸다.
     val markersActivated = uiState.markersActivated
@@ -439,6 +459,8 @@ private fun BrowseMap(
     // 0은 "아직 요청 없음"을 의미하는 초기값이라 KakaoMapView가 무시한다 — 버튼 클릭마다 증가시켜 트리거한다.
     var recenterRequestId by remember { mutableIntStateOf(0) }
     var searchAreaRequestId by remember { mutableIntStateOf(0) }
+    var zoomInRequestId by remember { mutableIntStateOf(0) }
+    var zoomOutRequestId by remember { mutableIntStateOf(0) }
 
     // BottomNavBar 자신은 navigationBarsPadding()으로 제스처/내비게이션 바 인셋을 소비해 화면 진짜
     // 하단에서 인셋만큼 띄워 그려진다(core/ui/BottomNavBar.kt 참고) — 즉 바 뒤쪽은 원래 뚫려 있어야
@@ -494,7 +516,12 @@ private fun BrowseMap(
             // 병원 전체(366개)가 부산 전역에 흩어져 있어 fitMapPoints를 쓰면 서면 클러스터가
             // 화면에서 작아진다. 서면 기본 중심으로 고정하고, "이 위치에서 검색" 이후에도
             // 사용자가 옮긴 카메라 위치를 결과 목록 때문에 다시 튕겨내지 않는다.
-            fitCameraToPins = false
+            fitCameraToPins = false,
+            zoomInRequestId = zoomInRequestId,
+            zoomOutRequestId = zoomOutRequestId,
+            // 축소하면 핀 수백 개가 서로 겹쳐 몇 개인지도 안 보였다 — 가까운 것끼리 개수 배지로 묶는다.
+            clusterPins = true,
+            onCameraMove = { latitude, longitude -> mapCenter = MapPoint(latitude, longitude) }
         )
 
         Column(
@@ -519,15 +546,20 @@ private fun BrowseMap(
                     placeholder = mapStrings.searchPlaceholder,
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                FilterPillButton(
-                    contentDescription = mapStrings.filterLabel,
-                    active = showSpecialtyFilters || uiState.selectedSpecialties.isNotEmpty(),
-                    badgeCount = uiState.selectedSpecialties.size,
-                    onClick = { showSpecialtyFilters = !showSpecialtyFilters }
-                )
+                // 진료과목 필터는 병원에만 걸린다(MapUiState.visibleHospitals) — 관광/음식 탭에서는
+                // 눌러도 아무 일이 없는데 배지 숫자만 남아 "걸려 있는데 왜 안 걸러지지?"로 읽혔다.
+                // 장소 탭에서는 버튼 자체를 숨긴다.
+                if (specialtyFilterApplies) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FilterPillButton(
+                        contentDescription = mapStrings.filterLabel,
+                        active = showSpecialtyFilters || uiState.selectedSpecialties.isNotEmpty(),
+                        badgeCount = uiState.selectedSpecialties.size,
+                        onClick = { showSpecialtyFilters = !showSpecialtyFilters }
+                    )
+                }
             }
-            AnimatedVisibility(visible = showSpecialtyFilters) {
+            AnimatedVisibility(visible = showSpecialtyFilters && specialtyFilterApplies) {
                 Column {
                     Spacer(modifier = Modifier.height(10.dp))
                     SpecialtyFilterRow(
@@ -559,7 +591,10 @@ private fun BrowseMap(
                     onClick = onLanguageFilterToggled
                 )
             }
-            if (uiState.selectedCategory == MapCategory.HOSPITAL || uiState.selectedCategory == MapCategory.ALL) {
+            // 예전엔 병원/전체 탭에서만 떠서 관광·음식으로 바꾸면 버튼이 사라졌다 — 어느 탭에서든
+            // "이 주변만 보기"라는 같은 뜻으로 동작하게 통일했다(병원은 서버 재조회, 장소는 이미
+            // 받아둔 목록을 그 좌표 반경으로 필터 — MapUiState.areaCenter 참고).
+            run {
                 Spacer(modifier = Modifier.height(8.dp))
                 SearchThisAreaButton(
                     isLoading = uiState.isSearchingArea,
@@ -575,19 +610,25 @@ private fun BrowseMap(
         // "전체" 탭에서는 마커가 병원/장소 둘 중 무엇이든 선택될 수 있어, 카테고리로 분기하는
         // 대신 uiState.categoryHospitals(현재 탭에서 병원을 보여줘야 하는지 이미 판단됨)/
         // visiblePlaces 두 목록에서 직접 선택된 항목을 찾는다.
-        val selectedHospital = uiState.categoryHospitals.firstOrNull { it.id == uiState.selectedMarkerId }
+        val selectedHospital = categoryHospitals.firstOrNull { it.id == uiState.selectedMarkerId }
         val selectedPlace = if (selectedHospital == null) {
-            uiState.visiblePlaces.firstOrNull { it.id == uiState.selectedMarkerId }
+            visiblePlaces.firstOrNull { it.id == uiState.selectedMarkerId }
         } else {
             null
         }
-        val entries = uiState.categoryHospitals.map { it.toCardEntry() } + uiState.visiblePlaces.map { it.toCardEntry() }
+        // 목록은 백엔드가 준 순서가 아니라 "지금 지도에서 보고 있는 지점"에서 가까운 순이다 —
+        // 화면 중앙에 있지도 않은 병원이 미리보기 카드에 뜨던 문제(지도와 목록이 따로 놀던 것)를
+        // 없앤다. 좌표가 없는 항목은 정렬 기준이 없어 맨 뒤로 보낸다.
+        val entries = remember(categoryHospitals, visiblePlaces, mapCenter) {
+            (categoryHospitals.map { it.toCardEntry(mapCenter) } + visiblePlaces.map { it.toCardEntry(mapCenter) })
+                .sortedBy { it.distanceMeters ?: Double.MAX_VALUE }
+        }
         // 리스트업(펼침) 페이지에서 행을 눌렀을 때 병원/장소 중 어느 상세화면으로 보낼지 판단하는 데 쓴다.
-        val hospitalIdSet = remember(uiState.categoryHospitals) { uiState.categoryHospitals.map { it.id }.toSet() }
+        val hospitalIdSet = remember(categoryHospitals) { categoryHospitals.map { it.id }.toSet() }
         // 미리보기(접힌 상태)에 한 줄만 보여줄 항목 — 선택된 마커가 있으면 그 항목, 없으면 목록 맨 앞.
         val peekEntry = when {
-            selectedHospital != null -> selectedHospital.toCardEntry()
-            selectedPlace != null -> selectedPlace.toCardEntry()
+            selectedHospital != null -> selectedHospital.toCardEntry(mapCenter)
+            selectedPlace != null -> selectedPlace.toCardEntry(mapCenter)
             else -> entries.firstOrNull()
         }
 
@@ -601,18 +642,44 @@ private fun BrowseMap(
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            RoundIconButton(
-                icon = Icons.Default.MyLocation,
-                contentDescription = mapStrings.recenterContentDescription,
-                onClick = {
-                    onMarkerSelected(null)
-                    recenterRequestId++
-                },
-                background = CoralPrimary,
-                tint = Color.White,
-                shape = MaterialTheme.shapes.medium,
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = recenterBottomPadding, end = 16.dp)
-            )
+            ) {
+                // 기본 배율이 건물이 보일 만큼 확대돼 있어(KakaoMapView의 DEFAULT_ZOOM_LEVEL),
+                // 부산 전역을 보려면 축소 수단이 필요하다 — 핀치 제스처 말고 버튼으로도 준다.
+                RoundIconButton(
+                    icon = Icons.Default.Add,
+                    contentDescription = mapStrings.zoomInContentDescription,
+                    onClick = { zoomInRequestId++ },
+                    background = Color.White,
+                    tint = TextPrimary,
+                    shape = MaterialTheme.shapes.medium
+                )
+                RoundIconButton(
+                    icon = Icons.Default.Remove,
+                    contentDescription = mapStrings.zoomOutContentDescription,
+                    onClick = { zoomOutRequestId++ },
+                    background = Color.White,
+                    tint = TextPrimary,
+                    shape = MaterialTheme.shapes.medium
+                )
+                // 아이콘이 MyLocation(GPS 조준선)이면 "내 위치로 간다"는 뜻으로 읽히는데, 이 앱은
+                // 위치 권한을 아예 쓰지 않고 고정된 기본 좌표로만 이동한다(CLAUDE.md §1) —
+                // 중립적인 "중심 맞추기" 아이콘으로 바꿔 오해를 없앤다.
+                RoundIconButton(
+                    icon = Icons.Default.CenterFocusStrong,
+                    contentDescription = mapStrings.recenterContentDescription,
+                    onClick = {
+                        onMarkerSelected(null)
+                        recenterRequestId++
+                    },
+                    background = CoralPrimary,
+                    tint = Color.White,
+                    shape = MaterialTheme.shapes.medium
+                )
+            }
         }
 
         // 손잡이 하나에만 걸려 있던 드래그를 시트 전체가 공유한다 — 미리보기 행(리스트) 위를
@@ -742,12 +809,23 @@ private fun BrowseMap(
                     when {
                         state == "expanded" -> Column(modifier = Modifier.fillMaxSize()) {
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                                Text(
-                                    text = mapStrings.listPageTitle,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = mapStrings.listPageTitle,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    // 몇 곳이 잡혔는지 — "이 위치에서 검색"으로 범위를 좁혔을 때
+                                    // 결과가 실제로 줄었는지 확인하는 신호도 된다.
+                                    Text(
+                                        text = "${entries.size}${mapStrings.resultCountSuffix}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CoralPrimary
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 CategoryTabsRow(
                                     strings = mapStrings,
@@ -805,8 +883,10 @@ private fun BrowseMap(
                                     hospital = selectedHospital,
                                     isFavorite = selectedHospital.id in uiState.favoriteHospitalIds,
                                     detailButtonLabel = mapStrings.detailButtonLabel,
+                                    closeContentDescription = mapStrings.closeSelectionContentDescription,
                                     onFavoriteClick = { onToggleFavorite(selectedHospital.id) },
-                                    onDetailClick = { onSelectHospital(selectedHospital.id) }
+                                    onDetailClick = { onSelectHospital(selectedHospital.id) },
+                                    onClose = { onMarkerSelected(null) }
                                 )
                             }
                         }
@@ -818,8 +898,12 @@ private fun BrowseMap(
                             ) {
                                 SelectedPlaceCard(
                                     place = selectedPlace,
+                                    isFavorite = selectedPlace.id in uiState.favoritePlaceIds,
                                     detailButtonLabel = mapStrings.detailButtonLabel,
-                                    onDetailClick = { onSelectPlace(selectedPlace.id) }
+                                    closeContentDescription = mapStrings.closeSelectionContentDescription,
+                                    onFavoriteClick = { onTogglePlaceFavorite(selectedPlace.id) },
+                                    onDetailClick = { onSelectPlace(selectedPlace.id) },
+                                    onClose = { onMarkerSelected(null) }
                                 )
                             }
                         }
@@ -1049,20 +1133,39 @@ private data class CardEntry(
     val fallbackImageRes: Int? = null,
     // 장소(Place)일 때만 채워진다 — 관광/음식 API 응답에 사진이 없는 경우가 많아, 그때 회색 빈
     // 박스 대신 이 종류에 맞는 색+아이콘 썸네일(PlaceFallbackThumbnail)을 그리는 데 쓴다.
-    val placeType: PlaceType? = null
+    val placeType: PlaceType? = null,
+    // 지도 화면 중심에서의 거리(m). 목록 정렬 기준이자 행에 "350m"로 표시된다. 좌표가 없으면 null.
+    val distanceMeters: Double? = null
 )
 
-private fun Hospital.toCardEntry() = CardEntry(
+private fun Hospital.toCardEntry(origin: MapPoint) = CardEntry(
     id = id,
     title = name,
     subtitle = districtLabel(),
     languages = supportedLanguages,
     imageUrl = imageUrl,
-    fallbackImageRes = resolveHospitalThumbnailRes(name, specialties)
+    fallbackImageRes = resolveHospitalThumbnailRes(name, specialties),
+    distanceMeters = distanceFrom(origin, latitude, longitude)
 )
 
-private fun Place.toCardEntry() =
-    CardEntry(id = id, title = name, subtitle = address, languages = emptyList(), imageUrl = imageUrl, placeType = type)
+private fun Place.toCardEntry(origin: MapPoint) = CardEntry(
+    id = id,
+    title = name,
+    subtitle = address,
+    languages = emptyList(),
+    imageUrl = imageUrl,
+    placeType = type,
+    distanceMeters = distanceFrom(origin, latitude, longitude)
+)
+
+private fun distanceFrom(origin: MapPoint, latitude: Double?, longitude: Double?): Double? {
+    if (latitude == null || longitude == null) return null
+    return haversineDistanceMeters(origin.latitude, origin.longitude, latitude, longitude)
+}
+
+/** 1km 미만은 10m 단위 m로, 그 이상은 소수 한 자리 km로 — 숫자만 쓰므로 언어별 문구가 필요 없다. */
+private fun Double.toDistanceLabel(): String =
+    if (this < 1_000.0) "${(this / 10).toInt() * 10}m" else String.format("%.1fkm", this / 1_000.0)
 
 // HospitalSearchListScreen의 SearchResultCard와 같은 느낌(왼쪽 썸네일 + 오른쪽 텍스트, 같은
 // 그림자 톤으로 흰 카드가 배경 위에 붕 떠 보임)의 가로형 리스트 행. feature 패키지끼리는 서로
@@ -1124,7 +1227,25 @@ private fun ListRowEntry(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = entry.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = entry.subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // 지도 화면 중심에서의 거리를 주소 앞에 둔다 — 목록이 이 거리순으로 정렬돼 있어
+                // "왜 이 순서인지"가 바로 읽힌다.
+                entry.distanceMeters?.let { distance ->
+                    Text(
+                        text = distance.toDistanceLabel(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = CoralPrimary,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = " · ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+                Text(text = entry.subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             if (entry.languages.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1142,8 +1263,10 @@ private fun SelectedHospitalCard(
     hospital: Hospital,
     isFavorite: Boolean,
     detailButtonLabel: String,
+    closeContentDescription: String,
     onFavoriteClick: () -> Unit,
-    onDetailClick: () -> Unit
+    onDetailClick: () -> Unit,
+    onClose: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1166,6 +1289,8 @@ private fun SelectedHospitalCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = hospital.districtLabel(), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                 }
+                // 예전엔 지도 빈 곳을 눌러야만 닫혔다 — 눈에 보이는 닫기 수단을 카드 안에 둔다.
+                SelectionCloseButton(contentDescription = closeContentDescription, onClick = onClose)
             }
             if (hospital.supportedLanguages.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1199,8 +1324,12 @@ private fun SelectedHospitalCard(
 @Composable
 private fun SelectedPlaceCard(
     place: Place,
+    isFavorite: Boolean,
     detailButtonLabel: String,
-    onDetailClick: () -> Unit
+    closeContentDescription: String,
+    onFavoriteClick: () -> Unit,
+    onDetailClick: () -> Unit,
+    onClose: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1223,17 +1352,48 @@ private fun SelectedPlaceCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = place.address, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                SelectionCloseButton(contentDescription = closeContentDescription, onClick = onClose)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onDetailClick,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
-            ) {
-                Text(text = detailButtonLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            // 장소도 상세화면·즐겨찾기 화면에서 이미 즐겨찾기 대상인데 이 카드에만 없어서, 마커를
+            // 눌렀을 때 병원과 장소가 서로 다른 카드처럼 보였다 — 병원 카드와 같은 구성으로 맞춘다.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onDetailClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
+                ) {
+                    Text(text = detailButtonLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Box(
+                    modifier = Modifier.size(48.dp).clip(CircleShape).border(width = 1.dp, color = DividerColor, shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    FavoriteHeartButton(isFavorite = isFavorite, onClick = onFavoriteClick, size = 32.dp)
+                }
             }
         }
+    }
+}
+
+// 선택 카드 오른쪽 위 X. RoundIconButton(44dp 기본)과 같은 터치 크기를 유지하되, 카드 안에
+// 얹히는 보조 버튼이라 배경 없이 아이콘만 둔다.
+@Composable
+private fun SelectionCloseButton(contentDescription: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = contentDescription,
+            tint = TextSecondary,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 

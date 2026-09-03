@@ -32,7 +32,14 @@ data class MapStrings(
     // 숨기므로(MapScreen.kt BrowseMap 참고) 항상 안 쓰이지만, 다른 필드와 같은 규칙으로 Ko도 채운다.
     val languageFilterLabel: String,
     // 하단 카드영역을 위로 드래그해서 펼치면 나오는 전체 리스트 페이지 상단 타이틀.
-    val listPageTitle: String
+    val listPageTitle: String,
+    // 목록 개수 뒤에 그대로 이어붙이는 단위("32곳", "32 places") — courseDurationPrefix와 같은
+    // flat field 컨벤션이다.
+    val resultCountSuffix: String,
+    val zoomInContentDescription: String,
+    val zoomOutContentDescription: String,
+    // 마커를 눌러 뜬 카드를 닫는 X 버튼 — 예전엔 지도 빈 곳을 눌러야만 닫혔다.
+    val closeSelectionContentDescription: String
 ) {
     companion object {
         val Ko = MapStrings(
@@ -55,7 +62,11 @@ data class MapStrings(
             courseNotFoundMessage = "코스 정보를 불러올 수 없습니다.",
             routeArrowHintLabel = "지도의 화살표를 따라 이동 순서를 확인하세요",
             languageFilterLabel = "번역된 곳만",
-            listPageTitle = "목적별로 찾는 장소"
+            listPageTitle = "목적별로 찾는 장소",
+            resultCountSuffix = "곳",
+            zoomInContentDescription = "지도 확대",
+            zoomOutContentDescription = "지도 축소",
+            closeSelectionContentDescription = "선택 닫기"
         )
         val En = MapStrings(
             searchPlaceholder = "Search MediIn Busan",
@@ -77,7 +88,11 @@ data class MapStrings(
             courseNotFoundMessage = "Couldn't load course details.",
             routeArrowHintLabel = "Follow the arrows on the map to see the visiting order",
             languageFilterLabel = "Translated only",
-            listPageTitle = "Find places by purpose"
+            listPageTitle = "Find places by purpose",
+            resultCountSuffix = " places",
+            zoomInContentDescription = "Zoom in",
+            zoomOutContentDescription = "Zoom out",
+            closeSelectionContentDescription = "Close selection"
         )
         val Zh = MapStrings(
             searchPlaceholder = "在MediIn Busan中搜索",
@@ -99,7 +114,11 @@ data class MapStrings(
             courseNotFoundMessage = "无法加载课程信息。",
             routeArrowHintLabel = "请沿地图上的箭头查看移动顺序",
             languageFilterLabel = "仅显示已翻译",
-            listPageTitle = "按目的查找场所"
+            listPageTitle = "按目的查找场所",
+            resultCountSuffix = "处",
+            zoomInContentDescription = "放大地图",
+            zoomOutContentDescription = "缩小地图",
+            closeSelectionContentDescription = "关闭所选"
         )
         val Ja = MapStrings(
             searchPlaceholder = "MediIn Busanで検索",
@@ -121,7 +140,11 @@ data class MapStrings(
             courseNotFoundMessage = "コース情報を読み込めません。",
             routeArrowHintLabel = "地図の矢印に沿って移動順序をご確認ください",
             languageFilterLabel = "翻訳済みのみ",
-            listPageTitle = "目的別に探す場所"
+            listPageTitle = "目的別に探す場所",
+            resultCountSuffix = "件",
+            zoomInContentDescription = "地図を拡大",
+            zoomOutContentDescription = "地図を縮小",
+            closeSelectionContentDescription = "選択を閉じる"
         )
     }
 }
