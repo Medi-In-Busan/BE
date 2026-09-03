@@ -1,12 +1,9 @@
 package com.mediinbusan.app.feature.map
 
-import androidx.compose.animation.AnimatedContent
+import com.mediinbusan.app.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -18,12 +15,18 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +35,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -43,16 +49,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -91,6 +95,7 @@ import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
+import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.InactiveIcon
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -356,6 +361,12 @@ private fun CourseStopChip(index: Int, place: Place, onClick: () -> Unit) {
     }
 }
 
+// 하단 카드영역(리스트업 바텀시트) 관련 고정 치수.
+private val ListRowFixedHeight = 96.dp
+// 손잡이 영역의 실제 높이(top padding 6dp + 알약 바 5dp + bottom padding 10dp) — 내 위치 버튼을
+// 이 손잡이 바로 위에 정확히 세우는 데 쓴다(실측 없이 고정값으로 계산).
+private val PeekHandleAreaHeight = 21.dp
+
 @Composable
 private fun BrowseMap(
     uiState: MapUiState,
@@ -375,11 +386,12 @@ private fun BrowseMap(
     // "필터" 버튼을 누르면 진료과목 칩 줄을 펼쳤다 접었다 한다 — 예전엔 버튼만 있고 실제 필터
     // 기능이 없는 자리표시자였다.
     var showSpecialtyFilters by remember { mutableStateOf(false) }
-    // 카드 패널이 지도를 계속 가리는 게 불편할 수 있어 숨겼다 다시 꺼낼 수 있게 한다. 마커/카드를
-    // 새로 선택하면 그 정보를 보러 온 것이므로 숨겨져 있었더라도 자동으로 다시 펼친다.
-    var isPanelVisible by remember { mutableStateOf(true) }
+    // 카드영역: 기본은 "미리보기"(손잡이 + 리스트 첫 항목만 66% 노출) 상태로 접혀있고, 손잡이를
+    // 위로 드래그(또는 탭)하면 검색바까지 덮는 전체 리스트 페이지로 펼쳐진다. 마커를 새로 선택하면
+    // 그 항목을 미리보기로 보여주면 되므로, 펼쳐져 있었어도 미리보기로 되돌아간다.
+    var isListExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.selectedMarkerId) {
-        if (uiState.selectedMarkerId != null) isPanelVisible = true
+        if (uiState.selectedMarkerId != null) isListExpanded = false
     }
     val hospitalPins = remember(uiState.visibleHospitals, uiState.selectedMarkerId) {
         uiState.visibleHospitals.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
@@ -387,20 +399,23 @@ private fun BrowseMap(
     val placePins = remember(uiState.visiblePlaces, uiState.selectedMarkerId) {
         uiState.visiblePlaces.mapNotNull { it.toMapPin(uiState.selectedMarkerId) }
     }
-    val pins = when (uiState.selectedCategory) {
-        MapCategory.ALL -> hospitalPins + placePins
-        MapCategory.HOSPITAL -> hospitalPins
-        else -> placePins
+    // 첫 진입 시 이미 로드돼있는 병원/장소가 한 번에 다 마커로 쏟아져서 지도를 뒤덮는 문제 —
+    // "이 위치에서 검색" 또는 카테고리 탭(전체/병원/관광/음식, 아무거나) 중 하나를 직접 누르기
+    // 전까지는 마커를 아예 안 그리고, 카메라만 기본 위치로 이동한 채 가만히 있게 한다. 그 외
+    // 기존 로직(목록/필터/카테고리 계산)은 그대로.
+    var markersActivated by remember { mutableStateOf(false) }
+    val pins = if (markersActivated) {
+        when (uiState.selectedCategory) {
+            MapCategory.ALL -> hospitalPins + placePins
+            MapCategory.HOSPITAL -> hospitalPins
+            else -> placePins
+        }
+    } else {
+        emptyList()
     }
     // 0은 "아직 요청 없음"을 의미하는 초기값이라 KakaoMapView가 무시한다 — 버튼 클릭마다 증가시켜 트리거한다.
     var recenterRequestId by remember { mutableIntStateOf(0) }
     var searchAreaRequestId by remember { mutableIntStateOf(0) }
-
-    // 하단 카드 패널(목록/선택된 병원/선택된 장소/빈 상태)은 내용에 따라 높이가 크게 달라진다
-    // (썸네일이 붙은 목록 카드는 선택 카드보다 훨씬 높다). 고정값으로 우측 버튼을 띄워두면 패널이
-    // 커질 때마다 버튼이 파묻히므로, 패널을 직접 실측해 그 높이만큼만 정확히 띄운다.
-    val density = LocalDensity.current
-    var bottomPanelHeight by remember { mutableStateOf(0.dp) }
 
     // BottomNavBar 자신은 navigationBarsPadding()으로 제스처/내비게이션 바 인셋을 소비해 화면 진짜
     // 하단에서 인셋만큼 띄워 그려진다(core/ui/BottomNavBar.kt 참고) — 즉 바 뒤쪽은 원래 뚫려 있어야
@@ -419,7 +434,29 @@ private fun BrowseMap(
         targetValue = navigationBarInset + if (isSelectionActive) 0.dp else BottomNavBarHeight,
         label = "mapBottomSafePadding"
     )
-    Box(modifier = Modifier.fillMaxSize()) {
+    val density = LocalDensity.current
+    // 드래그 제스처 판정용 임계값(약 40dp). 손잡이를 이만큼 위/아래로 끌면 펼침/접힘이 토글된다.
+    val dragThresholdPx = with(density) { 40.dp.toPx() }
+    // 펼쳤을 때 화면 전체가 아니라 "검색바 영역 바로 아래"까지만 리스트가 올라오게 하려면
+    // 검색바 블록(상단 Column)의 실제 높이를 알아야 한다 — 필터 줄 펼침 여부 등에 따라 그 높이가
+    // 달라지므로 실측한다. BoxWithConstraints로 화면 전체 높이(maxHeight)도 같이 얻는다.
+    var topBarHeight by remember { mutableStateOf(0.dp) }
+    // 마커 선택 카드(SelectedHospitalCard/SelectedPlaceCard)는 내용에 따라 높이가 크게 달라져서
+    // (사진+뱃지+버튼 유무 등) 고정값을 못 쓴다 — 실측해서 내 위치 버튼이 그 높이를 따라오게 한다.
+    // 선택이 없을 때(리스트 미리보기)는 행 높이가 고정값이라 이 실측이 필요 없다.
+    var selectedCardHeight by remember { mutableStateOf(0.dp) }
+    // 마커 선택 중이면 실측한 선택 카드 높이를, 아니면(리스트 미리보기) 고정값을 따라간다 —
+    // 두 경우를 하나의 애니메이션 값으로 합쳐서 내 위치 버튼이 항상 부드럽게 따라오게 한다.
+    val recenterBottomPadding by animateDpAsState(
+        targetValue = if (isSelectionActive) {
+            navigationBarInset + selectedCardHeight + 4.dp
+        } else {
+            navigationBarInset + ListRowFixedHeight + PeekHandleAreaHeight + 4.dp
+        },
+        label = "mapRecenterBottomPadding"
+    )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenHeight = maxHeight
         KakaoMapView(
             pins = pins,
             modifier = Modifier.fillMaxSize(),
@@ -435,9 +472,21 @@ private fun BrowseMap(
         )
 
         Column(
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // 펼친 리스트 시트가 이 검색바 줄 바로 아래까지만 올라오게(카테고리 탭 등 그 밑의
+            // 나머지는 시트가 덮어서 가림) 이 Row 하나만 실측한다 — 전체 Column을 재면 카테고리
+            // 탭/필터칩/이 위치에서 검색 버튼까지 다 포함돼 시트가 너무 조금만 올라왔었다.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.onGloballyPositioned { coordinates ->
+                    // 이 Column의 위쪽 padding(16dp)만큼 검색바 줄이 화면 맨 위에서 내려와 있다.
+                    topBarHeight = 16.dp + with(density) { coordinates.size.height.toDp() }
+                }
+            ) {
                 MapSearchBar(
                     query = uiState.searchQuery,
                     onQueryChange = onSearchQueryChanged,
@@ -446,7 +495,7 @@ private fun BrowseMap(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 FilterPillButton(
-                    label = mapStrings.filterLabel,
+                    contentDescription = mapStrings.filterLabel,
                     active = showSpecialtyFilters || uiState.selectedSpecialties.isNotEmpty(),
                     badgeCount = uiState.selectedSpecialties.size,
                     onClick = { showSpecialtyFilters = !showSpecialtyFilters }
@@ -465,7 +514,19 @@ private fun BrowseMap(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            CategoryTabsRow(strings = mapStrings, selected = uiState.selectedCategory, onSelected = onCategorySelected)
+            CategoryTabsRow(
+                strings = mapStrings,
+                // 마커가 아직 활성화되지 않았으면(첫 로드 직후) 어떤 탭도 활성 표시 없이 둔다 —
+                // 실제 uiState.selectedCategory 기본값은 그대로 HOSPITAL이지만(필터링 로직 등 다른
+                // 곳에서 계속 씀), 여기 시각적 하이라이트만 markersActivated로 가린다.
+                selected = if (markersActivated) uiState.selectedCategory else null,
+                onSelected = { category ->
+                    // 병원 탭만 활성화시키던 게 버그였다 — 관광/음식 탭을 눌러도 미리보기 내용만
+                    // 바뀌고 지도엔 마커가 안 뜨는 문제로 이어졌다. 어떤 탭을 누르든 활성화한다.
+                    markersActivated = true
+                    onCategorySelected(category)
+                }
+            )
             // 한국어 UI에서는 모든 장소가 원문(한국어)이라 이 필터가 아무것도 안 걸러 의미가 없다 —
             // 다른 언어일 때만, 그리고 장소(Place)가 나오는 카테고리에서만 보여준다(병원 이름·주소는
             // 번역 대상이 아니라 항상 그대로 나오므로 HOSPITAL 탭에는 안 띄운다).
@@ -483,132 +544,242 @@ private fun BrowseMap(
                     isLoading = uiState.isSearchingArea,
                     label = mapStrings.searchThisAreaLabel,
                     loadingLabel = mapStrings.searchingThisAreaLabel,
-                    onClick = { searchAreaRequestId++ },
+                    onClick = { searchAreaRequestId++; markersActivated = true },
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
         }
 
+        // "전체" 탭에서는 마커가 병원/장소 둘 중 무엇이든 선택될 수 있어, 카테고리로 분기하는
+        // 대신 uiState.categoryHospitals(현재 탭에서 병원을 보여줘야 하는지 이미 판단됨)/
+        // visiblePlaces 두 목록에서 직접 선택된 항목을 찾는다.
+        val selectedHospital = uiState.categoryHospitals.firstOrNull { it.id == uiState.selectedMarkerId }
+        val selectedPlace = if (selectedHospital == null) {
+            uiState.visiblePlaces.firstOrNull { it.id == uiState.selectedMarkerId }
+        } else {
+            null
+        }
+        val entries = uiState.categoryHospitals.map { it.toCardEntry() } + uiState.visiblePlaces.map { it.toCardEntry() }
+        // 리스트업(펼침) 페이지에서 행을 눌렀을 때 병원/장소 중 어느 상세화면으로 보낼지 판단하는 데 쓴다.
+        val hospitalIdSet = remember(uiState.categoryHospitals) { uiState.categoryHospitals.map { it.id }.toSet() }
+        // 미리보기(접힌 상태)에 한 줄만 보여줄 항목 — 선택된 마커가 있으면 그 항목, 없으면 목록 맨 앞.
+        val peekEntry = when {
+            selectedHospital != null -> selectedHospital.toCardEntry()
+            selectedPlace != null -> selectedPlace.toCardEntry()
+            else -> entries.firstOrNull()
+        }
+
         // 실제 GPS 위치가 아닌 고정된 부산 기본 좌표로만 이동한다 — 위치 권한을 쓰지 않는다.
         // (예전엔 이 옆에 "레이어" 버튼이 더 있었지만 onClick이 비어 있는 미구현 자리표시자라
-        // 제거했다 — 실제 동작하는 버튼만 남긴다.)
-        RoundIconButton(
-            icon = Icons.Default.MyLocation,
-            contentDescription = mapStrings.recenterContentDescription,
-            onClick = {
-                onMarkerSelected(null)
-                recenterRequestId++
-            },
-            background = CoralPrimary,
-            tint = Color.White,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = bottomSafePadding + bottomPanelHeight + 16.dp, end = 16.dp)
-        )
+        // 제거했다 — 실제 동작하는 버튼만 남긴다.) 리스트가 화면을 다 덮는 펼침 상태에선 어차피
+        // 안 보이는 자리라 그냥 숨긴다.
+        AnimatedVisibility(
+            visible = !isListExpanded,
+            modifier = Modifier.align(Alignment.BottomEnd),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            RoundIconButton(
+                icon = Icons.Default.MyLocation,
+                contentDescription = mapStrings.recenterContentDescription,
+                onClick = {
+                    onMarkerSelected(null)
+                    recenterRequestId++
+                },
+                background = CoralPrimary,
+                tint = Color.White,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.padding(bottom = recenterBottomPadding, end = 16.dp)
+            )
+        }
 
+        // 카드영역: 접힘(미리보기 한 줄) / 펼침(검색바까지 덮는 전체 리스트) 두 상태를 손잡이
+        // 드래그(또는 탭)로 전환한다. HospitalSearchListScreen과 같은 느낌의 가로형 리스트 행을
+        // 쓰되, feature 패키지 간 직접 import는 하지 않는 규칙(CLAUDE.md)이라 이 파일 안에 로컬로
+        // 새로 둔다(ListRowEntry).
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(bottom = bottomSafePadding)
-                .onGloballyPositioned { coordinates ->
-                    bottomPanelHeight = with(density) { coordinates.size.height.toDp() }
-                },
-            horizontalAlignment = Alignment.CenterHorizontally
+                // 펼쳤을 때도 화면 전체가 아니라 "검색바 블록 바로 아래"까지만 — 그 위 공간은
+                // 계속 지도가 보인다. 검색바 블록 높이가 필터 펼침 등으로 달라질 수 있어 실측값을 쓴다.
+                .then(if (isListExpanded) Modifier.height((screenHeight - topBarHeight).coerceAtLeast(0.dp)) else Modifier)
+                .shadow(
+                    elevation = if (isListExpanded) 0.dp else 10.dp,
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.2f),
+                    spotColor = Color.Black.copy(alpha = 0.2f)
+                )
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                // 시트 배경은 흰색이 아니라 Home/HospitalSearchList와 같은 앱 기본 배경색(연분홍) —
+                // 그 위에 얹히는 리스트 항목(ListRowEntry)이 각자 흰 카드+그림자로 구분돼 보인다.
+                .background(HomeBackgroundPink)
+                // 미리보기 콘텐츠(손잡이+리스트 행)는 탭바 높이를 피하지 않고 제스처 인셋만 남긴다 —
+                // 손잡이는 그래도 행 위에 있어서 탭바보다 위, 즉 계속 터치 가능하고, 리스트 행만
+                // 자연스럽게 아랫부분이 탭바에 가려진다(클리핑 없이 원래 크기 그대로 그림).
+                // 펼침(리스트업) 상태에서는 반대로 탭바를 완전히 피해야 한다 — 마지막 항목이
+                // 탭바 뒤에 가려지지 않고 그 바로 위에 오도록 bottomSafePadding(탭바 높이 포함)을 쓴다.
+                .padding(bottom = if (isListExpanded) bottomSafePadding else navigationBarInset)
+                .animateContentSize(animationSpec = tween(220))
         ) {
-            // 카드 패널을 숨겼다/꺼냈다 할 수 있는 손잡이. 패널 유무와 무관하게 항상 떠 있어서
-            // 숨긴 뒤에도 다시 꺼낼 방법이 사라지지 않는다.
-            PanelVisibilityHandle(
-                isVisible = isPanelVisible,
-                onToggle = { isPanelVisible = !isPanelVisible },
-                hideContentDescription = mapStrings.hidePanelContentDescription,
-                showContentDescription = mapStrings.showPanelContentDescription,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-            AnimatedVisibility(
-                visible = isPanelVisible,
-                enter = slideInVertically(animationSpec = tween(220)) { height -> height / 2 } + fadeIn(tween(220)),
-                exit = slideOutVertically(animationSpec = tween(180)) { height -> height / 2 } + fadeOut(tween(180))
-            ) {
-                // "전체" 탭에서는 마커가 병원/장소 둘 중 무엇이든 선택될 수 있어, 카테고리로 분기하는
-                // 대신 uiState.categoryHospitals(현재 탭에서 병원을 보여줘야 하는지 이미 판단됨)/
-                // visiblePlaces 두 목록에서 직접 선택된 항목을 찾는다.
-                val selectedHospital = uiState.categoryHospitals.firstOrNull { it.id == uiState.selectedMarkerId }
-                val selectedPlace = if (selectedHospital == null) {
-                    uiState.visiblePlaces.firstOrNull { it.id == uiState.selectedMarkerId }
+            var dragAccumPx by remember { mutableStateOf(0f) }
+            // 마커를 직접 선택했을 때는 리스트업으로 끌어올리는 손잡이 자체가 의미 없다(예전
+            // 사진 카드만 단독으로 뜨던 모양으로 돌아간다) — 미리보기/펼침 상태에서만 보여준다.
+            if (selectedHospital == null && selectedPlace == null) {
+                // 알약 모양(양옆이 완전히 둥근) 드래그 손잡이. 영역 맨 위에 바짝 붙이고(위 여백 없음),
+                // 위/아래로 끌거나 탭해서 펼침·접힘을 토글한다.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp, bottom = 10.dp)
+                        .pointerInput(isListExpanded) {
+                            detectVerticalDragGestures(
+                                onDragEnd = { dragAccumPx = 0f },
+                                onDragCancel = { dragAccumPx = 0f },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragAccumPx += dragAmount
+                                    if (!isListExpanded && dragAccumPx < -dragThresholdPx) {
+                                        isListExpanded = true
+                                        dragAccumPx = 0f
+                                    } else if (isListExpanded && dragAccumPx > dragThresholdPx) {
+                                        isListExpanded = false
+                                        dragAccumPx = 0f
+                                    }
+                                }
+                            )
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { isListExpanded = !isListExpanded }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 40.dp, height = 5.dp)
+                            .clip(RoundedCornerShape(percent = 50))
+                            .background(DividerColor)
+                    )
+                }
+            }
+
+            if (isListExpanded) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                    Text(
+                        text = mapStrings.listPageTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    CategoryTabsRow(
+                        strings = mapStrings,
+                        selected = uiState.selectedCategory,
+                        onSelected = { category ->
+                            if (category == MapCategory.HOSPITAL) markersActivated = true
+                            onCategorySelected(category)
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (entries.isEmpty()) {
+                    EmptyResultCard(
+                        message = if (uiState.selectedCategory == MapCategory.HOSPITAL) {
+                            mapStrings.emptyHospitalMessage
+                        } else {
+                            mapStrings.emptyPlaceMessage
+                        }
+                    )
                 } else {
-                    null
+                    // 4개씩 한 그룹 — 한 페이지 안에 리스트처럼 세로로 4개 쌓는다. 옆으로 넘기면
+                    // 다음 4개 그룹이 나오고, 페이지 가장자리가 살짝 미리보이는 게(contentPadding)
+                    // "다음 그룹 미리보기" 역할을 한다(Home HeroBannerSection과 같은 피킹 패턴).
+                    // 페이지 영역은 타이틀 바로 아래부터 시트 하단(탭바 위)까지 남는 공간을 그대로
+                    // 채운다(weight) — 4개가 균등 분할해서 채우니 마지막 항목이 자연스럽게 맨 아래,
+                    // 탭바 바로 위에 온다.
+                    val groupedEntries = remember(entries) { entries.chunked(4) }
+                    val pagerState = rememberPagerState(pageCount = { groupedEntries.size })
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 32.dp),
+                        pageSpacing = 12.dp,
+                        modifier = Modifier.fillMaxWidth().weight(1f)
+                    ) { page ->
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            groupedEntries[page].forEach { entry ->
+                                ListRowEntry(
+                                    entry = entry,
+                                    // 리스트업 페이지에서는 눌렀을 때 바로 상세화면으로 이동한다
+                                    // (선택 상태로만 바꾸는 미리보기 쪽과 다르다).
+                                    onClick = {
+                                        if (entry.id in hospitalIdSet) onSelectHospital(entry.id) else onSelectPlace(entry.id)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    // 행 높이에 맞춰 늘어나는 세로형 사진 — 가로 폭을 1.5배 키워서
+                                    // 비율을 0.5(1:2)에서 0.75로 늘렸다.
+                                    thumbnailModifier = Modifier.fillMaxHeight().aspectRatio(0.75f)
+                                )
+                            }
+                        }
+                    }
                 }
-                val entries = uiState.categoryHospitals.map { it.toCardEntry() } + uiState.visiblePlaces.map { it.toCardEntry() }
-                // 병원을 누르면(마커든 목록 카드든) 이 패널이 뭘 보여줄지가 바뀐다 — 예전엔 when{}이
-                // 그 순간 내용을 뚝 끊어 바꿔서 눌렀다는 반응이 잘 안 느껴졌다. panelKey로 "지금 보여줄
-                // 패널이 뭔지"를 문자열 하나로 나타내고 AnimatedContent로 감싸, 선택될 때마다 위로
-                // 슬라이드 + 페이드 되며 들어오게 한다.
-                val panelKey = when {
-                    selectedHospital != null -> "hospital:${selectedHospital.id}"
-                    selectedPlace != null -> "place:${selectedPlace.id}"
-                    entries.isNotEmpty() -> "list"
-                    uiState.selectedCategory == MapCategory.HOSPITAL -> "empty_hospital"
-                    else -> "empty_place"
-                }
-                AnimatedContent(
-                    targetState = panelKey,
-                    transitionSpec = {
-                        (slideInVertically(animationSpec = tween(220)) { height -> height / 4 } + fadeIn(tween(220)))
-                            .togetherWith(slideOutVertically(animationSpec = tween(180)) { height -> height / 4 } + fadeOut(tween(180)))
-                    },
-                    label = "mapBottomPanel"
-                ) { key ->
-                    when {
-                        key.startsWith("hospital:") && selectedHospital != null -> SelectedHospitalCard(
+            } else if (selectedHospital != null || selectedPlace != null) {
+                // 마커를 직접 눌러 선택한 경우: 리스트 미리보기 행이 아니라 예전에 쓰던 사진 위주
+                // 카드로 보여준다(사진+뱃지+상세보기 버튼). 내용에 따라 높이가 달라지므로 실측해서
+                // 내 위치 버튼(recenterBottomPadding)이 그 높이를 따라오게 한다.
+                Box(
+                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                        selectedCardHeight = with(density) { coordinates.size.height.toDp() }
+                    }
+                ) {
+                    if (selectedHospital != null) {
+                        SelectedHospitalCard(
                             hospital = selectedHospital,
                             isFavorite = selectedHospital.id in uiState.favoriteHospitalIds,
                             detailButtonLabel = mapStrings.detailButtonLabel,
                             onFavoriteClick = { onToggleFavorite(selectedHospital.id) },
                             onDetailClick = { onSelectHospital(selectedHospital.id) }
                         )
-                        key.startsWith("place:") && selectedPlace != null -> SelectedPlaceCard(
+                    } else if (selectedPlace != null) {
+                        SelectedPlaceCard(
                             place = selectedPlace,
                             detailButtonLabel = mapStrings.detailButtonLabel,
                             onDetailClick = { onSelectPlace(selectedPlace.id) }
                         )
-                        key == "list" -> EntryCardRow(entries = entries, onCardClick = { onMarkerSelected(it) })
-                        key == "empty_hospital" -> EmptyResultCard(message = mapStrings.emptyHospitalMessage)
-                        else -> EmptyResultCard(message = mapStrings.emptyPlaceMessage)
+                    }
+                }
+            } else {
+                // 미리보기: 리스트 행을 원래 크기(96dp) 그대로, 그림자도 온전히 살려서 그린다.
+                // 억지로 클리핑하지 않고, 아랫부분은 그 위에 그려지는 하단 탭바가 자연스럽게 가린다.
+                if (peekEntry != null) {
+                    ListRowEntry(
+                        entry = peekEntry,
+                        onClick = { onMarkerSelected(peekEntry.id) },
+                        modifier = Modifier.padding(horizontal = 20.dp).height(ListRowFixedHeight)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(ListRowFixedHeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (uiState.selectedCategory == MapCategory.HOSPITAL) {
+                                mapStrings.emptyHospitalMessage
+                            } else {
+                                mapStrings.emptyPlaceMessage
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun PanelVisibilityHandle(
-    isVisible: Boolean,
-    onToggle: () -> Unit,
-    hideContentDescription: String,
-    showContentDescription: String,
-    modifier: Modifier = Modifier
-) {
-    // 세로 패딩 6dp였을 땐 터치 영역이 32dp(아이콘 20dp + 6dp*2)로, 이 앱의 다른 아이콘 버튼
-    // 기준(RoundIconButton 기본 44dp)보다 눈에 띄게 작았다 — UI/UX Pro Max 스킬의 Android 터치
-    // 타깃 가이드(최소 48dp, 최소한 이 앱 관례인 44dp에는 맞춘다)에 맞춰 12dp로 키웠다.
-    Row(
-        modifier = modifier
-            .shadow(elevation = 3.dp, shape = RoundedCornerShape(percent = 50), ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.2f))
-            .clip(RoundedCornerShape(percent = 50))
-            .background(Color.White)
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (isVisible) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-            contentDescription = if (isVisible) hideContentDescription else showContentDescription,
-            tint = TextSecondary,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 
@@ -656,7 +827,11 @@ private fun MapSearchBar(query: String, onQueryChange: (String) -> Unit, placeho
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+        Image(
+            painter = painterResource(R.drawable.favicon),
+            contentDescription = null,
+            modifier = Modifier.size(28.dp)
+        )
         Spacer(modifier = Modifier.width(8.dp))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
@@ -676,33 +851,37 @@ private fun MapSearchBar(query: String, onQueryChange: (String) -> Unit, placeho
 
 // 예전엔 onClick이 없는 장식용 버튼이었다 — 진료과목 필터 줄을 여닫는 실제 동작을 붙였다.
 // 필터가 하나라도 선택돼 있으면(펼쳐져 있지 않아도) 배지 숫자로 몇 개가 걸려있는지 보여준다.
+// 텍스트 라벨 없이 아이콘만 있는 원형 버튼이라, 그 라벨을 접근성 트리에서 뺀 아이콘 대신 이제
+// 버튼 자체의 contentDescription으로 옮겼다(더 이상 옆에서 같은 말을 읽어주는 Text가 없어서).
 @Composable
-private fun FilterPillButton(label: String, active: Boolean, badgeCount: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .shadow(elevation = 4.dp, shape = RoundedCornerShape(percent = 50), ambientColor = Color.Black.copy(alpha = 0.15f), spotColor = Color.Black.copy(alpha = 0.15f))
-            .clip(RoundedCornerShape(percent = 50))
-            .background(if (active) CoralPrimary else Color.White)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 바로 옆에 label을 보여주는 Text가 있어 아이콘까지 contentDescription을 달면 스크린
-        // 리더가 "필터, 필터"처럼 같은 말을 두 번 읽는다 — 장식용으로 접근성 트리에서 뺀다
-        // (UI/UX Pro Max 스킬의 "decorative icon aria hidden" 규칙).
-        Icon(
-            imageVector = Icons.Default.FilterList,
-            contentDescription = null,
-            tint = if (active) Color.White else TextSecondary,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = if (active) Color.White else TextPrimary)
+private fun FilterPillButton(
+    contentDescription: String,
+    active: Boolean,
+    badgeCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .shadow(elevation = 4.dp, shape = CircleShape, ambientColor = Color.Black.copy(alpha = 0.15f), spotColor = Color.Black.copy(alpha = 0.15f))
+                .clip(CircleShape)
+                .background(if (active) CoralPrimary else Color.White)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Tune,
+                contentDescription = contentDescription,
+                tint = if (active) Color.White else TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
         if (badgeCount > 0) {
-            Spacer(modifier = Modifier.width(6.dp))
             Box(
                 modifier = Modifier
+                    .align(Alignment.TopEnd)
                     .size(18.dp)
                     .clip(CircleShape)
                     .background(if (active) Color.White else CoralPrimaryContainer),
@@ -740,7 +919,7 @@ private fun SearchThisAreaButton(
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(16.dp))
+        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = if (isLoading) loadingLabel else label,
@@ -751,7 +930,7 @@ private fun SearchThisAreaButton(
 }
 
 @Composable
-private fun CategoryTabsRow(strings: MapStrings, selected: MapCategory, onSelected: (MapCategory) -> Unit) {
+private fun CategoryTabsRow(strings: MapStrings, selected: MapCategory?, onSelected: (MapCategory) -> Unit) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -809,75 +988,59 @@ private fun Hospital.toCardEntry() = CardEntry(
 private fun Place.toCardEntry() =
     CardEntry(id = id, title = name, subtitle = address, languages = emptyList(), imageUrl = imageUrl)
 
+// HospitalSearchListScreen의 SearchResultCard와 같은 느낌(왼쪽 썸네일 + 오른쪽 텍스트, 같은
+// 그림자 톤으로 흰 카드가 배경 위에 붕 떠 보임)의 가로형 리스트 행. feature 패키지끼리는 서로
+// import하지 않는 규칙이라 그 컴포저블을 직접 가져다 쓰는 대신, CardEntry(병원/장소 통합 모델)
+// 기준으로 이 파일 안에 로컬로 새로 둔다. 카드영역 배경이 흰색이 아니라 연분홍(HomeBackgroundPink)
+// 이라, 각 행이 이 자체 그림자+흰 배경으로 서로 구분돼 보인다.
 @Composable
-private fun EntryCardRow(entries: List<CardEntry>, onCardClick: (String) -> Unit) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(entries, key = { it.id }) { entry ->
-            InfoMiniCard(entry = entry, onClick = { onCardClick(entry.id) })
-        }
-    }
-}
-
-// HospitalSearchListScreen의 SearchResultCard와 같은 그림자 톤(옅은 배경 위에서도 카드가 붕 떠
-// 보이도록 alpha를 진하게 줌)을 재사용해 앱 전체에서 "카드"가 같은 느낌으로 보이게 한다. 다만
-// 지도 위에 가로로 나열되는 좁은 카드라 썸네일을 왼쪽이 아니라 위쪽에 둔 세로 레이아웃으로 바꿨다.
-@Composable
-private fun InfoMiniCard(entry: CardEntry, onClick: () -> Unit) {
-    // 누르는 동안 살짝 줄어들었다 떼면 되돌아오는 눌림 반응 — 하단 탭바 아이템과 같은 방식으로
-    // "눌렀다"는 게 손끝에 바로 느껴지게 한다(디폴트 리플만으로는 지도 위에서 잘 안 보였다).
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(targetValue = if (isPressed) 0.96f else 1f, label = "mapCardPressScale")
-
-    Column(
-        modifier = Modifier
-            .width(196.dp)
-            .scale(scale)
+private fun ListRowEntry(
+    entry: CardEntry,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    // 미리보기(고정 96dp 행)에서는 기존 정사각形 썸네일을 쓰고, 리스트업 그룹(4개, 행이 위아래로
+    // 늘어남)에서는 가로1:세로2 비율 썸네일을 쓴다 — 호출부에서 다르게 넘긴다.
+    thumbnailModifier: Modifier = Modifier.size(72.dp)
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
             .shadow(
                 elevation = 6.dp,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(16.dp),
                 ambientColor = Color.Black.copy(alpha = 0.3f),
                 spotColor = Color.Black.copy(alpha = 0.3f)
             )
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         if (entry.imageUrl != null) {
             AsyncImageBox(
                 model = entry.imageUrl,
                 contentDescription = entry.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(96.dp)
-                    .background(DividerColor)
+                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp)).background(DividerColor)
             )
         } else if (entry.fallbackImageRes != null) {
             Image(
                 painter = painterResource(id = entry.fallbackImageRes),
                 contentDescription = entry.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(96.dp)
-                    .background(DividerColor)
+                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp)).background(DividerColor)
             )
         } else {
             AsyncImageBox(
                 model = null,
                 contentDescription = entry.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(96.dp)
-                    .background(DividerColor)
+                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp)).background(DividerColor)
             )
         }
-        Column(modifier = Modifier.padding(12.dp)) {
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(text = entry.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = entry.subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -891,6 +1054,8 @@ private fun InfoMiniCard(entry: CardEntry, onClick: () -> Unit) {
     }
 }
 
+// 마커를 직접 눌러 선택했을 때 뜨는 사진 위주 카드. 리스트업 미리보기 행(ListRowEntry)과 달리
+// 썸네일이 크고, 즐겨찾기·상세보기 버튼이 붙는다 — 리스트 리디자인 전부터 쓰던 컴포넌트를 그대로 되살렸다.
 @Composable
 private fun SelectedHospitalCard(
     hospital: Hospital,
@@ -906,8 +1071,6 @@ private fun SelectedHospitalCard(
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // 목록 카드(InfoMiniCard)엔 썸네일이 있는데 마커를 눌러 뜨는 이 카드엔 텍스트뿐이라
-            // 같은 화면 안에서 불일치했다 — 이미지를 붙여 맞춘다.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HospitalThumbnail(
                     hospital = hospital,
@@ -950,9 +1113,8 @@ private fun SelectedHospitalCard(
     }
 }
 
-// SelectedHospitalCard와 완전히 같은 구성으로 맞춘다: 설명 전문을 그대로 뿌리던 텍스트 카드 대신
-// 썸네일 + 이름 + 주소(메타 한 줄)만 보여주고, "상세보기"를 눌러야 설명 등 나머지 정보를 보게 한다 —
-// 마커를 눌렀을 때 병원과 장소가 같은 느낌으로 보이도록.
+// SelectedHospitalCard와 완전히 같은 구성으로 맞춘다: 썸네일 + 이름 + 주소(메타 한 줄)만 보여주고,
+// "상세보기"를 눌러야 설명 등 나머지 정보를 보게 한다 — 마커를 눌렀을 때 병원과 장소가 같은 느낌으로 보이도록.
 @Composable
 private fun SelectedPlaceCard(
     place: Place,
@@ -994,8 +1156,8 @@ private fun SelectedPlaceCard(
     }
 }
 
-// HospitalThumbnail과 같은 역할 — place.imageUrl이 없는 장소도 많아(EntryCardRow의 InfoMiniCard와
-// 동일하게) 실패해도 크래시 없이 빈 배경만 남는 AsyncImageBox(model=null)로 그냥 둔다.
+// HospitalThumbnail과 같은 역할 — place.imageUrl이 없는 장소도 많아 실패해도 크래시 없이
+// 빈 배경만 남는 AsyncImageBox(model=null)로 그냥 둔다.
 @Composable
 private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
     AsyncImageBox(model = place.imageUrl, contentDescription = place.name, modifier = modifier)

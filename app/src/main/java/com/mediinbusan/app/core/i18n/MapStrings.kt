@@ -30,11 +30,13 @@ data class MapStrings(
     val routeArrowHintLabel: String,
     // "번역된 장소만" 토글(MapUiState.languageFilterEnabled) — 한국어 UI에서는 이 토글 자체를
     // 숨기므로(MapScreen.kt BrowseMap 참고) 항상 안 쓰이지만, 다른 필드와 같은 규칙으로 Ko도 채운다.
-    val languageFilterLabel: String
+    val languageFilterLabel: String,
+    // 하단 카드영역을 위로 드래그해서 펼치면 나오는 전체 리스트 페이지 상단 타이틀.
+    val listPageTitle: String
 ) {
     companion object {
         val Ko = MapStrings(
-            searchPlaceholder = "지도에서 검색...",
+            searchPlaceholder = "메디인부산에서 검색",
             filterLabel = "필터",
             searchThisAreaLabel = "이 위치에서 검색",
             searchingThisAreaLabel = "검색 중…",
@@ -52,10 +54,11 @@ data class MapStrings(
             courseDurationPrefix = "예상 소요 ",
             courseNotFoundMessage = "코스 정보를 불러올 수 없습니다.",
             routeArrowHintLabel = "지도의 화살표를 따라 이동 순서를 확인하세요",
-            languageFilterLabel = "번역된 곳만"
+            languageFilterLabel = "번역된 곳만",
+            listPageTitle = "목적별로 찾는 장소"
         )
         val En = MapStrings(
-            searchPlaceholder = "Search on map...",
+            searchPlaceholder = "Search MediIn Busan",
             filterLabel = "Filter",
             searchThisAreaLabel = "Search this area",
             searchingThisAreaLabel = "Searching…",
@@ -73,10 +76,11 @@ data class MapStrings(
             courseDurationPrefix = "Est. ",
             courseNotFoundMessage = "Couldn't load course details.",
             routeArrowHintLabel = "Follow the arrows on the map to see the visiting order",
-            languageFilterLabel = "Translated only"
+            languageFilterLabel = "Translated only",
+            listPageTitle = "Find places by purpose"
         )
         val Zh = MapStrings(
-            searchPlaceholder = "在地图上搜索...",
+            searchPlaceholder = "在MediIn Busan中搜索",
             filterLabel = "筛选",
             searchThisAreaLabel = "搜索此区域",
             searchingThisAreaLabel = "搜索中…",
@@ -94,10 +98,11 @@ data class MapStrings(
             courseDurationPrefix = "预计所需 ",
             courseNotFoundMessage = "无法加载课程信息。",
             routeArrowHintLabel = "请沿地图上的箭头查看移动顺序",
-            languageFilterLabel = "仅显示已翻译"
+            languageFilterLabel = "仅显示已翻译",
+            listPageTitle = "按目的查找场所"
         )
         val Ja = MapStrings(
-            searchPlaceholder = "地図で検索...",
+            searchPlaceholder = "MediIn Busanで検索",
             filterLabel = "フィルター",
             searchThisAreaLabel = "この付近で検索",
             searchingThisAreaLabel = "検索中…",
@@ -115,7 +120,8 @@ data class MapStrings(
             courseDurationPrefix = "所要時間目安 ",
             courseNotFoundMessage = "コース情報を読み込めません。",
             routeArrowHintLabel = "地図の矢印に沿って移動順序をご確認ください",
-            languageFilterLabel = "翻訳済みのみ"
+            languageFilterLabel = "翻訳済みのみ",
+            listPageTitle = "目的別に探す場所"
         )
     }
 }

@@ -17,3 +17,7 @@ local.properties
 *.jks
 *.keystore
 keystore.properties
+gen_keystore.bat
+run_pepk.bat
+output.zip
+pepk.jar

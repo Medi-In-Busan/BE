@@ -489,15 +489,17 @@ private fun Context.routeArrowBitmap(): Bitmap = routeArrowBitmapCache ?: run {
     }.also { routeArrowBitmapCache = it }
 }
 
+// 선택/비선택 전용 애셋이 따로 없는 단일 아이콘(map_hospitalmaker/map_travelmaker/map_foodmaker)이라,
+// 선택 여부는 아이콘을 바꾸는 게 아니라 pinIconBitmap()에서 크기만 다르게 그려서 표현한다.
 private fun MapPin.iconRes(): Int = when (type) {
-    MapPinType.HOSPITAL -> if (selected) R.drawable.ic_map_pin_hospital_selected else R.drawable.ic_map_pin_hospital
-    MapPinType.TOURIST -> if (selected) R.drawable.ic_map_pin_tourist_selected else R.drawable.ic_map_pin_tourist
-    MapPinType.FOOD -> if (selected) R.drawable.ic_map_pin_food_selected else R.drawable.ic_map_pin_food
+    MapPinType.HOSPITAL -> R.drawable.map_hospitalmaker
+    MapPinType.TOURIST -> R.drawable.map_travelmaker
+    MapPinType.FOOD -> R.drawable.map_foodmaker
 }
 
 private fun MapPin.toLabelStyle(context: Context): LabelStyle =
     LabelStyle.from(
-        sequenceNumber?.let { context.numberedPinBitmap(it, selected) } ?: context.pinIconBitmap(iconRes())
+        sequenceNumber?.let { context.numberedPinBitmap(it, selected) } ?: context.pinIconBitmap(iconRes(), selected)
     ).setIconTransition(PinSelectTransition)
 
 private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
@@ -528,22 +530,33 @@ private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
 // 반환한다 — 그 결과 K3fAApi가 "ImageAsset is invalid"를 찍으며 라벨은 추가되지만 아이콘 없이 안 보인다.
 // VectorDrawable을 직접 Bitmap으로 래스터화해 LabelStyle.from(Bitmap)에 넘기면 정상 동작한다.
 // 아이콘 종류가 3개뿐이라 리소스 ID 기준으로 캐싱해 재렌더링마다 다시 그리지 않게 한다.
-private val pinIconBitmapCache = mutableMapOf<Int, Bitmap>()
+private val pinIconBitmapCache = mutableMapOf<Pair<Int, Boolean>, Bitmap>()
 private val numberedPinBitmapCache = mutableMapOf<Pair<Int, Boolean>, Bitmap>()
 
-private fun Context.pinIconBitmap(@DrawableRes resId: Int): Bitmap =
-    pinIconBitmapCache.getOrPut(resId) {
+// 단일 아이콘 애셋을 선택 여부에 따라 24dp/34dp로 스케일링해서 그린다(비율은 원본 유지, 크기는 그대로).
+private const val PIN_ICON_SIZE_DP = 24
+private const val PIN_ICON_SIZE_SELECTED_DP = 34
+
+private fun Context.pinIconBitmap(@DrawableRes resId: Int, selected: Boolean): Bitmap =
+    pinIconBitmapCache.getOrPut(resId to selected) {
         val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
-        // 이전에는 리소스가 선언한 실제 크기(ic_map_pin_*_selected.xml은 34dp로 선택 시 더 크게
-        // 보이도록 디자인됐고, 그 외는 24dp)를 무시하고 항상 32dp 고정 캔버스로 래스터화했다 —
-        // setBounds()가 캔버스 크기를 그대로 그리기 영역으로 쓰기 때문에 리소스 고유의
-        // android:width/height는 사실상 무시됐다. 그 결과 마커를 선택해도 아이콘이 커지지
-        // 않았다. intrinsicWidth/Height(리소스에 선언된 dp가 이미 기기 density로 환산된 값)를
-        // 그대로 캔버스 크기로 써서 선택 시 실제로 더 크게 그려지게 한다.
-        val width = drawable.intrinsicWidth.coerceAtLeast(1)
-        val height = drawable.intrinsicHeight.coerceAtLeast(1)
+        val density = resources.displayMetrics.density
+        val targetPx = ((if (selected) PIN_ICON_SIZE_SELECTED_DP else PIN_ICON_SIZE_DP) * density).toInt().coerceAtLeast(1)
+        val intrinsicWidth = drawable.intrinsicWidth.coerceAtLeast(1)
+        val intrinsicHeight = drawable.intrinsicHeight.coerceAtLeast(1)
+        val scale = targetPx.toFloat() / maxOf(intrinsicWidth, intrinsicHeight)
+        val width = (intrinsicWidth * scale).toInt().coerceAtLeast(1)
+        val height = (intrinsicHeight * scale).toInt().coerceAtLeast(1)
         Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
             val canvas = Canvas(bitmap)
+            // 아이콘 자체가 핀 모양(위쪽 원형 머리 + 아래쪽 꼬리)이라, 흰 배경 원은 꼬리까지 덮지
+            // 않도록 이미지 최상단(원형 머리 = 가로 폭과 같은 지름)에만 맞춰 그린다(테두리 없음).
+            val radius = width / 2f
+            val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(width / 2f, radius, radius, circlePaint)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
         }
