@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -58,9 +59,14 @@ import com.kakao.vectormap.route.RouteLineStyles
 import com.kakao.vectormap.route.RouteLineStylesSet
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.DefaultSearchOrigin
+import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 
 enum class MapPinType { HOSPITAL, TOURIST, FOOD }
+
+// 코스 동선(RecommendedCourseScreen)의 첫/마지막 정거장 전용 마커 — 번호 배지 대신 출발·도착
+// 전용 이미지(cource_detail_start/end)로 표시한다.
+enum class RouteEndpointKind { START, END }
 
 data class MapPin(
     val id: String,
@@ -68,7 +74,8 @@ data class MapPin(
     val longitude: Double,
     val type: MapPinType,
     val selected: Boolean = false,
-    val sequenceNumber: Int? = null
+    val sequenceNumber: Int? = null,
+    val endpointKind: RouteEndpointKind? = null
 )
 
 data class MapRoutePoint(val latitude: Double, val longitude: Double)
@@ -76,7 +83,7 @@ data class MapRoutePoint(val latitude: Double, val longitude: Double)
 data class MapRoutePath(
     val id: String,
     val points: List<MapRoutePoint>,
-    val color: Int = 0xFFFF6F61.toInt()
+    val color: Int = CoralRouteColor
 )
 
 /**
@@ -316,7 +323,7 @@ fun KakaoMapView(
 
     LaunchedEffect(kakaoMap, routePaths) {
         val map = kakaoMap ?: return@LaunchedEffect
-        renderRoutePaths(map, routePaths)
+        renderRoutePaths(context, map, routePaths)
     }
 
     LaunchedEffect(kakaoMap, routeStops) {
@@ -489,6 +496,21 @@ private fun Context.routeArrowBitmap(): Bitmap = routeArrowBitmapCache ?: run {
     }.also { routeArrowBitmapCache = it }
 }
 
+// 코스 경로선(renderRoutePaths) 전용 축소 화살촉 — ic_route_arrow_course.xml 참고. routeStops용
+// routeArrowBitmap()과는 별도 캐시로 둬서 서로의 크기에 영향을 주지 않는다.
+private var courseRouteArrowBitmapCache: Bitmap? = null
+
+private fun Context.courseRouteArrowBitmap(): Bitmap = courseRouteArrowBitmapCache ?: run {
+    val drawable = requireNotNull(ContextCompat.getDrawable(this, R.drawable.ic_route_arrow_course)) { "drawable not found: ic_route_arrow_course" }
+    val width = drawable.intrinsicWidth.coerceAtLeast(1)
+    val height = drawable.intrinsicHeight.coerceAtLeast(1)
+    Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+    }.also { courseRouteArrowBitmapCache = it }
+}
+
 // 선택/비선택 전용 애셋이 따로 없는 단일 아이콘(map_hospitalmaker/map_travelmaker/map_foodmaker)이라,
 // 선택 여부는 아이콘을 바꾸는 게 아니라 pinIconBitmap()에서 크기만 다르게 그려서 표현한다.
 private fun MapPin.iconRes(): Int = when (type) {
@@ -499,10 +521,19 @@ private fun MapPin.iconRes(): Int = when (type) {
 
 private fun MapPin.toLabelStyle(context: Context): LabelStyle =
     LabelStyle.from(
-        sequenceNumber?.let { context.numberedPinBitmap(it, selected) } ?: context.pinIconBitmap(iconRes(), selected)
+        when {
+            endpointKind == RouteEndpointKind.START -> context.routeEndpointBitmap(R.drawable.cource_detail_start)
+            endpointKind == RouteEndpointKind.END -> context.routeEndpointBitmap(R.drawable.cource_detail_end)
+            sequenceNumber != null -> context.numberedPinBitmap(sequenceNumber, selected)
+            else -> context.pinIconBitmap(iconRes(), selected)
+        }
     ).setIconTransition(PinSelectTransition)
 
-private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
+// RouteLineStyle 자체는 선-두께 + 테두리 한 겹만 지원해서, 노드(numberedPinBitmap)처럼 "코랄
+// 코어 + 흰 여백 + 회색 경계선" 3겹을 내려면 같은 좌표를 폭만 다르게 겹쳐 그려야 한다 — 가장 넓은
+// 회색 선(경계선)을 맨 아래에, 그보다 좁은 흰 선(여백)을 가운데, 원래 두께의 코랄 선(+화살표 패턴)을
+// 맨 위에 순서대로 쌓는다(zOrder로 순서 고정, 위층이 아래층 중앙을 덮어 테두리처럼 보이게 만든다).
+private fun renderRoutePaths(context: Context, map: KakaoMap, paths: List<MapRoutePath>) {
     val manager = map.routeLineManager ?: return
     if (paths.isEmpty()) {
         manager.getLayer(COURSE_ROUTE_LAYER_ID)?.removeAll()
@@ -511,17 +542,21 @@ private fun renderRoutePaths(map: KakaoMap, paths: List<MapRoutePath>) {
     val layer = manager.getLayer(COURSE_ROUTE_LAYER_ID)
         ?: manager.addLayer(COURSE_ROUTE_LAYER_ID, COURSE_ROUTE_Z_ORDER)
     layer.removeAll()
+    val pattern = RouteLinePattern.from(context.courseRouteArrowBitmap(), COURSE_ROUTE_ARROW_PATTERN_DISTANCE_PX)
+    val marginWidth = COURSE_LINE_WIDTH_PX + 2 * COURSE_LINE_MARGIN_WIDTH_PX
+    val borderWidth = marginWidth + 2 * COURSE_LINE_BORDER_WIDTH_PX
     paths.forEach { path ->
         if (path.points.size < 2) return@forEach
         val points = path.points.map { LatLng.from(it.latitude, it.longitude) }
-        val style = RouteLineStyle.from(
-            COURSE_LINE_WIDTH_PX,
-            path.color,
-            COURSE_LINE_STROKE_WIDTH_PX,
-            android.graphics.Color.WHITE
-        )
-        val segment = RouteLineSegment.from(points, style)
-        layer.addRouteLine(RouteLineOptions.from(path.id, segment))
+
+        val borderSegment = RouteLineSegment.from(points, RouteLineStyle.from(borderWidth, COURSE_LINE_BORDER_COLOR))
+        layer.addRouteLine(RouteLineOptions.from("${path.id}-border", borderSegment).setZOrder(0))
+
+        val marginSegment = RouteLineSegment.from(points, RouteLineStyle.from(marginWidth, android.graphics.Color.WHITE))
+        layer.addRouteLine(RouteLineOptions.from("${path.id}-margin", marginSegment).setZOrder(1))
+
+        val coreSegment = RouteLineSegment.from(points, RouteLineStyle.from(COURSE_LINE_WIDTH_PX, path.color, pattern))
+        layer.addRouteLine(RouteLineOptions.from("${path.id}-core", coreSegment).setZOrder(2))
     }
 }
 
@@ -562,25 +597,34 @@ private fun Context.pinIconBitmap(@DrawableRes resId: Int, selected: Boolean): B
         }
     }
 
+// 경유지 번호 핀 — 코랄 코어 + 흰 여백 + 회색 경계선, 코스 경로선(renderRoutePaths)과 같은 3겹
+// 구성을 원 마커에 그대로 옮긴 것이다(선은 폭을 겹쳐 쌓았지만, 원은 반지름을 줄여가며 채운 원을
+// 겹쳐 그리는 것으로 같은 효과를 낸다).
 private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
     numberedPinBitmapCache.getOrPut(number to selected) {
         val density = resources.displayMetrics.density
-        val size = (if (selected) 32 else 28) * density
+        val size = (if (selected) 29 else 25) * density
         val bitmapSize = size.toInt().coerceAtLeast(1)
+        val borderWidth = PIN_BORDER_WIDTH_DP * density
+        val marginWidth = PIN_MARGIN_WIDTH_DP * density
         Bitmap.createBitmap(bitmapSize, bitmapSize, Bitmap.Config.ARGB_8888).also { bitmap ->
             val canvas = Canvas(bitmap)
             val center = bitmapSize / 2f
-            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = if (selected) 0xFFE9564F.toInt() else 0xFFFF6F61.toInt()
+            val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = COURSE_LINE_BORDER_COLOR
                 style = Paint.Style.FILL
             }
-            val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            val marginPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = android.graphics.Color.WHITE
-                style = Paint.Style.STROKE
-                strokeWidth = 2f * density
+                style = Paint.Style.FILL
             }
-            canvas.drawCircle(center, center, center - border.strokeWidth, fill)
-            canvas.drawCircle(center, center, center - border.strokeWidth, border)
+            val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (selected) CoralRouteColorSelected else CoralRouteColor
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(center, center, center, borderPaint)
+            canvas.drawCircle(center, center, center - borderWidth, marginPaint)
+            canvas.drawCircle(center, center, center - borderWidth - marginWidth, corePaint)
             val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = android.graphics.Color.WHITE
                 textAlign = Paint.Align.CENTER
@@ -592,6 +636,51 @@ private fun Context.numberedPinBitmap(number: Int, selected: Boolean): Bitmap =
         }
     }
 
+// 코스 시작/도착 전용 마커(cource_detail_start/end) — 원본 PNG는 코랄 원 + 흰 화살표 아이콘뿐이라,
+// 번호 핀과 같은 흰 여백/회색 경계선 링을 직접 덧그리고 그 안쪽에 원본 이미지를 줄여서 앉힌다.
+// 전체 마커 크기(ROUTE_ENDPOINT_ICON_SIZE_DP)는 그대로 두고 사진만 안쪽으로 줄어든다.
+private val routeEndpointBitmapCache = mutableMapOf<Int, Bitmap>()
+private const val ROUTE_ENDPOINT_ICON_SIZE_DP = 29
+private const val ROUTE_ENDPOINT_MARGIN_WIDTH_DP = 0.6f
+
+private fun Context.routeEndpointBitmap(@DrawableRes resId: Int): Bitmap =
+    routeEndpointBitmapCache.getOrPut(resId) {
+        val drawable = requireNotNull(ContextCompat.getDrawable(this, resId)) { "drawable not found: $resId" }
+        val density = resources.displayMetrics.density
+        val size = (ROUTE_ENDPOINT_ICON_SIZE_DP * density).toInt().coerceAtLeast(1)
+        val borderWidth = PIN_BORDER_WIDTH_DP * density
+        // 번호 핀(PIN_MARGIN_WIDTH_DP)의 절반 — 출발/도착 마커만 흰 여백을 더 얇게.
+        val marginWidth = ROUTE_ENDPOINT_MARGIN_WIDTH_DP * density
+        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+            val canvas = Canvas(bitmap)
+            val center = size / 2f
+            val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = COURSE_LINE_BORDER_COLOR
+                style = Paint.Style.FILL
+            }
+            val marginPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(center, center, center, borderPaint)
+            canvas.drawCircle(center, center, center - borderWidth, marginPaint)
+
+            val photoRadius = center - borderWidth - marginWidth
+            val photoSize = (photoRadius * 2f).toInt().coerceAtLeast(1)
+            val photoOffset = ((size - photoSize) / 2f).toInt()
+            canvas.save()
+            canvas.translate(photoOffset.toFloat(), photoOffset.toFloat())
+            drawable.setBounds(0, 0, photoSize, photoSize)
+            drawable.draw(canvas)
+            canvas.restore()
+        }
+    }
+
+// 번호 핀/시작·도착 마커가 공유하는 흰 여백·회색 경계선 두께 — 코스 경로선(COURSE_LINE_MARGIN_WIDTH_PX
+// 등)과 같은 비율감을 원 마커 크기(22~36dp)에 맞게 줄인 값이다.
+private const val PIN_BORDER_WIDTH_DP = 1.5f
+private const val PIN_MARGIN_WIDTH_DP = 2f
+
 private const val DEFAULT_ZOOM_LEVEL = 12
 private const val SINGLE_PIN_ZOOM_LEVEL = 16
 private const val FIT_PADDING_PX = 140
@@ -600,5 +689,16 @@ private const val ROUTE_LINE_WIDTH_PX = 10f
 private const val ROUTE_LINE_COLOR = 0xFFFF6F61.toInt()
 private const val COURSE_ROUTE_LAYER_ID = "recommended-tourism-course"
 private const val COURSE_ROUTE_Z_ORDER = 20_000
-private const val COURSE_LINE_WIDTH_PX = 5f
-private const val COURSE_LINE_STROKE_WIDTH_PX = 1.5f
+private const val COURSE_LINE_WIDTH_PX = 16f
+// 코랄 코어 양옆 흰색 여백대의 (한쪽) 두께 — 10f의 약 75%.
+private const val COURSE_LINE_MARGIN_WIDTH_PX = 7.5f
+// 흰 여백 바깥쪽에 얇게 두르는 경계선의 (한쪽) 두께.
+private const val COURSE_LINE_BORDER_WIDTH_PX = 1.5f
+private val COURSE_LINE_BORDER_COLOR = android.graphics.Color.parseColor("#9E9E9E")
+// 화살촉 아이콘(16dp)보다 좁으면 아이콘끼리 겹쳐 "군데군데 두 개씩 붙어 보이는" 불균일한 느낌이
+// 났다 — 아이콘 폭보다 확실히 넓게 잡아 겹침 없이 고른 간격을 유지한다.
+private const val COURSE_ROUTE_ARROW_PATTERN_DISTANCE_PX = 30f
+
+// core/designsystem/Color.kt의 CoralPrimary와 같은 색 — 코스 경로선/번호 노드 모두 이 값을 쓴다.
+private val CoralRouteColor = CoralPrimary.toArgb()
+private val CoralRouteColorSelected = Color(0xFFE36A6D).toArgb()
