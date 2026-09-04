@@ -8,10 +8,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-/** F-002 언어 선택, F-003 의료 목적 선택, F-001 최초 실행 여부를 담는 스칼라 값들. */
+/** F-002 언어 선택, F-003 의료 목적 선택을 담는 스칼라 값들. */
 data class UserPreferences(
     val languageCode: String = SupportedLanguage.DEFAULT.code,
-    val onboardingComplete: Boolean = false,
     val medicalPurpose: MedicalCategory? = null,
     val notificationsEnabled: Boolean = true
 )
@@ -19,7 +18,6 @@ data class UserPreferences(
 interface UserPreferencesRepository {
     val userPreferences: Flow<UserPreferences>
     suspend fun setLanguageCode(languageCode: String)
-    suspend fun setOnboardingComplete(complete: Boolean)
     suspend fun setMedicalPurpose(purpose: MedicalCategory?)
     suspend fun setNotificationsEnabled(enabled: Boolean)
 }
@@ -31,7 +29,6 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override val userPreferences: Flow<UserPreferences> = dataStore.data.map { prefs ->
         UserPreferences(
             languageCode = prefs[UserPreferencesKeys.LANGUAGE_CODE] ?: SupportedLanguage.DEFAULT.code,
-            onboardingComplete = prefs[UserPreferencesKeys.ONBOARDING_COMPLETE] ?: false,
             medicalPurpose = prefs[UserPreferencesKeys.MEDICAL_PURPOSE]?.let { stored ->
                 // enum 도입 전에는 라벨 문자열("피부·미용" 등)을 그대로 저장했다. 기존 저장값이
                 // 업데이트 후 조용히 null이 되지 않도록 name 매칭 실패 시 label로도 조회한다.
@@ -44,10 +41,6 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setLanguageCode(languageCode: String) {
         dataStore.edit { it[UserPreferencesKeys.LANGUAGE_CODE] = languageCode }
-    }
-
-    override suspend fun setOnboardingComplete(complete: Boolean) {
-        dataStore.edit { it[UserPreferencesKeys.ONBOARDING_COMPLETE] = complete }
     }
 
     override suspend fun setMedicalPurpose(purpose: MedicalCategory?) {

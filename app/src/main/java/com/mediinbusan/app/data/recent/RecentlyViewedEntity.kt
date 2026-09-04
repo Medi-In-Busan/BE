@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class RecentlyViewedEntity(
     @PrimaryKey val itemId: String,
     val itemName: String,
-    val itemType: String, // FavoriteItemType.name ("HOSPITAL" | "PLACE")
+    val itemType: String, // RecentItemType.name ("HOSPITAL" | "PLACE" | "TOURISM_ITEM")
     val imageUrl: String?,
     val viewedAt: Long,
     // 카드에서 의료기관 리스트(SearchResultCard)와 같은 태그/주소/거리 표시를 하기 위한 스냅샷.
@@ -15,5 +15,10 @@ data class RecentlyViewedEntity(
     val subtitle: String = "",
     val address: String = "",
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    // itemType == TOURISM_ITEM일 때만 채워진다. 재조회(findMatchingPlace) 시 필요한 컨텍스트 —
+    // tourismDistrict가 있으면 tourismCategory+itemName으로 최신 데이터를 다시 찾고, 없으면
+    // (구·군 비종속 카테고리) 이 스냅샷만 그대로 보여준다. RecentlyViewed.kt 주석 참고.
+    val tourismCategory: String? = null,
+    val tourismDistrict: String? = null
 )

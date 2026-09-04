@@ -1,10 +1,19 @@
 package com.mediinbusan.app.core.common
 
+import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class PendingTourismSelection(
+    val category: TourismCatalogCategory,
+    val item: TourismCatalogItem,
+    // 최근 본 항목 재조회(findMatchingPlace)에 쓰는 구·군 컨텍스트. 구·군 비종속 카테고리(WALKING/
+    // AUDIO/PHOTOS 등)는 null — TourismCatalogItemDetailViewModel이 이 경우 재조회를 시도하지 않는다.
+    val district: BusanDistrict?
+)
 
 /**
  * 관광 데이터 목록(S-07 카탈로그)에서 상세 화면으로 넘어갈 때 선택한 항목을 1회성으로 실어 보내는
@@ -19,13 +28,11 @@ import javax.inject.Singleton
  */
 @Singleton
 class PendingTourismCatalogItem @Inject constructor() {
-    private data class Entry(val category: TourismCatalogCategory, val item: TourismCatalogItem)
-
     @Volatile
-    private var entry: Entry? = null
+    private var entry: PendingTourismSelection? = null
 
-    fun set(category: TourismCatalogCategory, item: TourismCatalogItem) {
-        entry = Entry(category, item)
+    fun set(category: TourismCatalogCategory, item: TourismCatalogItem, district: BusanDistrict?) {
+        entry = PendingTourismSelection(category, item, district)
     }
 
     fun setHotPlace(hotPlace: TourismHotPlace) {
@@ -39,10 +46,10 @@ class PendingTourismCatalogItem @Inject constructor() {
                         ?: hotPlace.district.label),
                     "congestionRate" to hotPlace.congestionRate.toString()
                 )
-            )
+            ),
+            district = hotPlace.district
         )
     }
 
-    fun consume(): Pair<TourismCatalogCategory, TourismCatalogItem>? =
-        entry?.let { it.category to it.item }.also { entry = null }
+    fun consume(): PendingTourismSelection? = entry.also { entry = null }
 }
