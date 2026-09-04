@@ -9,26 +9,41 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * TourAPI cat3 → {@link WellnessPlaceCategory} 매핑.
  *
- * 여기서 지키려는 건 "코드 표가 정확하다"가 아니라 — 그건 실제 응답으로만 확인할 수 있다
- * (WellnessDtoMapper.categoryOf 주석 참고) — <b>모르는 코드가 들어와도 터지지 않고 OTHER로
- * 떨어진다</b>는 쪽이다. 표가 틀려 있어도 목록이 깨지지 않고 세분화만 안 되게 하는 안전장치다.
+ * 두 가지를 지킨다. 하나는 <b>모르는 코드가 들어와도 터지지 않고 OTHER로 떨어진다</b>는 안전장치.
+ * 다른 하나는 <b>코드 표가 한국관광공사 서비스 분류체계와 일치한다</b>는 것이다 — 처음엔 서비스키가
+ * 없어 표를 검증하지 못한 채 두었는데, 그 사이 대형마트(A04010400)와 면세점(A04010500)이 서로
+ * 뒤바뀌고 쇼핑센터(A04010100)가 전통시장으로 분류된 걸 이 테스트가 오히려 굳혀 놓고 있었다.
+ * 기대값을 바꿀 때는 코드가 아니라 공식 분류표(data.visitkorea.or.kr/resource/A04)를 먼저 볼 것.
  */
 class WellnessDtoMapperCategoryTest {
 
     @Test
-    @DisplayName("쇼핑_하위_코드는_세부_분류로_옮겨진다")
-    void 쇼핑_하위_코드는_세부_분류로_옮겨진다() {
+    @DisplayName("쇼핑_하위_코드는_공식_분류_그대로_옮겨진다")
+    void 쇼핑_하위_코드는_공식_분류_그대로_옮겨진다() {
         assertThat(WellnessDtoMapper.categoryOf("A04010300")).isEqualTo(WellnessPlaceCategory.DEPARTMENT_STORE);
         assertThat(WellnessDtoMapper.categoryOf("A04010200")).isEqualTo(WellnessPlaceCategory.TRADITIONAL_MARKET);
-        assertThat(WellnessDtoMapper.categoryOf("A04010400")).isEqualTo(WellnessPlaceCategory.DUTY_FREE);
+        assertThat(WellnessDtoMapper.categoryOf("A04010400")).isEqualTo(WellnessPlaceCategory.LARGE_MART);
+        assertThat(WellnessDtoMapper.categoryOf("A04010500")).isEqualTo(WellnessPlaceCategory.DUTY_FREE);
+        assertThat(WellnessDtoMapper.categoryOf("A04010700")).isEqualTo(WellnessPlaceCategory.CRAFT_WORKSHOP);
+        assertThat(WellnessDtoMapper.categoryOf("A04010900")).isEqualTo(WellnessPlaceCategory.LOCAL_PRODUCTS);
     }
 
     @Test
-    @DisplayName("5일장과_상설시장은_같은_전통시장으로_묶인다")
-    void 오일장과_상설시장은_같은_전통시장으로_묶인다() {
-        assertThat(WellnessDtoMapper.categoryOf("A04010100"))
-            .isEqualTo(WellnessDtoMapper.categoryOf("A04010200"))
-            .isEqualTo(WellnessPlaceCategory.TRADITIONAL_MARKET);
+    @DisplayName("면세점과_사후면세점은_같은_분류로_묶인다")
+    void 면세점과_사후면세점은_같은_분류로_묶인다() {
+        // WellnessPlaceCategory.DUTY_FREE의 정의가 "면세점(사후면세점 포함)"이다.
+        assertThat(WellnessDtoMapper.categoryOf("A04011000"))
+            .isEqualTo(WellnessDtoMapper.categoryOf("A04010500"))
+            .isEqualTo(WellnessPlaceCategory.DUTY_FREE);
+    }
+
+    @Test
+    @DisplayName("쇼핑센터와_기념품점은_전문매장_상가로_묶인다")
+    void 쇼핑센터와_기념품점은_전문매장_상가로_묶인다() {
+        // 쇼핑센터(A04010100)는 시장이 아니라 상가다 — 별도 분류를 두지 않고
+        // SPECIALTY_STORE("전문매장·상가")에 넣는다(WellnessDtoMapper.categoryOf 주석 참고).
+        assertThat(WellnessDtoMapper.categoryOf("A04010100")).isEqualTo(WellnessPlaceCategory.SPECIALTY_STORE);
+        assertThat(WellnessDtoMapper.categoryOf("A04010600")).isEqualTo(WellnessPlaceCategory.SPECIALTY_STORE);
     }
 
     @Test
