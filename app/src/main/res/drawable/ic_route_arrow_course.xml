@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- ic_route_arrow.xml과 같은 노치형 화살촉을, 굵어진 코스 경로선(core/ui/KakaoMapView.kt의
+         renderRoutePaths) 안쪽에 여백을 두고 들어오도록 캔버스 자체를 줄이고(24dp→16dp) 그
+         안에서 한 번 더 중심 축소했다. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,7.1 L16.55,14.9 L12,12.6 L7.45,14.9 Z" />
+</vector>

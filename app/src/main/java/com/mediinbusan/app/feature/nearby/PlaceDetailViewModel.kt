@@ -11,6 +11,7 @@ import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceRepository
 import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +65,7 @@ class PlaceDetailViewModel @Inject constructor(
             recentRepository.recordView(
                 itemId = place.id,
                 itemName = place.name,
-                itemType = FavoriteItemType.PLACE,
+                itemType = RecentItemType.PLACE,
                 imageUrl = place.imageUrl,
                 subtitle = place.type.localizedLabel(languageCode),
                 address = place.address,

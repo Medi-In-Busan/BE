@@ -16,7 +16,7 @@ import com.mediinbusan.app.data.searchhistory.SearchHistoryEntity
  */
 @Database(
     entities = [FavoriteEntity::class, RecentlyViewedEntity::class, SearchHistoryEntity::class],
-    version = 4, // v4: Favorite/RecentlyViewed에 subtitle/address/latitude/longitude 추가 (MIGRATION_3_4)
+    version = 5, // v5: RecentlyViewed에 tourismCategory/tourismDistrict 추가 (MIGRATION_4_5)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -8,6 +8,7 @@ import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.route.DrivingRoute
 import com.mediinbusan.app.data.route.DrivingRoutePoint
@@ -101,10 +102,10 @@ class RecommendedCourseViewModel @Inject constructor(
                 .map { it.name }
             val recent = recentRepository.observeRecentlyViewed().first()
             val recentPlaceNames = recent
-                .filter { it.itemType == FavoriteItemType.PLACE }
+                .filter { it.itemType == RecentItemType.PLACE }
                 .map { it.itemName }
             val recentHospital = recent.firstOrNull {
-                it.itemType == FavoriteItemType.HOSPITAL && it.latitude != null && it.longitude != null
+                it.itemType == RecentItemType.HOSPITAL && it.latitude != null && it.longitude != null
             }
             val reference = recentHospital?.let {
                 TourismReferenceLocation(requireNotNull(it.latitude), requireNotNull(it.longitude))
@@ -160,6 +161,22 @@ class RecommendedCourseViewModel @Inject constructor(
 
     fun selectStop(itemId: String) {
         _uiState.update { it.copy(selectedStopId = itemId) }
+        val stop = recommendedCourse?.stops?.firstOrNull { it.item.id == itemId }?.item ?: return
+        val state = _uiState.value
+        viewModelScope.launch {
+            recentRepository.recordView(
+                itemId = stop.id,
+                itemName = stop.title,
+                itemType = RecentItemType.TOURISM_ITEM,
+                imageUrl = stop.imageUrl,
+                subtitle = stop.subtitle ?: "",
+                address = stop.address ?: "",
+                latitude = stop.latitude,
+                longitude = stop.longitude,
+                tourismCategory = state.category?.name,
+                tourismDistrict = state.district?.name
+            )
+        }
     }
 
     fun selectTravelMode(mode: TravelMode) {

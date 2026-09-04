@@ -13,9 +13,6 @@ sealed interface Route {
     data object Splash : Route // S-01
 
     @Serializable
-    data object Onboarding : Route // S-02
-
-    @Serializable
     data object Home : Route // S-03
 
     // S-04, 구 HospitalList + Search 통합. 인자를 일부러 안 둔다 — medicalPurpose 필터도,
@@ -99,8 +96,10 @@ sealed interface Route {
         val district: String? = null
     ) : Route // S-07 개인화 추천 관광지 3~5개 코스 지도
 
+    // S-07 하위 관광 데이터 항목 상세. recentItemId가 있으면 "최근 본 항목"에서 재진입한 것 —
+    // PendingTourismCatalogItem 대신 그 id로 저장된 스냅샷/재조회를 쓴다(TourismCatalogItemDetailViewModel 참고).
     @Serializable
-    data object TourismCatalogItemDetail : Route // S-07 하위 관광 데이터 항목 상세
+    data class TourismCatalogItemDetail(val recentItemId: String? = null) : Route
 
     // S-08. courseId가 non-null이면(hospitalId도 non-null이어야 함) 웰니스 코스 동선 모드 — 해당 코스의
     // 장소들을 방문 순서대로 번호 마커+연결선으로 그린다(feature/nearby의 WellnessCourseCard "이 코스
@@ -154,15 +153,5 @@ internal fun NavHostController.navigateToTab(route: Route) {
         popUpTo(Route.Home) { saveState = true }
         launchSingleTop = true
         restoreState = true
-    }
-}
-
-/**
- * 최초 실행 설정 흐름(언어선택) 완료 시 Home으로 이동하며 그 전까지 쌓인 스택을 비운다.
- * 특정 destination을 popUpTo 기준으로 잡을 필요 없이 그래프 전체를 기준으로 비운다.
- */
-internal fun NavHostController.navigateToHomeAfterSetup() {
-    navigate(Route.Home) {
-        popUpTo(graph.id) { inclusive = true }
     }
 }

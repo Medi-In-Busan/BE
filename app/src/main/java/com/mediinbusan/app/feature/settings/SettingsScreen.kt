@@ -539,7 +539,6 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     )
 }
 
-// feature/languageselect의 LanguageOption 라벨(한국어/ENGLISH/日本語/中文)과 표기를 통일한다.
 // 언어 설정 카드의 세그먼트 버튼 전용. 언어 코드(ko/en/ja/zh) 자체는 그대로 두고 화면에
 // 보여주는 문자열만 맞춘다.
 private fun String.toShortLabel(): String = when (this) {

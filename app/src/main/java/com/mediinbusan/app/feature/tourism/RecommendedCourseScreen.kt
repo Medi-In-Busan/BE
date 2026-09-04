@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,12 +26,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -64,11 +65,9 @@ import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
-import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -76,6 +75,7 @@ import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.RouteEndpointKind
 import com.mediinbusan.app.core.ui.MapRoutePath
 import com.mediinbusan.app.core.ui.MapRoutePoint
 import com.mediinbusan.app.data.route.DrivingRoute
@@ -94,7 +94,6 @@ fun RecommendedCourseScreen(
     viewModel: RecommendedCourseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var mapFocusRequestId by remember { mutableIntStateOf(0) }
     val strings = uiState.language.courseStrings()
     val currentLanguage = LocalAppStrings.current.language
     LaunchedEffect(categoryName, districtName, currentLanguage) {
@@ -102,14 +101,10 @@ fun RecommendedCourseScreen(
     }
 
     Scaffold(
-        containerColor = HomeBackgroundPink,
-        topBar = {
-            BackOnlyNavigationBar(
-                onBack = onBack,
-                background = HomeBackgroundPink,
-                onMapDetailsClick = uiState.course?.let { { mapFocusRequestId++ } }
-            )
-        }
+        containerColor = Color.White,
+        // 탑바를 아예 없애 히어로 사진이 화면 맨 위(상태바 아래까지)까지 올라오게 하고, 뒤로가기는
+        // TourismCourseHero 안에서 사진 위에 떠 있는 아이콘으로 대신한다.
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         when {
             uiState.isLoading -> LoadingState(modifier = Modifier.padding(innerPadding))
@@ -124,6 +119,7 @@ fun RecommendedCourseScreen(
             )
             else -> CourseContent(
                 modifier = Modifier.padding(innerPadding),
+                onBack = onBack,
                 course = requireNotNull(uiState.course),
                 route = requireNotNull(uiState.route),
                 courseTitle = recommendedCourseTitle(
@@ -137,7 +133,6 @@ fun RecommendedCourseScreen(
                 isRouteRefreshing = uiState.isRouteRefreshing,
                 routeErrorMessage = uiState.routeErrorMessage,
                 strings = strings,
-                mapFocusRequestId = mapFocusRequestId,
                 onSelectStop = viewModel::selectStop,
                 onTravelModeSelect = viewModel::selectTravelMode
             )
@@ -148,6 +143,7 @@ fun RecommendedCourseScreen(
 @Composable
 private fun CourseContent(
     modifier: Modifier,
+    onBack: () -> Unit,
     course: RecommendedTourismCourse,
     route: DrivingRoute,
     courseTitle: String,
@@ -157,7 +153,6 @@ private fun CourseContent(
     isRouteRefreshing: Boolean,
     routeErrorMessage: String?,
     strings: CourseStrings,
-    mapFocusRequestId: Int,
     onSelectStop: (String) -> Unit,
     onTravelModeSelect: (TravelMode) -> Unit
 ) {
@@ -165,15 +160,24 @@ private fun CourseContent(
     var zoomInRequestId by remember { mutableIntStateOf(0) }
     var zoomOutRequestId by remember { mutableIntStateOf(0) }
     var isMapInteractionActive by remember { mutableStateOf(false) }
+    // 첫/마지막 정거장은 번호 대신 출발·도착 전용 마커(course_detail_start/end)로 바꾸고, 그 사이
+    // 경유지들은 1번부터 다시 순서를 매긴다(예: 5개 코스면 1=시작, 2·3·4→1·2·3, 5=도착).
     val pins = remember(course, selectedStopId) {
-        course.stops.map { stop ->
+        val lastIndex = course.stops.lastIndex
+        course.stops.mapIndexed { index, stop ->
+            val endpointKind = when (index) {
+                0 -> RouteEndpointKind.START
+                lastIndex -> RouteEndpointKind.END
+                else -> null
+            }
             MapPin(
                 id = stop.item.id,
                 latitude = requireNotNull(stop.item.latitude),
                 longitude = requireNotNull(stop.item.longitude),
                 type = MapPinType.TOURIST,
                 selected = stop.item.id == selectedStopId,
-                sequenceNumber = stop.order
+                sequenceNumber = if (endpointKind == null) index else null,
+                endpointKind = endpointKind
             )
         }
     }
@@ -184,10 +188,6 @@ private fun CourseContent(
                 points = route.path.map { MapRoutePoint(it.latitude, it.longitude) }
             )
         )
-    }
-
-    LaunchedEffect(mapFocusRequestId) {
-        if (mapFocusRequestId > 0) listState.animateScrollToItem(COURSE_MAP_ITEM_INDEX)
     }
 
     LazyColumn(
@@ -205,7 +205,8 @@ private fun CourseContent(
                 selectedStopId = selectedStopId,
                 travelMode = travelMode,
                 strings = strings,
-                onSelectStop = onSelectStop
+                onSelectStop = onSelectStop,
+                onBack = onBack
             )
         }
         item {
@@ -285,8 +286,6 @@ private fun CourseContent(
     }
 }
 
-private const val COURSE_MAP_ITEM_INDEX = 2
-
 @Composable
 private fun TourismCourseHero(
     course: RecommendedTourismCourse,
@@ -296,7 +295,8 @@ private fun TourismCourseHero(
     selectedStopId: String?,
     travelMode: TravelMode,
     strings: CourseStrings,
-    onSelectStop: (String) -> Unit
+    onSelectStop: (String) -> Unit,
+    onBack: () -> Unit
 ) {
     val selectedStop = course.stops.firstOrNull { it.item.id == selectedStopId }
         ?: course.stops.first()
@@ -318,7 +318,7 @@ private fun TourismCourseHero(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(310.dp)
+                    .height(217.dp)
                     .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
                     .background(CoralPrimaryContainer)
             ) {
@@ -404,6 +404,22 @@ private fun TourismCourseHero(
                         )
                     }
                 }
+                // 탑바가 없어진 자리를 대신해 사진 좌측 상단에 떠 있는 뒤로가기. 위/왼쪽 여백을
+                // 똑같이 4dp로 맞추기 위해 statusBarsPadding은 쓰지 않는다(상태바 높이만큼 위쪽
+                // 여백이 왼쪽보다 훨씬 커지는 걸 막기 위해 대칭을 우선한다).
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronLeft,
+                        contentDescription = LocalAppStrings.current.common.backContentDescription,
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
 
             Column(
@@ -413,7 +429,7 @@ private fun TourismCourseHero(
                 Text(
                     text = strings.summary(course.stops.size, route, travelMode),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CoralPrimary,
+                    color = TextPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
                 TourismCourseStopSelector(
@@ -568,7 +584,7 @@ private fun TransferLeg(section: DrivingRouteSection, travelMode: TravelMode, st
         modifier = Modifier.padding(start = 19.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.width(2.dp).height(34.dp).background(CoralPrimary.copy(alpha = 0.35f)))
+        DottedTransferLine(modifier = Modifier.width(4.dp).height(34.dp))
         Spacer(Modifier.width(18.dp))
         Icon(
             if (travelMode == TravelMode.DRIVING) Icons.Default.DirectionsCar else Icons.AutoMirrored.Filled.DirectionsWalk,
@@ -585,6 +601,21 @@ private fun TransferLeg(section: DrivingRouteSection, travelMode: TravelMode, st
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
         )
+    }
+}
+
+// 정거장 사이 이동 구간을 잇는 세로선을 원형 점 5개로 표시한다. dash 패턴 대신 높이를 5등분해서
+// 각 구간 중앙에 점을 하나씩 찍어 개수를 정확히 고정한다.
+@Composable
+private fun DottedTransferLine(modifier: Modifier = Modifier, dotCount: Int = 5) {
+    val dotColor = CoralPrimary.copy(alpha = 0.5f)
+    Canvas(modifier = modifier) {
+        val radius = size.width / 2f
+        val centerX = size.width / 2f
+        repeat(dotCount) { index ->
+            val centerY = size.height * (index + 0.5f) / dotCount
+            drawCircle(color = dotColor, radius = radius, center = Offset(centerX, centerY))
+        }
     }
 }
 
@@ -635,7 +666,6 @@ private fun CourseStopRow(stop: RecommendedTourismStop, selected: Boolean, onCli
 
 private data class CourseStrings(
     val back: String,
-    val topBarTitle: String,
     val notEnoughPlaces: String,
     val summary: (Int, DrivingRoute, TravelMode) -> String,
     val transfer: (Int, Double) -> String,
@@ -648,7 +678,6 @@ private data class CourseStrings(
 private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     SupportedLanguage.KO -> CourseStrings(
         back = "뒤로가기",
-        topBarTitle = "추천 웰니스 코스",
         notEnoughPlaces = "코스를 만들 수 있는 위치 정보가 충분하지 않습니다.",
         summary = { stops, route, mode -> "${stops}곳 · ${if (mode == TravelMode.DRIVING) "차량" else "도보"} 이동 약 ${durationKo(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "약 ${minutes}분 · ${formatKm(km)}" },
@@ -658,7 +687,6 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     )
     SupportedLanguage.EN -> CourseStrings(
         back = "Back",
-        topBarTitle = "Recommended route",
         notEnoughPlaces = "There are not enough places with location data to build a course.",
         summary = { stops, route, mode -> "$stops stops · ${if (mode == TravelMode.DRIVING) "driving" else "walking"} about ${durationEn(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "About $minutes min · ${formatKm(km)}" },
@@ -668,7 +696,6 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     )
     SupportedLanguage.JA -> CourseStrings(
         back = "戻る",
-        topBarTitle = "おすすめルート",
         notEnoughPlaces = "コース作成に必要な位置情報が不足しています。",
         summary = { stops, route, mode -> "$stops\u304b\u6240 \u00b7 ${if (mode == TravelMode.DRIVING) "\u8eca" else "\u5f92\u6b69"}\u3067\u7d04${durationJa(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "\u7d04${minutes}\u5206 \u00b7 ${formatKm(km)}" },
@@ -678,7 +705,6 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
     )
     SupportedLanguage.ZH -> CourseStrings(
         back = "返回",
-        topBarTitle = "推荐路线",
         notEnoughPlaces = "没有足够的地点位置信息来生成路线。",
         summary = { stops, route, mode -> "$stops\u5904 \u00b7 ${if (mode == TravelMode.DRIVING) "\u9a7e\u8f66" else "\u6b65\u884c"}\u7ea6${durationZh(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
         transfer = { minutes, km -> "\u7ea6${minutes}\u5206\u949f \u00b7 ${formatKm(km)}" },

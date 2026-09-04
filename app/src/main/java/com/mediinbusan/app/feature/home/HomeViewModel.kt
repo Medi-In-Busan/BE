@@ -9,6 +9,7 @@ import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.hospital.HospitalRepository
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.data.tourism.TourismInteractionRepository
@@ -151,7 +152,7 @@ class HomeViewModel @Inject constructor(
             val favorites = favoriteRepository.observeFavorites().first()
             val recent = recentRepository.observeRecentlyViewed().first()
             val recentHospital = recent.firstOrNull {
-                it.itemType == FavoriteItemType.HOSPITAL && it.latitude != null && it.longitude != null
+                it.itemType == RecentItemType.HOSPITAL && it.latitude != null && it.longitude != null
             }
             val reference = recentHospital?.let {
                 TourismReferenceLocation(requireNotNull(it.latitude), requireNotNull(it.longitude))
@@ -160,7 +161,7 @@ class HomeViewModel @Inject constructor(
             courseFeedContext = HomeCourseFeedContext(
                 profile = profile,
                 favoritePlaceNames = favorites.filter { it.itemType == FavoriteItemType.PLACE }.map { it.name },
-                recentPlaceNames = recent.filter { it.itemType == FavoriteItemType.PLACE }.map { it.itemName },
+                recentPlaceNames = recent.filter { it.itemType == RecentItemType.PLACE }.map { it.itemName },
                 recommendationContext = TourismRecommendationContext(
                     medicalPurpose = preferences.medicalPurpose,
                     referenceLocation = reference,

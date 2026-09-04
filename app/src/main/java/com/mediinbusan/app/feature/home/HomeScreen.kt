@@ -41,9 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -987,7 +985,7 @@ private fun RecommendedHospitalCard(
 ) {
     Column(
         modifier = Modifier
-            .width(170.dp)
+            .width(210.dp)
             .shadow(
                 elevation = 3.dp,
                 shape = MaterialTheme.shapes.large,
@@ -1002,7 +1000,7 @@ private fun RecommendedHospitalCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp)
+                .height(138.dp)
         ) {
             if (hospital.imageUrl != null) {
                 AsyncImageBox(
@@ -1164,14 +1162,15 @@ private fun RecommendedCourseCard(course: HomeRecommendedCourse, onClick: () -> 
                 contentDescription = title,
                 modifier = Modifier.fillMaxSize()
             )
-            Text(
-                text = "${course.course.stops.size}${strings.courseStopsSuffix}",
-                modifier = Modifier.align(Alignment.TopStart).padding(9.dp).background(
-                    color = Color.White.copy(alpha = 0.92f),
-                    shape = CircleShape
-                ).padding(horizontal = 9.dp, vertical = 5.dp),
-                style = MaterialTheme.typography.labelSmall,
-                color = CoralPrimary
+            val stopsBadgeRes = when (course.course.stops.size) {
+                3 -> R.drawable.home_course3
+                4 -> R.drawable.home_course4
+                else -> R.drawable.home_course5
+            }
+            Image(
+                painter = painterResource(id = stopsBadgeRes),
+                contentDescription = "${course.course.stops.size}${strings.courseStopsSuffix}",
+                modifier = Modifier.align(Alignment.TopStart).padding(9.dp).height(40.dp)
             )
         }
         Column(modifier = Modifier.padding(12.dp)) {

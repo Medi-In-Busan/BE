@@ -11,6 +11,9 @@ interface RecentlyViewedDao {
     @Query("SELECT * FROM recently_viewed ORDER BY viewedAt DESC LIMIT 20")
     fun observeRecentlyViewed(): Flow<List<RecentlyViewedEntity>>
 
+    @Query("SELECT * FROM recently_viewed WHERE itemId = :itemId LIMIT 1")
+    suspend fun findById(itemId: String): RecentlyViewedEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: RecentlyViewedEntity)
 

@@ -5,6 +5,7 @@ import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.hospital.Hospital
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentlyViewed
 import javax.inject.Inject
 
@@ -55,7 +56,7 @@ class GetRecommendedHospitalsUseCase @Inject constructor() {
     ): Map<String, Int> {
         val hospitalsById = allHospitals.associateBy { it.id }
         val recentHospitalIds = recentlyViewed
-            .filter { it.itemType == FavoriteItemType.HOSPITAL }
+            .filter { it.itemType == RecentItemType.HOSPITAL }
             .take(RECENT_SIGNAL_LIMIT)
             .map { it.itemId }
 

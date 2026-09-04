@@ -74,7 +74,8 @@ class NearbyViewModel @Inject constructor(
         category: TourismCatalogCategory,
         item: TourismCatalogItem
     ) {
-        pendingTourismCatalogItem.set(category, item)
+        // loadCatalogPreviews가 항상 BusanDistrict.HAEUNDAE로 조회한 목록이라 재조회 컨텍스트도 동일하게 둔다.
+        pendingTourismCatalogItem.set(category, item, BusanDistrict.HAEUNDAE)
     }
 
     fun load(

@@ -9,6 +9,7 @@ import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.hospital.HospitalRepository
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +60,7 @@ class HospitalDetailViewModel @Inject constructor(
             recentRepository.recordView(
                 itemId = hospital.id,
                 itemName = hospital.name,
-                itemType = FavoriteItemType.HOSPITAL,
+                itemType = RecentItemType.HOSPITAL,
                 imageUrl = hospital.imageUrl,
                 subtitle = hospital.specialties.joinToString(", "),
                 address = hospital.address,
