@@ -13,6 +13,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.animateContentSize
@@ -86,6 +88,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -394,7 +397,9 @@ private fun CourseStopChip(index: Int, place: Place, onClick: () -> Unit) {
 }
 
 // 하단 카드영역(리스트업 바텀시트) 관련 고정 치수.
-private val ListRowFixedHeight = 96.dp
+// 접힌(미리보기) 시트에 남는 요약 헤더 한 줄의 높이 — 제목 + 결과 개수. 펼쳐도 이 줄은 같은
+// 자리에 그대로 있고 아래로 목록만 자라난다(아래 BrowseMap의 시트 구성 주석 참고).
+private val SheetHeaderHeight = 52.dp
 // 손잡이 영역의 실제 높이(top padding 6dp + 알약 바 5dp + bottom padding 10dp) — 내 위치 버튼을
 // 이 손잡이 바로 위에 정확히 세우는 데 쓴다(실측 없이 고정값으로 계산).
 private val PeekHandleAreaHeight = 21.dp
@@ -510,7 +515,7 @@ private fun BrowseMap(
             isSelectionActive -> navigationBarInset + selectedCardHeight + 4.dp
             // 카테고리를 껐을 땐 시트가 통째로 사라지므로 버튼도 탭바 바로 위까지 내려온다.
             !markersActivated -> navigationBarInset + BottomNavBarHeight + 4.dp
-            else -> navigationBarInset + BottomNavBarHeight + ListRowFixedHeight + PeekHandleAreaHeight + 4.dp
+            else -> navigationBarInset + BottomNavBarHeight + SheetHeaderHeight + PeekHandleAreaHeight + 4.dp
         },
         label = "mapRecenterBottomPadding"
     )
@@ -636,13 +641,6 @@ private fun BrowseMap(
         }
         // 리스트업(펼침) 페이지에서 행을 눌렀을 때 병원/장소 중 어느 상세화면으로 보낼지 판단하는 데 쓴다.
         val hospitalIdSet = remember(categoryHospitals) { categoryHospitals.map { it.id }.toSet() }
-        // 미리보기(접힌 상태)에 한 줄만 보여줄 항목 — 선택된 마커가 있으면 그 항목, 없으면 목록 맨 앞.
-        val peekEntry = when {
-            selectedHospital != null -> selectedHospital.toCardEntry(mapCenter)
-            selectedPlace != null -> selectedPlace.toCardEntry(mapCenter)
-            else -> entries.firstOrNull()
-        }
-
         // 실제 GPS 위치가 아닌 고정된 부산 기본 좌표로만 이동한다 — 위치 권한을 쓰지 않는다.
         // (예전엔 이 옆에 "레이어" 버튼이 더 있었지만 onClick이 비어 있는 미구현 자리표시자라
         // 제거했다 — 실제 동작하는 버튼만 남긴다.) 리스트가 화면을 다 덮는 펼침 상태에선 어차피
@@ -727,11 +725,39 @@ private fun BrowseMap(
             }
         }
 
-        // 시트 배경색 — 접힘(연분홍 트레이 위 흰 카드) / 펼침(흰 목록 페이지)을 오간다.
+        // 시트 배경색 — 목록(접힘 요약 줄/펼침 목록 페이지)은 같은 흰 면이고, 마커 선택 카드가
+        // 뜰 때만 연분홍 트레이로 바뀐다(그 위에 흰 사진 카드가 떠 보여야 하므로).
         val sheetBackgroundColor by animateColorAsState(
-            targetValue = if (isListExpanded) Color.White else HomeBackgroundPink,
+            targetValue = if (isSelectionActive) HomeBackgroundPink else Color.White,
             animationSpec = tween(220),
             label = "mapSheetBackground"
+        )
+
+        // 시트 높이는 접힘/펼침 두 값 사이를 하나의 애니메이션으로 오간다. 예전엔 콘텐츠 크기에
+        // 맡겼는데(animateContentSize + 상태별로 다른 자식), 접을 때는 안쪽 목록이 먼저 사라지고
+        // 컨테이너 높이만 뒤늦게 줄어들어 뚝 끊겨 보였다 — 펼칠 때만 자연스러웠던 이유가 이것이다.
+        // 목표 높이를 직접 계산해 같은 스펙으로 양방향을 굴리면 올릴 때와 내릴 때가 대칭이 된다.
+        val collapsedSheetHeight = PeekHandleAreaHeight + SheetHeaderHeight + bottomSafePadding
+        val expandedSheetHeight = (screenHeight - topBarHeight).coerceAtLeast(collapsedSheetHeight)
+        val sheetHeight by animateDpAsState(
+            targetValue = if (isListExpanded) expandedSheetHeight else collapsedSheetHeight,
+            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+            label = "mapSheetHeight"
+        )
+        // 접히는 동안에도 목록은 펼쳤을 때의 높이를 그대로 유지한 채 시트 밖으로 밀려나며 잘린다 —
+        // 매 프레임 LazyColumn을 다시 재는 대신 그리기만 잘라내므로 미끄러지듯 내려간다.
+        // (Modifier.height는 부모 제약에 맞춰 줄어들지만 requiredHeight는 무시하고 고정한다 — 이게 핵심.)
+        val expandedListHeight = (expandedSheetHeight - bottomSafePadding - PeekHandleAreaHeight - SheetHeaderHeight)
+            .coerceAtLeast(0.dp)
+        // 다 접히고 나서야 목록을 구성 해제한다 — 접히는 도중엔 계속 그려져 있어야 하기 때문이다.
+        val isListContentVisible = isListExpanded || sheetHeight > collapsedSheetHeight + 1.dp
+        // 그림자도 같은 길이로 따라간다. 접힘 상태에서만 시트가 지도 위에 떠 있으므로 그림자가
+        // 필요한데, 예전엔 이 값이 토글 순간 한 프레임에 0 ↔ 10dp로 튀어 접히기 시작할 때 테두리가
+        // 툭 나타났다.
+        val sheetElevation by animateDpAsState(
+            targetValue = if (isListExpanded) 0.dp else 10.dp,
+            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+            label = "mapSheetElevation"
         )
 
         // 손잡이 하나에만 걸려 있던 드래그를 시트 전체가 공유한다 — 미리보기 행(리스트) 위를
@@ -806,10 +832,10 @@ private fun BrowseMap(
             }
         }
 
-        // 카드영역: 접힘(미리보기 한 줄) / 펼침(검색바까지 덮는 전체 리스트) 두 상태를 시트를
-        // 위아래로 끌거나(어디든) 손잡이를 탭해서 전환한다. HospitalSearchListScreen과 같은 느낌의
-        // 가로형 리스트 행을 쓰되, feature 패키지 간 직접 import는 하지 않는 규칙(CLAUDE.md)이라
-        // 이 파일 안에 로컬로 새로 둔다(ListRowEntry).
+        // 카드영역: 접힘(제목+개수 요약 줄) / 펼침(검색바까지 덮는 전체 리스트) 두 상태를 시트를
+        // 위아래로 끌거나(어디든) 손잡이·요약 줄을 탭해서 전환한다. HospitalSearchListScreen과 같은
+        // 느낌의 가로형 리스트 행을 쓰되, feature 패키지 간 직접 import는 하지 않는 규칙(CLAUDE.md)
+        // 이라 이 파일 안에 로컬로 새로 둔다(MapPlaceListRow).
         //
         // 카테고리를 끈 상태(markersActivated=false — 첫 진입이거나 켜져 있던 탭을 한 번 더 누른
         // 경우)에는 마커도 없고 보여줄 목록도 의미가 없어, 시트를 아래로 밀어 화면 밖으로 내린다.
@@ -831,20 +857,21 @@ private fun BrowseMap(
                     .fillMaxWidth()
                     // 펼쳤을 때도 화면 전체가 아니라 "검색바 블록 바로 아래"까지만 — 그 위 공간은
                     // 계속 지도가 보인다. 검색바 블록 높이가 필터 펼침 등으로 달라질 수 있어 실측값을 쓴다.
-                    .then(if (isListExpanded) Modifier.height((screenHeight - topBarHeight).coerceAtLeast(0.dp)) else Modifier)
+                    // 목록 상태(접힘 요약 줄 ↔ 펼침)에서는 위에서 계산한 sheetHeight가 그 사이를
+                    // 대칭으로 오가고, 마커 선택 카드는 내용 높이가 제각각이라 그대로 감싸게 둔다.
+                    .then(if (isSelectionActive) Modifier else Modifier.height(sheetHeight))
                     .shadow(
-                        elevation = if (isListExpanded) 0.dp else 10.dp,
+                        elevation = sheetElevation,
                         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                         ambientColor = Color.Black.copy(alpha = 0.2f),
                         spotColor = Color.Black.copy(alpha = 0.2f)
                     )
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    // 접힌 상태(미리보기 한 줄 / 선택 카드)의 시트는 Home/HospitalSearchList와 같은
-                    // 앱 기본 배경색(연분홍)이다 — 그 위에 흰 카드가 그림자와 함께 떠 보인다.
-                    // 펼치면 그 자체가 목록 페이지가 되므로 흰 면으로 바뀐다: 행마다 카드를 띄우는
-                    // 대신 구분선으로만 나누는 플랫 구조라(MapPlaceListRow), 바닥이 흰색이어야
-                    // 행 사이 경계가 그림자 없이도 분명해진다. 두 상태 사이는 색을 애니메이션해서
-                    // 펼침/접힘 도중에 배경이 한 프레임에 툭 바뀌지 않게 한다.
+                    // 목록 시트는 접혀 있든 펼쳐져 있든 같은 흰 면이다 — 행마다 카드를 띄우는 대신
+                    // 구분선으로만 나누는 플랫 구조라(MapPlaceListRow) 바닥이 흰색이어야 행 사이
+                    // 경계가 그림자 없이도 분명하고, 접었을 때 남는 요약 줄도 그 목록의 머리글로
+                    // 읽힌다. 마커 선택 카드일 때만 Home/HospitalSearchList와 같은 앱 기본 배경색
+                    // (연분홍) 트레이로 바뀐다 — 그 위에 흰 사진 카드가 그림자와 함께 떠 보인다.
                     .background(sheetBackgroundColor)
                     .nestedScroll(sheetNestedScroll)
                     .then(sheetDragModifier)
@@ -852,11 +879,12 @@ private fun BrowseMap(
                     // 리스트 행 아랫부분이 탭바 뒤에 잘려 보였다. bottomSafePadding은 탭바가 보이는
                     // 동안엔 탭바 높이를, 마커 선택으로 탭바가 사라진 동안엔 제스처 인셋만 반영한다.
                     .padding(bottom = bottomSafePadding)
-                    .animateContentSize(animationSpec = tween(220))
+                    // 선택 카드일 때만 내용 크기를 따라간다(목록 쪽은 sheetHeight가 직접 몬다).
+                    .then(if (isSelectionActive) Modifier.animateContentSize(animationSpec = tween(220)) else Modifier)
             ) {
                 // 마커를 직접 선택했을 때는 리스트업으로 끌어올리는 손잡이 자체가 의미 없다(예전
                 // 사진 카드만 단독으로 뜨던 모양으로 돌아간다) — 미리보기/펼침 상태에서만 보여준다.
-                if (selectedHospital == null && selectedPlace == null) {
+                if (!isSelectionActive) {
                     // 알약 모양(양옆이 완전히 둥근) 드래그 손잡이. 영역 맨 위에 바짝 붙이고(위 여백 없음),
                     // 탭해서 펼침·접힘을 토글한다(끄는 동작은 시트 전체가 받는다).
                     Box(
@@ -879,19 +907,22 @@ private fun BrowseMap(
                     }
                 }
 
-                // 미리보기(peek) / 펼친 리스트(expanded) / 마커 선택 카드(hospital·place), 세 콘텐츠가
-                // 서로 바뀔 때 뚝 끊기지 않도록 위로 슬라이드 + 페이드 되며 전환한다(리스트업 리디자인
-                // 전에 쓰던 AnimatedContent 패턴을 되살림). isListExpanded일 때만 이 영역에 weight(1f)를
-                // 줘서 시트 하단(탭바 위)까지 남는 공간을 채운다 — 그 외 상태는 원래처럼 내용 크기만큼만 차지.
+                // 목록(browse) / 마커 선택 카드(hospital·place)가 서로 바뀔 때만 슬라이드 + 페이드로
+                // 전환한다. 펼침·접힘은 더 이상 여기서 콘텐츠를 갈아끼우지 않는다 — 같은 "browse"
+                // 콘텐츠가 그대로 있고 시트 높이(sheetHeight)만 자라거나 줄어든다. 예전엔 이 전환과
+                // 시트 높이 애니메이션이 서로 다른 스펙으로 동시에 돌아 접을 때 끊겨 보였다.
                 val panelKey = when {
                     selectedHospital != null -> "hospital:${selectedHospital.id}"
                     selectedPlace != null -> "place:${selectedPlace.id}"
-                    isListExpanded -> "expanded"
-                    else -> "peek"
+                    else -> "browse"
                 }
                 AnimatedContent(
                     targetState = panelKey,
-                    modifier = Modifier.fillMaxWidth().then(if (isListExpanded) Modifier.weight(1f) else Modifier),
+                    // 목록 상태에서는 시트에 남은 높이를 정확히 차지하고, 그보다 큰 내용(접히는 중인
+                    // 목록)은 잘라낸다. 선택 카드는 내용 크기 그대로 둔다(weight를 주면 0이 된다).
+                    modifier = Modifier.fillMaxWidth().then(
+                        if (isSelectionActive) Modifier else Modifier.weight(1f).clipToBounds()
+                    ),
                     transitionSpec = {
                         (slideInVertically(animationSpec = tween(220)) { height -> height / 4 } + fadeIn(tween(220)))
                             .togetherWith(slideOutVertically(animationSpec = tween(180)) { height -> height / 4 } + fadeOut(tween(180)))
@@ -899,8 +930,25 @@ private fun BrowseMap(
                     label = "mapBottomPanel"
                 ) { state ->
                     when {
-                        state == "expanded" -> Column(modifier = Modifier.fillMaxSize()) {
-                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                        state == "browse" -> Column(modifier = Modifier.fillMaxWidth()) {
+                            // 접힘/펼침 공통 헤더 — 접었을 때 시트에 남는 건 손잡이와 이 한 줄뿐이다.
+                            // 예전에는 여기에 목록 첫 항목을 흰 카드 한 줄로 띄웠는데,
+                            // 펼친 목록이 그림자 없는 플랫한 흰 면으로 바뀐 뒤로는 그 카드만 혼자
+                            // 옛 톤으로 떠 있어 어긋나 보였다. 요약 줄로 바꾸면 펼쳤을 때 이 줄이
+                            // 제자리에 그대로 남고 아래로 목록만 자라나, 두 상태가 한 화면으로 이어진다.
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .requiredHeight(SheetHeaderHeight)
+                                    // 손잡이뿐 아니라 이 줄 어디를 눌러도 펼침/접힘이 토글된다.
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { onListExpandedChange(!isListExpanded) }
+                                    )
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
                                 Row(verticalAlignment = Alignment.Bottom) {
                                     Text(
                                         text = mapStrings.listPageTitle,
@@ -922,122 +970,118 @@ private fun BrowseMap(
                                         modifier = Modifier.padding(bottom = 2.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(14.dp))
-                                CategoryTabsRow(
-                                    strings = mapStrings,
-                                    selected = if (markersActivated) uiState.selectedCategory else null,
-                                    onSelected = onCategoryTapped
-                                )
-                                Spacer(modifier = Modifier.height(14.dp))
                             }
-                            // 헤더(제목+탭)와 목록을 가르는 선. 아래 목록이 흰 면 위에 구분선으로만
-                            // 나뉘는 플랫 구조라, 헤더도 같은 문법으로 끊어줘야 스크롤될 때 탭 줄이
-                            // 목록 위에 떠 있는 고정 영역이라는 게 읽힌다.
-                            HorizontalDivider(color = DividerColor)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            if (entries.isEmpty()) {
-                                EmptyResultCard(
-                                    message = if (uiState.selectedCategory == MapCategory.HOSPITAL) {
-                                        mapStrings.emptyHospitalMessage
-                                    } else {
-                                        mapStrings.emptyPlaceMessage
+                            // 펼쳤을 때만 붙는 아래쪽(탭 + 목록). 높이를 requiredHeight로 못 박아
+                            // 접히는 동안에도 다시 재지 않고, 줄어드는 시트 밖으로 밀려나며 잘린다.
+                            if (isListContentVisible) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .requiredHeight(expandedListHeight)
+                                ) {
+                                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        CategoryTabsRow(
+                                            strings = mapStrings,
+                                            selected = if (markersActivated) uiState.selectedCategory else null,
+                                            onSelected = onCategoryTapped
+                                        )
+                                        Spacer(modifier = Modifier.height(14.dp))
                                     }
-                                )
-                            } else {
-                                // 옆으로 넘기는 페이지가 아니라 세로로 자연스럽게 스크롤되는 리스트.
-                                // uiState.selectedCategory로 key를 걸어, 카테고리 탭을 바꾸면(병원→관광 등)
-                                // 이전 스크롤 위치가 남지 않고 항상 맨 위부터 다시 보이게 한다.
-                                key(uiState.selectedCategory) {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxWidth().weight(1f),
-                                        contentPadding = PaddingValues(bottom = 8.dp)
-                                    ) {
-                                        itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
-                                            // 행 사이 구분선. 첫 행 위에는 두지 않는다(탭 줄 아래
-                                            // 구분선이 이미 그 경계를 만든다).
-                                            if (index > 0) {
-                                                HorizontalDivider(
-                                                    color = DividerColor,
-                                                    // 썸네일 오른쪽 끝까지 긋지 않고 텍스트 시작선에
-                                                    // 맞춰 들여쓴다 — 행이 하나씩 끊겨 보이는 대신
-                                                    // 목록 전체가 한 덩어리로 이어져 읽힌다.
-                                                    modifier = Modifier.padding(start = 20.dp)
-                                                )
+                                    // 헤더(제목+탭)와 목록을 가르는 선. 아래 목록이 흰 면 위에 구분선으로만
+                                    // 나뉘는 플랫 구조라, 헤더도 같은 문법으로 끊어줘야 스크롤될 때 탭 줄이
+                                    // 목록 위에 떠 있는 고정 영역이라는 게 읽힌다.
+                                    HorizontalDivider(color = DividerColor)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    if (entries.isEmpty()) {
+                                        EmptyResultCard(
+                                            message = if (uiState.selectedCategory == MapCategory.HOSPITAL) {
+                                                mapStrings.emptyHospitalMessage
+                                            } else {
+                                                mapStrings.emptyPlaceMessage
                                             }
-                                            MapPlaceListRow(
-                                                entry = entry,
-                                                categoryLabel = entry.categoryLabel(language, mapStrings),
-                                                visual = placeKindVisual(entry.placeType, entry.placeCategory),
-                                                // 리스트업 페이지에서는 눌렀을 때 바로 상세화면으로 이동한다
-                                                // (선택 상태로만 바꾸는 미리보기 쪽과 다르다).
-                                                onClick = {
-                                                    if (entry.id in hospitalIdSet) onSelectHospital(entry.id) else onSelectPlace(entry.id)
+                                        )
+                                    } else {
+                                        // 옆으로 넘기는 페이지가 아니라 세로로 자연스럽게 스크롤되는 리스트.
+                                        // uiState.selectedCategory로 key를 걸어, 카테고리 탭을 바꾸면(병원→관광 등)
+                                        // 이전 스크롤 위치가 남지 않고 항상 맨 위부터 다시 보이게 한다.
+                                        key(uiState.selectedCategory) {
+                                            LazyColumn(
+                                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                                contentPadding = PaddingValues(bottom = 8.dp)
+                                            ) {
+                                                itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
+                                                    // 행 사이 구분선. 첫 행 위에는 두지 않는다(탭 줄 아래
+                                                    // 구분선이 이미 그 경계를 만든다).
+                                                    if (index > 0) {
+                                                        HorizontalDivider(
+                                                            color = DividerColor,
+                                                            // 썸네일 오른쪽 끝까지 긋지 않고 텍스트 시작선에
+                                                            // 맞춰 들여쓴다 — 행이 하나씩 끊겨 보이는 대신
+                                                            // 목록 전체가 한 덩어리로 이어져 읽힌다.
+                                                            modifier = Modifier.padding(start = 20.dp)
+                                                        )
+                                                    }
+                                                    MapPlaceListRow(
+                                                        entry = entry,
+                                                        categoryLabel = entry.categoryLabel(language, mapStrings),
+                                                        visual = placeKindVisual(entry.placeType, entry.placeCategory),
+                                                        // 리스트업 페이지에서는 눌렀을 때 바로 상세화면으로 이동한다
+                                                        // (지도 마커를 눌러 선택 카드를 띄우는 쪽과 다르다).
+                                                        onClick = {
+                                                            if (entry.id in hospitalIdSet) onSelectHospital(entry.id) else onSelectPlace(entry.id)
+                                                        }
+                                                    )
                                                 }
-                                            )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                        state.startsWith("hospital:") && selectedHospital != null -> {
-                            // 마커를 직접 눌러 선택한 경우: 리스트 미리보기 행이 아니라 예전에 쓰던 사진
-                            // 위주 카드로 보여준다(사진+뱃지+상세보기 버튼). 내용에 따라 높이가 달라지므로
-                            // 실측해서 내 위치 버튼(recenterBottomPadding)이 그 높이를 따라오게 한다.
-                            Box(
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    selectedCardHeight = with(density) { coordinates.size.height.toDp() }
-                                }
-                            ) {
-                                SelectedHospitalCard(
-                                    hospital = selectedHospital,
-                                    isFavorite = selectedHospital.id in uiState.favoriteHospitalIds,
-                                    detailButtonLabel = mapStrings.detailButtonLabel,
-                                    closeContentDescription = mapStrings.closeSelectionContentDescription,
-                                    onFavoriteClick = { onToggleFavorite(selectedHospital.id) },
-                                    onDetailClick = { onSelectHospital(selectedHospital.id) },
-                                    onClose = { onMarkerSelected(null) }
-                                )
-                            }
-                        }
-                        state.startsWith("place:") && selectedPlace != null -> {
-                            Box(
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    selectedCardHeight = with(density) { coordinates.size.height.toDp() }
-                                }
-                            ) {
-                                SelectedPlaceCard(
-                                    place = selectedPlace,
-                                    isFavorite = selectedPlace.id in uiState.favoritePlaceIds,
-                                    detailButtonLabel = mapStrings.detailButtonLabel,
-                                    closeContentDescription = mapStrings.closeSelectionContentDescription,
-                                    onFavoriteClick = { onTogglePlaceFavorite(selectedPlace.id) },
-                                    onDetailClick = { onSelectPlace(selectedPlace.id) },
-                                    onClose = { onMarkerSelected(null) }
-                                )
-                            }
-                        }
-                        else -> {
-                            // 미리보기: 리스트 행을 원래 크기(96dp) 그대로, 그림자도 온전히 살려서 그린다.
-                            // 억지로 클리핑하지 않고, 아랫부분은 그 위에 그려지는 하단 탭바가 자연스럽게 가린다.
-                            if (peekEntry != null) {
-                                ListRowEntry(
-                                    entry = peekEntry,
-                                    onClick = { onMarkerSelected(peekEntry.id) },
-                                    modifier = Modifier.padding(horizontal = 20.dp).height(ListRowFixedHeight)
-                                )
-                            } else {
+                        // 마커를 직접 눌러 선택한 경우: 목록 대신 사진 위주 카드로 보여준다(사진+뱃지+
+                        // 상세보기 버튼). 선택이 풀려 카드가 빠져나가는 동안에도 계속 그려져야 하므로,
+                        // 지금 선택값(selectedHospital)이 아니라 이 전환이 들고 있는 key로 항목을 다시
+                        // 찾는다 — 예전엔 그 순간 selectedHospital이 null이 되면서 나가던 카드가 미리보기
+                        // 행으로 뒤바뀐 채 사라졌다.
+                        state.startsWith("hospital:") -> {
+                            val hospital = categoryHospitals.firstOrNull { it.id == state.removePrefix("hospital:") }
+                            if (hospital != null) {
+                                // 내용에 따라 높이가 달라지므로 실측해서 내 위치 버튼
+                                // (recenterBottomPadding)이 그 높이를 따라오게 한다.
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(ListRowFixedHeight),
-                                    contentAlignment = Alignment.Center
+                                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                                        selectedCardHeight = with(density) { coordinates.size.height.toDp() }
+                                    }
                                 ) {
-                                    Text(
-                                        text = if (uiState.selectedCategory == MapCategory.HOSPITAL) {
-                                            mapStrings.emptyHospitalMessage
-                                        } else {
-                                            mapStrings.emptyPlaceMessage
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextSecondary
+                                    SelectedHospitalCard(
+                                        hospital = hospital,
+                                        isFavorite = hospital.id in uiState.favoriteHospitalIds,
+                                        detailButtonLabel = mapStrings.detailButtonLabel,
+                                        closeContentDescription = mapStrings.closeSelectionContentDescription,
+                                        onFavoriteClick = { onToggleFavorite(hospital.id) },
+                                        onDetailClick = { onSelectHospital(hospital.id) },
+                                        onClose = { onMarkerSelected(null) }
+                                    )
+                                }
+                            }
+                        }
+                        state.startsWith("place:") -> {
+                            val place = visiblePlaces.firstOrNull { it.id == state.removePrefix("place:") }
+                            if (place != null) {
+                                Box(
+                                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                                        selectedCardHeight = with(density) { coordinates.size.height.toDp() }
+                                    }
+                                ) {
+                                    SelectedPlaceCard(
+                                        place = place,
+                                        isFavorite = place.id in uiState.favoritePlaceIds,
+                                        detailButtonLabel = mapStrings.detailButtonLabel,
+                                        closeContentDescription = mapStrings.closeSelectionContentDescription,
+                                        onFavoriteClick = { onTogglePlaceFavorite(place.id) },
+                                        onDetailClick = { onSelectPlace(place.id) },
+                                        onClose = { onMarkerSelected(null) }
                                     )
                                 }
                             }
@@ -1294,10 +1338,13 @@ private fun CardEntry.categoryLabel(language: SupportedLanguage, strings: MapStr
 }
 
 /**
- * 행 왼쪽 아래에 붙는 종류 표시. 그 종류의 색을 옅게 깔고, 같은 색 아이콘과 글자를 얹는다.
+ * 행 왼쪽 아래에 붙는 종류 표시. 그 종류의 색을 옅게 깔고, 같은 계열의 진한 색으로 아이콘과 글자를 얹는다.
  *
  * 아이콘이 있어야 "백화점"과 "전통시장"처럼 색이 같은(둘 다 쇼핑 계열) 항목이 글자를 읽기 전에도
  * 구분된다 — 색은 묶음, 아이콘은 종류를 맡는다(core/ui/PlaceKindVisuals.kt).
+ *
+ * 배경은 면 색(visual.color), 글자·아이콘은 ink다 — 11sp짜리 글자를 면 색 그대로 쓰면 음식(주황)·
+ * 쇼핑(청록) 칩이 옅은 배경 위에서 거의 안 읽혔다.
  */
 @Composable
 private fun CategoryChip(label: String, visual: PlaceKindVisual) {
@@ -1312,14 +1359,14 @@ private fun CategoryChip(label: String, visual: PlaceKindVisual) {
         Icon(
             imageVector = visual.icon,
             contentDescription = null,
-            tint = visual.color,
+            tint = visual.ink,
             modifier = Modifier.size(11.dp)
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = visual.color
+            color = visual.ink
         )
     }
 }
@@ -1327,13 +1374,13 @@ private fun CategoryChip(label: String, visual: PlaceKindVisual) {
 /**
  * 펼친 목록("목적별로 찾는 장소")의 한 행. 텍스트가 왼쪽, 썸네일이 오른쪽인 플랫 리스트 행이다.
  *
- * 예전에는 이 자리에도 [ListRowEntry](흰 카드 + 6dp 그림자)를 썼는데, 시트 배경(HomeBackgroundPink,
+ * 예전에는 이 자리에도 흰 카드 행(+ 6dp 그림자)을 썼는데, 시트 배경(HomeBackgroundPink,
  * #FFFAFA)과 카드(순백)의 명도차가 거의 없어서 행 구분을 전적으로 그림자에 기대고 있었다 — 행이
  * 열 개씩 쌓이면 그림자가 서로 번져 회색 얼룩처럼 보였다. 시트를 통째로 흰 면으로 두고 행 사이를
  * 얇은 구분선으로만 나누면, 그림자 없이도 경계가 분명하고 목록이 훨씬 조용해진다.
  *
- * 카드 형태가 필요한 자리는 지도 위에 한 줄만 떠 있는 미리보기(peek)뿐이라, 그쪽은 [ListRowEntry]를
- * 그대로 쓴다 — 거기서는 지도 타일 위에 떠야 해서 그림자가 실제로 제 역할을 한다.
+ * 접힌(미리보기) 시트도 이제 카드 한 줄이 아니라 제목+개수 요약 줄이라, 이 파일에서 흰 카드
+ * 행(ListRowEntry)을 쓰던 자리는 모두 없어졌다 — 지도 위에 뜨는 카드는 마커 선택 카드뿐이다.
  */
 @Composable
 private fun MapPlaceListRow(
@@ -1418,96 +1465,8 @@ private fun MapPlaceListRow(
     }
 }
 
-// HospitalSearchListScreen의 SearchResultCard와 같은 느낌(왼쪽 썸네일 + 오른쪽 텍스트, 같은
-// 그림자 톤으로 흰 카드가 배경 위에 붕 떠 보임)의 가로형 리스트 행. feature 패키지끼리는 서로
-// import하지 않는 규칙이라 그 컴포저블을 직접 가져다 쓰는 대신, CardEntry(병원/장소 통합 모델)
-// 기준으로 이 파일 안에 로컬로 새로 둔다. 지도 위에 한 줄만 떠 있는 미리보기(peek) 전용이다 —
-// 펼친 목록은 그림자 없는 플랫 행(MapPlaceListRow)을 쓴다.
-@Composable
-private fun ListRowEntry(
-    entry: CardEntry,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // 미리보기는 고정 높이(ListRowFixedHeight) 한 줄이라 썸네일도 정사각으로 고정한다.
-    val thumbnailModifier = Modifier.size(72.dp)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.3f),
-                spotColor = Color.Black.copy(alpha = 0.3f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (entry.imageUrl != null) {
-            AsyncImageBox(
-                model = entry.imageUrl,
-                contentDescription = entry.title,
-                contentScale = ContentScale.Crop,
-                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp)).background(DividerColor)
-            )
-        } else if (entry.fallbackImageRes != null) {
-            Image(
-                painter = painterResource(id = entry.fallbackImageRes),
-                contentDescription = entry.title,
-                contentScale = ContentScale.Crop,
-                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp)).background(DividerColor)
-            )
-        } else if (entry.placeType != null) {
-            PlaceFallbackThumbnail(
-                visual = placeKindVisual(entry.placeType, entry.placeCategory),
-                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp))
-            )
-        } else {
-            AsyncImageBox(
-                model = null,
-                contentDescription = entry.title,
-                contentScale = ContentScale.Crop,
-                modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp)).background(DividerColor)
-            )
-        }
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = entry.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // 지도 화면 중심에서의 거리를 주소 앞에 둔다 — 목록이 이 거리순으로 정렬돼 있어
-                // "왜 이 순서인지"가 바로 읽힌다.
-                entry.distanceMeters?.let { distance ->
-                    Text(
-                        text = distance.toDistanceLabel(),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = CoralPrimary,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = " · ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
-                    )
-                }
-                Text(text = entry.subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (entry.languages.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    entry.languages.take(3).forEach { lang -> LanguageBadge(text = lang.toLanguageBadgeLabel()) }
-                }
-            }
-        }
-    }
-}
-
-// 마커를 직접 눌러 선택했을 때 뜨는 사진 위주 카드. 리스트업 미리보기 행(ListRowEntry)과 달리
-// 썸네일이 크고, 즐겨찾기·상세보기 버튼이 붙는다 — 리스트 리디자인 전부터 쓰던 컴포넌트를 그대로 되살렸다.
+// 마커를 직접 눌러 선택했을 때 뜨는 사진 위주 카드. 펼친 목록의 플랫 행(MapPlaceListRow)과 달리
+// 썸네일이 크고, 즐겨찾기·상세보기 버튼이 붙는다 — 지도 위에 떠야 해서 그림자가 있는 흰 카드다.
 @Composable
 private fun SelectedHospitalCard(
     hospital: Hospital,

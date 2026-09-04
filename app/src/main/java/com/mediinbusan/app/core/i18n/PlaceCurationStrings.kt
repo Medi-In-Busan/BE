@@ -10,7 +10,16 @@ package com.mediinbusan.app.core.i18n
  * 부산 명소별 개별 문구는 분량이 커서 BusanHighlightStrings.kt로 따로 뺐다.
  */
 data class PlaceCurationStrings(
+    /**
+     * 이 섹션의 값(방문 시기·활동 강도·환경·권장 체류)은 한국관광공사 TourAPI가 주는 데이터가 아니라
+     * 장소 유형만으로 결정되는 앱 자체 큐레이션이다(core/common/PlaceCareProfile.kt). 제목에 앱 이름을
+     * 넣어 누가 쓴 안내인지 드러내고, 바로 아래 [atAGlanceSourceNote]로 한 번 더 밝힌다.
+     */
     val atAGlanceTitle: String,
+    /** 위 값들이 자체 안내임을 밝히는 각주. pill 줄 바로 아래에 작게 붙는다. */
+    val atAGlanceSourceNote: String,
+    /** 반대로 진짜 TourAPI에서 온 항목(이름·주소·사진·소개·갱신일)의 출처 표기. 화면 맨 아래 한 줄. */
+    val officialDataCreditLabel: String,
     val recoveryFitLabel: String,
     val activityLevelLabel: String,
     val settingLabel: String,
@@ -42,12 +51,14 @@ data class PlaceCurationStrings(
     val travelerHelpEmergencyLabel: String,
     val travelerHelpEmergencyNumber: String,
     val travelerHelpEmergencyDescription: String,
-    val travelerHelpPaymentLabel: String,
-    val travelerHelpPaymentDescription: String
+    /** 결제·이동 안내. 전화 행이 아니라 카드 맨 아래 각주 한 줄이다. */
+    val travelerHelpPaymentNote: String
 ) {
     companion object {
         val Ko = PlaceCurationStrings(
-            atAGlanceTitle = "한눈에 보기",
+            atAGlanceTitle = "메디인부산 가이드",
+            atAGlanceSourceNote = "장소 유형을 기준으로 메디인부산이 정리한 참고 안내입니다 — 관광공사 제공 정보가 아닙니다.",
+            officialDataCreditLabel = "이름·주소·사진·소개·갱신일은 한국관광공사 TourAPI 제공 정보입니다.",
             recoveryFitLabel = "방문 시기",
             activityLevelLabel = "활동 강도",
             settingLabel = "환경",
@@ -93,17 +104,18 @@ data class PlaceCurationStrings(
                 "OTHER" to "병원 주변에서 짧게 들러 쉬어가기 좋은 장소입니다."
             ),
             travelerHelpTitle = "여행자 편의",
-            travelerHelpTourLineLabel = "관광통역안내 1330",
+            travelerHelpTourLineLabel = "관광통역안내",
             travelerHelpTourLineNumber = "1330",
-            travelerHelpTourLineDescription = "한국관광공사가 운영하는 24시간 안내 전화로, 영어·중국어·일본어 통역 안내를 받을 수 있습니다.",
-            travelerHelpEmergencyLabel = "응급 상황 119",
+            travelerHelpTourLineDescription = "24시간 영어·중국어·일본어 안내",
+            travelerHelpEmergencyLabel = "응급 상황",
             travelerHelpEmergencyNumber = "119",
-            travelerHelpEmergencyDescription = "응급 의료·구급차 요청은 119입니다. 외국어 통역 연결도 지원합니다.",
-            travelerHelpPaymentLabel = "결제·이동",
-            travelerHelpPaymentDescription = "대부분의 시설에서 신용카드 결제가 가능하고, 지하철·버스는 교통카드 한 장으로 환승할 수 있습니다."
+            travelerHelpEmergencyDescription = "응급 의료·구급차 요청, 통역 연결 가능",
+            travelerHelpPaymentNote = "대부분의 시설에서 카드 결제가 되고, 지하철·버스는 교통카드 한 장으로 환승됩니다."
         )
         val En = PlaceCurationStrings(
-            atAGlanceTitle = "At a glance",
+            atAGlanceTitle = "MediIn Busan guide",
+            atAGlanceSourceNote = "A MediIn Busan reference guide based on the type of place — not data provided by the Korea Tourism Organization.",
+            officialDataCreditLabel = "Name, address, photo, description and update date are provided by the Korea Tourism Organization TourAPI.",
             recoveryFitLabel = "When to visit",
             activityLevelLabel = "Effort",
             settingLabel = "Setting",
@@ -149,17 +161,18 @@ data class PlaceCurationStrings(
                 "OTHER" to "An easy place near the hospital to stop by and take a break."
             ),
             travelerHelpTitle = "Traveler essentials",
-            travelerHelpTourLineLabel = "Tourist help line 1330",
+            travelerHelpTourLineLabel = "Tourist help line",
             travelerHelpTourLineNumber = "1330",
-            travelerHelpTourLineDescription = "The Korea Tourism Organization's 24-hour line, with interpretation in English, Chinese, and Japanese.",
-            travelerHelpEmergencyLabel = "Emergency 119",
+            travelerHelpTourLineDescription = "24-hour help in English, Chinese and Japanese",
+            travelerHelpEmergencyLabel = "Emergency",
             travelerHelpEmergencyNumber = "119",
-            travelerHelpEmergencyDescription = "Call 119 for emergency medical care or an ambulance. Interpretation support is available.",
-            travelerHelpPaymentLabel = "Payment & transit",
-            travelerHelpPaymentDescription = "Credit cards work almost everywhere, and one transit card covers subway and bus transfers."
+            travelerHelpEmergencyDescription = "Emergency care and ambulance, with interpretation",
+            travelerHelpPaymentNote = "Most places take cards, and one transit card covers subway and bus transfers."
         )
         val Zh = PlaceCurationStrings(
-            atAGlanceTitle = "一览",
+            atAGlanceTitle = "MediIn Busan 指南",
+            atAGlanceSourceNote = "此为 MediIn Busan 依据场所类型整理的参考信息，并非韩国观光公社提供的数据。",
+            officialDataCreditLabel = "名称、地址、照片、介绍及更新日期由韩国观光公社 TourAPI 提供。",
             recoveryFitLabel = "建议时机",
             activityLevelLabel = "活动强度",
             settingLabel = "环境",
@@ -205,17 +218,18 @@ data class PlaceCurationStrings(
                 "OTHER" to "医院周边适合短暂停留休息的场所。"
             ),
             travelerHelpTitle = "旅行便利信息",
-            travelerHelpTourLineLabel = "旅游咨询热线 1330",
+            travelerHelpTourLineLabel = "旅游咨询热线",
             travelerHelpTourLineNumber = "1330",
-            travelerHelpTourLineDescription = "韩国观光公社运营的24小时咨询电话，提供英语、汉语、日语翻译服务。",
-            travelerHelpEmergencyLabel = "紧急情况 119",
+            travelerHelpTourLineDescription = "24小时英语·汉语·日语咨询",
+            travelerHelpEmergencyLabel = "紧急情况",
             travelerHelpEmergencyNumber = "119",
-            travelerHelpEmergencyDescription = "急救医疗和救护车请拨打119，同时支持外语翻译连线。",
-            travelerHelpPaymentLabel = "支付·交通",
-            travelerHelpPaymentDescription = "大部分设施都可以刷信用卡，地铁和公交使用一张交通卡即可换乘。"
+            travelerHelpEmergencyDescription = "急救医疗·救护车，可连接翻译",
+            travelerHelpPaymentNote = "多数场所可刷卡，地铁与公交可用一张交通卡换乘。"
         )
         val Ja = PlaceCurationStrings(
-            atAGlanceTitle = "ひと目でわかる",
+            atAGlanceTitle = "メディインブサン ガイド",
+            atAGlanceSourceNote = "場所の種類をもとにメディインブサンがまとめた参考案内です。韓国観光公社提供のデータではありません。",
+            officialDataCreditLabel = "名称・住所・写真・紹介・更新日は韓国観光公社 TourAPI 提供の情報です。",
             recoveryFitLabel = "訪問の目安",
             activityLevelLabel = "活動量",
             settingLabel = "環境",
@@ -261,14 +275,13 @@ data class PlaceCurationStrings(
                 "OTHER" to "病院周辺で短く立ち寄って休むのにちょうどよい場所です。"
             ),
             travelerHelpTitle = "旅行者向け案内",
-            travelerHelpTourLineLabel = "観光通訳案内 1330",
+            travelerHelpTourLineLabel = "観光通訳案内",
             travelerHelpTourLineNumber = "1330",
-            travelerHelpTourLineDescription = "韓国観光公社が運営する24時間の案内電話で、英語・中国語・日本語の通訳案内を受けられます。",
-            travelerHelpEmergencyLabel = "緊急時 119",
+            travelerHelpTourLineDescription = "24時間 英語・中国語・日本語で案内",
+            travelerHelpEmergencyLabel = "緊急時",
             travelerHelpEmergencyNumber = "119",
-            travelerHelpEmergencyDescription = "救急医療・救急車の要請は119です。外国語の通訳対応もあります。",
-            travelerHelpPaymentLabel = "支払い・移動",
-            travelerHelpPaymentDescription = "ほとんどの施設でクレジットカードが使え、地下鉄とバスは交通カード1枚で乗り換えできます。"
+            travelerHelpEmergencyDescription = "救急医療・救急車の要請、通訳もつながります",
+            travelerHelpPaymentNote = "ほとんどの施設でカード決済ができ、地下鉄・バスは交通カード1枚で乗り換えられます。"
         )
     }
 }

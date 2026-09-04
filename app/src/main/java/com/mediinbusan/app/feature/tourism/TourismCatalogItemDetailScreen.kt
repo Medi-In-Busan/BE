@@ -236,7 +236,7 @@ private fun TourismDetailLoaded(
         item { TourismSummaryCard(item = item, category = category) }
         item {
             CurationSectionCard(title = strings.placeCuration.atAGlanceTitle) {
-                AtAGlanceRow(profile = careProfile, accent = CoralPrimary)
+                AtAGlanceRow(profile = careProfile)
             }
         }
         mapPin?.let { pin ->
@@ -265,7 +265,7 @@ private fun TourismDetailLoaded(
                     title = strings.placeCuration.mediTipTitle,
                     icon = Icons.Default.TipsAndUpdates
                 ) {
-                    MediTipContent(copy = copy, accent = CoralPrimary)
+                    MediTipContent(copy = copy)
                 }
             }
         }
@@ -280,7 +280,7 @@ private fun TourismDetailLoaded(
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary
                     )
-                    CautionList(cautions = careProfile.cautions, accent = CoralPrimary)
+                    CautionList(cautions = careProfile.cautions)
                     // 면책 문구는 반드시 남긴다 — 위 안내는 의료 자문이 아니다.
                     Text(
                         strings.nearby.recoveryDisclaimer,
@@ -309,7 +309,7 @@ private fun TourismDetailLoaded(
                 title = strings.placeCuration.travelerHelpTitle,
                 icon = Icons.Default.SupportAgent
             ) {
-                TravelerHelpContent(accent = CoralPrimary, onDial = { context.dialPhone(it) })
+                TravelerHelpContent(onDial = { context.dialPhone(it) })
             }
         }
         item {
@@ -325,6 +325,17 @@ private fun TourismDetailLoaded(
                     )
                 }
             }
+        }
+        // 이 화면도 앱이 직접 쓴 안내(가이드·팁·진료 전후 체크)와 TourAPI 원문이 섞여 있어,
+        // 어디까지가 공식 데이터인지 밝힌다. 반드시 리스트 맨 끝이다 — 앞에 끼우면 아래
+        // TOURISM_DETAIL_MAP_ITEM_INDEX가 가리키는 지도 카드 위치가 어긋난다.
+        item {
+            Text(
+                text = strings.placeCuration.officialDataCreditLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+            )
         }
     }
 }

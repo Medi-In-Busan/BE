@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
 
@@ -27,7 +28,13 @@ import com.mediinbusan.app.data.place.PlaceType
  * SkyBlue/CoralPrimary/MediBlue40 팔레트)과 `PlaceDetailScreen`의 `tint`/`icon`(지도 핀 색 2종).
  * 같은 장소가 목록 썸네일에서는 하늘색, 상세에서는 파란색으로 나오던 이유다. 여기 하나로 모은다.
  */
-data class PlaceKindVisual(val icon: ImageVector, val color: Color)
+/**
+ * @param color 채우기용 색 — 지도 핀, 옅은 배지 배경, 히어로 그라데이션처럼 **면**으로 쓰는 자리.
+ * @param ink 같은 계열의 진한 색 — 흰 배경 위 **글자와 아이콘**용. 채우기 색을 그대로 글자에 쓰면
+ *   음식(#FAA85C, 약 2:1)·쇼핑(#0FA3B1, 약 2.9:1)처럼 대비가 모자라 읽기 어려웠다. 면과 글자를
+ *   나눠 두면 같은 종류라는 인상은 유지하면서 대비만 확보할 수 있다(모두 흰색 대비 4.5:1 이상).
+ */
+data class PlaceKindVisual(val icon: ImageVector, val color: Color, val ink: Color)
 
 /**
  * [type]과 [category]로 아이콘·색을 고른다. 세부 분류를 아는 장소는 그쪽이 이긴다 —
@@ -36,17 +43,17 @@ data class PlaceKindVisual(val icon: ImageVector, val color: Color)
  * @param type 장소 종류. null이면 병원(장소가 아님)으로 본다.
  */
 fun placeKindVisual(type: PlaceType?, category: PlaceCategory = PlaceCategory.OTHER): PlaceKindVisual {
-    if (type == null) return PlaceKindVisual(Icons.Default.LocalHospital, HospitalKindColor)
+    if (type == null) return PlaceKindVisual(Icons.Default.LocalHospital, HospitalKindColor, HospitalKindInk)
     // 세부 분류를 아는 경우(현재는 쇼핑 하위만)가 먼저다. OTHER면 장소 종류로 내려간다.
     shoppingVisual(category)?.let { return it }
     return when (type) {
-        PlaceType.TOURIST_ATTRACTION -> PlaceKindVisual(Icons.Default.PhotoCamera, TouristKindColor)
-        PlaceType.RESTAURANT -> PlaceKindVisual(Icons.Default.Restaurant, FoodKindColor)
-        PlaceType.SHOPPING -> PlaceKindVisual(Icons.Default.ShoppingBag, ShoppingKindColor)
-        PlaceType.LODGING -> PlaceKindVisual(Icons.Default.Hotel, LodgingKindColor)
-        PlaceType.SPA -> PlaceKindVisual(Icons.Default.Spa, SpaKindColor)
-        PlaceType.WALK -> PlaceKindVisual(Icons.AutoMirrored.Filled.DirectionsWalk, WalkKindColor)
-        PlaceType.OTHER -> PlaceKindVisual(Icons.Default.Place, TouristKindColor)
+        PlaceType.TOURIST_ATTRACTION -> PlaceKindVisual(Icons.Default.PhotoCamera, TouristKindColor, TouristKindInk)
+        PlaceType.RESTAURANT -> PlaceKindVisual(Icons.Default.Restaurant, FoodKindColor, FoodKindInk)
+        PlaceType.SHOPPING -> PlaceKindVisual(Icons.Default.ShoppingBag, ShoppingKindColor, ShoppingKindInk)
+        PlaceType.LODGING -> PlaceKindVisual(Icons.Default.Hotel, LodgingKindColor, LodgingKindInk)
+        PlaceType.SPA -> PlaceKindVisual(Icons.Default.Spa, SpaKindColor, SpaKindInk)
+        PlaceType.WALK -> PlaceKindVisual(Icons.AutoMirrored.Filled.DirectionsWalk, WalkKindColor, WalkKindInk)
+        PlaceType.OTHER -> PlaceKindVisual(Icons.Default.Place, TouristKindColor, TouristKindInk)
     }
 }
 
@@ -68,7 +75,7 @@ private fun shoppingVisual(category: PlaceCategory): PlaceKindVisual? {
         PlaceCategory.CRAFT_WORKSHOP -> Icons.Default.Brush
         PlaceCategory.OTHER -> return null
     }
-    return PlaceKindVisual(icon, ShoppingKindColor)
+    return PlaceKindVisual(icon, ShoppingKindColor, ShoppingKindInk)
 }
 
 // 색은 지도 핀 세 가지(KakaoMapView의 clusterColor)를 기준으로 삼고, 핀 하나에 여러 종류가 묶이는
@@ -81,3 +88,14 @@ private val LodgingKindColor = Color(0xFF6C5CE7) // 관광 핀의 파랑에서 �
 private val ShoppingKindColor = Color(0xFF0FA3B1) // 관광 핀의 파랑에서 청록 쪽으로
 private val SpaKindColor = Color(0xFFE8749B)
 private val WalkKindColor = Color(0xFF2FA36B)
+
+// 위 색들을 그대로 흰 배경 위 글자로 쓰면 특히 음식(주황)·쇼핑(청록)이 흐릿하게 뜬다 — 같은 계열을
+// 어둡게 낮춘 짝을 따로 둔다(PlaceKindVisual.ink 주석 참고). 면 색은 그대로 두므로 지도 핀·배지
+// 배경의 인상은 바뀌지 않고, 글자만 또렷해진다.
+private val HospitalKindInk = CoralInk // 값이 같다 — 코랄 글자색 토큰을 그대로 쓴다
+private val FoodKindInk = Color(0xFFA85C00)
+private val TouristKindInk = Color(0xFF1E4FC8)
+private val LodgingKindInk = Color(0xFF5A49D6)
+private val ShoppingKindInk = Color(0xFF0B7C87)
+private val SpaKindInk = Color(0xFFB23A64)
+private val WalkKindInk = Color(0xFF1B7A4B)
