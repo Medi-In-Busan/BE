@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -124,6 +125,7 @@ public class WellnessIngestionService {
                 target.updateFrom(
                     candidate.name(),
                     candidate.placeType(),
+                    candidate.categoryCode(),
                     candidate.address(),
                     candidate.coordinates(),
                     candidate.imageUrl(),
@@ -137,6 +139,7 @@ public class WellnessIngestionService {
                     candidate.contentId(),
                     candidate.name(),
                     candidate.placeType(),
+                    candidate.categoryCode(),
                     candidate.address(),
                     candidate.coordinates(),
                     candidate.imageUrl(),
@@ -192,7 +195,26 @@ public class WellnessIngestionService {
         fetchTourApiList("39", WellnessPlaceType.RESTAURANT, candidates);
         fetchTourApiList("32", WellnessPlaceType.LODGING, candidates);
         fetchTourApiList("38", WellnessPlaceType.SHOPPING, candidates);
+        logCategoryCodeDistribution(candidates);
         return enrichTourDetails(candidates);
+    }
+
+    /**
+     * 이번 수집에서 실제로 내려온 cat3 코드 분포를 한 줄로 남긴다.
+     *
+     * WellnessDtoMapper.categoryOf의 코드 표는 TourAPI 문서를 근거로 적었을 뿐 실제 응답으로
+     * 검증된 적이 없다 — 표에 없는 코드는 조용히 OTHER로 떨어져서, 로그가 없으면 "세분화가 왜 안
+     * 되지"를 추적할 방법이 없다. 이 로그와 categoryOf를 대조하면 틀린 코드를 바로 잡을 수 있다.
+     */
+    private void logCategoryCodeDistribution(List<WellnessPlaceCandidate> candidates) {
+        Map<String, Long> distribution = candidates.stream()
+            .filter(candidate -> candidate.categoryCode() != null && !candidate.categoryCode().isBlank())
+            .collect(Collectors.groupingBy(WellnessPlaceCandidate::categoryCode, TreeMap::new, Collectors.counting()));
+        if (distribution.isEmpty()) {
+            log.warn("TourAPI 수집 결과에 cat3 분류 코드가 하나도 없다 — 응답 필드명이 바뀌었는지 확인할 것");
+            return;
+        }
+        log.info("TourAPI cat3 분류 코드 분포(WellnessDtoMapper.categoryOf 표와 대조할 것): {}", distribution);
     }
 
     private void fetchTourApiList(String contentTypeId, WellnessPlaceType placeType, List<WellnessPlaceCandidate> candidates) {
@@ -437,6 +459,8 @@ public class WellnessIngestionService {
             "tour-" + contentId,
             text(item, "title"),
             placeType,
+            // areaBasedList2 응답의 분류 코드. cat1(A04)/cat2(A0401)는 cat3의 접두사라 cat3만 받는다.
+            text(item, "cat3"),
             firstNonBlank(text(item, "addr1"), text(item, "addr2")),
             coordinates(doubleValue(item, "mapy"), doubleValue(item, "mapx")),
             firstNonBlank(text(item, "firstimage"), text(item, "firstimage2")),
@@ -476,6 +500,8 @@ public class WellnessIngestionService {
             "busanfood-" + contentId,
             text(item, "MAIN_TITLE"),
             WellnessPlaceType.RESTAURANT,
+            // 부산맛집정보는 TourAPI 분류 체계를 쓰지 않는다 — 세부 분류 없음.
+            null,
             firstNonBlank(text(item, "ADDR1"), text(item, "ADDR2")),
             coordinates(doubleValue(item, "LAT"), doubleValue(item, "LNG")),
             firstNonBlank(text(item, "MAIN_IMG_NORMAL"), text(item, "MAIN_IMG_THUMB")),

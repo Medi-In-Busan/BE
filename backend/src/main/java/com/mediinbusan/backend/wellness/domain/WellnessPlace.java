@@ -31,6 +31,17 @@ public class WellnessPlace {
     @Column(name = "place_type", nullable = false, length = 30)
     private WellnessPlaceType placeType;
 
+    /**
+     * TourAPI cat3 원본 코드(예: A04010300 = 백화점). {@link WellnessPlaceType}만으로는 "쇼핑" 안의
+     * 백화점/전통시장/면세점이 구분되지 않아 이 코드를 같이 들고 있는다.
+     *
+     * 우리 분류로 변환하지 않고 원본을 그대로 저장하는 이유는 V11 마이그레이션 주석 참고 —
+     * 변환은 응답을 만들 때(WellnessDtoMapper) 한다. 아직 재수집하지 않은 행이나 TourAPI가 아닌
+     * 소스(부산맛집정보 등)에서 온 행은 null이다.
+     */
+    @Column(name = "category_code", length = 20)
+    private String categoryCode;
+
     @Column(name = "address", nullable = false, length = 300)
     private String address;
 
@@ -86,6 +97,7 @@ public class WellnessPlace {
         String contentId,
         String name,
         WellnessPlaceType placeType,
+        String categoryCode,
         String address,
         Coordinates coordinates,
         String imageUrl,
@@ -96,6 +108,7 @@ public class WellnessPlace {
         this.contentId = contentId;
         this.name = name;
         this.placeType = placeType;
+        this.categoryCode = categoryCode;
         this.address = address;
         this.coordinates = coordinates;
         this.imageUrl = imageUrl;
@@ -118,6 +131,10 @@ public class WellnessPlace {
 
     public WellnessPlaceType getPlaceType() {
         return placeType;
+    }
+
+    public String getCategoryCode() {
+        return categoryCode;
     }
 
     public String getAddress() {
@@ -214,6 +231,7 @@ public class WellnessPlace {
     public void updateFrom(
         String name,
         WellnessPlaceType placeType,
+        String categoryCode,
         String address,
         Coordinates coordinates,
         String imageUrl,
@@ -223,6 +241,10 @@ public class WellnessPlace {
     ) {
         this.name = name;
         this.placeType = placeType;
+        // 이번 수집에서 코드를 못 받았으면(다른 소스 등) 이미 저장돼 있던 값을 지우지 않는다.
+        if (categoryCode != null) {
+            this.categoryCode = categoryCode;
+        }
         this.address = address;
         this.coordinates = coordinates;
         this.imageUrl = imageUrl;

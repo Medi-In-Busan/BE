@@ -119,6 +119,7 @@ class WellnessServiceTest {
             contentId,
             name,
             WellnessPlaceType.TOURIST_ATTRACTION,
+            null,
             "부산 어딘가",
             coordinates,
             null,

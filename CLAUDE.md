@@ -121,6 +121,8 @@ Android 앱은 한국관광공사 OpenAPI나 data.go.kr을 **직접** 호출하�
 
 `core/common/MedicalCategory.kt`(Android) ↔ `MedicalSpecialty`(백엔드) enum 값은 **동일하게 유지되어야 한다** — 한쪽만 바꾸면 필터가 조용히 깨진다.
 
+`data/place/PlaceCategory.kt`(Android) ↔ `wellness/domain/WellnessPlaceCategory.java`(백엔드)도 같은 규칙이다 — 장소 세부 분류(백화점/전통시장/면세점 등, TourAPI cat3 기반). 한쪽만 바꾸면 앱이 모르는 이름을 받아 조용히 `OTHER`로 떨어진다(목록이 깨지진 않고 세분화만 사라진다). 분류의 근거인 cat3 원본 코드는 백엔드 `wellness_place.category_code`에 그대로 저장되고, 코드→분류 매핑은 수집 시점이 아니라 응답 생성 시점(`WellnessDtoMapper.categoryOf`)에 일어난다 — 매핑이 틀려도 재수집 없이 코드 배포만으로 고칠 수 있게 한 구조다.
+
 Kakao Map은 실제로 렌더링된다(`core/ui/KakaoMapView.kt`) — `KAKAO_NATIVE_APP_KEY`가 유효하면 실제 타일·마커가 보이고, 없으면 `MapUnavailableFallback` 폴백 화면만 뜬다. x86_64 에뮬레이터는 `libK3fAndroid.so`가 arm64-v8a/armeabi-v7a로만 배포돼 `KakaoMapSdk.init()`이 실패한다(실기기·ARM 에뮬레이터에선 정상).
 
 ## 8. 시크릿·로컬 설정 관리
