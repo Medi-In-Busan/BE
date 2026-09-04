@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -103,6 +104,7 @@ import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.place.Place
@@ -167,8 +169,9 @@ private fun PlaceDetailContent(
     val scrollState = rememberScrollState()
     // 히어로 사진을 지나 스크롤하면 상단바가 서서히 나타난다 — 예전엔 흰 배경 위에 코랄 화살표만
     // 덩그러니 떠서 본문(주소 줄)과 겹쳐 보였다. 사진 높이의 절반쯤 지나면 완전히 불투명해진다.
-    // 사진이 없는 장소는 아이콘 하나뿐이라 사진과 같은 높이를 주면 화면 위쪽이 휑하다 — 한 단계 낮춘다.
-    val heroHeight = if (place.imageUrl != null) HeroHeight else HeroHeightWithoutPhoto
+    // 사진이 없는 장소도 이제 마스코트 일러스트가 그 자리를 채우므로(PlaceHeroSection) 사진과
+    // 같은 높이를 쓴다 — 아이콘 배지 하나뿐이라 화면 위쪽이 휑하던 시절엔 한 단계 낮춰뒀었다.
+    val heroHeight = HeroHeight
     val topBarAlpha by remember(heroHeight) {
         derivedStateOf {
             val fadeDistancePx = with(density) { (heroHeight / 2).toPx() }
@@ -373,8 +376,12 @@ private fun PlaceHeroSection(place: Place, height: Dp) {
             )
         } else {
             // 실제 사진이 없는 장소가 많아(웰니스 API 원문에 이미지가 비어있는 경우) 이 자리표시자가
-            // 사실상 기본 히어로가 된다 — 무채색 박스 대신 장소 종류(place.type.tint)에 맞춘 옅은
-            // 그라데이션 + 아이콘 배지로, HospitalDetailScreen의 기본 갤러리 폴백과 같은 톤을 쓴다.
+            // 사실상 기본 히어로가 된다 — 예전엔 작은 아이콘 배지 하나뿐이라 화면 위쪽이 휑했다.
+            // 대신 종류에 맞는 마스코트 일러스트를 세우고, 배경은 그대로 장소 종류(place.type.tint)에
+            // 맞춘 옅은 그라데이션을 깔아 투명한 캐릭터가 얹힐 바닥을 만든다.
+            //
+            // 상세화면 전용이다 — 리스트/카드 썸네일은 지금처럼 fallbackBannerImageFor()를 쓴다.
+            // 같은 캐릭터를 목록 행마다 반복하면 행이 전부 똑같아 보여서 구분이 되지 않는다.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -383,22 +390,20 @@ private fun PlaceHeroSection(place: Place, height: Dp) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .background(
-                                brush = Brush.radialGradient(listOf(Color.White, place.type.tint.copy(alpha = 0.18f))),
-                                shape = CircleShape
-                            )
-                            .border(width = 1.dp, color = place.type.tint.copy(alpha = 0.25f), shape = CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = place.type.icon(), contentDescription = null, tint = place.type.tint, modifier = Modifier.size(32.dp))
-                    }
-                    // 이름/카테고리는 아래 타이틀 블록이 책임진다 — 사진 있는 경우와 똑같이,
-                    // 여기서는 종류를 알려주는 아이콘 배지만 남긴다.
-                }
+                // 이름/카테고리는 아래 타이틀 블록이 책임진다. 그림 자체에 "관광 SIGHTSEEING" /
+                // "식사 FOOD" 표지판이 그려져 있어 별도 배지를 겹치지 않아도 종류가 읽힌다.
+                Image(
+                    painter = painterResource(id = place.type.fallbackCharacterImage()),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // 위는 상태바와 떠 있는 뒤로가기 버튼이, 아래는 겹쳐 올라오는 콘텐츠
+                        // 시트(SheetOverlap)가 덮는 자리다 — 캐릭터의 모자와 발이 그 밑으로
+                        // 잘리지 않게 그만큼 비워두고 그 안에 맞춰 넣는다.
+                        .statusBarsPadding()
+                        .padding(bottom = SheetOverlap)
+                )
             }
         }
     }
@@ -634,29 +639,36 @@ private fun RecoveryNoticeSection(place: Place, accent: Color = CoralPrimary) {
 }
 
 // 카드 상단에 카테고리를 색 텍스트 한 줄로만 보여주던 것을, 아이콘+옅은 배경의 배지(pill)로
-// 바꾼다 — PlaceHeroSection의 이미지 없는 폴백이 이미 이 색(place.type.tint)의 아이콘 배지를
-// 쓰고 있어 톤을 그대로 이어받는다.
+// 바꾼다 — 화면 전체의 액센트(place.type.tint)를 그대로 쓰는 자리라, 바로 위 히어로의
+// 배경 그라데이션과 톤이 이어진다.
 @Composable
 private fun CategoryBadge(place: Place, modifier: Modifier = Modifier) {
     val language = LocalAppStrings.current.language
+    // 아이콘·색을 지도 목록의 종류 칩과 같은 표에서 받는다 — 같은 장소가 목록에선 청록 쇼핑백,
+    // 상세에선 파란 카메라로 보이던 문제를 없앤다(core/ui/PlaceKindVisuals.kt).
+    val visual = placeKindVisual(place.type, place.category)
     Row(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
-            .background(place.type.tint.copy(alpha = 0.12f))
+            .background(visual.color.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = place.type.icon(),
+            imageVector = visual.icon,
             contentDescription = null,
-            tint = place.type.tint,
+            tint = visual.color,
             modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = place.type.translatedLabel(language),
+            // 지도 목록(MapScreen)의 종류 칩과 같은 규칙 — 세부 분류를 알면 그걸(백화점/전통시장/
+            // 면세점), 모르면 장소 종류로 되돌아간다. 같은 장소가 목록과 상세에서 다른 이름으로
+            // 불리지 않게 두 곳이 같은 순서를 쓴다.
+            text = place.category.translatedLabel(language)
+                .ifBlank { place.type.translatedLabel(language) },
             style = MaterialTheme.typography.labelMedium,
-            color = place.type.tint,
+            color = visual.color,
             fontWeight = FontWeight.Bold
         )
     }
@@ -838,11 +850,19 @@ private val FoodPinColor = Color(0xFFFAA85C)
 // 화면 폭을 꽉 채우게 되면서 예전(240dp, 좌우 여백 있는 카드)보다 키워 몰입감을 준다.
 private val HeroHeight = 300.dp
 
-// 사진이 없어 아이콘 배지만 들어가는 폴백 히어로의 높이.
-private val HeroHeightWithoutPhoto = 220.dp
 
 // 콘텐츠 시트가 히어로 사진 위로 겹쳐 올라오는 양.
 private val SheetOverlap = 28.dp
+
+/**
+ * 사진이 없을 때 히어로에 세우는 마스코트(상세화면 전용 — PlaceHeroSection 참고).
+ *
+ * 앱 전체가 쓰는 분류 기준을 그대로 따른다: RESTAURANT만 "식사", 나머지(SHOPPING/LODGING/SPA/
+ * WALK/OTHER 포함)는 전부 "관광"이다(Place.toMapPin, MapUiState.visiblePlaces와 동일한 기준).
+ * 지도 "관광" 탭에 묶여 있던 장소가 상세에 들어가서 갑자기 다른 종류로 보이지 않게 하려는 것이다.
+ */
+private fun PlaceType.fallbackCharacterImage(): Int =
+    if (this == PlaceType.RESTAURANT) R.drawable.travel_character_food else R.drawable.travel_character
 
 private fun PlaceType.icon(): ImageVector = when (this) {
     PlaceType.TOURIST_ATTRACTION -> Icons.Default.PhotoCamera

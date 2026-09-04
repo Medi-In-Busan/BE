@@ -4,6 +4,7 @@ fun PlaceDto.toDomain(): Place = Place(
     id = contentId.orEmpty(),
     name = name.orEmpty(),
     type = contentTypeId.toPlaceType(),
+    category = placeCategory.toPlaceCategory(),
     address = address.orEmpty(),
     latitude = latitude,
     longitude = longitude,

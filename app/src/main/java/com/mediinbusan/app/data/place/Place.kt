@@ -4,6 +4,8 @@ data class Place(
     val id: String,
     val name: String,
     val type: PlaceType,
+    // [type]보다 한 단계 자세한 분류(쇼핑 하위 등). 모르는 경우 PlaceCategory.OTHER — 대다수가 그렇다.
+    val category: PlaceCategory = PlaceCategory.OTHER,
     val address: String,
     val latitude: Double?,
     val longitude: Double?,

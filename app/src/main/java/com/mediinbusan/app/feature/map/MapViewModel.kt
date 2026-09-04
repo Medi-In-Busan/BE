@@ -70,90 +70,111 @@ class MapViewModel @Inject constructor(
         BottomBarVisibilityController.setMapSelectionActive(false)
     }
 
+    /**
+     * 이미 같은 대상·같은 언어로 불러와 둔 상태를 기억한다. 화면에 다시 들어올 때마다 처음부터
+     * 다시 받지 않기 위한 것 — 아래 [load] 주석 참고. 조회에 실패하면 null로 되돌려 재시도가
+     * 막히지 않게 한다.
+     */
+    private var loadedKey: LoadKey? = null
+
+    private data class LoadKey(val hospitalId: String?, val courseId: String?, val languageCode: String)
+
+    /**
+     * 화면 진입 시 호출된다. **같은 대상을 같은 언어로 이미 불러왔으면 아무것도 하지 않는다.**
+     *
+     * 예전엔 재진입마다 무조건 다시 받았는데, 그 사이 isLoading=true가 되면서 MapScreen이 잠깐
+     * LoadingState로 바뀌고 BrowseMap이 통째로 사라졌다 — 목록에서 항목을 골라 상세로 갔다가
+     * 뒤로 돌아올 때마다 스피너가 한 번 번쩍이고, 그때 화면 상태(펼침 여부·스크롤 위치)가 전부
+     * 초기화돼 지도만 남았다. 즐겨찾기는 init의 observeFavorites가 계속 흘려주므로 이 조회에
+     * 기대지 않고, 언어가 바뀌면 키가 달라져 정상적으로 다시 받는다.
+     */
     fun load(hospitalId: String?, courseId: String? = null) {
-        when {
-            hospitalId != null && courseId != null -> loadCourseRoute(hospitalId, courseId)
-            hospitalId != null -> loadHospitalFocused(hospitalId)
-            else -> loadAllHospitals()
+        viewModelScope.launch {
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+            val key = LoadKey(hospitalId, courseId, languageCode)
+            if (loadedKey == key) return@launch
+            loadedKey = key
+            when {
+                hospitalId != null && courseId != null -> loadCourseRoute(hospitalId, courseId, languageCode)
+                hospitalId != null -> loadHospitalFocused(hospitalId, languageCode)
+                else -> loadAllHospitals(languageCode)
+            }
+            // 실패한 조회는 캐시하지 않는다 — ErrorState의 "다시 시도"가 그대로 다시 돌아야 한다.
+            if (_uiState.value.errorMessage != null) {
+                loadedKey = null
+            }
         }
+    }
+
+    /** 하단 시트의 펼침/접힘. 화면이 아니라 여기 두는 이유는 MapUiState.isListExpanded 주석 참고. */
+    fun onListExpandedChange(expanded: Boolean) {
+        _uiState.update { it.copy(isListExpanded = expanded) }
     }
 
     // F-014 웰니스 코스 동선: 코스를 구성하는 병원+장소들을 방문 순서 그대로 지도에 그리기 위한 로드 경로.
     // AssembleWellnessCourseUseCase는 feature/nearby의 WellnessCourseCard가 이미 쓰는 것과 동일한
     // 유스케이스 — 여기서는 그 결과 중 courseId가 일치하는 코스 하나만 골라 activeCourse에 담는다.
-    private fun loadCourseRoute(hospitalId: String, courseId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+    private suspend fun loadCourseRoute(hospitalId: String, courseId: String, languageCode: String) {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
+            .first { it !is Result.Loading }
+        val coursesResult = assembleWellnessCourse(hospitalId, languageCode)
+            .first { it !is Result.Loading }
 
-            val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
-                .first { it !is Result.Loading }
-            val coursesResult = assembleWellnessCourse(hospitalId, languageCode)
-                .first { it !is Result.Loading }
+        val hospital = (hospitalResult as? Result.Success)?.data
+        val course = (coursesResult as? Result.Success)?.data?.firstOrNull { it.id == courseId }
 
-            val hospital = (hospitalResult as? Result.Success)?.data
-            val course = (coursesResult as? Result.Success)?.data?.firstOrNull { it.id == courseId }
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    focusedHospital = hospital,
-                    activeCourse = course,
-                    selectedMarkerId = hospital?.id,
-                    errorMessage = if (hospital == null || course == null) "코스 정보를 불러올 수 없습니다." else null
-                )
-            }
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                focusedHospital = hospital,
+                activeCourse = course,
+                selectedMarkerId = hospital?.id,
+                errorMessage = if (hospital == null || course == null) "코스 정보를 불러올 수 없습니다." else null
+            )
         }
     }
 
-    private fun loadHospitalFocused(hospitalId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+    private suspend fun loadHospitalFocused(hospitalId: String, languageCode: String) {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
+            .first { it !is Result.Loading }
+        val placesResult = placeRepository.getNearbyPlaces(hospitalId, languageCode)
+            .first { it !is Result.Loading }
 
-            val hospitalResult = hospitalRepository.getHospitalDetail(hospitalId, languageCode)
-                .first { it !is Result.Loading }
-            val placesResult = placeRepository.getNearbyPlaces(hospitalId, languageCode)
-                .first { it !is Result.Loading }
+        val hospital = (hospitalResult as? Result.Success)?.data
+        val places = (placesResult as? Result.Success)?.data.orEmpty()
 
-            val hospital = (hospitalResult as? Result.Success)?.data
-            val places = (placesResult as? Result.Success)?.data.orEmpty()
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    focusedHospital = hospital,
-                    nearbyPlaces = places,
-                    selectedMarkerId = hospital?.id,
-                    errorMessage = if (hospital == null) "병원 위치 정보를 불러올 수 없습니다." else null
-                )
-            }
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                focusedHospital = hospital,
+                nearbyPlaces = places,
+                selectedMarkerId = hospital?.id,
+                errorMessage = if (hospital == null) "병원 위치 정보를 불러올 수 없습니다." else null
+            )
         }
     }
 
-    private fun loadAllHospitals() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+    private suspend fun loadAllHospitals(languageCode: String) {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        val hospitalsResult = hospitalRepository.getHospitals(languageCode = languageCode)
+            .first { it !is Result.Loading }
+        val hospitals = (hospitalsResult as? Result.Success)?.data.orEmpty()
 
-            val hospitalsResult = hospitalRepository.getHospitals(languageCode = languageCode)
-                .first { it !is Result.Loading }
-            val hospitals = (hospitalsResult as? Result.Success)?.data.orEmpty()
+        // 예전엔 병원 목록 맨 앞 병원 하나의 반경 3km(getNearbyPlaces)만 빌려써서, 그 반경 밖
+        // 장소(다른 구에 upsert된 부산맛집 데이터 등)가 지도에 아예 안 떴다 — 병원 비종속 전체
+        // 조회(getAllPlaces, GET /api/wellness/places)로 바꿔 부산 전역 장소가 다 보이게 한다.
+        val placesResult = placeRepository.getAllPlaces(languageCode).first { it !is Result.Loading }
+        val places = (placesResult as? Result.Success)?.data.orEmpty()
 
-            // 예전엔 병원 목록 맨 앞 병원 하나의 반경 3km(getNearbyPlaces)만 빌려써서, 그 반경 밖
-            // 장소(다른 구에 upsert된 부산맛집 데이터 등)가 지도에 아예 안 떴다 — 병원 비종속 전체
-            // 조회(getAllPlaces, GET /api/wellness/places)로 바꿔 부산 전역 장소가 다 보이게 한다.
-            val placesResult = placeRepository.getAllPlaces(languageCode).first { it !is Result.Loading }
-            val places = (placesResult as? Result.Success)?.data.orEmpty()
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    allHospitals = hospitals,
-                    allPlaces = places,
-                    errorMessage = if (hospitalsResult is Result.Error) "병원 목록을 불러올 수 없습니다." else null
-                )
-            }
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                allHospitals = hospitals,
+                allPlaces = places,
+                errorMessage = if (hospitalsResult is Result.Error) "병원 목록을 불러올 수 없습니다." else null
+            )
         }
     }
 

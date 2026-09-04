@@ -31,6 +31,11 @@ data class MapUiState(
     // false가 되어 마커와 하단 목록 시트가 함께 사라진다. 화면 상태(remember)가 아니라 여기 두는
     // 이유는, 마커→상세화면→뒤로가기로 돌아왔을 때 골라둔 카테고리가 그대로 남아있어야 하기 때문이다.
     val markersActivated: Boolean = false,
+    // 하단 시트가 "펼친 목록"(목적별로 찾는 장소) 상태인지. markersActivated와 같은 이유로 화면
+    // 상태(rememberSaveable)가 아니라 여기 둔다 — 목록에서 항목을 골라 상세로 갔다 뒤로 돌아오면
+    // MapScreen이 잠깐 LoadingState로 바뀌면서 BrowseMap이 통째로 사라지는데, 그때 화면 로컬
+    // 상태는 같이 날아가 목록이 접힌 채(=지도만 보이는 채) 돌아왔다.
+    val isListExpanded: Boolean = false,
     val searchQuery: String = "",
     val selectedMarkerId: String? = null,
     val favoriteHospitalIds: Set<String> = emptySet(),

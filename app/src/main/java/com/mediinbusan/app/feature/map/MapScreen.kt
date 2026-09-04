@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -20,7 +21,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,12 +51,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -66,12 +63,11 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -86,7 +82,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -121,8 +116,6 @@ import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.InactiveIcon
-import com.mediinbusan.app.core.designsystem.MediBlue40
-import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
@@ -146,12 +139,15 @@ import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.PlaceKindVisual
+import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.RouteStop
 import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import kotlinx.coroutines.launch
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
+import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.WellnessCourse
 
@@ -204,7 +200,8 @@ fun MapScreen(
             onSearchThisArea = viewModel::searchThisArea,
             onSpecialtyFilterToggled = viewModel::onSpecialtyFilterToggled,
             onSpecialtyFiltersCleared = viewModel::onSpecialtyFiltersCleared,
-            onLanguageFilterToggled = viewModel::onLanguageFilterToggled
+            onLanguageFilterToggled = viewModel::onLanguageFilterToggled,
+            onListExpandedChange = viewModel::onListExpandedChange
         )
     }
 }
@@ -415,7 +412,8 @@ private fun BrowseMap(
     onSearchThisArea: (latitude: Double, longitude: Double) -> Unit,
     onSpecialtyFilterToggled: (String) -> Unit,
     onSpecialtyFiltersCleared: () -> Unit,
-    onLanguageFilterToggled: () -> Unit
+    onLanguageFilterToggled: () -> Unit,
+    onListExpandedChange: (Boolean) -> Unit
 ) {
     val mapStrings = LocalAppStrings.current.map
     val language = LocalAppStrings.current.language
@@ -428,10 +426,12 @@ private fun BrowseMap(
     // 카드영역: 기본은 "미리보기"(손잡이 + 리스트 첫 항목만 66% 노출) 상태로 접혀있고, 손잡이를
     // 위로 드래그(또는 탭)하면 검색바까지 덮는 전체 리스트 페이지로 펼쳐진다. 마커를 새로 선택하면
     // 그 항목을 미리보기로 보여주면 되므로, 펼쳐져 있었어도 미리보기로 되돌아간다.
-    // rememberSaveable — 상세화면에 갔다 뒤로 돌아왔을 때 펼침 상태를 그대로 이어받는다.
-    var isListExpanded by rememberSaveable { mutableStateOf(false) }
+    // 펼침 여부는 ViewModel이 들고 있다(MapUiState.isListExpanded) — 목록에서 항목을 골라 상세로
+    // 갔다 뒤로 돌아와도 그 상태 그대로 복귀해야 하기 때문이다. 화면 로컬 상태로 두면 재진입 때
+    // BrowseMap이 잠깐 사라지면서 같이 날아갔다.
+    val isListExpanded = uiState.isListExpanded
     LaunchedEffect(uiState.selectedMarkerId) {
-        if (uiState.selectedMarkerId != null) isListExpanded = false
+        if (uiState.selectedMarkerId != null) onListExpandedChange(false)
     }
     // visibleHospitals/visiblePlaces/categoryHospitals는 MapUiState의 계산 프로퍼티라 읽을 때마다
     // 전체 목록을 다시 거른다 — 한 번의 recomposition에서 핀/목록/선택 조회로 네댓 번씩 반복됐고,
@@ -464,7 +464,7 @@ private fun BrowseMap(
     // 카테고리 탭은 토글이다(켜진 탭을 다시 누르면 마커가 사라진다) — 그 판단은 ViewModel의
     // onCategorySelected가 하고, 화면은 꺼질 때 펼쳐둔 리스트만 같이 접는다.
     val onCategoryTapped: (MapCategory) -> Unit = { category ->
-        if (markersActivated && uiState.selectedCategory == category) isListExpanded = false
+        if (markersActivated && uiState.selectedCategory == category) onListExpandedChange(false)
         onCategorySelected(category)
     }
     // 0은 "아직 요청 없음"을 의미하는 초기값이라 KakaoMapView가 무시한다 — 버튼 클릭마다 증가시켜 트리거한다.
@@ -727,6 +727,13 @@ private fun BrowseMap(
             }
         }
 
+        // 시트 배경색 — 접힘(연분홍 트레이 위 흰 카드) / 펼침(흰 목록 페이지)을 오간다.
+        val sheetBackgroundColor by animateColorAsState(
+            targetValue = if (isListExpanded) Color.White else HomeBackgroundPink,
+            animationSpec = tween(220),
+            label = "mapSheetBackground"
+        )
+
         // 손잡이 하나에만 걸려 있던 드래그를 시트 전체가 공유한다 — 미리보기 행(리스트) 위를
         // 위로 쓸어올려도 펼쳐지고, 펼친 상태에서 제목/탭 줄을 아래로 끌면 다시 접힌다.
         val dragAccumPx = remember { mutableFloatStateOf(0f) }
@@ -767,10 +774,10 @@ private fun BrowseMap(
                     }
                     dragAccumPx.floatValue += dragAmount
                     if (!isListExpanded && dragAccumPx.floatValue < -dragThresholdPx) {
-                        isListExpanded = true
+                        onListExpandedChange(true)
                         dragAccumPx.floatValue = 0f
                     } else if (isListExpanded && dragAccumPx.floatValue > dragThresholdPx) {
-                        isListExpanded = false
+                        onListExpandedChange(false)
                         dragAccumPx.floatValue = 0f
                     }
                 }
@@ -790,7 +797,7 @@ private fun BrowseMap(
                     if (isListExpanded && available.y > 0f) {
                         dragAccumPx.floatValue += available.y
                         if (dragAccumPx.floatValue > dragThresholdPx) {
-                            isListExpanded = false
+                            onListExpandedChange(false)
                             dragAccumPx.floatValue = 0f
                         }
                     }
@@ -832,9 +839,13 @@ private fun BrowseMap(
                         spotColor = Color.Black.copy(alpha = 0.2f)
                     )
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    // 시트 배경은 흰색이 아니라 Home/HospitalSearchList와 같은 앱 기본 배경색(연분홍) —
-                    // 그 위에 얹히는 리스트 항목(ListRowEntry)이 각자 흰 카드+그림자로 구분돼 보인다.
-                    .background(HomeBackgroundPink)
+                    // 접힌 상태(미리보기 한 줄 / 선택 카드)의 시트는 Home/HospitalSearchList와 같은
+                    // 앱 기본 배경색(연분홍)이다 — 그 위에 흰 카드가 그림자와 함께 떠 보인다.
+                    // 펼치면 그 자체가 목록 페이지가 되므로 흰 면으로 바뀐다: 행마다 카드를 띄우는
+                    // 대신 구분선으로만 나누는 플랫 구조라(MapPlaceListRow), 바닥이 흰색이어야
+                    // 행 사이 경계가 그림자 없이도 분명해진다. 두 상태 사이는 색을 애니메이션해서
+                    // 펼침/접힘 도중에 배경이 한 프레임에 툭 바뀌지 않게 한다.
+                    .background(sheetBackgroundColor)
                     .nestedScroll(sheetNestedScroll)
                     .then(sheetDragModifier)
                     // 세 상태 모두 하단 탭바를 피한다 — 예전엔 미리보기일 때만 탭바 높이를 안 비워서
@@ -855,7 +866,7 @@ private fun BrowseMap(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { isListExpanded = !isListExpanded }
+                                onClick = { onListExpandedChange(!isListExpanded) }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -893,28 +904,37 @@ private fun BrowseMap(
                                 Row(verticalAlignment = Alignment.Bottom) {
                                     Text(
                                         text = mapStrings.listPageTitle,
-                                        style = MaterialTheme.typography.titleMedium,
+                                        // 펼친 상태는 지도 위에 살짝 뜬 트레이가 아니라 하나의
+                                        // "목록 페이지"다 — 제목을 한 단계 키워 그 위계를 준다.
+                                        style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     // 몇 곳이 잡혔는지 — "이 위치에서 검색"으로 범위를 좁혔을 때
-                                    // 결과가 실제로 줄었는지 확인하는 신호도 된다.
+                                    // 결과가 실제로 줄었는지 확인하는 신호도 된다. 제목과 같은 줄
+                                    // 아래쪽(Alignment.Bottom)에 붙어 부제처럼 읽힌다.
                                     Text(
                                         text = "${entries.size}${mapStrings.resultCountSuffix}",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = CoralPrimary
+                                        color = CoralPrimary,
+                                        modifier = Modifier.padding(bottom = 2.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
                                 CategoryTabsRow(
                                     strings = mapStrings,
                                     selected = if (markersActivated) uiState.selectedCategory else null,
                                     onSelected = onCategoryTapped
                                 )
+                                Spacer(modifier = Modifier.height(14.dp))
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            // 헤더(제목+탭)와 목록을 가르는 선. 아래 목록이 흰 면 위에 구분선으로만
+                            // 나뉘는 플랫 구조라, 헤더도 같은 문법으로 끊어줘야 스크롤될 때 탭 줄이
+                            // 목록 위에 떠 있는 고정 영역이라는 게 읽힌다.
+                            HorizontalDivider(color = DividerColor)
+                            Spacer(modifier = Modifier.height(4.dp))
                             if (entries.isEmpty()) {
                                 EmptyResultCard(
                                     message = if (uiState.selectedCategory == MapCategory.HOSPITAL) {
@@ -930,21 +950,29 @@ private fun BrowseMap(
                                 key(uiState.selectedCategory) {
                                     LazyColumn(
                                         modifier = Modifier.fillMaxWidth().weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        contentPadding = PaddingValues(bottom = 8.dp)
                                     ) {
-                                        items(entries, key = { it.id }) { entry ->
-                                            ListRowEntry(
+                                        itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
+                                            // 행 사이 구분선. 첫 행 위에는 두지 않는다(탭 줄 아래
+                                            // 구분선이 이미 그 경계를 만든다).
+                                            if (index > 0) {
+                                                HorizontalDivider(
+                                                    color = DividerColor,
+                                                    // 썸네일 오른쪽 끝까지 긋지 않고 텍스트 시작선에
+                                                    // 맞춰 들여쓴다 — 행이 하나씩 끊겨 보이는 대신
+                                                    // 목록 전체가 한 덩어리로 이어져 읽힌다.
+                                                    modifier = Modifier.padding(start = 20.dp)
+                                                )
+                                            }
+                                            MapPlaceListRow(
                                                 entry = entry,
+                                                categoryLabel = entry.categoryLabel(language, mapStrings),
+                                                visual = placeKindVisual(entry.placeType, entry.placeCategory),
                                                 // 리스트업 페이지에서는 눌렀을 때 바로 상세화면으로 이동한다
                                                 // (선택 상태로만 바꾸는 미리보기 쪽과 다르다).
                                                 onClick = {
                                                     if (entry.id in hospitalIdSet) onSelectHospital(entry.id) else onSelectPlace(entry.id)
-                                                },
-                                                modifier = Modifier.height(108.dp),
-                                                // 행 높이(108dp)에 맞춰 늘어나는 세로형 사진 — 가로 폭을 1.5배
-                                                // 키워서 비율을 0.5(1:2)에서 0.75로 늘렸다.
-                                                thumbnailModifier = Modifier.fillMaxHeight().aspectRatio(0.75f)
+                                                }
                                             )
                                         }
                                     }
@@ -1215,6 +1243,9 @@ private data class CardEntry(
     // 장소(Place)일 때만 채워진다 — 관광/음식 API 응답에 사진이 없는 경우가 많아, 그때 회색 빈
     // 박스 대신 이 종류에 맞는 색+아이콘 썸네일(PlaceFallbackThumbnail)을 그리는 데 쓴다.
     val placeType: PlaceType? = null,
+    // placeType보다 한 단계 자세한 분류(백화점/전통시장/면세점 등). 대다수는 OTHER이고, 그때는
+    // 칩이 placeType 라벨로 되돌아간다 — PlaceCategory.translatedLabel 주석 참고.
+    val placeCategory: PlaceCategory = PlaceCategory.OTHER,
     // 지도 화면 중심에서의 거리(m). 목록 정렬 기준이자 행에 "350m"로 표시된다. 좌표가 없으면 null.
     val distanceMeters: Double? = null
 )
@@ -1236,6 +1267,7 @@ private fun Place.toCardEntry(origin: MapPoint) = CardEntry(
     languages = emptyList(),
     imageUrl = imageUrl,
     placeType = type,
+    placeCategory = category,
     distanceMeters = distanceFrom(origin, latitude, longitude)
 )
 
@@ -1248,20 +1280,157 @@ private fun distanceFrom(origin: MapPoint, latitude: Double?, longitude: Double?
 private fun Double.toDistanceLabel(): String =
     if (this < 1_000.0) "${(this / 10).toInt() * 10}m" else String.format("%.1fkm", this / 1_000.0)
 
+/**
+ * 칩에 쓸 글자. 자세한 쪽부터 고른다 — 세부 분류(백화점/전통시장/면세점) → 장소 종류(관광지/쇼핑/
+ * 숙소/카페·맛집) → 병원.
+ *
+ * 세부 분류는 백엔드가 TourAPI cat3를 아는 장소에만 붙는다(대부분은 PlaceCategory.OTHER =
+ * 빈 문자열). 그래서 "있으면 쓰고 없으면 한 단계 위로 되돌아가는" 이 순서가 필요하다 — 목록에
+ * 절반은 "백화점", 절반은 "기타"가 뜨는 대신 "백화점 / 쇼핑"처럼 아는 만큼만 자세해진다.
+ */
+private fun CardEntry.categoryLabel(language: SupportedLanguage, strings: MapStrings): String {
+    val type = placeType ?: return strings.categoryHospitalLabel
+    return placeCategory.translatedLabel(language).ifBlank { type.translatedLabel(language) }
+}
+
+/**
+ * 행 왼쪽 아래에 붙는 종류 표시. 그 종류의 색을 옅게 깔고, 같은 색 아이콘과 글자를 얹는다.
+ *
+ * 아이콘이 있어야 "백화점"과 "전통시장"처럼 색이 같은(둘 다 쇼핑 계열) 항목이 글자를 읽기 전에도
+ * 구분된다 — 색은 묶음, 아이콘은 종류를 맡는다(core/ui/PlaceKindVisuals.kt).
+ */
+@Composable
+private fun CategoryChip(label: String, visual: PlaceKindVisual) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(visual.color.copy(alpha = 0.12f))
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Icon(
+            imageVector = visual.icon,
+            contentDescription = null,
+            tint = visual.color,
+            modifier = Modifier.size(11.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = visual.color
+        )
+    }
+}
+
+/**
+ * 펼친 목록("목적별로 찾는 장소")의 한 행. 텍스트가 왼쪽, 썸네일이 오른쪽인 플랫 리스트 행이다.
+ *
+ * 예전에는 이 자리에도 [ListRowEntry](흰 카드 + 6dp 그림자)를 썼는데, 시트 배경(HomeBackgroundPink,
+ * #FFFAFA)과 카드(순백)의 명도차가 거의 없어서 행 구분을 전적으로 그림자에 기대고 있었다 — 행이
+ * 열 개씩 쌓이면 그림자가 서로 번져 회색 얼룩처럼 보였다. 시트를 통째로 흰 면으로 두고 행 사이를
+ * 얇은 구분선으로만 나누면, 그림자 없이도 경계가 분명하고 목록이 훨씬 조용해진다.
+ *
+ * 카드 형태가 필요한 자리는 지도 위에 한 줄만 떠 있는 미리보기(peek)뿐이라, 그쪽은 [ListRowEntry]를
+ * 그대로 쓴다 — 거기서는 지도 타일 위에 떠야 해서 그림자가 실제로 제 역할을 한다.
+ */
+@Composable
+private fun MapPlaceListRow(
+    entry: CardEntry,
+    categoryLabel: String,
+    visual: PlaceKindVisual,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = entry.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // 지도 화면 중심에서의 거리를 주소 앞에 둔다 — 목록이 이 거리순으로 정렬돼 있어
+                // "왜 이 순서인지"가 바로 읽힌다.
+                entry.distanceMeters?.let { distance ->
+                    Text(
+                        text = distance.toDistanceLabel(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = CoralPrimary,
+                        maxLines = 1
+                    )
+                    Text(text = " · ", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                }
+                Text(
+                    text = entry.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            // 종류 칩과 지원 언어 배지를 한 줄로 묶는다 — 병원은 "병원 EN JP", 장소는 칩만 남는다.
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CategoryChip(label = categoryLabel, visual = visual)
+                entry.languages.take(3).forEach { lang -> LanguageBadge(text = lang.toLanguageBadgeLabel()) }
+            }
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        // 세로형(0.75)에서 가로형에 가까운 정사각에 가깝게 — 가로 행에서 세로로 긴 사진은 행 높이를
+        // 끌어올리기만 하고 정작 무엇이 찍혔는지는 덜 보였다.
+        val thumbnail = Modifier.size(width = 88.dp, height = 72.dp).clip(RoundedCornerShape(12.dp))
+        when {
+            entry.imageUrl != null -> AsyncImageBox(
+                model = entry.imageUrl,
+                contentDescription = entry.title,
+                contentScale = ContentScale.Crop,
+                modifier = thumbnail.background(DividerColor)
+            )
+            entry.fallbackImageRes != null -> Image(
+                painter = painterResource(id = entry.fallbackImageRes),
+                contentDescription = entry.title,
+                contentScale = ContentScale.Crop,
+                modifier = thumbnail.background(DividerColor)
+            )
+            entry.placeType != null -> PlaceFallbackThumbnail(visual = visual, modifier = thumbnail)
+            else -> AsyncImageBox(
+                model = null,
+                contentDescription = entry.title,
+                contentScale = ContentScale.Crop,
+                modifier = thumbnail.background(DividerColor)
+            )
+        }
+    }
+}
+
 // HospitalSearchListScreen의 SearchResultCard와 같은 느낌(왼쪽 썸네일 + 오른쪽 텍스트, 같은
 // 그림자 톤으로 흰 카드가 배경 위에 붕 떠 보임)의 가로형 리스트 행. feature 패키지끼리는 서로
 // import하지 않는 규칙이라 그 컴포저블을 직접 가져다 쓰는 대신, CardEntry(병원/장소 통합 모델)
-// 기준으로 이 파일 안에 로컬로 새로 둔다. 카드영역 배경이 흰색이 아니라 연분홍(HomeBackgroundPink)
-// 이라, 각 행이 이 자체 그림자+흰 배경으로 서로 구분돼 보인다.
+// 기준으로 이 파일 안에 로컬로 새로 둔다. 지도 위에 한 줄만 떠 있는 미리보기(peek) 전용이다 —
+// 펼친 목록은 그림자 없는 플랫 행(MapPlaceListRow)을 쓴다.
 @Composable
 private fun ListRowEntry(
     entry: CardEntry,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    // 미리보기(고정 96dp 행)에서는 기존 정사각形 썸네일을 쓰고, 리스트업 그룹(4개, 행이 위아래로
-    // 늘어남)에서는 가로1:세로2 비율 썸네일을 쓴다 — 호출부에서 다르게 넘긴다.
-    thumbnailModifier: Modifier = Modifier.size(72.dp)
 ) {
+    // 미리보기는 고정 높이(ListRowFixedHeight) 한 줄이라 썸네일도 정사각으로 고정한다.
+    val thumbnailModifier = Modifier.size(72.dp)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1293,7 +1462,7 @@ private fun ListRowEntry(
             )
         } else if (entry.placeType != null) {
             PlaceFallbackThumbnail(
-                type = entry.placeType,
+                visual = placeKindVisual(entry.placeType, entry.placeCategory),
                 modifier = thumbnailModifier.clip(RoundedCornerShape(12.dp))
             )
         } else {
@@ -1485,63 +1654,40 @@ private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
     if (place.imageUrl != null) {
         AsyncImageBox(model = place.imageUrl, contentDescription = place.name, modifier = modifier)
     } else {
-        PlaceFallbackThumbnail(type = place.type, modifier = modifier)
+        PlaceFallbackThumbnail(visual = placeKindVisual(place.type, place.category), modifier = modifier)
     }
 }
 
-// 사진이 없는 장소의 대체 썸네일 — PlaceDetailScreen의 히어로 폴백과 같은 아이디어(종류별 색
-// 그라데이션 + 아이콘 배지)를 작은 카드 썸네일 크기에 맞춰 줄인 것. 색은 앱 브랜드 팔레트
-// (CoralPrimary/SkyBlue/MediBlue40)에서 가져와 지도 마커 색 계열과 따로 놀지 않게 한다.
-// feature 패키지끼리 import하지 않는 규칙(CLAUDE.md)이라 여기에 로컬로 둔다.
+// 사진이 없는 장소의 대체 썸네일 — 종류별 색 그라데이션 + 아이콘 배지를 작은 카드 썸네일 크기에
+// 맞춰 줄인 것. 아이콘·색은 core/ui/PlaceKindVisuals.kt 한 곳에서 받아 쓴다(예전엔 이 파일과
+// PlaceDetailScreen이 각자 다른 팔레트를 들고 있어 같은 장소가 화면마다 다른 색으로 보였다).
 @Composable
-private fun PlaceFallbackThumbnail(type: PlaceType, modifier: Modifier = Modifier) {
-    val tint = type.fallbackTint
+private fun PlaceFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.background(
-            Brush.verticalGradient(listOf(tint.copy(alpha = 0.20f), tint.copy(alpha = 0.06f)))
+            Brush.verticalGradient(
+                listOf(visual.color.copy(alpha = 0.20f), visual.color.copy(alpha = 0.06f))
+            )
         ),
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = type.fallbackIcon(),
+            imageVector = visual.icon,
             contentDescription = null,
-            tint = tint,
+            tint = visual.color,
             modifier = Modifier.size(26.dp)
         )
     }
 }
 
-private val PlaceType.fallbackTint: Color
-    get() = when (this) {
-        PlaceType.TOURIST_ATTRACTION -> SkyBlue
-        PlaceType.RESTAURANT -> CoralPrimary
-        PlaceType.SHOPPING -> CoralPrimary
-        PlaceType.LODGING -> MediBlue40
-        PlaceType.SPA -> CoralPrimary
-        PlaceType.WALK -> SkyBlue
-        PlaceType.OTHER -> MediBlue40
-    }
-
-private fun PlaceType.fallbackIcon(): ImageVector = when (this) {
-    PlaceType.TOURIST_ATTRACTION -> Icons.Default.PhotoCamera
-    PlaceType.RESTAURANT -> Icons.Default.Restaurant
-    PlaceType.SHOPPING -> Icons.Default.ShoppingBag
-    PlaceType.LODGING -> Icons.Default.Hotel
-    PlaceType.SPA -> Icons.Default.Spa
-    PlaceType.WALK -> Icons.AutoMirrored.Filled.DirectionsWalk
-    PlaceType.OTHER -> Icons.Default.Place
-}
-
 @Composable
 private fun EmptyResultCard(message: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 16.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    ) {
+    // 펼친 목록이 그림자 없는 흰 면이 되면서(MapPlaceListRow) 이 자리도 같이 평평해졌다 —
+    // 예전엔 연분홍 배경 위에 떠야 해서 흰 Surface + 16dp 그림자를 썼는데, 흰 바탕 위에서는
+    // 그 그림자가 회색 얼룩으로만 남는다.
+    Box(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
