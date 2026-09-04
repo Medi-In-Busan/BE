@@ -10,6 +10,7 @@ import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.data.tourism.TourismInteractionRepository
@@ -103,7 +104,7 @@ class TourismCatalogViewModel @Inject constructor(
 
     fun selectItem(item: TourismCatalogItem) {
         val category = _uiState.value.category ?: return
-        pendingTourismCatalogItem.set(category, item)
+        pendingTourismCatalogItem.set(category, item, _uiState.value.selectedDistrict)
         viewModelScope.launch {
             interactionRepository.recordItemSelection(category, item)
         }
@@ -237,11 +238,11 @@ class TourismCatalogViewModel @Inject constructor(
             .map { it.name }
         val recent = recentRepository.observeRecentlyViewed().first()
         val recentPlaceNames = recent
-            .filter { it.itemType == FavoriteItemType.PLACE }
+            .filter { it.itemType == RecentItemType.PLACE }
             .map { it.itemName }
         val recentHospital = recent
             .filter {
-                it.itemType == FavoriteItemType.HOSPITAL &&
+                it.itemType == RecentItemType.HOSPITAL &&
                     it.latitude != null && it.longitude != null
             }
             .maxByOrNull { it.viewedAt }

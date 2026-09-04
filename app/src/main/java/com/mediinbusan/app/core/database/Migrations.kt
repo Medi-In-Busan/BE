@@ -18,3 +18,13 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("ALTER TABLE recently_viewed ADD COLUMN longitude REAL")
     }
 }
+
+// v4 -> v5: recently_viewed에 tourismCategory/tourismDistrict 컬럼을 추가한다. TOURISM_ITEM
+// 타입(웰니스/투어 카탈로그·추천 코스에서 본 항목)을 나중에 재조회(findMatchingPlace)하기 위한
+// 컨텍스트 — 순수 컬럼 추가라 destructive fallback 없이 기존 로컬 데이터를 보존한다.
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE recently_viewed ADD COLUMN tourismCategory TEXT")
+        db.execSQL("ALTER TABLE recently_viewed ADD COLUMN tourismDistrict TEXT")
+    }
+}
