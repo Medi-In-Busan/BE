@@ -28,7 +28,11 @@ data class PlaceCurationStrings(
     val stayTimeRangeFormat: String,
     /** 숙소처럼 체류 시간을 못 박는 게 의미 없는 유형에 쓴다(PlaceCareProfile의 0~0). */
     val stayTimeFlexible: String,
-    /** 키는 RecoveryFit.name. */
+    /**
+      * 키는 RecoveryFit.name. **"진료 당일도 무난" 같은 허가성 문구를 넣지 말 것** — 앱은 시술
+      * 종류도 환자 상태도 모른다(core/common/PlaceCareProfile.kt의 RecoveryFit 주석 참고).
+      * 장소 쪽 부담만 말하고, 시기 판단은 [atAGlanceSourceNote]가 의료기관으로 넘긴다.
+      */
     val recoveryFitLabels: Map<String, String>,
     /** 키는 ActivityLevel.name. */
     val activityLevelLabels: Map<String, String>,
@@ -57,7 +61,7 @@ data class PlaceCurationStrings(
     companion object {
         val Ko = PlaceCurationStrings(
             atAGlanceTitle = "메디인부산 가이드",
-            atAGlanceSourceNote = "장소 유형을 기준으로 메디인부산이 정리한 참고 안내입니다 — 관광공사 제공 정보가 아닙니다.",
+            atAGlanceSourceNote = "장소 유형을 기준으로 메디인부산이 정리한 참고 안내입니다 — 관광공사 제공 정보가 아닙니다. 언제부터 다녀도 되는지는 진료받은 의료기관 안내를 우선하세요.",
             officialDataCreditLabel = "이름·주소·사진·소개·갱신일은 한국관광공사 TourAPI 제공 정보입니다.",
             recoveryFitLabel = "방문 시기",
             activityLevelLabel = "활동 강도",
@@ -66,7 +70,7 @@ data class PlaceCurationStrings(
             stayTimeRangeFormat = "%d~%d분",
             stayTimeFlexible = "일정에 맞춰",
             recoveryFitLabels = mapOf(
-                "IMMEDIATE" to "진료 당일도 무난",
+                "IMMEDIATE" to "부담이 적은 편",
                 "AFTER_FEW_DAYS" to "회복 2~3일 후",
                 "AFTER_RECOVERY" to "회복 후 권장"
             ),
@@ -114,7 +118,7 @@ data class PlaceCurationStrings(
         )
         val En = PlaceCurationStrings(
             atAGlanceTitle = "MediIn Busan guide",
-            atAGlanceSourceNote = "A MediIn Busan reference guide based on the type of place — not data provided by the Korea Tourism Organization.",
+            atAGlanceSourceNote = "A MediIn Busan reference guide based on the type of place — not data provided by the Korea Tourism Organization. On when it is safe to go out, follow the guidance of the clinic that treated you.",
             officialDataCreditLabel = "Name, address, photo, description and update date are provided by the Korea Tourism Organization TourAPI.",
             recoveryFitLabel = "When to visit",
             activityLevelLabel = "Effort",
@@ -123,7 +127,7 @@ data class PlaceCurationStrings(
             stayTimeRangeFormat = "%d–%d min",
             stayTimeFlexible = "As your schedule allows",
             recoveryFitLabels = mapOf(
-                "IMMEDIATE" to "Fine on treatment day",
+                "IMMEDIATE" to "Low-demand outing",
                 "AFTER_FEW_DAYS" to "2–3 days into recovery",
                 "AFTER_RECOVERY" to "Best after recovery"
             ),
@@ -171,7 +175,7 @@ data class PlaceCurationStrings(
         )
         val Zh = PlaceCurationStrings(
             atAGlanceTitle = "MediIn Busan 指南",
-            atAGlanceSourceNote = "此为 MediIn Busan 依据场所类型整理的参考信息，并非韩国观光公社提供的数据。",
+            atAGlanceSourceNote = "此为 MediIn Busan 依据场所类型整理的参考信息，并非韩国观光公社提供的数据。何时可以外出，请以为您诊疗的医疗机构的说明为准。",
             officialDataCreditLabel = "名称、地址、照片、介绍及更新日期由韩国观光公社 TourAPI 提供。",
             recoveryFitLabel = "建议时机",
             activityLevelLabel = "活动强度",
@@ -180,7 +184,7 @@ data class PlaceCurationStrings(
             stayTimeRangeFormat = "%d~%d分钟",
             stayTimeFlexible = "按行程安排",
             recoveryFitLabels = mapOf(
-                "IMMEDIATE" to "就诊当天也可以",
+                "IMMEDIATE" to "负担较小",
                 "AFTER_FEW_DAYS" to "恢复2~3天后",
                 "AFTER_RECOVERY" to "建议恢复后"
             ),
@@ -228,7 +232,7 @@ data class PlaceCurationStrings(
         )
         val Ja = PlaceCurationStrings(
             atAGlanceTitle = "メディインブサン ガイド",
-            atAGlanceSourceNote = "場所の種類をもとにメディインブサンがまとめた参考案内です。韓国観光公社提供のデータではありません。",
+            atAGlanceSourceNote = "場所の種類をもとにメディインブサンがまとめた参考案内です。韓国観光公社提供のデータではありません。いつから出かけてよいかは、診療を受けた医療機関の案内を優先してください。",
             officialDataCreditLabel = "名称・住所・写真・紹介・更新日は韓国観光公社 TourAPI 提供の情報です。",
             recoveryFitLabel = "訪問の目安",
             activityLevelLabel = "活動量",
@@ -237,7 +241,7 @@ data class PlaceCurationStrings(
             stayTimeRangeFormat = "%d~%d分",
             stayTimeFlexible = "予定に合わせて",
             recoveryFitLabels = mapOf(
-                "IMMEDIATE" to "診療当日でも無理なく",
+                "IMMEDIATE" to "負担が少なめ",
                 "AFTER_FEW_DAYS" to "回復2~3日後",
                 "AFTER_RECOVERY" to "回復後がおすすめ"
             ),

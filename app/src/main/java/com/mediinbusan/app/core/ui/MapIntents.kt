@@ -14,15 +14,19 @@ import android.net.Uri
  * 먼저 쓰고, 앱이 없을 때만 단계적으로 폴백한다.
  *
  * 출발지(`sp`)는 넘기지 않는다 — 이 앱은 위치 권한을 쓰지 않으므로(CLAUDE.md §1) 현재 위치는
- * 카카오맵이 자기 권한으로 잡게 둔다.
+ * 카카오맵이 자기 권한으로 잡게 둔다. 같은 이유로 **대중교통 지정은 1)번 앱 스킴에서만 보장된다** —
+ * 웹 길찾기에서 이동수단까지 지정하려면 `/link/by/traffic/...` 형식이 출발지 좌표를 요구하는데,
+ * 우리는 그 좌표를 만들 수 없다.
  */
 fun Context.launchExternalDirections(latitude: Double?, longitude: Double?, label: String, fallbackAddress: String) {
     if (latitude != null && longitude != null) {
         // 1) 카카오맵 앱의 길찾기 화면. 외국인 의료관광객이 주 사용자라 대중교통을 기본 수단으로 둔다.
-        val routeIntent = Intent(Intent.ACTION_VIEW, Uri.parse("kakaomap://route?ep=$latitude,$longitude&by=PUBLICTRANSIT"))
+        // by 값은 카카오맵 URL 스킴 문서 표기대로 소문자다(car/publictransit/foot/bicycle).
+        val routeIntent = Intent(Intent.ACTION_VIEW, Uri.parse("kakaomap://route?ep=$latitude,$longitude&by=publictransit"))
         if (startActivitySafely(routeIntent)) return
 
         // 2) 앱이 없으면 웹 길찾기 링크 — 브라우저에서 열리고, 앱이 있는 기기에선 앱으로 이어진다.
+        // 목적지만 지정하는 형식이라 이동수단은 카카오맵 기본값(자동차)으로 열린다(위 주석 참고).
         val webRoute = Uri.parse("https://map.kakao.com/link/to/${Uri.encode(label)},$latitude,$longitude")
         if (startActivitySafely(Intent(Intent.ACTION_VIEW, webRoute))) return
 

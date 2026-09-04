@@ -45,7 +45,13 @@ data class PlaceKindVisual(val icon: ImageVector, val color: Color, val ink: Col
 fun placeKindVisual(type: PlaceType?, category: PlaceCategory = PlaceCategory.OTHER): PlaceKindVisual {
     if (type == null) return PlaceKindVisual(Icons.Default.LocalHospital, HospitalKindColor, HospitalKindInk)
     // 세부 분류를 아는 경우(현재는 쇼핑 하위만)가 먼저다. OTHER면 장소 종류로 내려간다.
-    shoppingVisual(category)?.let { return it }
+    //
+    // 반드시 SHOPPING일 때만 본다 — placeType과 placeCategory는 백엔드가 각각 따로 내려주고,
+    // WellnessPlace.updateFrom은 새 categoryCode가 없으면 이전 값을 그대로 두므로 타입이 바뀐
+    // 장소에 쇼핑 분류가 남아 있을 수 있다. 그때 이 분기가 먼저 걸리면 음식점이 쇼핑백 아이콘을 달았다.
+    if (type == PlaceType.SHOPPING) {
+        shoppingVisual(category)?.let { return it }
+    }
     return when (type) {
         PlaceType.TOURIST_ATTRACTION -> PlaceKindVisual(Icons.Default.PhotoCamera, TouristKindColor, TouristKindInk)
         PlaceType.RESTAURANT -> PlaceKindVisual(Icons.Default.Restaurant, FoodKindColor, FoodKindInk)

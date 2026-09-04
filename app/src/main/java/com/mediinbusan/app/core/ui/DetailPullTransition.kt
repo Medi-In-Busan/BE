@@ -161,7 +161,10 @@ fun DetailPullDismissBox(
                 } else {
                     animate(pullPx, 0f, animationSpec = DetailPullSettleSpec) { value, _ -> pullPx = value }
                 }
-                return Velocity(0f, available.y)
+                // 아래 방향 속도만 삼킨다. 예전엔 available.y를 그대로 돌려줘서 위로 튕기는 플링까지
+                // 전부 소비했고, 화면을 조금 끌어내린 상태에서 위로 튕기면 제자리로 복귀만 하고
+                // 본문은 스크롤되지 않았다.
+                return if (available.y > 0f) Velocity(0f, available.y) else Velocity.Zero
             }
         }
     }

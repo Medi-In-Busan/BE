@@ -152,6 +152,7 @@ import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
+import java.util.Locale
 import com.mediinbusan.app.domain.course.WellnessCourse
 
 /**
@@ -1320,9 +1321,15 @@ private fun distanceFrom(origin: MapPoint, latitude: Double?, longitude: Double?
     return haversineDistanceMeters(origin.latitude, origin.longitude, latitude, longitude)
 }
 
-/** 1km 미만은 10m 단위 m로, 그 이상은 소수 한 자리 km로 — 숫자만 쓰므로 언어별 문구가 필요 없다. */
+/**
+ * 1km 미만은 10m 단위 m로, 그 이상은 소수 한 자리 km로 — 숫자만 쓰므로 언어별 문구가 필요 없다.
+ *
+ * 소수점 구분자는 [Locale.US]로 못 박는다. 앱 언어는 SupportedLanguage/AppStrings가 따로 들고 있는데
+ * String.format은 **기기** 기본 로케일을 따르므로, 그대로 두면 같은 앱 언어에서도 기기 설정에 따라
+ * `1.2km`와 `1,2km`가 섞여 나온다(PlaceDetailScreen의 같은 함수도 Locale.US를 쓴다).
+ */
 private fun Double.toDistanceLabel(): String =
-    if (this < 1_000.0) "${(this / 10).toInt() * 10}m" else String.format("%.1fkm", this / 1_000.0)
+    if (this < 1_000.0) "${(this / 10).toInt() * 10}m" else String.format(Locale.US, "%.1fkm", this / 1_000.0)
 
 /**
  * 칩에 쓸 글자. 자세한 쪽부터 고른다 — 세부 분류(백화점/전통시장/면세점) → 장소 종류(관광지/쇼핑/

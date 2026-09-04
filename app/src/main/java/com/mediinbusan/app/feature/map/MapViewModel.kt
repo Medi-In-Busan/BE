@@ -208,6 +208,11 @@ class MapViewModel @Inject constructor(
      * = false) 선택도 푼다. 화면에서는 하단 목록 시트도 같이 내려가 지도만 남는다.
      */
     fun onCategorySelected(category: MapCategory) {
+        // areaCenter는 장소 목록만 걸러낸다 — 병원은 searchThisArea가 allHospitals 자체를 그 지점
+        // 주변 결과로 갈아끼운다. 그래서 areaCenter만 풀면 장소는 부산 전역으로 넓어지는데 병원은
+        // 이전 영역 결과에 묶인 채로 남아, 두 목록이 서로 다른 범위를 보여주면서 그 사실이 화면
+        // 어디에도 표시되지 않았다. 좁혀져 있었다면 병원 전체 목록도 같이 다시 받는다.
+        val wasAreaNarrowed = _uiState.value.areaCenter != null
         _uiState.update {
             if (it.markersActivated && it.selectedCategory == category) {
                 it.copy(markersActivated = false, selectedMarkerId = null, areaCenter = null)
@@ -216,6 +221,23 @@ class MapViewModel @Inject constructor(
                 // 다시 전체에서 보겠다는 뜻에 가깝다.
                 it.copy(selectedCategory = category, markersActivated = true, selectedMarkerId = null, areaCenter = null)
             }
+        }
+        if (wasAreaNarrowed) reloadAllHospitals()
+    }
+
+    /**
+     * "이 위치에서 검색"으로 좁혀둔 병원 목록을 부산 전역으로 되돌린다.
+     *
+     * [loadAllHospitals]와 달리 장소는 다시 받지 않고 isLoading도 건드리지 않는다 — 이미 화면에
+     * 떠 있는 목록을 조용히 넓히는 자리라, 스피너로 화면을 한 번 비우면 그게 더 어색하다.
+     */
+    private fun reloadAllHospitals() {
+        viewModelScope.launch {
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+            val result = hospitalRepository.getHospitals(languageCode = languageCode)
+                .first { it !is Result.Loading }
+            val hospitals = (result as? Result.Success)?.data ?: return@launch
+            _uiState.update { it.copy(allHospitals = hospitals) }
         }
     }
 
