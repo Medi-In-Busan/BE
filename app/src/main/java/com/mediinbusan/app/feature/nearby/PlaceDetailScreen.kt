@@ -97,6 +97,7 @@ import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedRecoveryHint
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
+import com.mediinbusan.app.core.ui.DetailPullDismissBox
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
@@ -125,7 +126,12 @@ fun PlaceDetailScreen(
     // 넘어왔을 때 배경색이 끊겨 보이지 않게 한다(HospitalDetailScreen이 HomeBackgroundPink를
     // 재사용하는 것과 같은 이유 — core/designsystem 공용 토큰이 아니라 화면마다 자기 캔버스색을
     // 갖는 기존 관례를 그대로 따른다).
-    Box(modifier = Modifier.fillMaxSize().background(PlaceDetailCanvas)) {
+    // HospitalDetailScreen과 같은 이유 — 지도에서 카드를 끌어올려 들어온 화면을 아래로 끌어
+    // 되돌린다(core/ui/DetailPullTransition.kt).
+    DetailPullDismissBox(
+        onDismiss = onBack,
+        modifier = Modifier.fillMaxSize().background(PlaceDetailCanvas)
+    ) {
         val place = uiState.place
         val errorMessage = uiState.errorMessage
         when {

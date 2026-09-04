@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -83,6 +84,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -94,6 +97,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -127,6 +131,12 @@ import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BusanDefaultCenter
+import com.mediinbusan.app.core.ui.DetailPullCommitDurationMs
+import com.mediinbusan.app.core.ui.DetailPullMaxFade
+import com.mediinbusan.app.core.ui.DetailPullResistance
+import com.mediinbusan.app.core.ui.DetailPullSettleSpec
+import com.mediinbusan.app.core.ui.DetailPullThreshold
+import com.mediinbusan.app.core.ui.DetailPullTravel
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FavoriteHeartButton
 import com.mediinbusan.app.core.ui.FilterChipPill
@@ -139,6 +149,7 @@ import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.RouteStop
 import com.mediinbusan.app.core.ui.RoundIconButton
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
+import kotlinx.coroutines.launch
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
@@ -682,15 +693,78 @@ private fun BrowseMap(
             }
         }
 
+        // 마커를 골라 선택 카드가 떠 있는 동안에는 같은 "위로 끌기"가 리스트 펼치기가 아니라
+        // 그 항목의 상세화면으로 넘어가는 동작이 된다 — 선택 상태에서는 어차피 리스트를 펼쳐도
+        // 카드가 계속 그 자리를 차지해 펼침이 의미가 없었다(panelKey가 선택 카드를 우선한다).
+        // 카드가 손가락을 따라 올라가다 임계값을 넘기면 남은 거리를 마저 올린 뒤 상세로 넘어가고,
+        // 상세화면은 같은 방향으로 밀려 올라와 한 동작처럼 이어진다(core/ui/DetailPullTransition.kt).
+        //
+        // 아래 pointerInput은 "선택 중인가"(isSelectionActive)로만 다시 걸리므로, 카드가 떠 있는
+        // 채로 다른 마커를 눌러 선택만 바뀌는 경우엔 제스처 블록이 그대로 남는다 — 이 람다를 그냥
+        // 캡처하면 먼저 골랐던 항목의 상세로 가버린다. 늘 최신 선택을 가리키도록 감싸 둔다
+        // (KakaoMapView가 콜백을 다루는 방식과 같다).
+        val openSelectedDetail by rememberUpdatedState<() -> Unit>({
+            when {
+                selectedHospital != null -> onSelectHospital(selectedHospital.id)
+                selectedPlace != null -> onSelectPlace(selectedPlace.id)
+                else -> Unit
+            }
+        })
+        val pullThresholdPx = with(density) { DetailPullThreshold.toPx() }
+        val pullTravelPx = with(density) { DetailPullTravel.toPx() }
+        // 지금 카드가 손가락을 따라 올라와 있는 거리(px, 양수가 위쪽).
+        var cardLiftPx by remember { mutableFloatStateOf(0f) }
+        // 전환이 확정된 뒤 들어오는 드래그는 무시한다(같은 상세화면으로 두 번 navigate 방지).
+        var isOpeningDetail by remember { mutableStateOf(false) }
+        val liftScope = rememberCoroutineScope()
+        LaunchedEffect(uiState.selectedMarkerId) {
+            cardLiftPx = 0f
+            isOpeningDetail = false
+        }
+        val settleCardLift: () -> Unit = {
+            liftScope.launch {
+                animate(cardLiftPx, 0f, animationSpec = DetailPullSettleSpec) { value, _ -> cardLiftPx = value }
+            }
+        }
+
         // 손잡이 하나에만 걸려 있던 드래그를 시트 전체가 공유한다 — 미리보기 행(리스트) 위를
         // 위로 쓸어올려도 펼쳐지고, 펼친 상태에서 제목/탭 줄을 아래로 끌면 다시 접힌다.
         val dragAccumPx = remember { mutableFloatStateOf(0f) }
-        val sheetDragModifier = Modifier.pointerInput(isListExpanded) {
+        val sheetDragModifier = Modifier.pointerInput(isListExpanded, isSelectionActive) {
             detectVerticalDragGestures(
-                onDragEnd = { dragAccumPx.floatValue = 0f },
-                onDragCancel = { dragAccumPx.floatValue = 0f },
+                onDragEnd = {
+                    dragAccumPx.floatValue = 0f
+                    if (!isSelectionActive || isOpeningDetail) return@detectVerticalDragGestures
+                    if (cardLiftPx >= pullThresholdPx) {
+                        isOpeningDetail = true
+                        liftScope.launch {
+                            // 남은 거리를 마저 올려 카드를 화면 밖으로 보낸 뒤 넘어간다 —
+                            // 올라가던 움직임을 상세화면 등장 애니메이션이 그대로 이어받는다.
+                            animate(
+                                cardLiftPx,
+                                pullTravelPx,
+                                animationSpec = tween(DetailPullCommitDurationMs)
+                            ) { value, _ -> cardLiftPx = value }
+                            openSelectedDetail()
+                        }
+                    } else {
+                        settleCardLift()
+                    }
+                },
+                onDragCancel = {
+                    dragAccumPx.floatValue = 0f
+                    if (isSelectionActive && !isOpeningDetail) settleCardLift()
+                },
                 onVerticalDrag = { change, dragAmount ->
                     change.consume()
+                    if (isSelectionActive) {
+                        // 아래로 끌어 내리는 건 0에서 막는다 — 카드를 닫는 건 X 버튼과 지도 탭이 맡는다.
+                        if (!isOpeningDetail) {
+                            cardLiftPx = (cardLiftPx - dragAmount * DetailPullResistance)
+                                .coerceIn(0f, pullTravelPx)
+                        }
+                        return@detectVerticalDragGestures
+                    }
                     dragAccumPx.floatValue += dragAmount
                     if (!isListExpanded && dragAccumPx.floatValue < -dragThresholdPx) {
                         isListExpanded = true
@@ -740,6 +814,13 @@ private fun BrowseMap(
         ) {
             Column(
                 modifier = Modifier
+                    // 선택 카드를 위로 끌어올리는 동안 시트 전체가 손가락을 따라 올라가며 옅어진다.
+                    // 레이아웃(높이·여백)은 건드리지 않고 그리기만 옮기므로, 도중에 손을 떼고
+                    // 되돌아와도 아래 내 위치 버튼 등이 따라 흔들리지 않는다.
+                    .graphicsLayer {
+                        translationY = -cardLiftPx
+                        alpha = 1f - (cardLiftPx / pullTravelPx).coerceIn(0f, 1f) * DetailPullMaxFade
+                    }
                     .fillMaxWidth()
                     // 펼쳤을 때도 화면 전체가 아니라 "검색바 블록 바로 아래"까지만 — 그 위 공간은
                     // 계속 지도가 보인다. 검색바 블록 높이가 필터 펼침 등으로 달라질 수 있어 실측값을 쓴다.

@@ -11,6 +11,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
+import com.mediinbusan.app.core.ui.detailPullEnter
+import com.mediinbusan.app.core.ui.detailPullPopExit
+import com.mediinbusan.app.core.ui.detailPullUnderlayHold
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
@@ -64,7 +69,16 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         startDestination = Route.Splash,
         modifier = modifier,
         enterTransition = { EnterTransition.None },
-        exitTransition = { ExitTransition.None },
+        // 상세화면(HospitalDetail/PlaceDetail)으로 갈 때만 예외 — 그 화면이 아래에서 위로 밀려
+        // 올라오는 동안 떠나는 화면이 첫 프레임에 사라지면 아직 안 덮인 위쪽에 앱 배경색이
+        // 번쩍인다. 그 전환에 한해 떠나는 화면을 애니메이션이 끝날 때까지 붙잡아 둔다.
+        exitTransition = {
+            if (targetState.destination.isDetailPullDestination()) {
+                detailPullUnderlayHold()
+            } else {
+                ExitTransition.None
+            }
+        },
         popEnterTransition = { EnterTransition.None },
         popExitTransition = { ExitTransition.None }
     ) {
@@ -126,7 +140,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
-        composable<Route.HospitalDetail> { backStackEntry ->
+        // 지도(S-08)에서 선택 카드를 위로 끌어올려 들어오는 두 화면 — 손가락이 움직인 방향
+        // 그대로 아래에서 위로 밀려 올라오고, 되돌아갈 땐 같은 길로 내려간다. 상세화면 쪽
+        // 끌어내리기 제스처(DetailPullDismissBox)와 한 벌이다(core/ui/DetailPullTransition.kt).
+        composable<Route.HospitalDetail>(
+            enterTransition = { detailPullEnter() },
+            popExitTransition = { detailPullPopExit() }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<Route.HospitalDetail>()
             HospitalDetailScreen(
                 hospitalId = route.hospitalId,
@@ -228,7 +248,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
         }
-        composable<Route.PlaceDetail> { backStackEntry ->
+        composable<Route.PlaceDetail>(
+            enterTransition = { detailPullEnter() },
+            popExitTransition = { detailPullPopExit() }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<Route.PlaceDetail>()
             PlaceDetailScreen(
                 placeId = route.placeId,
@@ -365,3 +388,11 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
     }
 }
+
+/**
+ * 지도(S-08)의 선택 카드를 끌어올려 들어가는 두 상세화면인지 — 그 두 라우트만 detailPullEnter()로
+ * 밀려 올라오므로, 떠나는 화면을 붙잡아 둘 필요가 있는지도 이 기준으로 판단한다.
+ * (core/ui/DetailPullTransition.kt)
+ */
+private fun NavDestination.isDetailPullDestination(): Boolean =
+    hasRoute<Route.HospitalDetail>() || hasRoute<Route.PlaceDetail>()

@@ -93,6 +93,7 @@ import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.EmptyState
+import com.mediinbusan.app.core.ui.DetailPullDismissBox
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
@@ -126,7 +127,13 @@ fun HospitalDetailScreen(
     // 홈(S-03)/의료기관 목록(S-04)이 Scaffold containerColor로 쓰는 HomeBackgroundPink를 그대로
     // 깔아, 그 화면들에서 넘어왔을 때 배경색이 끊겨 보이지 않게 한다(root Surface의 M3 기본
     // 배경색과 미세하게 달라 이음매가 보이던 문제).
-    Box(modifier = Modifier.fillMaxSize().background(HomeBackgroundPink)) {
+    // 지도(S-08)에서 선택 카드를 위로 끌어올려 들어오는 화면이라, 반대로 본문을 맨 위에서 더
+    // 아래로 끌면 그대로 되돌아간다 — 들어온 동작을 그 자리에서 되감는 짝이다. 다른 화면
+    // (홈/목록/즐겨찾기)에서 들어왔을 때도 같은 제스처가 뒤로가기로 동작한다.
+    DetailPullDismissBox(
+        onDismiss = onBack,
+        modifier = Modifier.fillMaxSize().background(HomeBackgroundPink)
+    ) {
         when {
             uiState.isLoading -> LoadingState()
             uiState.isError -> ErrorState(
