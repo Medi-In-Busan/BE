@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -84,6 +86,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.common.careProfile
+import com.mediinbusan.app.core.common.resolveBusanHighlight
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
@@ -94,9 +98,12 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedCopy
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedRecoveryHint
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.AtAGlanceRow
+import com.mediinbusan.app.core.ui.CautionList
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.DetailPullDismissBox
 import com.mediinbusan.app.core.ui.ErrorState
@@ -105,6 +112,8 @@ import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.placeKindVisual
+import com.mediinbusan.app.core.ui.MediTipContent
+import com.mediinbusan.app.core.ui.TravelerHelpContent
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.place.Place
@@ -163,6 +172,12 @@ private fun PlaceDetailContent(
     // 이 화면 전체가 쓰는 액센트 — 지도 마커/클러스터와 같은 색이라, 지도에서 파란 관광 핀을
     // 눌러 들어오면 상세 화면도 파란 톤으로 이어진다(PlaceType.tint 참고).
     val accent = place.type.tint
+    // 어떤 장소가 와도 항상 채워지는 유형별 케어 프로필과, 부산 대표 명소일 때만 붙는 큐레이션 문구.
+    // 웰니스 API가 전화·소개를 비워 내려주면 이 화면이 "사진+이름+지도"만 남던 문제를 이 둘로 메운다.
+    val careProfile = remember(place.type) { place.type.careProfile }
+    val highlightCopy = remember(place.name, place.type, strings.language) {
+        resolveBusanHighlight(place.name, place.type)?.translatedCopy(strings.language)
+    }
     // 하단 고정 액션바 실측 높이를 그대로 스크롤 콘텐츠 하단 여백으로 써서, 콘텐츠가 액션바에
     // 가려지거나 반대로 그 사이에 빈 여백이 남지 않고 정확히 맞닿게 한다(HospitalDetailScreen과 동일).
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
@@ -213,6 +228,15 @@ private fun PlaceDetailContent(
                     onCall = { place.phoneNumber?.let { context.dialPhone(it) } }
                 )
 
+                // 방문 시기·활동 강도·환경·권장 체류. 유형만으로 결정되므로 값이 비는 일이 없다 —
+                // 아래 기본정보/소개 카드가 통째로 사라지는 장소에서도 이 줄은 항상 남는다.
+                Spacer(modifier = Modifier.height(18.dp))
+                AtAGlanceRow(
+                    profile = careProfile,
+                    accent = accent,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                )
+
                 Spacer(modifier = Modifier.height(26.dp))
                 // HospitalDetailScreen의 기본정보(BasicInfoRow: 운영시간/전화/홈페이지/언어) 카드와
                 // 같은 아이콘 원형+라벨+값 구성 — 전화·거리에 더해, 지금까지 화면 어디에도 없던
@@ -258,9 +282,28 @@ private fun PlaceDetailContent(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                place.displayDescription?.takeUnless { it.isBlank() }?.let { description ->
+                // 소개는 이제 사라지지 않는다 — 원문(displayDescription)이 없으면 부산 명소 큐레이션
+                // 한 줄로, 그것도 없으면 유형별 기본 소개문으로 내려간다. 원문이 URL이나 `EX0000`
+                // 코드로 오는 장소가 흔해서(displayDescription이 그걸 걸러낸다) 폴백이 사실상 기본값이다.
+                val introText = place.displayDescription?.takeUnless { it.isBlank() }
+                    ?: highlightCopy?.tagline
+                    ?: strings.placeCuration.typeIntroFallbacks[place.type.name]
+                introText?.let { description ->
                     InfoSection(title = strings.nearby.introSectionTitle, icon = Icons.Default.Info, accent = accent) {
                         Text(text = description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
+                // 부산 대표 명소로 매칭됐을 때만 붙는 카드. 매칭이 없는 평범한 장소에서는 통째로
+                // 빠지지만, 위 한눈에 보기와 소개가 이미 채워져 있어 화면이 비어 보이지 않는다.
+                highlightCopy?.let { copy ->
+                    InfoSection(
+                        title = strings.placeCuration.mediTipTitle,
+                        icon = Icons.Default.TipsAndUpdates,
+                        accent = accent
+                    ) {
+                        MediTipContent(copy = copy, accent = accent)
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                 }
@@ -274,6 +317,17 @@ private fun PlaceDetailContent(
                 // 하나로 합치고 나머지는 없앤다.
                 InfoSection(title = strings.hospitalDetail.locationSectionTitle, icon = Icons.Default.Place, accent = accent) {
                     LocationMiniMap(place = place)
+                }
+
+                // 장소와 무관하게 항상 같은 공공 안내(1330·119·결제/교통). 앱이 상담이나 통역사를
+                // 연결하는 게 아니라 공개된 번호를 안내만 한다(CLAUDE.md §1 MVP 하드 제약).
+                Spacer(modifier = Modifier.height(14.dp))
+                InfoSection(
+                    title = strings.placeCuration.travelerHelpTitle,
+                    icon = Icons.Default.SupportAgent,
+                    accent = accent
+                ) {
+                    TravelerHelpContent(accent = accent, onDial = { context.dialPhone(it) })
                 }
                         // 시트를 위로 끌어올린 만큼(SheetOverlap) 아래에서 다시 채워, 마지막 카드와
                         // 하단 액션바 사이 간격이 예전과 같게 유지한다.
@@ -628,6 +682,9 @@ private fun RecoveryNoticeSection(place: Place, accent: Color = CoralPrimary) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextPrimary
             )
+            // 유형별 주의 항목(경사·온열·자외선·금식 등). 안내 문구 한 줄만 있던 카드에 실제로
+            // 확인할 거리를 붙이되, 아래 면책 문구는 그대로 남겨 자문이 아님을 계속 밝힌다.
+            CautionList(cautions = place.type.careProfile.cautions, accent = accent)
             Text(
                 text = strings.nearby.recoveryDisclaimer,
                 style = MaterialTheme.typography.labelSmall,
@@ -849,7 +906,6 @@ private val FoodPinColor = Color(0xFFFAA85C)
 // 히어로 사진 높이. 상단바가 서서히 나타나는 구간(이 높이의 절반)을 계산하는 데도 쓴다.
 // 화면 폭을 꽉 채우게 되면서 예전(240dp, 좌우 여백 있는 카드)보다 키워 몰입감을 준다.
 private val HeroHeight = 300.dp
-
 
 // 콘텐츠 시트가 히어로 사진 위로 겹쳐 올라오는 양.
 private val SheetOverlap = 28.dp

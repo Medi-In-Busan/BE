@@ -25,7 +25,8 @@ data class AppStrings(
     val documentScan: DocumentScanStrings,
     val map: MapStrings,
     val tourism: TourismStrings,
-    val nearby: NearbyStrings
+    val nearby: NearbyStrings,
+    val placeCuration: PlaceCurationStrings
 )
 
 private val KoreanAppStrings = AppStrings(
@@ -46,7 +47,8 @@ private val KoreanAppStrings = AppStrings(
     documentScan = DocumentScanStrings.Ko,
     map = MapStrings.Ko,
     tourism = TourismStrings.Ko,
-    nearby = NearbyStrings.Ko
+    nearby = NearbyStrings.Ko,
+    placeCuration = PlaceCurationStrings.Ko
 )
 
 private val EnglishAppStrings = AppStrings(
@@ -67,7 +69,8 @@ private val EnglishAppStrings = AppStrings(
     documentScan = DocumentScanStrings.En,
     map = MapStrings.En,
     tourism = TourismStrings.En,
-    nearby = NearbyStrings.En
+    nearby = NearbyStrings.En,
+    placeCuration = PlaceCurationStrings.En
 )
 
 private val ChineseAppStrings = AppStrings(
@@ -88,7 +91,8 @@ private val ChineseAppStrings = AppStrings(
     documentScan = DocumentScanStrings.Zh,
     map = MapStrings.Zh,
     tourism = TourismStrings.Zh,
-    nearby = NearbyStrings.Zh
+    nearby = NearbyStrings.Zh,
+    placeCuration = PlaceCurationStrings.Zh
 )
 
 private val JapaneseAppStrings = AppStrings(
@@ -109,7 +113,8 @@ private val JapaneseAppStrings = AppStrings(
     documentScan = DocumentScanStrings.Ja,
     map = MapStrings.Ja,
     tourism = TourismStrings.Ja,
-    nearby = NearbyStrings.Ja
+    nearby = NearbyStrings.Ja,
+    placeCuration = PlaceCurationStrings.Ja
 )
 
 fun appStringsFor(language: SupportedLanguage): AppStrings = when (language) {
