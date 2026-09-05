@@ -69,7 +69,7 @@ import com.mediinbusan.app.core.ui.fallbackBannerImageFor
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberCountUpValue
 import com.mediinbusan.app.core.ui.rememberRevealedCount
-import com.mediinbusan.app.data.favorite.FavoriteItemType
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentlyViewed
 import java.util.concurrent.TimeUnit
 
@@ -77,6 +77,7 @@ import java.util.concurrent.TimeUnit
 fun RecentlyViewedScreen(
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
+    onSelectTourismItem: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: RecentlyViewedViewModel = hiltViewModel()
 ) {
@@ -87,8 +88,9 @@ fun RecentlyViewedScreen(
         onBack = onBack,
         onSelectItem = { item ->
             when (item.itemType) {
-                FavoriteItemType.HOSPITAL -> onSelectHospital(item.itemId)
-                FavoriteItemType.PLACE -> onSelectPlace(item.itemId)
+                RecentItemType.HOSPITAL -> onSelectHospital(item.itemId)
+                RecentItemType.PLACE -> onSelectPlace(item.itemId)
+                RecentItemType.TOURISM_ITEM -> onSelectTourismItem(item.itemId)
             }
         },
         onRemove = { viewModel.onRemove(it.itemId) },
@@ -363,7 +365,7 @@ private fun RecentlyViewedContentPreview() {
                 RecentlyViewed(
                     itemId = "1",
                     itemName = "부산대학교병원",
-                    itemType = FavoriteItemType.HOSPITAL,
+                    itemType = RecentItemType.HOSPITAL,
                     imageUrl = null,
                     viewedAt = System.currentTimeMillis()
                 )

@@ -4,14 +4,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 
 /**
- * Home/LanguageSelect/Settings/Search(HospitalSearchList)/HospitalDetail 5개 화면의 정적 UI
- * 문구를 언어별로 묶은 루트. 병원 데이터 등 API 응답 기반 동적 텍스트는 다루지 않는다.
+ * Home/Settings/Search(HospitalSearchList)/HospitalDetail 등 화면의 정적 UI 문구를 언어별로
+ * 묶은 루트. 병원 데이터 등 API 응답 기반 동적 텍스트는 다루지 않는다.
  */
 data class AppStrings(
     val language: SupportedLanguage,
     val common: CommonStrings,
     val home: HomeStrings,
-    val languageSelect: LanguageSelectStrings,
     val settings: SettingsStrings,
     val search: SearchStrings,
     val hospitalDetail: HospitalDetailStrings,
@@ -33,7 +32,6 @@ private val KoreanAppStrings = AppStrings(
     language = SupportedLanguage.KO,
     common = CommonStrings.Ko,
     home = HomeStrings.Ko,
-    languageSelect = LanguageSelectStrings.Ko,
     settings = SettingsStrings.Ko,
     search = SearchStrings.Ko,
     hospitalDetail = HospitalDetailStrings.Ko,
@@ -55,7 +53,6 @@ private val EnglishAppStrings = AppStrings(
     language = SupportedLanguage.EN,
     common = CommonStrings.En,
     home = HomeStrings.En,
-    languageSelect = LanguageSelectStrings.En,
     settings = SettingsStrings.En,
     search = SearchStrings.En,
     hospitalDetail = HospitalDetailStrings.En,
@@ -77,7 +74,6 @@ private val ChineseAppStrings = AppStrings(
     language = SupportedLanguage.ZH,
     common = CommonStrings.Zh,
     home = HomeStrings.Zh,
-    languageSelect = LanguageSelectStrings.Zh,
     settings = SettingsStrings.Zh,
     search = SearchStrings.Zh,
     hospitalDetail = HospitalDetailStrings.Zh,
@@ -99,7 +95,6 @@ private val JapaneseAppStrings = AppStrings(
     language = SupportedLanguage.JA,
     common = CommonStrings.Ja,
     home = HomeStrings.Ja,
-    languageSelect = LanguageSelectStrings.Ja,
     settings = SettingsStrings.Ja,
     search = SearchStrings.Ja,
     hospitalDetail = HospitalDetailStrings.Ja,

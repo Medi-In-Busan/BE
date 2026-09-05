@@ -10,6 +10,7 @@ import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.i18n.appStringsFor
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.data.tourism.TourismInteractionRepository
@@ -63,12 +64,12 @@ class TourismHubViewModel @Inject constructor(
                 val categories = tourismHubCategories(language.code)
                 val languageCategory = categories.first()
                 val hasPlaceHistory = favorites.any { it.itemType == FavoriteItemType.PLACE } ||
-                    recent.any { it.itemType == FavoriteItemType.PLACE }
+                    recent.any { it.itemType == RecentItemType.PLACE }
                 val now = System.currentTimeMillis()
                 val recoveryStage = inferTourismRecoveryStage(
                     medicalPurpose = preferences.medicalPurpose,
                     lastHospitalViewedAt = recent.firstOrNull {
-                        it.itemType == FavoriteItemType.HOSPITAL
+                        it.itemType == RecentItemType.HOSPITAL
                     }?.viewedAt,
                     nowEpochMillis = now
                 )

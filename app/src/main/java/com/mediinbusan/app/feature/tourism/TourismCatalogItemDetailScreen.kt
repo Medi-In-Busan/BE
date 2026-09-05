@@ -104,12 +104,17 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 fun TourismCatalogItemDetailScreen(
     onBack: () -> Unit,
     onNavigateHome: () -> Unit,
+    recentItemId: String? = null,
     viewModel: TourismCatalogItemDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val context = LocalContext.current
     var mapFocusRequestId by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(recentItemId) {
+        if (recentItemId != null) viewModel.loadFromRecent(recentItemId)
+    }
 
     LaunchedEffect(uiState.consumed, uiState.selectedTitle) {
         if (uiState.consumed && uiState.selectedTitle == null) onBack()

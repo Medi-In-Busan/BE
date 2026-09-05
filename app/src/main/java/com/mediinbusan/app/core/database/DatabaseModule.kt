@@ -21,11 +21,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
-        // v3->v4(즐겨찾기/최근 본 항목에 subtitle/address/좌표 컬럼 추가)는 순수 컬럼 추가라
-        // MIGRATION_3_4로 로컬 데이터를 보존한다. 그 외 아직 안 챙긴 스키마 변경은 출시 전이라
-        // 정식 Migration 없이 destructive fallback으로 초기화되게 둔다.
+        // v3->v4(즐겨찾기/최근 본 항목에 subtitle/address/좌표 컬럼 추가), v4->v5(최근 본 항목에
+        // tourismCategory/tourismDistrict 추가)는 순수 컬럼 추가라 정식 Migration으로 로컬 데이터를
+        // 보존한다. 그 외 아직 안 챙긴 스키마 변경은 출시 전이라 destructive fallback으로 초기화되게 둔다.
         Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
-            .addMigrations(MIGRATION_3_4)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 

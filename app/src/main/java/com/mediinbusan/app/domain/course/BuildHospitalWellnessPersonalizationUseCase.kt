@@ -4,6 +4,7 @@ import com.mediinbusan.app.core.common.MedicalCategory
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentlyViewed
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismInteractionProfile
@@ -41,7 +42,7 @@ class BuildHospitalWellnessPersonalizationUseCase @Inject constructor() {
             favorite.subtitle.toPlaceType()?.let { typeWeights.add(it, FAVORITE_TYPE_WEIGHT) }
         }
 
-        val placeRecents = recentItems.filter { it.itemType == FavoriteItemType.PLACE }
+        val placeRecents = recentItems.filter { it.itemType == RecentItemType.PLACE }
         val recentWeights = placeRecents.associate { recent ->
             val decay = timeDecay(recent.viewedAt, nowEpochMillis, RECENT_HALF_LIFE_MILLIS)
             tokenize(recent.itemName).forEach { keywordWeights.add(it, RECENT_KEYWORD_WEIGHT * decay) }
