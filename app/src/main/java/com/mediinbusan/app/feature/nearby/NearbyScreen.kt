@@ -391,8 +391,9 @@ private fun TourismPlaceSlider(
     onSeeAll: (TourismCatalogCategory) -> Unit
 ) {
     val revealedCount = rememberRevealedCount(itemsKey = items, itemCount = items.size)
-    // 헤더(로고+타이틀+설명)와 카드 목록 사이가 답답해 보여서 여백을 10dp -> 18dp로 늘린다.
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    // 요청: 헤더↔카드 목록 여백을 거의 붙을 정도(2dp)로 좁힌다. 실제 시각적 간격은 아래
+    // LazyRow 카드 래퍼의 top padding(2dp)이 만들어주므로 여기 자체 간격은 0으로 둔다.
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
         Column(modifier = Modifier.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
@@ -438,15 +439,24 @@ private fun TourismPlaceSlider(
         if (items.isEmpty()) {
             TourismPlaceEmptyCard()
         } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // LazyRow의 contentPadding만으로는 카드 그림자가 안 보였다 — TourismRevealContent가 카드를
+            // graphicsLayer(alpha) Box로 한 번 더 감싸는데, 그 Box의 레이아웃 크기가 카드(140x180)와
+            // 정확히 같아서 밖으로 번지는 그림자가 이 Box 경계에서 잘렸다. 카드를 감싸는 이 Box 자체를
+            // 그림자만큼 여유 있게 키워야(패딩) 확실히 보인다 — 좌우 6dp씩(=기존 12dp 간격 유지,
+            // spacedBy는 0으로), 위 2dp/아래 10dp(하단 스팟 그림자가 더 진해서 더 크게).
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                     TourismRevealContent(index = index, revealedCount = revealedCount) {
-                        TourismPlaceCard(
-                            item = item,
-                            accent = accent,
-                            tagRes = tagResFor(item),
-                            onClick = { onSelectItem(category, item) }
-                        )
+                        Box(
+                            modifier = Modifier.padding(start = 6.dp, top = 2.dp, end = 6.dp, bottom = 10.dp)
+                        ) {
+                            TourismPlaceCard(
+                                item = item,
+                                accent = accent,
+                                tagRes = tagResFor(item),
+                                onClick = { onSelectItem(category, item) }
+                            )
+                        }
                     }
                 }
             }
@@ -461,13 +471,14 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: In
             // 화면에 카드가 1.5개 정도 보이던 걸 2.5개 정도 보이게 폭을 줄인다(210dp -> 140dp).
             .width(140.dp)
             .height(180.dp)
-            // 홈 카드 그림자(elevation 3dp/alpha 0.04)로는 사진 카드 위에서 티가 안 나서
-            // 훨씬 진하고 두껍게(elevation 10dp/alpha 0.28) 준다.
+            // 카드마다 개별로 그림자를 건다(핫플 4·5위 리스트와 같은 방식). 14dp/alpha 0.5는
+            // 블러가 너무 넓게 퍼져 옆 카드(12dp 간격)와 이어져 하나의 영역처럼 보였다 — 카드
+            // 사이 간격 안에서 각자 그림자로 분리돼 보이도록 더 얇고 옅게 낮춘다.
             .shadow(
-                elevation = 10.dp,
+                elevation = 8.dp,
                 shape = RoundedCornerShape(20.dp),
-                ambientColor = Color.Black.copy(alpha = 0.28f),
-                spotColor = Color.Black.copy(alpha = 0.28f)
+                ambientColor = Color.Black.copy(alpha = 0.35f),
+                spotColor = Color.Black.copy(alpha = 0.35f)
             )
             .clip(RoundedCornerShape(20.dp))
             .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.16f), CoralPrimaryContainer)))
