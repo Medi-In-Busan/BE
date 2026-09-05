@@ -16,13 +16,20 @@ package com.mediinbusan.app.feature.documentscan
  */
 
 /**
+ * 숫자 사이 구분자. OCR은 하이픈 앞뒤에 공백을 넣기도 해서(`900101 - 1234567`) 한 글자만 허용하면
+ * 그런 표기가 통째로 안 걸려 평문 그대로 노출된다. 길이를 3으로 묶어 `" - "`까지는 받되, 열 경계
+ * (공백 2칸)를 건너뛰며 무관한 숫자열끼리 이어붙는 일은 막는다.
+ */
+private const val NumberSeparator = "[-.\\s]{0,3}"
+
+/**
  * `YYMMDD-Nxxxxxx` 형태의 주민등록번호/외국인등록번호. 뒤 6자리만 가리고 성별 자리까지는 남긴다
  * (공공기관 마스킹 관례와 같다). 앞뒤 lookaround로 더 긴 숫자열의 일부를 잘라 먹지 않게 막는다.
  */
-private val ResidentRegistrationNumber = Regex("""(?<!\d)(\d{6})[-\s]?(\d)\d{6}(?!\d)""")
+private val ResidentRegistrationNumber = Regex("""(?<!\d)(\d{6})$NumberSeparator(\d)\d{6}(?!\d)""")
 
 /** 010으로 시작하는 휴대전화번호. 하이픈/공백은 OCR이 붙였다 뗐다 하므로 선택으로 둔다. */
-private val MobilePhoneNumber = Regex("""(?<!\d)(010)[-.\s]?\d{4}[-.\s]?(\d{4})(?!\d)""")
+private val MobilePhoneNumber = Regex("""(?<!\d)(010)$NumberSeparator\d{4}$NumberSeparator(\d{4})(?!\d)""")
 
 fun maskSensitiveText(text: String): String =
     text

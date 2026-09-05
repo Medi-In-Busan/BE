@@ -75,6 +75,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -713,6 +714,8 @@ private fun DocumentTextBlockList(blocks: List<DocumentTextBlock>) {
                         modifier = Modifier.weight(0.62f)
                     )
                 }
+
+                is DocumentTextBlock.Table -> DocumentTextTable(block)
             }
             if (index != blocks.lastIndex) {
                 HorizontalDivider(
@@ -723,6 +726,69 @@ private fun DocumentTextBlockList(blocks: List<DocumentTextBlock>) {
         }
     }
 }
+
+/**
+ * 처방전 약품 목록처럼 열이 맞물리는 표를 격자 그대로 그린다. 라벨/값 두 칸으로 접으면 헤더의
+ * 의미가 데이터 행과 뒤바뀌므로(예: `약품명 | 1회 투약량` 행이 "약품명: 1회 투약량"이 된다)
+ * 헤더 행을 따로 두고 아래에 데이터 행을 쌓는다.
+ */
+@Composable
+private fun DocumentTextTable(table: DocumentTextBlock.Table) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(MaterialTheme.shapes.small)
+            .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.small)
+    ) {
+        DocumentTextTableRow(
+            cells = table.header,
+            textStyle = MaterialTheme.typography.bodySmall,
+            textColor = TextSecondary,
+            fontWeight = FontWeight.Bold,
+            background = CoralPrimaryContainer.copy(alpha = 0.45f)
+        )
+        table.rows.forEach { row ->
+            HorizontalDivider(color = DividerColor)
+            DocumentTextTableRow(
+                cells = row,
+                textStyle = MaterialTheme.typography.bodySmall,
+                textColor = TextPrimary,
+                fontWeight = FontWeight.Normal,
+                background = Color.Transparent
+            )
+        }
+    }
+}
+
+@Composable
+private fun DocumentTextTableRow(
+    cells: List<String>,
+    textStyle: TextStyle,
+    textColor: Color,
+    fontWeight: FontWeight,
+    background: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().background(background).padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        cells.forEachIndexed { index, cell ->
+            if (index > 0) {
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                text = cell,
+                style = textStyle,
+                color = textColor,
+                fontWeight = fontWeight,
+                // 첫 열(약품명 등)이 가장 길어서 나머지보다 넓게 잡는다.
+                modifier = Modifier.weight(if (index == 0) FirstColumnWeight else 1f)
+            )
+        }
+    }
+}
+
+private const val FirstColumnWeight = 1.6f
 
 // FileProvider로 앱 캐시 디렉토리 안의 임시 파일을 가리키는 content:// Uri를 만든다. 촬영한 원본
 // 이미지를 TakePicture()가 이 Uri에 직접 써준다. res/xml/file_paths.xml의 cache-path와 짝을 이룬다.

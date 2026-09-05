@@ -4,6 +4,7 @@ import com.mediinbusan.backend.document.client.ClovaOcrResponse;
 import com.mediinbusan.backend.document.exception.DocumentOcrFailedException;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,6 +71,43 @@ class DocumentOcrDtoMapperTest {
             처방 의약품의 명칭
             약품명 | 1회 투약량
             타이레놀정500mg | 1""");
+    }
+
+    @Test
+    void 병합된_헤더_다음_셀도_원래_열_자리에_그대로_렌더링된다() {
+        // 헤더의 "약품명"이 2칸을 차지하면(columnSpan=2) 그 다음 셀은 열 1이 아니라 열 2에 있다.
+        // span이 덮는 자리를 비워두지 않으면 헤더가 앞으로 밀려 데이터 행과 열이 어긋난다.
+        ClovaOcrResponse response = successResponse(
+            List.of(),
+            List.of(new ClovaOcrResponse.Table(List.of(
+                spannedCell(0, 0, 1, 2, "약품명", 10, 200, 400, 230),
+                cell(0, 2, "1회 투약량", 400, 200, 600, 230),
+                cell(1, 0, "타이레놀정500mg", 10, 230, 200, 260),
+                cell(1, 1, "500mg", 200, 230, 400, 260),
+                cell(1, 2, "1", 400, 230, 600, 260)
+            )))
+        );
+
+        String result = DocumentOcrDtoMapper.extractText(response);
+
+        assertThat(result).isEqualTo("""
+            약품명 |  | 1회 투약량
+            타이레놀정500mg | 500mg | 1""");
+    }
+
+    @Test
+    void 표_셀에_null_원소가_섞여도_나머지_셀을_렌더링한다() {
+        // Jackson은 cells 배열의 JSON null 원소를 null 값으로 남긴다 — 걸러내지 않으면 NPE로 500이 난다.
+        List<ClovaOcrResponse.Cell> cells = new ArrayList<>();
+        cells.add(cell(0, 0, "약품명", 10, 200, 200, 230));
+        cells.add(null);
+        cells.add(cell(0, 1, "1회 투약량", 200, 200, 400, 230));
+
+        ClovaOcrResponse response = successResponse(List.of(), List.of(new ClovaOcrResponse.Table(cells)));
+
+        String result = DocumentOcrDtoMapper.extractText(response);
+
+        assertThat(result).isEqualTo("약품명 | 1회 투약량");
     }
 
     @Test
@@ -154,6 +192,18 @@ class DocumentOcrDtoMapperTest {
 
     private static ClovaOcrResponse.Field field(String text, double left, double top, double right, double bottom) {
         return new ClovaOcrResponse.Field(text, 0.99, "NORMAL", false, poly(left, top, right, bottom));
+    }
+
+    private static ClovaOcrResponse.Cell spannedCell(
+        int rowIndex, int columnIndex, int rowSpan, int columnSpan,
+        String text, double left, double top, double right, double bottom
+    ) {
+        ClovaOcrResponse.CellWord word = new ClovaOcrResponse.CellWord(text, 0.99, poly(left, top, right, bottom));
+        return new ClovaOcrResponse.Cell(
+            rowIndex, columnIndex, rowSpan, columnSpan,
+            List.of(new ClovaOcrResponse.CellTextLine(List.of(word))),
+            poly(left, top, right, bottom)
+        );
     }
 
     private static ClovaOcrResponse.Cell cell(

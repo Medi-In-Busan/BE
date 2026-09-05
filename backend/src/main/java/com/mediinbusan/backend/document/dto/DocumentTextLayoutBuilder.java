@@ -186,6 +186,11 @@ final class DocumentTextLayoutBuilder {
         Map<Integer, Map<Integer, List<String>>> grid = new TreeMap<>();
         Rect bounds = null;
         for (ClovaOcrResponse.Cell cell : cells) {
+            // Jackson은 cells 배열의 JSON null 원소를 그대로 null 값으로 남긴다 — cellText()가
+            // 바로 역참조하므로 여기서 걸러내지 않으면 OCR 요청 전체가 500으로 실패한다.
+            if (cell == null) {
+                continue;
+            }
             String cellText = cellText(cell);
             if (cellText.isBlank()) {
                 continue;
@@ -195,6 +200,7 @@ final class DocumentTextLayoutBuilder {
             grid.computeIfAbsent(rowIndex, key -> new TreeMap<>())
                 .computeIfAbsent(columnIndex, key -> new ArrayList<>())
                 .add(cellText);
+            reserveSpannedCells(grid, cell, rowIndex, columnIndex);
             bounds = Rect.union(bounds, Rect.of(cell.boundingPoly()));
         }
 
@@ -212,6 +218,40 @@ final class DocumentTextLayoutBuilder {
         }
 
         return new Block(bounds != null ? bounds.top() : UNKNOWN_POSITION, bounds, text.toString());
+    }
+
+    /**
+     * 병합 셀(rowSpan/columnSpan)이 덮는 논리 위치를 빈 칸으로 미리 잡아둔다.
+     *
+     * <p>이걸 안 하면 병합 셀 다음 셀의 열 번호가 출력에서 앞으로 밀린다 — 헤더의 약품명이 2칸을
+     * 차지하는 처방전에서 헤더와 데이터 행의 열이 어긋나 약품명과 투약량 대응이 바뀐다.
+     *
+     * <p>표 전체 폭까지 빈 칸을 채우지는 않는다 — 진단서 서식처럼 행마다 칸 수가 다른 표를 넓은
+     * 희소 격자로 만들어버려서, 실제로 열이 맞물리는 표와 구분이 안 되게 된다.
+     */
+    private static void reserveSpannedCells(
+        Map<Integer, Map<Integer, List<String>>> grid,
+        ClovaOcrResponse.Cell cell,
+        int rowIndex,
+        int columnIndex
+    ) {
+        if (rowIndex == Integer.MAX_VALUE || columnIndex == Integer.MAX_VALUE) {
+            return; // 위치를 모르는 셀은 격자에 자리를 잡아줄 수 없다.
+        }
+
+        int rowSpan = spanOf(cell.rowSpan());
+        int columnSpan = spanOf(cell.columnSpan());
+        for (int row = rowIndex; row < rowIndex + rowSpan; row++) {
+            for (int column = columnIndex; column < columnIndex + columnSpan; column++) {
+                grid.computeIfAbsent(row, key -> new TreeMap<>())
+                    .computeIfAbsent(column, key -> new ArrayList<>());
+            }
+        }
+    }
+
+    /** span 값이 없거나 비정상(0 이하)이면 병합이 없는 것으로 본다. */
+    private static int spanOf(Integer span) {
+        return span != null && span > 0 ? span : 1;
     }
 
     private static String cellText(ClovaOcrResponse.Cell cell) {

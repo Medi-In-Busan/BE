@@ -4,10 +4,15 @@ package com.mediinbusan.app.feature.documentscan
  * OCR 평문 한 덩어리를 화면에 그릴 블록 목록으로 쪼갠다.
  *
  * 백엔드(DocumentTextLayoutBuilder)는 이미 문서의 배치를 복원해서 내려준다 — 표 셀은 파이프로,
- * 같은 줄 안의 열 경계는 공백 두 칸으로 구분된다. 진단서·처방전은 대부분 "라벨 : 값"이 가로로
- * 반복되는 서식이라(예: `환자의 성명 | 홍종민 | 성별 | 남`), 그 구분자를 셀로 되돌린 뒤 앞뒤를
- * 짝지어 항목으로 만든다. 짝이 안 맞거나 구분자가 없는 줄은 문단 그대로 남긴다 — OCR 결과를
- * 억지로 서식에 끼워 맞추다 원문을 잃는 것보다, 못 알아본 줄은 있는 그대로 보여주는 편이 낫다.
+ * 같은 줄 안의 열 경계는 공백 두 칸으로 구분된다. 여기서 그 구분자를 셀로 되돌린 뒤 세 가지로 나눈다.
+ *
+ * - [DocumentTextBlock.Table]: 처방전 약품 목록처럼 **열이 실제로 맞물리는 격자**. 첫 행이 헤더다.
+ * - [DocumentTextBlock.Field]: 진단서 서식처럼 `라벨 : 값`이 가로로 반복되는 줄.
+ * - [DocumentTextBlock.Paragraph]: 구분자가 없어 나눌 수 없는 줄(제목, 서술형 문장).
+ *
+ * 표와 서식을 가르는 근거는 **"칸 수가 같은 줄이 연달아 나오는가"** 하나뿐이다. 평문으로 내려온
+ * 이상 그 이상은 알 수 없고, 억지로 서식에 끼워 맞추다 원문을 잃는 것보다 못 알아본 줄을 있는
+ * 그대로 보여주는 편이 낫다. 그래서 판정이 애매한 2칸짜리 줄은 표로 보지 않고 서식으로 남긴다.
  */
 sealed interface DocumentTextBlock {
 
@@ -16,6 +21,9 @@ sealed interface DocumentTextBlock {
 
     /** `라벨 | 값` 한 쌍. */
     data class Field(val label: String, val value: String) : DocumentTextBlock
+
+    /** 첫 행이 헤더인 격자. 모든 행의 칸 수는 [header]와 같다. */
+    data class Table(val header: List<String>, val rows: List<List<String>>) : DocumentTextBlock
 }
 
 /** 열 경계로 쓰인 공백 2칸 이상. 단어 사이 공백 1칸과 구분된다. */
@@ -25,12 +33,67 @@ private const val CellSeparator = "|"
 /** 번역문(영문 등)의 긴 라벨까지 담되 서술형 문장은 라벨로 보지 않는 길이. */
 private const val MaxLabelLength = 20
 
-fun parseDocumentText(text: String): List<DocumentTextBlock> =
-    text.lineSequence()
+/**
+ * 표로 인정할 최소 열 수. 2칸짜리 줄은 `병록번호 | 12257`처럼 서식의 라벨/값과 구분이 되지 않아
+ * 표로 보면 첫 줄의 값이 헤더로 올라가버린다 — 그런 줄은 [DocumentTextBlock.Field]로 남긴다.
+ */
+private const val MinTableColumns = 3
+
+/** 표로 인정할 최소 행 수. 한 줄만으로는 헤더인지 서식 한 줄인지 알 수 없다. */
+private const val MinTableRows = 2
+
+fun parseDocumentText(text: String): List<DocumentTextBlock> {
+    val lines = text.lineSequence()
         .map(String::trim)
         .filter(String::isNotEmpty)
-        .flatMap { line -> parseLine(line).asSequence() }
         .toList()
+
+    val blocks = mutableListOf<DocumentTextBlock>()
+    var index = 0
+    while (index < lines.size) {
+        val tableRows = tableRunAt(lines, index)
+        if (tableRows != null) {
+            blocks += DocumentTextBlock.Table(header = tableRows.first(), rows = tableRows.drop(1))
+            index += tableRows.size
+        } else {
+            blocks += parseLine(lines[index])
+            index++
+        }
+    }
+    return blocks
+}
+
+/**
+ * [start]부터 칸 수가 같은 파이프 줄이 연달아 몇 줄인지 보고, 표로 볼 만하면 그 행들을 돌려준다.
+ * @return 표로 판정된 행들(헤더 포함), 아니면 null.
+ */
+private fun tableRunAt(lines: List<String>, start: Int): List<List<String>>? {
+    val first = tableCells(lines[start]) ?: return null
+
+    val rows = mutableListOf(first)
+    var index = start + 1
+    while (index < lines.size) {
+        val cells = tableCells(lines[index])
+        if (cells == null || cells.size != first.size) {
+            break
+        }
+        rows += cells
+        index++
+    }
+    return if (rows.size >= MinTableRows) rows else null
+}
+
+/**
+ * 표 행 후보로서의 셀 분해. 서식 줄과 달리 **빈 칸을 버리지 않는다** — 백엔드가 병합 셀이 덮는
+ * 자리를 빈 칸으로 남겨 보내므로, 그걸 버리면 열이 앞으로 밀려 헤더와 데이터가 어긋난다.
+ */
+private fun tableCells(line: String): List<String>? {
+    if (!line.contains(CellSeparator)) {
+        return null
+    }
+    val cells = line.split(CellSeparator).map { it.replace(ColumnGap, " ").trim() }
+    return if (cells.size >= MinTableColumns && cells.any(String::isNotEmpty)) cells else null
+}
 
 private fun parseLine(line: String): List<DocumentTextBlock> {
     val cells = splitIntoCells(line)
