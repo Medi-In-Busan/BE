@@ -134,9 +134,10 @@ class DocumentOcrServiceTest {
             List.of(new ClovaOcrResponse.ImageResult(
                 "document", "SUCCESS", "SUCCESS",
                 List.of(
-                    new ClovaOcrResponse.Field("환자명", 0.99, "NORMAL", false),
-                    new ClovaOcrResponse.Field("홍길동", 0.99, "NORMAL", true)
-                )
+                    new ClovaOcrResponse.Field("환자명", 0.99, "NORMAL", false, null),
+                    new ClovaOcrResponse.Field("홍길동", 0.99, "NORMAL", true, null)
+                ),
+                null
             ))
         );
     }
