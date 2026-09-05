@@ -64,7 +64,8 @@ import kotlinx.coroutines.delay
 fun BrandTopAppBar(
     onSettingsClick: () -> Unit,
     currentLanguageCode: String,
-    onLanguageSelected: (String) -> Unit
+    onLanguageSelected: (String) -> Unit,
+    containerColor: Color = HomeBackgroundPink
 ) {
     TopAppBar(
         title = {
@@ -107,9 +108,10 @@ fun BrandTopAppBar(
         // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백이 답답해
         // 보여서 줄인다. 완전히 없애면(top=0) 바가 상태바에 바로 붙어버리니 일부만 뺀다.
         windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
-        // Home 탑바(HomeScreen.kt의 HomeTopAppBar)와 동일하게 본문 배경(HomeBackgroundPink)과
-        // 맞춰서 탑바-본문 경계가 안 보이게 한다.
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink)
+        // Home 탑바(HomeScreen.kt의 HomeTopAppBar)와 동일하게 기본은 본문 배경(HomeBackgroundPink)과
+        // 맞춰서 탑바-본문 경계가 안 보이게 한다. 본문 배경이 다른 화면(예: NearbyScreen의 흰 배경)은
+        // containerColor를 그 배경색으로 넘겨서 이 화면들도 경계가 안 보이게 한다.
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor)
     )
 }
 

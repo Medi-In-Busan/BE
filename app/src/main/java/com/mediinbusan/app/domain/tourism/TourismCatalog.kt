@@ -23,6 +23,18 @@ data class TourismCatalogItem(
     val details: Map<String, String>
 )
 
+// TourismCatalogItem.categoryCode(contenttypeid)를 부산관광 슬라이드 태그 3종으로 묶는다 —
+// 관광지/문화시설/레포츠/쇼핑/여행코스는 SPOT 하나로, 32(숙박)는 LODGING, 39(음식점)는 FOOD.
+// NearbyScreen.kt(태그 이미지 표시)와 NearbyViewModel.kt(미리보기 항목 균형 배분)가 같이 쓴다.
+enum class TourismTagGroup { SPOT, LODGING, FOOD }
+
+fun String.toTourismTagGroup(): TourismTagGroup? = when (this) {
+    "12", "14", "25", "28", "38" -> TourismTagGroup.SPOT
+    "32" -> TourismTagGroup.LODGING
+    "39" -> TourismTagGroup.FOOD
+    else -> null
+}
+
 enum class TourismCatalogGroup(val label: String, val description: String) {
     PLACES("관광지 탐색", "부산의 장소와 이동 편의 정보를 확인해요."),
     ROUTES("여행 동선", "함께 둘러볼 곳과 걷기 코스를 찾아요."),
