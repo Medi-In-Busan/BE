@@ -16,6 +16,8 @@ import com.mediinbusan.app.domain.tourism.TourismCatalog
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
+import com.mediinbusan.app.domain.tourism.TourismTagGroup
+import com.mediinbusan.app.domain.tourism.toTourismTagGroup
 import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -256,7 +258,7 @@ class NearbyViewModel @Inject constructor(
                 it.copy(
                     tourismPreviews =
                         previews[tourismCategory]
-                            .toPreviewItems(),
+                            .toBalancedTourismPreviewItems(),
                     accessiblePreviews =
                         previews[
                             TourismCatalogCategory.ACCESSIBLE
@@ -276,8 +278,31 @@ class NearbyViewModel @Inject constructor(
             .take(PREVIEW_LIMIT)
     }
 
+    // 부산 관광 미리보기 전용: 사진 있는 항목 우선 + 중복 제거까지는 toPreviewItems()와 같지만,
+    // 태그 그룹(관광지/숙박/맛집)당 최대 PER_TAG_LIMIT개씩 고르게 뽑는다(요청: "관광지 2개, 맛집
+    // 2개, 숙박 2개"). 특정 그룹이 모자라 6개를 못 채우면 남은 자리는 우선순위대로 채운다.
+    private fun List<TourismCatalogItem>?.toBalancedTourismPreviewItems():
+        List<TourismCatalogItem> {
+        val prioritized = orEmpty()
+            .distinctBy { it.title }
+            .sortedByDescending { it.imageUrl != null }
+        val byGroup = prioritized.groupBy { it.categoryCode?.toTourismTagGroup() }
+        val picked = LinkedHashSet<TourismCatalogItem>()
+        TourismTagGroup.entries.forEach { group ->
+            picked += byGroup[group].orEmpty().take(PER_TAG_LIMIT)
+        }
+        if (picked.size < PREVIEW_LIMIT) {
+            for (item in prioritized) {
+                if (picked.size >= PREVIEW_LIMIT) break
+                picked += item
+            }
+        }
+        return picked.take(PREVIEW_LIMIT)
+    }
+
     private companion object {
         const val HOT_PLACE_LIMIT = 5
         const val PREVIEW_LIMIT = 6
+        const val PER_TAG_LIMIT = 2
     }
 }
