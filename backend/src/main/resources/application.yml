@@ -74,6 +74,9 @@ clova:
   ocr:
     api-url: ${CLOVA_OCR_API_URL:}
     secret-key: ${CLOVA_OCR_SECRET_KEY:}
+    # 처방전 약품 표를 셀 단위(rowIndex/columnIndex)로 받기 위한 옵션. 요청 루트에 실린다.
+    # 계정 도메인이 표 인식을 지원하지 않아 호출이 실패하면 재배포 없이 이 환경변수로 끌 수 있다.
+    enable-table-detection: ${CLOVA_OCR_ENABLE_TABLE_DETECTION:true}
 
 papago:
   translation:

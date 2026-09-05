@@ -15,6 +15,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.util.List;
+
 /**
  * Naver CLOVA OCR General API와의 통신만 담당한다. Secret Key는 여기서만 다루고,
  * 이미지 원본/OCR 결과 원문은 로그에 남기지 않는다(로그에는 상태 코드/길이 등만 남긴다).
@@ -58,7 +60,9 @@ public class ClovaOcrClient {
                     throw new ClovaOcrApiException("CLOVA OCR 호출이 실패했습니다. HTTP " + res.getStatusCode());
                 })
                 .body(ClovaOcrResponse.class);
-            log.info("CLOVA OCR 호출 성공: imageCount={}", response != null && response.images() != null ? response.images().size() : 0);
+            // 표 인식은 계정 도메인 설정을 타므로, 실제로 tables가 내려왔는지 개수만 남겨둔다
+            // (0이 계속 찍히면 enableTableDetection이 먹지 않는 계정이라는 신호다).
+            log.info("CLOVA OCR 호출 성공: imageCount={}, tableCount={}", imageCount(response), tableCount(response));
             return response;
         } catch (ClovaOcrAuthenticationException | ClovaOcrApiException e) {
             throw e;
@@ -68,8 +72,24 @@ public class ClovaOcrClient {
         }
     }
 
+    private int imageCount(ClovaOcrResponse response) {
+        return response != null && response.images() != null ? response.images().size() : 0;
+    }
+
+    private int tableCount(ClovaOcrResponse response) {
+        if (response == null || response.images() == null) {
+            return 0;
+        }
+        return response.images().stream()
+            .map(ClovaOcrResponse.ImageResult::tables)
+            .filter(tables -> tables != null)
+            .mapToInt(List::size)
+            .sum();
+    }
+
     private MultiValueMap<String, Object> buildRequestBody(byte[] imageBytes, String imageFormat) {
-        ClovaOcrRequestMessage message = ClovaOcrRequestMessage.of(imageFormat, REQUEST_IMAGE_NAME);
+        ClovaOcrRequestMessage message =
+            ClovaOcrRequestMessage.of(imageFormat, REQUEST_IMAGE_NAME, properties.enableTableDetection());
 
         HttpHeaders messagePartHeaders = new HttpHeaders();
         messagePartHeaders.setContentType(MediaType.APPLICATION_JSON);

@@ -29,6 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Subject
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
@@ -38,6 +40,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,6 +75,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -496,21 +501,21 @@ private fun DocumentScanPreview(
             // 먼저 보여주고 원문은 그 아래에 보조로 둔다. 번역이 없으면 원문 카드 하나만 보인다.
             if (translatedText != null) {
                 DocumentScanTextResultCard(
+                    strings = strings,
                     title = strings.translatedResultTitle,
                     text = translatedText,
                     icon = Icons.Default.Translate,
                     accentColor = CoralPrimary,
-                    copyContentDescription = strings.copyButtonContentDescription,
-                    onCopyClick = { onCopyClick(translatedText) }
+                    onCopyClick = onCopyClick
                 )
             }
             DocumentScanTextResultCard(
+                strings = strings,
                 title = strings.resultTitle,
                 text = extractedText,
                 icon = Icons.Default.Description,
                 accentColor = TextSecondary,
-                copyContentDescription = strings.copyButtonContentDescription,
-                onCopyClick = { onCopyClick(extractedText) }
+                onCopyClick = onCopyClick
             )
         }
     }
@@ -548,13 +553,27 @@ private fun ScanFrameCorners(modifier: Modifier = Modifier) {
 
 @Composable
 private fun DocumentScanTextResultCard(
+    strings: DocumentScanStrings,
     title: String,
     text: String,
     icon: ImageVector,
     accentColor: Color,
-    copyContentDescription: String,
-    onCopyClick: () -> Unit
+    onCopyClick: (String) -> Unit
 ) {
+    // 서식 복원은 어디까지나 추정이라(OCR이 라벨을 쪼개면 항목이 어긋난다) 원문 보기로 언제든
+    // 되돌아갈 수 있게 둔다. 번역문/원문 카드가 각각 상태를 갖도록 rememberSaveable을 카드 안에 둔다.
+    var showRawText by rememberSaveable { mutableStateOf(false) }
+    // 주민등록번호 같은 식별번호는 기본으로 가린다(SensitiveTextMasking 참고). 마스킹은 파싱보다
+    // 먼저 걸어서, 화면·클립보드·항목 분해 어디에도 원본 번호가 흘러가지 않게 한다.
+    var showSensitive by rememberSaveable { mutableStateOf(false) }
+    val maskedText = remember(text) { maskSensitiveText(text) }
+    val hasMaskedValue = maskedText != text
+    val displayText = if (showSensitive) text else maskedText
+
+    val blocks = remember(displayText) { parseDocumentText(displayText) }
+    // 항목이 하나도 안 잡히는 텍스트(문장만 있는 문서)에서는 토글을 띄워봐야 두 화면이 같으므로 숨긴다.
+    val hasFields = remember(blocks) { blocks.any { it is DocumentTextBlock.Field } }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -586,10 +605,40 @@ private fun DocumentScanTextResultCard(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onCopyClick) {
+            if (hasMaskedValue) {
+                IconButton(onClick = { showSensitive = !showSensitive }) {
+                    Icon(
+                        imageVector = if (showSensitive) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showSensitive) {
+                            strings.hideSensitiveButtonContentDescription
+                        } else {
+                            strings.revealSensitiveButtonContentDescription
+                        },
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            if (hasFields) {
+                IconButton(onClick = { showRawText = !showRawText }) {
+                    Icon(
+                        imageVector = if (showRawText) Icons.AutoMirrored.Filled.ViewList else Icons.AutoMirrored.Filled.Subject,
+                        contentDescription = if (showRawText) {
+                            strings.structuredViewButtonContentDescription
+                        } else {
+                            strings.rawViewButtonContentDescription
+                        },
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            // 복사는 화면에 보이는 그대로 나간다 — 가린 상태로 보고 있는데 클립보드에는 원본이
+            // 담기면, 이 화면을 신뢰하고 붙여넣는 순간 마스킹이 무의미해진다.
+            IconButton(onClick = { onCopyClick(displayText) }) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = copyContentDescription,
+                    contentDescription = strings.copyButtonContentDescription,
                     tint = TextSecondary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -597,15 +646,149 @@ private fun DocumentScanTextResultCard(
         }
         HorizontalDivider(color = DividerColor)
         SelectionContainer {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
-                color = TextPrimary,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            if (showRawText || !hasFields) {
+                Text(
+                    text = displayText,
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.5f),
+                    color = TextPrimary,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                )
+            } else {
+                DocumentTextBlockList(blocks = blocks)
+            }
+        }
+        // 별표만 보고 "OCR이 못 읽었나" 오해하지 않도록, 가린 게 있을 때만 이유를 한 줄 남긴다.
+        if (hasMaskedValue && !showSensitive) {
+            HorizontalDivider(color = DividerColor)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(12.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = strings.maskedNote, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            }
+        }
+    }
+}
+
+/**
+ * 복원한 블록을 "라벨 열 + 값 열" 표로 그린다. 라벨 열을 고정 dp가 아니라 weight로 잡아, OCR이
+ * 통째로 뱉은 긴 라벨(`병 명 □임상적추정 □ 최종진단` 같은)도 잘리지 않고 줄바꿈되게 한다.
+ */
+@Composable
+private fun DocumentTextBlockList(blocks: List<DocumentTextBlock>) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        blocks.forEachIndexed { index, block ->
+            when (block) {
+                is DocumentTextBlock.Paragraph -> Text(
+                    text = block.text,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.5f
+                    ),
+                    color = TextPrimary,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                )
+
+                is DocumentTextBlock.Field -> Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = block.label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(0.38f)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = block.value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(0.62f)
+                    )
+                }
+
+                is DocumentTextBlock.Table -> DocumentTextTable(block)
+            }
+            if (index != blocks.lastIndex) {
+                HorizontalDivider(
+                    color = DividerColor.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 처방전 약품 목록처럼 열이 맞물리는 표를 격자 그대로 그린다. 라벨/값 두 칸으로 접으면 헤더의
+ * 의미가 데이터 행과 뒤바뀌므로(예: `약품명 | 1회 투약량` 행이 "약품명: 1회 투약량"이 된다)
+ * 헤더 행을 따로 두고 아래에 데이터 행을 쌓는다.
+ */
+@Composable
+private fun DocumentTextTable(table: DocumentTextBlock.Table) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(MaterialTheme.shapes.small)
+            .border(width = 1.dp, color = DividerColor, shape = MaterialTheme.shapes.small)
+    ) {
+        DocumentTextTableRow(
+            cells = table.header,
+            textStyle = MaterialTheme.typography.bodySmall,
+            textColor = TextSecondary,
+            fontWeight = FontWeight.Bold,
+            background = CoralPrimaryContainer.copy(alpha = 0.45f)
+        )
+        table.rows.forEach { row ->
+            HorizontalDivider(color = DividerColor)
+            DocumentTextTableRow(
+                cells = row,
+                textStyle = MaterialTheme.typography.bodySmall,
+                textColor = TextPrimary,
+                fontWeight = FontWeight.Normal,
+                background = Color.Transparent
             )
         }
     }
 }
+
+@Composable
+private fun DocumentTextTableRow(
+    cells: List<String>,
+    textStyle: TextStyle,
+    textColor: Color,
+    fontWeight: FontWeight,
+    background: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().background(background).padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        cells.forEachIndexed { index, cell ->
+            if (index > 0) {
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                text = cell,
+                style = textStyle,
+                color = textColor,
+                fontWeight = fontWeight,
+                // 첫 열(약품명 등)이 가장 길어서 나머지보다 넓게 잡는다.
+                modifier = Modifier.weight(if (index == 0) FirstColumnWeight else 1f)
+            )
+        }
+    }
+}
+
+private const val FirstColumnWeight = 1.6f
 
 // FileProvider로 앱 캐시 디렉토리 안의 임시 파일을 가리키는 content:// Uri를 만든다. 촬영한 원본
 // 이미지를 TakePicture()가 이 Uri에 직접 써준다. res/xml/file_paths.xml의 cache-path와 짝을 이룬다.

@@ -2,6 +2,9 @@ package com.mediinbusan.app.feature.tourism
 
 import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.data.recent.RecentItemType
+import com.mediinbusan.app.data.recent.RecentRepository
+import com.mediinbusan.app.data.recent.RecentlyViewed
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalog
@@ -49,7 +52,7 @@ class TourismHotPlaceDetailTest {
             val matched = tourismItem("tour-$rank", hotPlace.item.title)
             val repository = FakeRepository(Result.Success(matched))
 
-            val viewModel = TourismCatalogItemDetailViewModel(pending, repository)
+            val viewModel = TourismCatalogItemDetailViewModel(pending, repository, FakeRecentRepository())
             assertTrue(viewModel.uiState.value.isLoading)
             advanceUntilIdle()
             val state = viewModel.uiState.value
@@ -68,7 +71,7 @@ class TourismHotPlaceDetailTest {
     @Test
     fun unmatchedPlaceShowsNotFoundInsteadOfCrowdingRowAsDetail() = runTest {
         pending.setHotPlace(hotPlace("crowding", 82.0))
-        val viewModel = TourismCatalogItemDetailViewModel(pending, FakeRepository(Result.Success(null)))
+        val viewModel = TourismCatalogItemDetailViewModel(pending, FakeRepository(Result.Success(null)), FakeRecentRepository())
 
         advanceUntilIdle()
 
@@ -81,7 +84,7 @@ class TourismHotPlaceDetailTest {
     fun networkFailureCanBeRetried() = runTest {
         pending.setHotPlace(hotPlace("crowding", 82.0))
         val repository = FakeRepository(Result.Error(IllegalStateException("offline")))
-        val viewModel = TourismCatalogItemDetailViewModel(pending, repository)
+        val viewModel = TourismCatalogItemDetailViewModel(pending, repository, FakeRecentRepository())
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.loadFailed)
 
@@ -96,10 +99,10 @@ class TourismHotPlaceDetailTest {
 
     @Test
     fun ordinaryCatalogSelectionDoesNotCallMatcher() = runTest {
-        pending.set(TourismCatalogCategory.ACCESSIBLE, tourismItem("accessible", "Accessible place"))
+        pending.set(TourismCatalogCategory.ACCESSIBLE, tourismItem("accessible", "Accessible place"), district = null)
         val repository = FakeRepository(Result.Error())
 
-        val state = TourismCatalogItemDetailViewModel(pending, repository).uiState.value
+        val state = TourismCatalogItemDetailViewModel(pending, repository, FakeRecentRepository()).uiState.value
         advanceUntilIdle()
 
         assertEquals("accessible", state.item?.id)
@@ -113,7 +116,7 @@ class TourismHotPlaceDetailTest {
         val hotPlace = hotPlace("beach", 82.5)
         pending.setHotPlace(hotPlace)
 
-        val item = pending.consume()!!.second
+        val item = pending.consume()!!.item
 
         assertEquals(BusanDistrict.HAEUNDAE.name, item.details["hotPlaceDistrict"])
         assertEquals(BusanDistrict.HAEUNDAE.label, item.details["signguNm"])
@@ -123,12 +126,36 @@ class TourismHotPlaceDetailTest {
 
     @Test
     fun detailWithoutSelectionStillSignalsEmptyState() {
-        val state = TourismCatalogItemDetailViewModel(pending, FakeRepository(Result.Error())).uiState.value
+        val state = TourismCatalogItemDetailViewModel(pending, FakeRepository(Result.Error()), FakeRecentRepository()).uiState.value
 
         assertTrue(state.consumed)
         assertNull(state.selectedTitle)
         assertNull(state.category)
         assertNull(state.item)
+    }
+
+    /** 상세 진입 시 기록만 하고 이 테스트의 검증 대상은 아니라, 호출을 삼키기만 하는 페이크. */
+    private class FakeRecentRepository : RecentRepository {
+        override fun observeRecentlyViewed(): Flow<List<RecentlyViewed>> = flowOf(emptyList())
+
+        override suspend fun findById(itemId: String): RecentlyViewed? = null
+
+        override suspend fun recordView(
+            itemId: String,
+            itemName: String,
+            itemType: RecentItemType,
+            imageUrl: String?,
+            subtitle: String,
+            address: String,
+            latitude: Double?,
+            longitude: Double?,
+            tourismCategory: String?,
+            tourismDistrict: String?
+        ) = Unit
+
+        override suspend fun removeItem(itemId: String) = Unit
+
+        override suspend fun removeAll() = Unit
     }
 
     private fun hotPlace(id: String, rate: Double) = TourismHotPlace(
