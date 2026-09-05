@@ -3,7 +3,6 @@ package com.mediinbusan.app.feature.nearby
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -70,7 +68,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -83,6 +80,7 @@ import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediBlue40
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
+import com.mediinbusan.app.core.designsystem.SettingsDivider
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -202,7 +200,7 @@ private fun NearbyLoadedContent(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         item {
-            WellnessSearchAndFilterSection(modifier = Modifier.padding(horizontal = 20.dp))
+            WellnessSearchAndFilterSection()
         }
 
         item {
@@ -237,29 +235,33 @@ private fun NearbyLoadedContent(
 @Composable
 private fun WellnessSearchAndFilterSection(modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        WellnessCatalogSearchBar()
-        WellnessCategoryFilterRow()
+        // 요청: 서치바는 필터 원형 버튼(20dp 여백 유지)보다 살짝 더 넓게 — 좌우 여백을 1dp씩 줄여
+        // 총 2dp 더 길어 보이게 한다.
+        WellnessCatalogSearchBar(modifier = Modifier.padding(horizontal = 19.dp))
+        WellnessCategoryFilterRow(modifier = Modifier.padding(horizontal = 20.dp))
     }
 }
 
+// 요청: 코랄 외곽선 대신 회색 베이스(테두리 없음)로, 돋보기 아이콘은 왼쪽에 회색으로 배치.
 @Composable
-private fun WellnessCatalogSearchBar() {
+private fun WellnessCatalogSearchBar(modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
     val strings = LocalAppStrings.current
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .height(46.dp)
             .clip(RoundedCornerShape(percent = 50))
-            .background(Color.White)
-            .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.35f), shape = RoundedCornerShape(percent = 50))
+            .background(SettingsDivider)
             .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        Icon(imageVector = Icons.Default.Search, contentDescription = strings.common.searchContentDescription, tint = TextSecondary)
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    text = strings.common.searchPlaceholder,
+                    text = strings.nearby.wellnessSearchPlaceholder,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
@@ -273,14 +275,13 @@ private fun WellnessCatalogSearchBar() {
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        Icon(imageVector = Icons.Default.Search, contentDescription = strings.common.searchContentDescription, tint = CoralPrimary)
     }
 }
 
 private data class WellnessFilterOption(val key: String, val label: String, @param:androidx.annotation.DrawableRes val iconRes: Int)
 
 @Composable
-private fun WellnessCategoryFilterRow() {
+private fun WellnessCategoryFilterRow(modifier: Modifier = Modifier) {
     val strings = LocalAppStrings.current.nearby
     val language = LocalAppStrings.current.language
     val options = listOf(
@@ -292,7 +293,7 @@ private fun WellnessCategoryFilterRow() {
     var selectedKey by remember { mutableStateOf<String?>(null) }
     // 4dp로는 시각적으로 서치바 끝선과 거의 같아 보였다 — 확실히 그 안쪽이라고 보이도록 살짝만 더 당긴다.
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -390,37 +391,49 @@ private fun TourismPlaceSlider(
     onSeeAll: (TourismCatalogCategory) -> Unit
 ) {
     val revealedCount = rememberRevealedCount(itemsKey = items, itemCount = items.size)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+    // 헤더(로고+타이틀+설명)와 카드 목록 사이가 답답해 보여서 여백을 10dp -> 18dp로 늘린다.
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(id = logoRes),
                     contentDescription = null,
                     modifier = Modifier.size(40.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(text = title, style = SectionTitleStyle, color = TextPrimary)
-                    Text(text = description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(text = title, style = SectionTitleStyle, color = TextPrimary)
+            }
+            // 요청: 전체보기를 타이틀이 아니라 서브타이틀(설명 텍스트)과 같은 줄에 나란히 배치한다.
+            // 서브타이틀은 왼쪽 정렬 유지(타이틀 텍스트 시작 위치에 맞추는 들여쓰기는 넣지 않는다).
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+                // 핫플레이스 TOP5 헤더가 쓰는 회색 텍스트 + ">" 아이콘 패턴으로 통일. 글자 크기(labelMedium)는 그대로 유지.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { onSeeAll(category) }
+                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = LocalAppStrings.current.nearby.allRanksLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
-            Text(
-                text = LocalAppStrings.current.nearby.seeAllLabel,
-                style = MaterialTheme.typography.labelMedium,
-                color = CoralPrimary,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.End,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier
-                    .widthIn(min = 84.dp)
-                    .clickable { onSeeAll(category) }
-                    .padding(horizontal = 6.dp, vertical = 6.dp)
-            )
         }
         if (items.isEmpty()) {
             TourismPlaceEmptyCard()
@@ -448,6 +461,14 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: In
             // 화면에 카드가 1.5개 정도 보이던 걸 2.5개 정도 보이게 폭을 줄인다(210dp -> 140dp).
             .width(140.dp)
             .height(180.dp)
+            // 홈 카드 그림자(elevation 3dp/alpha 0.04)로는 사진 카드 위에서 티가 안 나서
+            // 훨씬 진하고 두껍게(elevation 10dp/alpha 0.28) 준다.
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = Color.Black.copy(alpha = 0.28f),
+                spotColor = Color.Black.copy(alpha = 0.28f)
+            )
             .clip(RoundedCornerShape(20.dp))
             .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.16f), CoralPrimaryContainer)))
             .clickable(onClick = onClick)
@@ -612,30 +633,40 @@ private fun HotTourismTopFiveSection(
 ) {
     val revealedCount = rememberRevealedCount(itemsKey = hotPlaces, itemCount = hotPlaces.size)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(shape = RoundedCornerShape(6.dp), color = CoralPrimaryContainer) {
-                    Text(
-                        text = "LIVE",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = CoralPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // 요청: LIVE/타이틀/서브텍스트가 1st 카드 내부 콘텐츠(버튼/텍스트 시작점, 16dp 들여쓰기)보다
+            // 왼쪽에 있어 헤더 전체가 왼쪽으로 치우쳐 보였다 — 전체보기는 그대로 두고 이 세 요소만
+            // 1st 카드 내부 시작 위치에 맞춰 오른쪽으로 16dp 밀어준다.
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = CoralPrimaryContainer,
+                modifier = Modifier.padding(start = 16.dp)
+            ) {
+                Text(
+                    text = "LIVE",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CoralPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            // 요청: 타이틀 크기를 headlineMedium 대비 15% 줄이고 옆에 불 이모지를 붙인다.
+            Text(
+                text = "${LocalAppStrings.current.nearby.hotPlaceTopFiveTitle} 🔥",
+                style = MaterialTheme.typography.headlineMedium.let { it.copy(fontSize = it.fontSize * 0.85f) },
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+            // 요청: 전체보기를 타이틀이 아니라 서브텍스트와 같은 줄에 나란히 배치(부산관광/무장애관광과 동일한 패턴).
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = LocalAppStrings.current.nearby.crowdingForecastLabel,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = LocalAppStrings.current.nearby.hotPlaceTopFiveTitle,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    color = TextSecondary,
+                    modifier = Modifier.padding(start = 16.dp).weight(1f)
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -693,18 +724,17 @@ private fun HotTourismTopFiveSection(
 
                 val compactPlaces = hotPlaces.drop(3).take(2)
                 if (compactPlaces.isNotEmpty()) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color.White,
-                        shadowElevation = 2.dp
-                    ) {
-                        Column(modifier = Modifier.padding(horizontal = 14.dp)) {
-                            compactPlaces.forEachIndexed { index, hotPlace ->
-                                if (index > 0) {
-                                    androidx.compose.material3.HorizontalDivider(color = DividerColor)
-                                }
-                                TourismRevealContent(index = index + 3, revealedCount = revealedCount) {
+                    // 요청: 4·5위가 하나의 Surface 안에 구분선으로만 붙어 있던 걸, 의료기관 목록처럼
+                    // 각각 독립된 카드로 떼어놓는다. 크기·구성 요소(순위/썸네일/제목/혼잡도 등)는 그대로.
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        compactPlaces.forEachIndexed { index, hotPlace ->
+                            TourismRevealContent(index = index + 3, revealedCount = revealedCount) {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = Color.White,
+                                    shadowElevation = 2.dp
+                                ) {
                                     HotPlaceCompactRow(
                                         rank = index + 4,
                                         hotPlace = hotPlace,
@@ -775,9 +805,18 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
             .clickable(onClick = onClick)
     ) {
         HotPlaceThumbnailImage(hotPlace, Modifier.fillMaxSize())
+        // 1위 카드는 heightIn(min=...)라 2/3위(고정 180dp)보다 실제 높이가 훨씬 커질 수 있어서,
+        // 2-stop 그라데이션을 그대로 쓰면 하단 텍스트 영역까지의 어두워지는 구간이 상대적으로
+        // 옅어 보인다 — 중간 stop을 추가해 어두워지는 시점을 앞당기고 최종 alpha도 더 올린다.
         Box(
             Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0.76f)))
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Black.copy(alpha = 0.05f),
+                        0.45f to Color.Black.copy(alpha = 0.30f),
+                        1f to Color.Black.copy(alpha = 0.85f)
+                    )
+                )
             )
         )
         HotPlaceRankBadge(
@@ -787,8 +826,16 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
         )
         Column(
             modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            Text(
+                text = hotPlace.item.title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(
                     Icons.Default.Place,
@@ -798,15 +845,7 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
                 )
                 Text(LocalAppStrings.current.nearby.busanDistrictFormat.format(hotPlace.district.translatedLabel(LocalAppStrings.current.language)), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.78f))
             }
-            Text(
-                text = hotPlace.item.title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            // 혼잡도 배지와 ">" 아이콘을 같은 Row에 둬서 수평 위치가 자동으로 맞게 한다.
+            // 혼잡도 배지와 ">" 아이콘은 위치 고정 — 항상 맨 아래 Row에 둬서 수평 위치가 자동으로 맞게 한다.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CongestionLevelBadge(congestionRate = hotPlace.congestionRate, height = 28.dp)
                 Spacer(modifier = Modifier.weight(1f))
@@ -894,8 +933,10 @@ private fun HotPlaceGridCard(
 
 @Composable
 private fun HotPlaceCompactRow(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Unit) {
+    // 요청: 4·5위를 각각 독립 카드로 분리하면서 사라진 좌우 여백(원래 병합 Surface의
+    // horizontal=14dp)을 다시 넣어, 내용이 카드 가장자리에 붙지 않고 안쪽으로 모이게 한다.
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
