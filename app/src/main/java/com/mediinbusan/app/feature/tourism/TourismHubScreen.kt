@@ -66,6 +66,7 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedDescription
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
@@ -191,7 +192,7 @@ private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Un
             modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            HotPlaceThumbnail(rank = rank)
+            HotPlaceThumbnail(rank = rank, imageUrl = hotPlace.item.imageUrl)
             Column(
                 modifier = Modifier.weight(1f).height(112.dp),
                 verticalArrangement = Arrangement.SpaceBetween
@@ -217,15 +218,7 @@ private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Un
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Surface(shape = CircleShape, color = CoralPrimary.copy(alpha = 0.11f)) {
-                        Text(
-                            text = hotPlace.congestionRate.toCongestionLabel(),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CoralPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    CongestionLevelBadge(congestionRate = hotPlace.congestionRate, height = 22.dp)
                     Text(
                         text = LocalAppStrings.current.nearby.busanDistrictFormat.format(
                             hotPlace.district.translatedLabel(LocalAppStrings.current.language)
@@ -247,35 +240,50 @@ private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Un
 }
 
 @Composable
-private fun HotPlaceThumbnail(rank: Int) {
+private fun HotPlaceThumbnail(rank: Int, imageUrl: String?) {
     Box(
         modifier = Modifier
             .size(width = 104.dp, height = 112.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(Color(0xFFFFE2DA), Color(0xFFFFF5F0), Color(0xFFEAF7FF))
-                )
-            )
     ) {
-        Box(
-            modifier = Modifier.size(54.dp).align(Alignment.Center).clip(CircleShape).background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.BarChart,
+        if (imageUrl != null) {
+            AsyncImageBox(
+                model = imageUrl,
                 contentDescription = null,
-                tint = CoralPrimary,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFFFFE2DA), Color(0xFFFFF5F0), Color(0xFFEAF7FF))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = CoralPrimary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+            shape = RoundedCornerShape(50),
+            color = Color.White
+        ) {
+            Text(
+                text = "HOT $rank",
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = CoralPrimary,
+                fontWeight = FontWeight.Bold
             )
         }
-        Text(
-            text = "HOT $rank",
-            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = CoralPrimary,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
@@ -424,16 +432,6 @@ private fun HighlightErrorCard(message: String, onRetry: () -> Unit) {
 private fun Double.toDisplayRate(): String = LocalAppStrings.current.tourism.concentrationIndexFormat.format(
     if (this % 1.0 == 0.0) toInt().toString() else "%.1f".format(this)
 )
-
-@Composable
-private fun Double.toCongestionLabel(): String = with(LocalAppStrings.current.nearby) {
-    when {
-        this@toCongestionLabel >= 80.0 -> crowdingVeryHigh
-        this@toCongestionLabel >= 60.0 -> crowdingHigh
-        this@toCongestionLabel >= 40.0 -> crowdingNormal
-        else -> crowdingRelaxed
-    }
-}
 
 private const val HOT_PLACE_CARD_LIMIT = 5
 
