@@ -1,5 +1,6 @@
 package com.mediinbusan.app.feature.documentscan
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -8,6 +9,9 @@ import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.data.document.DocumentOcrRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -19,7 +23,8 @@ import javax.inject.Inject
 class DocumentScanViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val documentOcrRepository: DocumentOcrRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     // 촬영/선택한 이미지는 프로세스가 죽었다 복원돼도(카메라 앱 실행 중 메모리 회수 등)
@@ -85,6 +90,23 @@ class DocumentScanViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.setLanguageCode(languageCode)
         }
+    }
+
+    /**
+     * 이 ViewModel이 사라진다는 건 선택 상태도 같이 사라진다는 뜻이라, 캐시에 남은 촬영본은
+     * 주인 없는 진단서 사진이 된다. 다음에 문서 스캔 탭을 여는 시점(화면의 clearCapturedImages)까지
+     * 기다리지 말고 여기서 지운다.
+     *
+     * 탭 전환은 여기로 오지 않는다 — navigateToTab이 상태를 보관해서 ViewModel이 그대로 살아 있고,
+     * 돌아왔을 때 미리보기가 그대로 떠 있어야 하므로 파일도 남아 있어야 맞다. 프로세스가 강제
+     * 종료될 때도 이 콜백은 안 불리는데, 그때는 SavedStateHandle로 선택이 복원되므로 역시 남는 게 맞다.
+     *
+     * viewModelScope는 이 시점에 이미 취소돼 있어 쓸 수 없고, 삭제는 화면 수명과 무관하게 끝나야
+     * 하므로 이 작업만 하고 끝나는 스코프를 따로 만든다(파일 몇 개 지우는 짧은 IO다).
+     */
+    override fun onCleared() {
+        super.onCleared()
+        CoroutineScope(Dispatchers.IO).launch { clearCapturedImages(context, keep = null) }
     }
 
     companion object {

@@ -392,8 +392,10 @@ internal fun captureImageUri(context: Context, file: File): Uri =
  *
  * 촬영본은 앱 캐시에 실물 JPEG로 떨어지는데, 그게 진단서·처방전 사진이라 쌓아둘 이유가 없다.
  * 설정의 "캐시 지우기"는 Coil 이미지 캐시만 비우므로(SettingsViewModel.onClearCacheConfirmed)
- * 이 파일들을 정리하는 곳은 여기뿐이다. 안드로이드가 저장공간이 부족할 때 알아서 비워주긴 하지만,
- * 그때까지 남아 있는다는 뜻이라 우리가 필요 없어지는 시점에 직접 지운다.
+ * 이 파일들을 정리하는 건 이 함수뿐이다. 안드로이드가 저장공간이 부족할 때 알아서 비워주긴 하지만,
+ * 그때까지 남아 있는다는 뜻이라 우리가 필요 없어지는 시점에 직접 지운다. 부르는 곳은 두 군데다 —
+ * 선택이 바뀔 때마다 도는 DocumentScanScreen(지금 쓰는 것만 남긴다)과, 화면이 아주 빠질 때
+ * 남은 것까지 지우는 DocumentScanViewModel.onCleared(keep = null).
  *
  * [keep]이 갤러리에서 고른 이미지(MediaStore Uri)면 이름이 우리 파일과 겹치지 않아 촬영본이
  * 전부 지워진다 — 의도한 동작이다.

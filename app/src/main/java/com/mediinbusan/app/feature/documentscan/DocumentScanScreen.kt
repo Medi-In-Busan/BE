@@ -154,8 +154,9 @@ private fun DocumentScanContent(
     }
 
     // 선택이 바뀌거나 해제될 때마다 지금 쓰는 촬영본만 남기고 캐시를 정리한다. 촬영할 때마다
-    // 진단서 사진이 앱 캐시에 쌓이는 걸 막는 유일한 지점이다(clearCapturedImages 주석 참고).
+    // 진단서 사진이 앱 캐시에 쌓이는 걸 막는 지점이다(clearCapturedImages 주석 참고).
     // 화면에 들어올 때도 한 번 도는데, 그때는 이전 세션에 남은 파일까지 같이 정리된다.
+    // 남은 하나(지금 선택된 촬영본)는 화면이 백스택에서 빠질 때 DocumentScanViewModel.onCleared가 지운다.
     LaunchedEffect(uiState.selectedImageUri) {
         withContext(Dispatchers.IO) { clearCapturedImages(context, keep = uiState.selectedImageUri) }
     }
@@ -681,7 +682,11 @@ private fun DocumentTextTable(table: DocumentTextBlock.Table) {
  */
 private fun columnWeights(table: DocumentTextBlock.Table): List<Float> {
     val allRows = listOf(table.header) + table.rows
-    return table.header.indices.map { column ->
+    // 파서는 모든 행의 칸 수를 헤더와 맞춰서 내려주지만(DocumentTextBlock.Table 참고), 열 수를
+    // 헤더가 아니라 가장 긴 행 기준으로 잡아 둔다 — 그 불변식이 깨져도 열이 통째로 안 그려지거나
+    // 행마다 다른 비율로 어긋나는 대신 빈 칸만 남는다.
+    val columnCount = allRows.maxOf { it.size }
+    return (0 until columnCount).map { column ->
         val longest = allRows.maxOf { it.getOrNull(column)?.length ?: 0 }
         longest.toFloat().coerceIn(MinColumnWeight, MaxColumnWeight)
     }
@@ -702,16 +707,17 @@ private fun DocumentTextTableRow(
     Row(
         modifier = Modifier.fillMaxWidth().background(background).padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        cells.forEachIndexed { index, cell ->
+        // 칸이 모자란 행도 열 수만큼 빈 칸을 채워 그린다 — 그래야 위아래 행의 열이 같은 자리에 선다.
+        weights.forEachIndexed { index, weight ->
             if (index > 0) {
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(
-                text = cell,
+                text = cells.getOrElse(index) { "" },
                 style = textStyle,
                 color = textColor,
                 fontWeight = fontWeight,
-                modifier = Modifier.weight(weights.getOrElse(index) { MinColumnWeight })
+                modifier = Modifier.weight(weight)
             )
         }
     }
