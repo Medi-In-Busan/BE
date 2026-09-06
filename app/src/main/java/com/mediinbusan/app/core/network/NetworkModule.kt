@@ -35,16 +35,20 @@ object NetworkModule {
         isLenient = true
     }
 
+    // 응답/요청 본문에 의료 문서 원문·건강 상태가 실리는 엔드포인트. 이 경로들만 BODY 로깅에서
+    // 제외한다(SensitivePathLoggingInterceptor 참고).
+    private val SENSITIVE_LOG_PATHS = listOf("/documents/ocr", "/diagnosis-chat")
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        }
+        val bodyLevel = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+        val basicLevel = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+        val logging = SensitivePathLoggingInterceptor(
+            defaultLogger = HttpLoggingInterceptor().apply { level = bodyLevel },
+            sensitiveLogger = HttpLoggingInterceptor().apply { level = basicLevel },
+            sensitivePaths = SENSITIVE_LOG_PATHS
+        )
         // 기본 10초 타임아웃은 문서 스캔 이미지 업로드(멀티파트, CLOVA OCR 왕복 포함)에는
         // 빠듯할 수 있어 전체 클라이언트 기준으로 여유를 둔다.
         return OkHttpClient.Builder()
