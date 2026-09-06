@@ -80,7 +80,35 @@ private fun tableRunAt(lines: List<String>, start: Int): List<List<String>>? {
         rows += cells
         index++
     }
-    return if (rows.size >= MinTableRows) rows else null
+    if (rows.size < MinTableRows) {
+        return null
+    }
+    // 열을 추려낸 뒤 다시 표 자격을 따진다 — 추려서 두 칸만 남으면 그건 표가 아니라 서식이고,
+    // 각 줄이 parseLine으로 내려가 라벨/값으로 잡힌다.
+    val columns = dropDataEmptyColumns(rows)
+    return if (columns.first().size >= MinTableColumns) columns else null
+}
+
+/**
+ * 첫 행에만 값이 있고 아래 데이터 행에서는 전부 빈 열을 버린다.
+ *
+ * 진단서처럼 서식을 표로 인식한 문서에서 이런 열이 생긴다 — `병록번호 | 12257 | 연번호 | 19-7001`
+ * 줄만 네 칸을 쓰고 그 아래 `환자의 성명 | 홍종민 |  | ` 줄들은 뒤 두 칸이 비어 있다. 그대로 두면
+ * 첫 줄이 헤더로 색칠되고(헤더가 아니라 데이터 줄이다), 빈 열이 폭을 절반 가까이 가져가 값이
+ * 서너 글자마다 줄바꿈된다.
+ *
+ * 반대로 **병합 셀이 만든 빈 칸은 남긴다** — 헤더만 비고 데이터 행에는 값이 있는 열이라 이 조건에
+ * 걸리지 않는다. 그걸 버리면 열이 앞으로 밀려 헤더와 데이터가 어긋난다.
+ */
+private fun dropDataEmptyColumns(rows: List<List<String>>): List<List<String>> {
+    val dataRows = rows.drop(1)
+    val keptColumns = rows.first().indices.filter { column ->
+        dataRows.any { it[column].isNotEmpty() }
+    }
+    if (keptColumns.size == rows.first().size) {
+        return rows
+    }
+    return rows.map { row -> keptColumns.map(row::get) }
 }
 
 /**
@@ -127,6 +155,29 @@ private fun isLabelLike(cell: String): Boolean =
 
 /** 파이프가 있으면 파이프를, 없으면 열 경계 공백을 셀 구분자로 쓴다(둘을 섞으면 값 안의 공백까지 쪼개진다). */
 private fun splitIntoCells(line: String): List<String> {
-    val cells = if (line.contains(CellSeparator)) line.split(CellSeparator) else line.split(ColumnGap)
-    return cells.map { it.replace(ColumnGap, " ").trim() }.filter(String::isNotEmpty)
+    if (line.contains(CellSeparator)) {
+        // 파이프는 백엔드가 표 셀 경계로 넣은 것이라 자간 벌림과 무관하다 — 여기서 되붙이면
+        // `타이레놀정500mg | 1 | 3 | 3`의 한 글자 값들이 `133`으로 뭉개진다.
+        return line.split(CellSeparator).map { it.replace(ColumnGap, " ").trim() }.filter(String::isNotEmpty)
+    }
+    val cells = line.split(ColumnGap).map(String::trim).filter(String::isNotEmpty)
+    return mergeLetterSpacedCells(cells)
+}
+
+/**
+ * 공문서 제목과 서식 라벨은 `진   단   서`, `병      명`처럼 자간을 벌려 인쇄된다. 백엔드는 그
+ * 간격을 열 경계(공백 2칸)로 보고 내려주므로 그대로 쪼개면 `진`이 라벨이고 `단 서`가 값인 엉뚱한
+ * 항목이 된다. 줄 맨 앞에 한 글자짜리 셀이 연달아 나오면 자간을 벌린 한 낱말로 보고 되붙인다.
+ *
+ * 되붙이는 범위를 **줄 맨 앞**으로 한정한 이유: 서식 줄에서 라벨은 항상 맨 앞이고(parseLine 참고),
+ * 줄 가운데의 한 글자 셀은 `성별 | 남`의 값처럼 진짜 한 글자 값일 때가 많다. 값까지 라벨에 붙여
+ * 원문을 잃는 것보다, 못 알아본 줄은 그대로 두는 편이 낫다 — 언제든 원문 보기로 확인할 수 있다.
+ */
+private fun mergeLetterSpacedCells(cells: List<String>): List<String> {
+    val runLength = cells.takeWhile { it.length == 1 }.size
+    if (runLength < 2) {
+        return cells
+    }
+    // 줄 전체가 한 글자 셀이면(=제목) 합친 결과가 셀 하나뿐이라 parseLine이 문단으로 남긴다.
+    return listOf(cells.take(runLength).joinToString(separator = "")) + cells.drop(runLength)
 }

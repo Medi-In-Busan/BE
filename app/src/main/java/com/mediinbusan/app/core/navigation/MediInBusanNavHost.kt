@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,6 +40,7 @@ import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
+import com.mediinbusan.app.feature.documentscan.DocumentCaptureScreen
 import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogItemDetailScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
@@ -262,8 +265,29 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onBack = navController::popBackStack
             )
         }
-        composable<Route.DocumentScan> {
-            DocumentScanScreen(onMenuClick = { navController.navigate(Route.Settings) })
+        composable<Route.DocumentScan> { entry ->
+            // 촬영 화면이 pop하면서 넣어준 Uri를 여기서 받아 화면에 넘긴다. 화면이 반영한 뒤
+            // 곧바로 null로 지워야(onCapturedImageHandled) 탭을 다시 열 때 되살아나지 않는다.
+            val capturedImageUri by entry.savedStateHandle
+                .getStateFlow<String?>(CapturedImageUriKey, null)
+                .collectAsStateWithLifecycle()
+            DocumentScanScreen(
+                onMenuClick = { navController.navigate(Route.Settings) },
+                onNavigateToCapture = { navController.navigate(Route.DocumentCapture) },
+                capturedImageUri = capturedImageUri?.let(Uri::parse),
+                onCapturedImageHandled = { entry.savedStateHandle[CapturedImageUriKey] = null }
+            )
+        }
+        composable<Route.DocumentCapture> {
+            DocumentCaptureScreen(
+                onImageCaptured = { uri ->
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(CapturedImageUriKey, uri.toString())
+                    navController.popBackStack()
+                },
+                onClose = navController::popBackStack
+            )
         }
         composable<Route.SelfDiagnosis> {
             val guideStrings = LocalAppStrings.current.guide
