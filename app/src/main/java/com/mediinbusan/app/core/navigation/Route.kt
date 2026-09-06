@@ -92,7 +92,16 @@ sealed interface Route {
     // 촬영·선택까지만 우선 배선한다 — 관련 이슈 참고.
     @Serializable
     data object DocumentScan : Route
+
+    // 문서 촬영(CameraX 자체 UI). DocumentScan에서만 진입하고, 촬영본 Uri를 이전 백스택 엔트리의
+    // SavedStateHandle(CapturedImageUriKey)에 넣고 pop해서 돌려준다. 전체화면이라 하단 탭바를
+    // 노출하지 않는다(shouldShowBottomBar에 넣지 않음).
+    @Serializable
+    data object DocumentCapture : Route
 }
+
+/** [Route.DocumentCapture]가 [Route.DocumentScan]으로 촬영본 Uri를 돌려줄 때 쓰는 SavedStateHandle 키. */
+const val CapturedImageUriKey = "capturedImageUri"
 
 /**
  * 탭 전환 표준 패턴: Route.Home까지 스택을 정리하되 각 탭의 상태는 보존한다.

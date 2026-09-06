@@ -35,20 +35,34 @@ object NetworkModule {
         isLenient = true
     }
 
+    // 응답/요청 본문에 의료 문서 원문·건강 상태가 실리는 엔드포인트. 이 경로들만 BODY 로깅에서
+    // 제외한다(SensitivePathLoggingInterceptor 참고).
+    private val SENSITIVE_LOG_PATHS = listOf("/documents/ocr", "/diagnosis-chat")
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        }
+        val bodyLevel = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+        val basicLevel = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+        // 호출 단위 로그(메서드·URL·응답 코드·소요 시간)는 애플리케이션 인터셉터로 단다 — 연결 자체가
+        // 실패한 요청(오프라인, base URL 오타)도 남기려면 이 자리여야 한다. 네트워크 인터셉터는
+        // 연결이 성립해야 돌기 때문에 그런 호출은 흔적조차 남지 않는다.
+        val callLogging = HttpLoggingInterceptor().apply { level = basicLevel }
+        // 본문 로그는 네트워크 인터셉터로 단다. 애플리케이션 인터셉터는 최초 요청 경로로 한 번만
+        // 민감도를 판정해서, 비민감 경로가 /documents/ocr 같은 민감 경로로 리디렉션되면 최종 본문이
+        // 그대로 찍힌다. 네트워크 인터셉터는 리디렉션·재시도로 실제 오간 홉마다 다시 돌아 경로를
+        // 매번 새로 판정한다. 민감 홉은 여기서 NONE으로 완전히 빼고, 메서드·URL·소요 시간은 위
+        // callLogging이 이미 남기므로 디버깅에 필요한 정보는 그대로 남는다.
+        val bodyLogging = SensitivePathLoggingInterceptor(
+            defaultLogger = HttpLoggingInterceptor().apply { level = bodyLevel },
+            sensitiveLogger = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.NONE },
+            sensitivePaths = SENSITIVE_LOG_PATHS
+        )
         // 기본 10초 타임아웃은 문서 스캔 이미지 업로드(멀티파트, CLOVA OCR 왕복 포함)에는
         // 빠듯할 수 있어 전체 클라이언트 기준으로 여유를 둔다.
         return OkHttpClient.Builder()
-            .addInterceptor(logging)
+            .addInterceptor(callLogging)
+            .addNetworkInterceptor(bodyLogging)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

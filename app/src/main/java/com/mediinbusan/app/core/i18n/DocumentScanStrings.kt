@@ -21,7 +21,17 @@ data class DocumentScanStrings(
     val rawViewButtonContentDescription: String,
     val revealSensitiveButtonContentDescription: String,
     val hideSensitiveButtonContentDescription: String,
-    val maskedNote: String
+    val maskedNote: String,
+    val captureGuideMessage: String,
+    val captureCloseContentDescription: String,
+    val captureShutterContentDescription: String,
+    val captureTorchOnContentDescription: String,
+    val captureTorchOffContentDescription: String,
+    val cameraStartFailedMessage: String,
+    val captureFailedMessage: String,
+    val introStepCaptureLabel: String,
+    val introStepRecognizeLabel: String,
+    val introStepTranslateLabel: String
 ) {
     companion object {
         val Ko = DocumentScanStrings(
@@ -45,7 +55,17 @@ data class DocumentScanStrings(
             rawViewButtonContentDescription = "원문 그대로 보기",
             revealSensitiveButtonContentDescription = "가려진 번호 보기",
             hideSensitiveButtonContentDescription = "번호 다시 가리기",
-            maskedNote = "주민등록번호·휴대전화번호는 가려서 보여드려요."
+            maskedNote = "주민등록번호·휴대전화번호는 가려서 보여드려요.",
+            captureGuideMessage = "문서 전체가 프레임 안에 들어오게 맞춰주세요",
+            captureCloseContentDescription = "촬영 화면 닫기",
+            captureShutterContentDescription = "촬영",
+            captureTorchOnContentDescription = "플래시 켜기",
+            captureTorchOffContentDescription = "플래시 끄기",
+            cameraStartFailedMessage = "카메라를 시작하지 못했어요. 갤러리에서 선택해주세요.",
+            captureFailedMessage = "촬영에 실패했어요. 다시 시도해주세요.",
+            introStepCaptureLabel = "촬영",
+            introStepRecognizeLabel = "텍스트 인식",
+            introStepTranslateLabel = "번역"
         )
         val En = DocumentScanStrings(
             introTitle = "Scan a diagnosis certificate or prescription",
@@ -68,7 +88,17 @@ data class DocumentScanStrings(
             rawViewButtonContentDescription = "View raw text",
             revealSensitiveButtonContentDescription = "Show hidden numbers",
             hideSensitiveButtonContentDescription = "Hide numbers again",
-            maskedNote = "ID and mobile numbers are hidden."
+            maskedNote = "ID and mobile numbers are hidden.",
+            captureGuideMessage = "Fit the whole document inside the frame",
+            captureCloseContentDescription = "Close camera",
+            captureShutterContentDescription = "Take photo",
+            captureTorchOnContentDescription = "Turn flash on",
+            captureTorchOffContentDescription = "Turn flash off",
+            cameraStartFailedMessage = "Couldn't start the camera. Please pick from your gallery instead.",
+            captureFailedMessage = "Couldn't take the photo. Please try again.",
+            introStepCaptureLabel = "Capture",
+            introStepRecognizeLabel = "Recognize",
+            introStepTranslateLabel = "Translate"
         )
         val Zh = DocumentScanStrings(
             introTitle = "扫描诊断书·处方笺",
@@ -91,7 +121,17 @@ data class DocumentScanStrings(
             rawViewButtonContentDescription = "查看原始文本",
             revealSensitiveButtonContentDescription = "显示隐藏的号码",
             hideSensitiveButtonContentDescription = "重新隐藏号码",
-            maskedNote = "身份证号码和手机号码已隐藏。"
+            maskedNote = "身份证号码和手机号码已隐藏。",
+            captureGuideMessage = "请将整份文件对准取景框",
+            captureCloseContentDescription = "关闭拍摄画面",
+            captureShutterContentDescription = "拍照",
+            captureTorchOnContentDescription = "打开闪光灯",
+            captureTorchOffContentDescription = "关闭闪光灯",
+            cameraStartFailedMessage = "无法启动相机，请从相册中选择。",
+            captureFailedMessage = "拍摄失败，请重试。",
+            introStepCaptureLabel = "拍摄",
+            introStepRecognizeLabel = "识别文字",
+            introStepTranslateLabel = "翻译"
         )
         val Ja = DocumentScanStrings(
             introTitle = "診断書・処方箋をスキャンしてみましょう",
@@ -114,7 +154,17 @@ data class DocumentScanStrings(
             rawViewButtonContentDescription = "元のテキストを見る",
             revealSensitiveButtonContentDescription = "隠された番号を表示",
             hideSensitiveButtonContentDescription = "番号を再び隠す",
-            maskedNote = "住民登録番号・携帯電話番号は隠して表示します。"
+            maskedNote = "住民登録番号・携帯電話番号は隠して表示します。",
+            captureGuideMessage = "書類全体がフレームに収まるように合わせてください",
+            captureCloseContentDescription = "撮影画面を閉じる",
+            captureShutterContentDescription = "撮影",
+            captureTorchOnContentDescription = "フラッシュをつける",
+            captureTorchOffContentDescription = "フラッシュを消す",
+            cameraStartFailedMessage = "カメラを起動できませんでした。ギャラリーから選択してください。",
+            captureFailedMessage = "撮影に失敗しました。もう一度お試しください。",
+            introStepCaptureLabel = "撮影",
+            introStepRecognizeLabel = "文字認識",
+            introStepTranslateLabel = "翻訳"
         )
     }
 }
