@@ -14,16 +14,25 @@ public class WellnessTourismGatewayService {
 
     private final WellnessIngestionProperties properties;
     private final TourismExternalClient externalClient;
+    private final TourismPlacesCache placesCache;
 
-    public WellnessTourismGatewayService(WellnessIngestionProperties properties, TourismExternalClient externalClient) {
+    public WellnessTourismGatewayService(
+        WellnessIngestionProperties properties,
+        TourismExternalClient externalClient,
+        TourismPlacesCache placesCache
+    ) {
         this.properties = properties;
         this.externalClient = externalClient;
+        this.placesCache = placesCache;
     }
 
     public TourismExternalResponse places(Language language, BusanTourismCodes.District district, String contentTypeId) {
         return places(language, district, contentTypeId, 1, 50);
     }
 
+    // "부산 관광지"(PLACES_KO/EN/JA/ZH) 원본 목록 전용 — TTL 캐시(TourismPlacesCache)를 거치는
+    // 유일한 메서드다. 이 클래스의 다른 메서드(accessibility/related/hubs/crowding/photos/
+    // walkingCourses/audio)는 캐시 대상이 아니라 그대로 매번 라이브 호출한다.
     public TourismExternalResponse places(
         Language language,
         BusanTourismCodes.District district,
@@ -31,9 +40,19 @@ public class WellnessTourismGatewayService {
         int pageNo,
         int pageSize
     ) {
-        Map<String, Object> params = tourismParams(district, pageNo, pageSize);
-        params.put("contentTypeId", contentTypeId);
-        return request("tourism-" + language.name().toLowerCase(), language.baseUrl(properties), "areaBasedList2", params);
+        String cacheKey = TourismPlacesCache.key(language, district, contentTypeId, pageNo, pageSize);
+        return placesCache.get(cacheKey).orElseGet(() -> {
+            Map<String, Object> params = tourismParams(district, pageNo, pageSize);
+            params.put("contentTypeId", contentTypeId);
+            TourismExternalResponse response = request(
+                "tourism-" + language.name().toLowerCase(),
+                language.baseUrl(properties),
+                "areaBasedList2",
+                params
+            );
+            placesCache.put(cacheKey, response);
+            return response;
+        });
     }
 
     public TourismExternalResponse accessibility(BusanTourismCodes.District district) {

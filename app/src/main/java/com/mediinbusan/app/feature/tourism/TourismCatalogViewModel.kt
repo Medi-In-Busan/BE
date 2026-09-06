@@ -8,6 +8,7 @@ import com.mediinbusan.app.core.common.Result
 import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.datastore.UserPreferencesRepository
 import com.mediinbusan.app.core.i18n.appStringsFor
+import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.recent.RecentItemType
@@ -23,14 +24,17 @@ import com.mediinbusan.app.domain.tourism.TourismRecommendationContext
 import com.mediinbusan.app.domain.tourism.TourismReferenceLocation
 import com.mediinbusan.app.domain.tourism.inferTourismRecoveryStage
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
+import com.mediinbusan.app.domain.tourism.placeCategoryCodes
 import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -57,6 +61,14 @@ class TourismCatalogViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var loadMoreJob: Job? = null
 
+    init {
+        viewModelScope.launch {
+            favoriteRepository.observeFavorites().collect { favorites ->
+                _uiState.update { it.copy(favoriteItemIds = favorites.mapTo(mutableSetOf()) { favorite -> favorite.itemId }) }
+            }
+        }
+    }
+
     fun load(categoryName: String) {
         viewModelScope.launch {
             val preferences = userPreferencesRepository.userPreferences.first()
@@ -75,19 +87,44 @@ class TourismCatalogViewModel @Inject constructor(
             } else {
                 requestedCategory
             }
+            // "부산 관광지"도 다른 구·군 지원 카테고리처럼 첫 진입부터 특정 지역(해운대구) 중심으로
+            // 보여준다(wellness_tourism_recommendation_list.png 기준 — "전체"가 아니라 해운대구가
+            // 기본 체크돼 있음). "전체"는 지역 드롭다운에서 사용자가 직접 선택했을 때만 적용된다.
             val district = when {
                 category == TourismCatalogCategory.CROWDING -> null
-                category.isLanguageVariant -> null
-                category.supportsDistrict -> _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
+                category.isLanguageVariant || category.supportsDistrict -> _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
                 else -> null
             }
+            // "부산 관광지" 화면의 카테고리 필터 3종(관광지/숙박/맛집) 중 "관광지" 기본 선택은
+            // loadCatalog()의 Result.Success에서 실제 데이터를 받은 뒤에 적용한다(아래 참고) —
+            // 데이터가 오기 전에 미리 정해두면, 언어별 TourAPI 소스(EN/JA/ZH)가 해당 지역·카테고리에
+            // 항목이 아예 없을 때 사용자가 아무 필터도 안 건드렸는데 "검색 결과 없음"으로 막힌다.
             loadCatalog(category, district)
         }
     }
 
-    fun selectDistrict(district: BusanDistrict) {
+    fun selectDistrict(district: BusanDistrict?) {
         val category = _uiState.value.category ?: return
         loadCatalog(category, district)
+    }
+
+    /** 그리드 카드의 하트 토글 — FavoriteRepository.toggleFavorite이 존재 여부로 추가/제거를 알아서 판단한다. */
+    fun toggleFavorite(item: TourismCatalogItem) {
+        viewModelScope.launch {
+            favoriteRepository.toggleFavorite(
+                Favorite(
+                    itemId = item.id,
+                    itemType = FavoriteItemType.PLACE,
+                    name = item.title,
+                    imageUrl = item.imageUrl,
+                    savedAt = System.currentTimeMillis(),
+                    subtitle = item.subtitle.orEmpty(),
+                    address = item.address.orEmpty(),
+                    latitude = item.latitude,
+                    longitude = item.longitude
+                )
+            )
+        }
     }
 
     fun retry() {
@@ -160,19 +197,30 @@ class TourismCatalogViewModel @Inject constructor(
                                 isLoadingMore = false,
                                 currentPage = 0,
                                 hasNextPage = true,
-                                errorMessage = null
+                                errorMessage = null,
+                                // append(무한 스크롤 페이지 추가)가 아니라 진짜 새 조회일 때만 올린다 —
+                                // 그리드 카드 리빌 애니메이션(rememberRevealedCount)의 key로 써서,
+                                // 스크롤로 다음 페이지가 붙을 때마다 이미 보이던 카드까지 처음부터
+                                // 다시 스켈레톤→페이드인되며 버벅이던 문제를 없앤다.
+                                loadGeneration = state.loadGeneration + 1
                             )
                         }
                     }
                     is Result.Success -> {
+                        // append일 때 이번 페이지가 실제로 "새" 항목을 몇 개 가져왔는지 세어둔다 —
+                        // TourAPI가 마지막 페이지 이후로도 이전 페이지와 같은 항목을 다시 내려주는
+                        // 경우(끝에 도달했는데도 raw 개수만 PAGE_SIZE 이상인 경우), 이 값이 0이면
+                        // 더 가져올 게 없다는 뜻이라 hasNextPage를 꺼서 무한 로딩 스피너를 막는다.
+                        var newItemCount = result.data.items.size
                         val mergedCatalog = if (append) {
                             val current = _uiState.value.catalog
                             if (current == null) {
                                 result.data
                             } else {
-                                current.copy(
-                                    items = (current.items + result.data.items).distinctBy { it.id }
-                                )
+                                val existingIds = current.items.mapTo(mutableSetOf()) { it.id }
+                                val newItems = result.data.items.distinctBy { it.id }.filterNot { it.id in existingIds }
+                                newItemCount = newItems.size
+                                current.copy(items = current.items + newItems)
                             }
                         } else {
                             result.data
@@ -185,6 +233,19 @@ class TourismCatalogViewModel @Inject constructor(
                         } else {
                             mergedCatalog to emptySet()
                         }
+                        // "관광지" 기본 선택(wellness_tourism_recommendation_list.png 기준)은 실제로
+                        // 받아온 첫 페이지에 그 카테고리 항목이 있을 때만 건다 — 사용자가 아직 아무
+                        // 필터도 안 건드린 최초 진입(append 아님)에서만 해당하고, 이미 뭔가 선택
+                        // 중이면(다른 칩 선택·언어 전환 재진입) 덮어쓰지 않는다. PLACES_KO와
+                        // PLACES_EN/JA/ZH는 TourAPI contenttypeid 체계 자체가 달라서(placeCategoryCodes
+                        // 참고) "관광지"에 해당하는 실제 코드값도 카테고리별로 다르다.
+                        if (!append && category.isLanguageVariant && _uiState.value.selectedCategoryCode == null) {
+                            val defaultCategoryCode = category.placeCategoryCodes().spot
+                            val hasDefaultCategoryItems = catalog.items.any { it.categoryCode == defaultCategoryCode }
+                            if (hasDefaultCategoryItems) {
+                                _uiState.update { it.copy(selectedCategoryCode = defaultCategoryCode) }
+                            }
+                        }
                         _uiState.update { state ->
                             state.copy(
                                 category = category,
@@ -194,7 +255,9 @@ class TourismCatalogViewModel @Inject constructor(
                                 isLoading = false,
                                 isLoadingMore = false,
                                 currentPage = page,
-                                hasNextPage = supportsInfiniteScroll(category) && result.data.items.size >= PAGE_SIZE,
+                                hasNextPage = supportsInfiniteScroll(category) &&
+                                    result.data.items.size >= PAGE_SIZE &&
+                                    newItemCount > 0,
                                 errorMessage = null
                             )
                         }
@@ -250,57 +313,77 @@ class TourismCatalogViewModel @Inject constructor(
             TourismReferenceLocation(requireNotNull(it.latitude), requireNotNull(it.longitude))
         }
         val now = System.currentTimeMillis()
-        recommendTourismCatalog(
-            catalog = catalog,
-            profile = profile,
-            favoritePlaceNames = favorites,
-            recentPlaceNames = recentPlaceNames,
-            context = TourismRecommendationContext(
-                medicalPurpose = preferences.medicalPurpose,
-                referenceLocation = reference,
-                recoveryStage = inferTourismRecoveryStage(preferences.medicalPurpose, recentHospital?.viewedAt, now),
-                nowEpochMillis = now
+        // RecommendTourismCatalogUseCase의 diversify()는 항목 수가 늘어날수록(무한 스크롤로 누적)
+        // 비용이 급격히 커지는 연산이라, viewModelScope 기본 디스패처(Main.immediate)에서 그대로
+        // 돌리면 Main Thread를 오래 막아 ANR(Input dispatching timed out)로 이어진다 — 계산만
+        // Dispatchers.Default로 옮긴다. 알고리즘·결과는 그대로다.
+        withContext(Dispatchers.Default) {
+            recommendTourismCatalog(
+                catalog = catalog,
+                profile = profile,
+                favoritePlaceNames = favorites,
+                recentPlaceNames = recentPlaceNames,
+                context = TourismRecommendationContext(
+                    medicalPurpose = preferences.medicalPurpose,
+                    referenceLocation = reference,
+                    recoveryStage = inferTourismRecoveryStage(preferences.medicalPurpose, recentHospital?.viewedAt, now),
+                    nowEpochMillis = now
+                )
             )
-        )
+        }
     }
 
     // 매번 catalog.items(서버 원본 순서, 부산 관광지는 개인화 점수순)에서 다시 필터링해야 한다 —
     // 이미 필터링된 결과를 또 필터링하면 검색어를 지우거나 필터를 해제했을 때 원본으로 돌아가지 못한다.
+    // catalog가 무한 스크롤로 커질수록 filter/sortedBy 비용도 커지므로, recommendPlaces와 같은
+    // 이유로 실제 계산은 Dispatchers.Default에서 하고 결과만 state에 반영한다. 검색창 타이핑처럼
+    // 짧은 시간에 여러 번 불릴 수 있어 filterJob으로 이전 계산은 취소하고 마지막 요청만 반영한다.
+    private var filterJob: Job? = null
+
     private fun applyClientFilters() {
         val state = _uiState.value
         val catalog: TourismCatalog = state.catalog ?: return
-        val query = state.searchQuery.trim()
+        filterJob?.cancel()
+        filterJob = viewModelScope.launch {
+            val query = state.searchQuery.trim()
+            val isLanguageVariant = state.category?.isLanguageVariant == true
 
-        val filtered = catalog.items
-            .filter { item -> query.isBlank() || item.title.contains(query, ignoreCase = true) }
-            .filter { item -> state.selectedCategoryCode == null || item.categoryCode == state.selectedCategoryCode }
+            val (recommended, visible) = withContext(Dispatchers.Default) {
+                val filtered = catalog.items
+                    .filter { item -> query.isBlank() || item.title.contains(query, ignoreCase = true) }
+                    .filter { item -> state.selectedCategoryCode == null || item.categoryCode == state.selectedCategoryCode }
 
-        // "부산 관광지"는 정렬 선택지가 없다 — 추천 섹션은 개인화 점수순, 나머지는 catalog.items의
-        // 원본(서버) 순서를 그대로 따른다.
-        if (state.category?.isLanguageVariant == true) {
-            val recommended = filtered.filter { it.id in state.personalizedItemIds }
-            val rest = filtered.filterNot { it.id in state.personalizedItemIds }
-            _uiState.update { it.copy(recommendedItems = recommended, visibleItems = rest) }
-            return
-        }
-
-        val sorted = when (state.selectedSort) {
-            TourismSortOption.NAME -> filtered.sortedBy { it.title }
-            TourismSortOption.DISTANCE -> filtered.sortedBy { item ->
-                val lat = item.latitude
-                val lng = item.longitude
-                if (lat == null || lng == null) {
-                    Double.MAX_VALUE
+                // "부산 관광지"는 정렬 선택지가 없다 — 추천 섹션은 개인화 점수순, 나머지는
+                // catalog.items의 원본(서버) 순서를 그대로 따른다.
+                if (isLanguageVariant) {
+                    val recommended = filtered.filter { it.id in state.personalizedItemIds }
+                    val rest = filtered.filterNot { it.id in state.personalizedItemIds }
+                    recommended to rest
                 } else {
-                    haversineDistanceMeters(DefaultSearchOrigin.LATITUDE, DefaultSearchOrigin.LONGITUDE, lat, lng)
+                    val sorted = when (state.selectedSort) {
+                        TourismSortOption.NAME -> filtered.sortedBy { it.title }
+                        TourismSortOption.DISTANCE -> filtered.sortedBy { item ->
+                            val lat = item.latitude
+                            val lng = item.longitude
+                            if (lat == null || lng == null) {
+                                Double.MAX_VALUE
+                            } else {
+                                haversineDistanceMeters(DefaultSearchOrigin.LATITUDE, DefaultSearchOrigin.LONGITUDE, lat, lng)
+                            }
+                        }
+                    }
+                    emptyList<TourismCatalogItem>() to sorted
                 }
             }
-        }
 
-        _uiState.update { it.copy(recommendedItems = emptyList(), visibleItems = sorted) }
+            _uiState.update { it.copy(recommendedItems = recommended, visibleItems = visible) }
+        }
     }
 
     private companion object {
-        const val PAGE_SIZE = 20
+        // 백엔드가 "부산 관광지" 카테고리를 TourAPI에 실시간으로 프록시하고(캐싱 없음), 무한
+        // 스크롤 페이지 하나당 왕복 지연이 그대로 체감된다 — 페이지 크기를 키워 왕복 횟수 자체를
+        // 줄인다(백엔드 상한 50 이내). 근본 해결(백엔드 캐시/사전 적재)은 별도로 논의 필요.
+        const val PAGE_SIZE = 40
     }
 }
