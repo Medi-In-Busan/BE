@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.mediinbusan.app.core.designsystem.DividerColor
 import kotlinx.coroutines.delay
 
 // HospitalSearchListScreen에서 처음 만든 "시그널 리빌" 카드 등장 연출 — 즐겨찾기/최근 본 항목
@@ -77,14 +76,21 @@ fun ShimmerSkeleton(alpha: Float, modifier: Modifier = Modifier) {
             .graphicsLayer { this.alpha = alpha }
             .clip(RoundedCornerShape(16.dp))
             .background(
+                // 이전엔 DividerColor(#EEEEEE)~흰색 사이를 오갔는데, 흰 배경 화면(부산 관광지/
+                // 무장애 관광 그리드 등) 위에서는 스켈레톤 전체가 거의 안 보여서 "로딩 중인데
+                // 흰 화면처럼 보인다"는 문제로 이어졌다 — 배경색과 무관하게 항상 또렷한 회색이
+                // 보이도록 두 색 다 흰색보다 뚜렷이 어둡게 내린다.
                 Brush.linearGradient(
-                    colors = listOf(DividerColor, Color.White, DividerColor),
+                    colors = listOf(ShimmerBase, ShimmerHighlight, ShimmerBase),
                     start = Offset(shimmerOffset, 0f),
                     end = Offset(shimmerOffset + 300f, 300f)
                 )
             )
     )
 }
+
+private val ShimmerBase = Color(0xFFD9D9D9)
+private val ShimmerHighlight = Color(0xFFEFEFEF)
 
 /** 0에서 target까지 카운트업하는 애니메이션 값. target이 바뀔 때마다(새 데이터 도착) 0부터 재생된다. */
 @Composable
