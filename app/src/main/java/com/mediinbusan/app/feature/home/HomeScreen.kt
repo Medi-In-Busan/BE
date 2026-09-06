@@ -1162,6 +1162,15 @@ private fun RecommendedCourseCard(course: HomeRecommendedCourse, onClick: () -> 
                 contentDescription = title,
                 modifier = Modifier.fillMaxSize()
             )
+            // home_course3/4/5 배지가 흰 배경/흰 텍스트라 사진이 밝으면 묻힐 수 있다 — 히어로
+            // 배너1과 같은 방식(옅은 검정 세로 그라데이션)으로 배지가 놓이는 상단만 살짝 어둡게 깐다.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .align(Alignment.TopStart)
+                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent)))
+            )
             val stopsBadgeRes = when (course.course.stops.size) {
                 3 -> R.drawable.home_course3
                 4 -> R.drawable.home_course4

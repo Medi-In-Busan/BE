@@ -16,7 +16,12 @@ data class DocumentScanStrings(
     val analysisErrorFallback: String,
     val privacyNote: String,
     val copyButtonContentDescription: String,
-    val copiedMessage: String
+    val copiedMessage: String,
+    val structuredViewButtonContentDescription: String,
+    val rawViewButtonContentDescription: String,
+    val revealSensitiveButtonContentDescription: String,
+    val hideSensitiveButtonContentDescription: String,
+    val maskedNote: String
 ) {
     companion object {
         val Ko = DocumentScanStrings(
@@ -35,7 +40,12 @@ data class DocumentScanStrings(
             analysisErrorFallback = "분석에 실패했어요. 다시 시도해주세요.",
             privacyNote = "촬영한 이미지는 분석 후 서버에 저장되지 않아요.",
             copyButtonContentDescription = "텍스트 복사",
-            copiedMessage = "복사되었습니다"
+            copiedMessage = "복사되었습니다",
+            structuredViewButtonContentDescription = "항목별로 보기",
+            rawViewButtonContentDescription = "원문 그대로 보기",
+            revealSensitiveButtonContentDescription = "가려진 번호 보기",
+            hideSensitiveButtonContentDescription = "번호 다시 가리기",
+            maskedNote = "주민등록번호·휴대전화번호는 가려서 보여드려요."
         )
         val En = DocumentScanStrings(
             introTitle = "Scan a diagnosis certificate or prescription",
@@ -53,7 +63,12 @@ data class DocumentScanStrings(
             analysisErrorFallback = "Analysis failed. Please try again.",
             privacyNote = "Your photo isn't stored on our server after analysis.",
             copyButtonContentDescription = "Copy text",
-            copiedMessage = "Copied to clipboard"
+            copiedMessage = "Copied to clipboard",
+            structuredViewButtonContentDescription = "View as fields",
+            rawViewButtonContentDescription = "View raw text",
+            revealSensitiveButtonContentDescription = "Show hidden numbers",
+            hideSensitiveButtonContentDescription = "Hide numbers again",
+            maskedNote = "ID and mobile numbers are hidden."
         )
         val Zh = DocumentScanStrings(
             introTitle = "扫描诊断书·处方笺",
@@ -71,7 +86,12 @@ data class DocumentScanStrings(
             analysisErrorFallback = "分析失败，请重试。",
             privacyNote = "拍摄的图片在分析后不会保存在服务器上。",
             copyButtonContentDescription = "复制文字",
-            copiedMessage = "已复制"
+            copiedMessage = "已复制",
+            structuredViewButtonContentDescription = "按项目查看",
+            rawViewButtonContentDescription = "查看原始文本",
+            revealSensitiveButtonContentDescription = "显示隐藏的号码",
+            hideSensitiveButtonContentDescription = "重新隐藏号码",
+            maskedNote = "身份证号码和手机号码已隐藏。"
         )
         val Ja = DocumentScanStrings(
             introTitle = "診断書・処方箋をスキャンしてみましょう",
@@ -89,7 +109,12 @@ data class DocumentScanStrings(
             analysisErrorFallback = "分析に失敗しました。もう一度お試しください。",
             privacyNote = "撮影した画像は分析後にサーバーに保存されません。",
             copyButtonContentDescription = "テキストをコピー",
-            copiedMessage = "コピーしました"
+            copiedMessage = "コピーしました",
+            structuredViewButtonContentDescription = "項目別に見る",
+            rawViewButtonContentDescription = "元のテキストを見る",
+            revealSensitiveButtonContentDescription = "隠された番号を表示",
+            hideSensitiveButtonContentDescription = "番号を再び隠す",
+            maskedNote = "住民登録番号・携帯電話番号は隠して表示します。"
         )
     }
 }

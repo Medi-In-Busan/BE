@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,18 +31,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.HealthAndSafety
-import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.TipsAndUpdates
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -51,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,10 +62,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -71,24 +80,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
+import com.mediinbusan.app.core.common.careProfile
+import com.mediinbusan.app.core.common.resolveBusanHighlight
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
+import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.MediBlue40
+import com.mediinbusan.app.core.designsystem.InactiveIcon
+import com.mediinbusan.app.core.designsystem.MedinTipCardBackground
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedCopy
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedRecoveryHint
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.AtAGlanceRow
+import com.mediinbusan.app.core.ui.CautionList
 import com.mediinbusan.app.core.ui.EmptyState
+import com.mediinbusan.app.core.ui.DetailPullDismissBox
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.PlaceKindVisual
+import com.mediinbusan.app.core.ui.placeKindVisual
+import com.mediinbusan.app.core.ui.MediTipContent
+import com.mediinbusan.app.core.ui.TravelerHelpContent
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.place.Place
@@ -112,7 +133,12 @@ fun PlaceDetailScreen(
     // 넘어왔을 때 배경색이 끊겨 보이지 않게 한다(HospitalDetailScreen이 HomeBackgroundPink를
     // 재사용하는 것과 같은 이유 — core/designsystem 공용 토큰이 아니라 화면마다 자기 캔버스색을
     // 갖는 기존 관례를 그대로 따른다).
-    Box(modifier = Modifier.fillMaxSize().background(PlaceDetailCanvas)) {
+    // HospitalDetailScreen과 같은 이유 — 지도에서 카드를 끌어올려 들어온 화면을 아래로 끌어
+    // 되돌린다(core/ui/DetailPullTransition.kt).
+    DetailPullDismissBox(
+        onDismiss = onBack,
+        modifier = Modifier.fillMaxSize().background(PlaceDetailCanvas)
+    ) {
         val place = uiState.place
         val errorMessage = uiState.errorMessage
         when {
@@ -139,67 +165,150 @@ private fun PlaceDetailContent(
     val context = LocalContext.current
     val density = LocalDensity.current
     val strings = LocalAppStrings.current
+    // 장소 종류 색. 예전엔 이 색이 화면 본문 전체(전화 글자·액션 아이콘·안내 카드 배경까지)를
+    // 물들였는데, 배지는 7색 표(쇼핑=청록 등)를 쓰고 본문은 별도의 2색 표(관광=파랑/음식=주황)를
+    // 써서 한 화면에 계열이 두 개 겹쳤고, 거기에 코랄 CTA까지 더해 색이 셋이었다. 이제 종류 색은
+    // **"이게 무슨 장소인가"를 말하는 자리에만** 남는다 — 카테고리 배지, 사진이 없을 때의 히어로
+    // 배경, 지도 핀. 그 셋을 뺀 나머지(아이콘·본문·누를 수 있는 것)는 전부 앱 브랜드색(코랄)과
+    // 중립색이다.
+    val visual = remember(place.type, place.category) { placeKindVisual(place.type, place.category) }
+    // 어떤 장소가 와도 항상 채워지는 유형별 케어 프로필과, 부산 대표 명소일 때만 붙는 큐레이션 문구.
+    // 웰니스 API가 전화·소개를 비워 내려주면 이 화면이 "사진+이름+지도"만 남던 문제를 이 둘로 메운다.
+    val careProfile = remember(place.type) { place.type.careProfile }
+    val highlightCopy = remember(place.name, place.type, strings.language) {
+        resolveBusanHighlight(place.name, place.type)?.translatedCopy(strings.language)
+    }
     // 하단 고정 액션바 실측 높이를 그대로 스크롤 콘텐츠 하단 여백으로 써서, 콘텐츠가 액션바에
     // 가려지거나 반대로 그 사이에 빈 여백이 남지 않고 정확히 맞닿게 한다(HospitalDetailScreen과 동일).
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
+    val scrollState = rememberScrollState()
+    // 히어로 사진을 지나 스크롤하면 상단바가 서서히 나타난다 — 예전엔 흰 배경 위에 코랄 화살표만
+    // 덩그러니 떠서 본문(주소 줄)과 겹쳐 보였다. 사진 높이의 절반쯤 지나면 완전히 불투명해진다.
+    // 사진이 없는 장소도 이제 마스코트 일러스트가 그 자리를 채우므로(PlaceHeroSection) 사진과
+    // 같은 높이를 쓴다 — 아이콘 배지 하나뿐이라 화면 위쪽이 휑하던 시절엔 한 단계 낮춰뒀었다.
+    val heroHeight = HeroHeight
+    val topBarAlpha by remember(heroHeight) {
+        derivedStateOf {
+            val fadeDistancePx = with(density) { (heroHeight / 2).toPx() }
+            (scrollState.value / fadeDistancePx).coerceIn(0f, 1f)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(bottom = bottomBarHeight)
             ) {
-                PlaceHeroSection(place = place)
+                PlaceHeroSection(place = place, height = heroHeight, kindColor = visual.color)
 
-                Spacer(modifier = Modifier.height(14.dp))
-                PlaceTitleSection(
-                    place = place,
+                // 사진 위로 콘텐츠 시트를 끌어올려 겹친다 — 사진이 카드처럼 따로 떠 있던 예전
+                // 레이아웃보다 화면이 한 장으로 이어져 보인다(장소/숙소 앱들의 표준 상세 패턴).
+                Surface(
+                    modifier = Modifier.fillMaxWidth().offset(y = -SheetOverlap),
+                    color = PlaceDetailCanvas,
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                Spacer(modifier = Modifier.height(26.dp))
+                PlaceTitleSection(place = place, visual = visual)
+
+                Spacer(modifier = Modifier.height(18.dp))
+                // 예전엔 즐겨찾기·공유가 제목 옆 작은 아이콘 두 개였고 전화는 정보 표 안에 묻혀
+                // 있었다 — 세 가지를 같은 크기의 액션 줄로 끌어올린다(길찾기는 하단 CTA 하나로
+                // 유지: 화면에 길찾기 진입점을 둘로 늘리지 않는다).
+                QuickActionRow(
                     isFavorite = isFavorite,
+                    phoneNumber = place.phoneNumber?.takeUnless { it.isBlank() },
                     onToggleFavorite = onToggleFavorite,
-                    onShare = { context.sharePlace(place) }
+                    onShare = { context.sharePlace(place) },
+                    onCall = { place.phoneNumber?.let { context.dialPhone(it) } }
                 )
 
-                // HospitalDetailScreen의 위치 서브타이틀-소개 카드 사이 여백(42dp)과 같은 비율로,
-                // "타이틀 블록"과 "카드형 정보 섹션들"을 시각적으로 크게 구분한다.
-                Spacer(modifier = Modifier.height(32.dp))
+                // 방문 시기·활동 강도·환경·권장 체류. 유형만으로 결정되므로 값이 비는 일이 없다 —
+                // 아래 기본정보/소개 카드가 통째로 사라지는 장소에서도 이 줄은 항상 남는다.
+                //
+                // 예전엔 제목 없이 pill 네 개만 캔버스 위에 맨몸으로 떠 있어서, 관광공사가 준 공식
+                // 정보인지 앱이 쓴 안내인지 구분할 단서가 없었다. 다른 카드들과 같은 섹션으로 감싸
+                // "메디인부산 가이드"라는 이름을 붙인다 — 출처 각주는 AtAGlanceRow가 직접 달아서
+                // 이 컴포넌트를 쓰는 화면 어디서도 빠질 수 없게 했다(core/ui/PlaceCurationSections.kt).
+                Spacer(modifier = Modifier.height(18.dp))
+                InfoSection(
+                    title = strings.placeCuration.atAGlanceTitle,
+                    icon = Icons.Default.TipsAndUpdates
+                ) {
+                    AtAGlanceRow(profile = careProfile, modifier = Modifier.fillMaxWidth())
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
                 // HospitalDetailScreen의 기본정보(BasicInfoRow: 운영시간/전화/홈페이지/언어) 카드와
                 // 같은 아이콘 원형+라벨+값 구성 — 전화·거리에 더해, 지금까지 화면 어디에도 없던
                 // "정보 갱신일"(place.lastModified, 웰니스 API 원본에 실려 오지만 그동안 안 쓰였다)을
                 // 세 번째 행으로 추가한다. 전화 행은 그 자체가 다이얼 액션도 겸해서, 예전에 따로
                 // 있던 "전화" 아이콘 버튼(ActionButtonsRow)이 여기 하나로 합쳐진다.
-                InfoSection(title = strings.hospitalDetail.basicInfoSectionTitle) {
-                    BasicInfoRow(
-                        iconRes = R.drawable.hospital_detail_phone,
-                        label = strings.hospitalDetail.phoneLabel,
-                        value = place.phoneNumber ?: strings.hospitalDetail.infoNotAvailable,
-                        onClick = place.phoneNumber?.takeUnless { it.isBlank() }?.let { { context.dialPhone(it) } }
-                    )
-                    BasicInfoRow(
-                        iconRes = R.drawable.hospital_detail_findmap,
-                        label = strings.nearby.distanceLabel,
-                        value = place.distanceFromHospitalMeters
-                            ?.let { strings.nearby.distanceFromHospitalFormat.format(it.toDistanceLabel()) }
-                            ?: strings.hospitalDetail.infoNotAvailable
-                    )
-                    place.lastModified?.let { lastModified ->
-                        BasicInfoRow(
-                            iconRes = R.drawable.hospital_detail_runtime,
-                            label = strings.nearby.lastUpdatedLabel,
-                            value = lastModified.toDisplayDate()
-                        )
+                // 값이 없는 행은 아예 그리지 않는다 — 웰니스 API는 전화·거리가 비어 오는 장소가
+                // 많아서, 예전엔 "정보 없음"만 두 줄 채운 카드가 화면 한가운데를 차지했다.
+                // (거리는 병원을 기준으로 조회했을 때만 의미가 있어, 지도에서 바로 들어온 경우엔
+                // 기준점이 없다 — 없는 걸 임의의 좌표로 지어내지 않고 행 자체를 뺀다.)
+                val phoneNumber = place.phoneNumber?.takeUnless { it.isBlank() }
+                val distanceText = place.distanceFromHospitalMeters
+                    ?.let { strings.nearby.distanceFromHospitalFormat.format(it.toDistanceLabel()) }
+                val lastUpdated = place.lastModified?.takeUnless { it.isBlank() }?.toDisplayDate()
+                if (phoneNumber != null || distanceText != null || lastUpdated != null) {
+                    InfoSection(title = strings.hospitalDetail.basicInfoSectionTitle) {
+                        phoneNumber?.let {
+                            BasicInfoRow(
+                                icon = Icons.Default.Call,
+                                label = strings.hospitalDetail.phoneLabel,
+                                value = it,
+                                onClick = { context.dialPhone(it) }
+                            )
+                        }
+                        distanceText?.let {
+                            BasicInfoRow(
+                                icon = Icons.Default.NearMe,
+                                label = strings.nearby.distanceLabel,
+                                value = it
+                            )
+                        }
+                        lastUpdated?.let {
+                            BasicInfoRow(
+                                icon = Icons.Default.Update,
+                                label = strings.nearby.lastUpdatedLabel,
+                                value = it
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                place.displayDescription?.let { description ->
-                    Spacer(modifier = Modifier.height(14.dp))
+                // 소개는 이제 사라지지 않는다 — 원문(displayDescription)이 없으면 부산 명소 큐레이션
+                // 한 줄로, 그것도 없으면 유형별 기본 소개문으로 내려간다. 원문이 URL이나 `EX0000`
+                // 코드로 오는 장소가 흔해서(displayDescription이 그걸 걸러낸다) 폴백이 사실상 기본값이다.
+                val introText = place.displayDescription?.takeUnless { it.isBlank() }
+                    ?: highlightCopy?.tagline
+                    ?: strings.placeCuration.typeIntroFallbacks[place.type.name]
+                introText?.let { description ->
                     InfoSection(title = strings.nearby.introSectionTitle, icon = Icons.Default.Info) {
                         Text(text = description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                // 부산 대표 명소로 매칭됐을 때만 붙는 카드. 매칭이 없는 평범한 장소에서는 통째로
+                // 빠지지만, 위 한눈에 보기와 소개가 이미 채워져 있어 화면이 비어 보이지 않는다.
+                highlightCopy?.let { copy ->
+                    InfoSection(
+                        title = strings.placeCuration.mediTipTitle,
+                        icon = Icons.Default.TipsAndUpdates
+                    ) {
+                        MediTipContent(copy = copy)
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
                 RecoveryNoticeSection(place = place)
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -210,7 +319,32 @@ private fun PlaceDetailContent(
                 InfoSection(title = strings.hospitalDetail.locationSectionTitle, icon = Icons.Default.Place) {
                     LocationMiniMap(place = place)
                 }
+
+                // 장소와 무관하게 항상 같은 공공 안내(1330·119·결제/교통). 앱이 상담이나 통역사를
+                // 연결하는 게 아니라 공개된 번호를 안내만 한다(CLAUDE.md §1 MVP 하드 제약).
                 Spacer(modifier = Modifier.height(14.dp))
+                InfoSection(
+                    title = strings.placeCuration.travelerHelpTitle,
+                    icon = Icons.Default.SupportAgent
+                ) {
+                    TravelerHelpContent(onDial = { context.dialPhone(it) })
+                }
+
+                // 위 카드들 중 실제로 한국관광공사 TourAPI에서 온 항목이 어디까지인지 밝힌다 —
+                // 같은 화면에 앱이 직접 쓴 안내(가이드·팁·진료 전후 체크)가 섞여 있어서, 어느 쪽이
+                // 공식 데이터인지 구분할 단서가 화면 어디에도 없었다.
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = strings.placeCuration.officialDataCreditLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                )
+                        // 시트를 위로 끌어올린 만큼(SheetOverlap) 아래에서 다시 채워, 마지막 카드와
+                        // 하단 액션바 사이 간격이 예전과 같게 유지한다.
+                        Spacer(modifier = Modifier.height(14.dp + SheetOverlap))
+                    }
+                }
             }
 
             // 길찾기 CTA는 화면 전체에서 이 버튼 하나뿐이다(위 주석 참고) — 즐겨찾기도 타이틀 줄
@@ -224,33 +358,68 @@ private fun PlaceDetailContent(
                     }
             )
         }
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding()
+        // 스크롤에 따라 나타나는 상단바 — 사진 위에서는 투명하고(사진을 가리지 않는다), 본문
+        // 구간에서는 흰 배경 + 장소 이름이 떠서 지금 뭘 보고 있는지가 계속 보인다.
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .graphicsLayer { alpha = topBarAlpha },
+            color = Color.White,
+            shadowElevation = if (topBarAlpha > 0.95f) 3.dp else 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(start = 56.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = place.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        // 뒤로가기는 사진 위(어두운 배경)와 흰 본문 위 양쪽에 얹히므로, 아이콘만 두면 한쪽에서
+        // 반드시 묻힌다 — 반투명 흰 원을 깔아 어디서든 같은 대비를 유지한다.
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(8.dp)
+                .size(40.dp)
+                .shadow(elevation = 2.dp, shape = CircleShape, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.2f))
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.92f))
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.ChevronLeft,
                 contentDescription = LocalAppStrings.current.common.backContentDescription,
                 tint = CoralPrimary,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(28.dp)
             )
         }
     }
 }
 
 @Composable
-private fun PlaceHeroSection(place: Place) {
-    // HospitalDetailScreen의 ImageCarouselSection과 같은 톤: 위쪽 여백 + 네 모서리를 전부 둥글려
-    // 한 장의 사진처럼 떠 보이게 한다. 뒤로가기/공유/즐겨찾기는 더 이상 이 사진 위에 얹지 않는다 —
-    // PlaceDetailTopBar(뒤로가기)와 PlaceTitleSection(공유/즐겨찾기)으로 옮겨, HospitalDetailScreen처럼
-    // 사진은 순수하게 사진 역할만 하게 한다.
-    val language = LocalAppStrings.current.language
+private fun PlaceHeroSection(place: Place, height: Dp, kindColor: Color) {
+    // 사진은 사진 역할만 한다 — 예전엔 이 위에 카테고리 라벨과 장소 이름을 얹었는데, 바로 아래
+    // PlaceTitleSection이 같은 배지와 같은 제목을 한 번 더 보여줘서 화면 상단에 같은 문구가 두 번
+    // 나왔다. 텍스트를 전부 아래 타이틀 블록으로 몰아, 사진이 없는 장소에서도 레이아웃이 같아진다.
+    // 좌우 여백 없이 화면 폭을 꽉 채우고 상태바 아래까지 올라간다 — 여백을 두고 둥글게 잘린
+    // "사진 카드"보다 몰입감이 크고, 바로 아래 콘텐츠 시트가 이 위로 겹쳐 올라오면서 화면이 한 장으로 읽힌다.
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, top = 10.dp, end = 20.dp)
-            .height(240.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .height(height)
     ) {
         if (place.imageUrl != null) {
             AsyncImageBox(
@@ -258,51 +427,48 @@ private fun PlaceHeroSection(place: Place) {
                 contentDescription = place.name,
                 modifier = Modifier.fillMaxSize()
             )
+            // 위쪽은 상태바 아이콘과 뒤로가기 버튼이 얹히는 자리라 살짝 눌러 대비를 확보하고,
+            // 아래쪽은 시트가 겹치는 자리라 그대로 둔다.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.72f))
+                            colors = listOf(Color.Black.copy(alpha = 0.28f), Color.Transparent),
+                            endY = 320f
                         )
                     )
             )
-            Column(
-                modifier = Modifier.align(Alignment.BottomStart).padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(text = place.type.translatedLabel(language), style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(text = place.name, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold)
-            }
         } else {
             // 실제 사진이 없는 장소가 많아(웰니스 API 원문에 이미지가 비어있는 경우) 이 자리표시자가
-            // 사실상 기본 히어로가 된다 — 무채색 박스 대신 장소 종류(place.type.tint)에 맞춘 옅은
-            // 그라데이션 + 아이콘 배지로, HospitalDetailScreen의 기본 갤러리 폴백과 같은 톤을 쓴다.
+            // 사실상 기본 히어로가 된다 — 예전엔 작은 아이콘 배지 하나뿐이라 화면 위쪽이 휑했다.
+            // 대신 종류에 맞는 마스코트 일러스트를 세우고, 배경은 그대로 장소 종류 색(kindColor)에
+            // 맞춘 옅은 그라데이션을 깔아 투명한 캐릭터가 얹힐 바닥을 만든다.
+            //
+            // 상세화면 전용이다 — 리스트/카드 썸네일은 지금처럼 fallbackBannerImageFor()를 쓴다.
+            // 같은 캐릭터를 목록 행마다 반복하면 행이 전부 똑같아 보여서 구분이 되지 않는다.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        Brush.verticalGradient(listOf(place.type.tint.copy(alpha = 0.22f), Color(0xFFEDEDF2)))
+                        Brush.verticalGradient(listOf(kindColor.copy(alpha = 0.22f), Color(0xFFEDEDF2)))
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .background(
-                                brush = Brush.radialGradient(listOf(Color.White, place.type.tint.copy(alpha = 0.18f))),
-                                shape = CircleShape
-                            )
-                            .border(width = 1.dp, color = place.type.tint.copy(alpha = 0.25f), shape = CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = place.type.icon(), contentDescription = null, tint = place.type.tint, modifier = Modifier.size(32.dp))
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = place.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(text = place.type.translatedLabel(language), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                }
+                // 이름/카테고리는 아래 타이틀 블록이 책임진다. 그림 자체에 "관광 SIGHTSEEING" /
+                // "식사 FOOD" 표지판이 그려져 있어 별도 배지를 겹치지 않아도 종류가 읽힌다.
+                Image(
+                    painter = painterResource(id = place.type.fallbackCharacterImage()),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // 위는 상태바와 떠 있는 뒤로가기 버튼이, 아래는 겹쳐 올라오는 콘텐츠
+                        // 시트(SheetOverlap)가 덮는 자리다 — 캐릭터의 모자와 발이 그 밑으로
+                        // 잘리지 않게 그만큼 비워두고 그 안에 맞춰 넣는다.
+                        .statusBarsPadding()
+                        .padding(bottom = SheetOverlap)
+                )
             }
         }
     }
@@ -311,65 +477,126 @@ private fun PlaceHeroSection(place: Place) {
 // HospitalDetailScreen의 타이틀 줄(이름+즐겨찾기+공유 → 서브타이틀 주소)과 동일한 배치. 카드 배경
 // 없이 화면 캔버스 위에 바로 얹혀서, 아래 카드형 정보 섹션들과 시각적으로 구분되는 "헤더" 블록이 된다.
 @Composable
-private fun PlaceTitleSection(
-    place: Place,
+private fun PlaceTitleSection(place: Place, visual: PlaceKindVisual) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        CategoryBadge(place = place, visual = visual)
+        Spacer(modifier = Modifier.height(12.dp))
+        // 액션 아이콘을 아래 QuickActionRow로 내리면서 제목이 한 줄 폭을 다 쓴다 — 긴 장소 이름이
+        // 아이콘에 밀려 두 줄로 꺾이던 게 줄고, 화면에서 가장 큰 글씨가 확실한 시작점이 된다.
+        Text(
+            text = place.name,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            lineHeight = MaterialTheme.typography.headlineSmall.fontSize * 1.25f
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                imageVector = Icons.Default.Place,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(16.dp).padding(top = 2.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = place.address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        }
+    }
+}
+
+/**
+ * 저장·공유·전화를 같은 크기의 원형 액션으로 나란히 둔 줄. 각 항목은 아이콘 원(44dp, 터치 타깃
+ * 기준 충족) + 아래 작은 라벨로, 아이콘만 있을 때보다 뜻이 분명하다.
+ * 길찾기는 여기 넣지 않는다 — 화면의 유일한 길찾기 진입점은 하단 고정 CTA다.
+ *
+ * 세 항목 모두 앱 브랜드색(코랄)이다 — 예전엔 저장만 코랄이고 공유·전화는 장소 종류 색이라
+ * 같은 줄에 선 원 세 개가 두 가지 색으로 갈려 있었다. 누를 수 있는 것은 화면 어디서나 같은 색이다.
+ */
+@Composable
+private fun QuickActionRow(
     isFavorite: Boolean,
+    phoneNumber: String?,
     onToggleFavorite: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onCall: () -> Unit
 ) {
     val strings = LocalAppStrings.current
-    Column {
-        CategoryBadge(place = place, modifier = Modifier.padding(start = 20.dp))
-        Spacer(modifier = Modifier.height(10.dp))
-        // 즐겨찾기/공유 아이콘 줄은 20dp 안쪽 패딩 없이 fillMaxWidth로 화면 진짜 오른쪽 끝까지
-        // 채운다 — HospitalDetailScreen의 타이틀 줄과 동일한 폭 기준이다.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        QuickAction(
+            icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            label = strings.nearby.favoriteActionLabel,
+            contentDescription = if (isFavorite) {
+                strings.nearby.favoriteRemoveContentDescription
+            } else {
+                strings.nearby.favoriteAddContentDescription
+            },
+            filled = isFavorite,
+            onClick = onToggleFavorite,
+            modifier = Modifier.weight(1f)
+        )
+        QuickAction(
+            icon = Icons.Default.Share,
+            label = strings.hospitalDetail.actionShare,
+            contentDescription = strings.hospitalDetail.actionShare,
+            onClick = onShare,
+            modifier = Modifier.weight(1f)
+        )
+        // 전화번호가 없는 장소가 많아, 없으면 흐리게 두고 누르지 못하게 한다(누르면 아무 일도
+        // 일어나지 않는 버튼을 남겨두지 않는다).
+        QuickAction(
+            icon = Icons.Default.Call,
+            label = strings.hospitalDetail.phoneLabel,
+            contentDescription = strings.hospitalDetail.phoneLabel,
+            enabled = phoneNumber != null,
+            onClick = onCall,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun QuickAction(
+    icon: ImageVector,
+    label: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    filled: Boolean = false,
+    enabled: Boolean = true
+) {
+    val tint = if (enabled) CoralPrimary else InactiveIcon
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (filled) tint else tint.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = place.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.padding(start = 20.dp).weight(1f, fill = false)
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (filled) Color.White else tint,
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            // 사진 위 흰 원형 배경 버튼(RoundIconButton/FavoriteHeartButton) 대신, HospitalDetailScreen의
-            // 타이틀 줄과 똑같이 배경 없는 일반 IconButton으로 즐겨찾기/공유를 얹는다 — 이제 캔버스
-            // 배경 위라 원형 배경이 없어도 아이콘이 묻히지 않는다.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.offset(x = 12.dp)) {
-                    IconButton(onClick = onToggleFavorite) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (isFavorite) {
-                                strings.nearby.favoriteRemoveContentDescription
-                            } else {
-                                strings.nearby.favoriteAddContentDescription
-                            },
-                            tint = CoralPrimary
-                        )
-                    }
-                }
-                IconButton(onClick = onShare) {
-                    Image(
-                        painter = painterResource(id = R.drawable.hospital_detail_share),
-                        contentDescription = strings.hospitalDetail.actionShare,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
         }
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Place, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = place.address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-            }
-        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (enabled) TextSecondary else InactiveIcon,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -378,38 +605,46 @@ private fun PlaceTitleSection(
 // [onClick]이 있으면(전화번호가 있는 "전화" 행) 행 전체가 탭 가능해진다 — 예전엔 이 값을 보여주는
 // 행과, 탭하면 전화를 거는 별도 아이콘 버튼(ActionButtonsRow)이 따로 있었는데 하나로 합친 것이다.
 @Composable
-private fun BasicInfoRow(iconRes: Int, label: String, value: String, onClick: (() -> Unit)? = null) {
+private fun BasicInfoRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
             .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 옅은 코랄 원 안의 벡터 아이콘. 한때 장소 종류 색을 깔았는데, 이 행은 "무슨 장소인가"가
+        // 아니라 "전화·거리·갱신일"이라는 기능 정보라 종류 색이 붙을 이유가 없었다.
         Box(
             modifier = Modifier
-                .size(30.dp)
+                .size(34.dp)
                 .clip(CircleShape)
-                .background(Color.White)
-                .border(width = 1.dp, color = DividerColor, shape = CircleShape),
+                .background(CoralPrimaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Image(painter = painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            modifier = Modifier.width(56.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (onClick != null) CoralPrimary else TextPrimary,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
+        Spacer(modifier = Modifier.width(14.dp))
+        // 라벨을 값 옆 고정폭 칸이 아니라 값 위 작은 글씨로 올린다 — 값이 길어도 줄이 안 밀리고,
+        // 읽는 순서(무엇 → 얼마)가 자연스럽다.
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Spacer(modifier = Modifier.height(2.dp))
+            // 누를 수 있는 값(전화번호)만 코랄 글자색으로 구분한다. 면이 아니라 글자라서
+            // CoralPrimary가 아니라 CoralInk를 쓴다(core/designsystem/Color.kt 참고).
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (onClick != null) CoralInk else TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 
@@ -419,9 +654,23 @@ private fun RecoveryNoticeSection(place: Place) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         shape = MaterialTheme.shapes.large,
-        color = CoralPrimaryContainer,
+        // 안내 카드 배경은 가이드 STEP의 "메디인 팁" 배너와 같은 옅은 코랄톤이다. 한때 장소 종류
+        // 색을 깔았는데, 이 카드 내용은 장소가 아니라 진료 전후 몸 상태에 대한 안내라 종류 색과
+        // 얽힐 이유가 없었고, 파랑/주황 카드가 화면에서 가장 큰 색 덩어리가 됐다.
+        color = MedinTipCardBackground,
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.8f))
     ) {
+        // 왼쪽에 카테고리 색 레일을 세워 "본문 카드"가 아니라 인용/안내 블록으로 읽히게 한다.
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 14.dp)
+                    .padding(start = 14.dp)
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(CoralPrimary)
+            )
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // 제목 앞에 작은 원형 아이콘 배지를 달아, 아래 InfoSection들의 "타이틀+아이콘" 톤과
             // 일관되게 맞춘다 — 텍스트만 있던 이전보다 이 카드가 "경고문 한 줄"이 아니라 안내
@@ -436,44 +685,60 @@ private fun RecoveryNoticeSection(place: Place) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = strings.nearby.recoveryCheckTitle, style = CardTitleStyle, color = TextPrimary)
             }
+            // 본문이 회색(TextSecondary) + 작은 글씨라 흐렸다 — 정작 읽어야 할 안내라서 본문 색과
+            // 크기를 올리고, 면책 문구만 작고 옅게 남겨 둘의 위계를 분명히 한다(예전엔 파란 면책
+            // 문구가 회색 본문보다 더 눈에 띄었다).
             Text(
                 text = place.type.translatedRecoveryHint(strings.language),
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextPrimary
             )
+            // 유형별 주의 항목(경사·온열·자외선·금식 등). 안내 문구 한 줄만 있던 카드에 실제로
+            // 확인할 거리를 붙이되, 아래 면책 문구는 그대로 남겨 자문이 아님을 계속 밝힌다.
+            CautionList(cautions = place.type.careProfile.cautions)
             Text(
                 text = strings.nearby.recoveryDisclaimer,
                 style = MaterialTheme.typography.labelSmall,
-                color = MediBlue40
+                color = TextSecondary
             )
+            }
         }
     }
 }
 
 // 카드 상단에 카테고리를 색 텍스트 한 줄로만 보여주던 것을, 아이콘+옅은 배경의 배지(pill)로
-// 바꾼다 — PlaceHeroSection의 이미지 없는 폴백이 이미 이 색(place.type.tint)의 아이콘 배지를
-// 쓰고 있어 톤을 그대로 이어받는다.
+// 바꾼다 — 바로 위 히어로의 배경 그라데이션과 같은 종류 색을 쓰는 자리라 톤이 이어진다.
+//
+// 아이콘·색은 지도 목록의 종류 칩과 같은 표에서 받는다(core/ui/PlaceKindVisuals.kt) — 같은 장소가
+// 목록에선 청록 쇼핑백, 상세에선 파란 카메라로 보이던 문제를 없앴다. 화면 위쪽에서 이미 구한 값을
+// 인자로 받아, 같은 조회를 두 번 하지 않는다.
 @Composable
-private fun CategoryBadge(place: Place, modifier: Modifier = Modifier) {
+private fun CategoryBadge(place: Place, visual: PlaceKindVisual, modifier: Modifier = Modifier) {
     val language = LocalAppStrings.current.language
     Row(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
-            .background(place.type.tint.copy(alpha = 0.12f))
+            .background(visual.color.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 배경은 면 색, 아이콘·글자는 같은 계열의 진한 색(ink)이다 — 면 색을 그대로 글자에 쓰면
+        // 음식(주황)·쇼핑(청록) 배지가 옅은 자기 배경 위에서 흐릿하게 떴다.
         Icon(
-            imageVector = place.type.icon(),
+            imageVector = visual.icon,
             contentDescription = null,
-            tint = place.type.tint,
+            tint = visual.ink,
             modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = place.type.translatedLabel(language),
+            // 지도 목록(MapScreen)의 종류 칩과 같은 규칙 — 세부 분류를 알면 그걸(백화점/전통시장/
+            // 면세점), 모르면 장소 종류로 되돌아간다. 같은 장소가 목록과 상세에서 다른 이름으로
+            // 불리지 않게 두 곳이 같은 순서를 쓴다.
+            text = place.category.translatedLabel(language)
+                .ifBlank { place.type.translatedLabel(language) },
             style = MaterialTheme.typography.labelMedium,
-            color = place.type.tint,
+            color = visual.ink,
             fontWeight = FontWeight.Bold
         )
     }
@@ -528,6 +793,16 @@ private fun BottomActionBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // 흰 바 위에 흰 카드가 스크롤돼 지나가면 경계가 안 보여 콘텐츠가 잘린 것처럼 보였다
+                // — 얇은 구분선 한 줄로 "여기서부터 고정 영역"임을 분명히 한다.
+                .drawBehind {
+                    drawLine(
+                        color = DividerColor,
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, 0f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
@@ -562,10 +837,17 @@ private fun BottomActionBar(
 // title 앞에 작은 아이콘을 얹을 수 있게 열어둔다 — "소개"/"위치" 섹션이 텍스트만 있을 때보다
 // 눈에 더 잘 띄고, RecoveryNoticeSection의 아이콘+타이틀 톤과도 화면 전체에서 통일된다.
 @Composable
-private fun InfoSection(title: String, icon: ImageVector? = null, content: @Composable ColumnScope.() -> Unit) {
+private fun InfoSection(
+    title: String,
+    icon: ImageVector? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
     SectionCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
+                // 아이콘 색은 앱 브랜드색 하나로 고정한다 — 병원 상세(HospitalDetailScreen)와 관광
+                // 카탈로그 상세(CurationSectionCard)의 같은 자리가 이미 코랄이라, 여기만 장소 종류
+                // 색(파랑/주황/청록)을 쓰면 같은 모양의 카드가 화면마다 다른 색 아이콘을 달았다.
                 Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
             }
@@ -623,26 +905,22 @@ private fun Context.sharePlace(place: Place) {
 // PlaceType.label/recoveryHint의 언어별 문구는 core/i18n/PlaceTypeStrings.kt(translatedLabel/
 // translatedRecoveryHint)로 옮겼다 — 여기 있던 한글 하드코딩 버전은 삭제한다.
 
-private val PlaceType.tint: Color
-    get() = when (this) {
-        PlaceType.TOURIST_ATTRACTION -> Color(0xFF2F6690)
-        PlaceType.RESTAURANT -> Color(0xFF3A7D7B)
-        PlaceType.SHOPPING -> Color(0xFF9A5C7F)
-        PlaceType.LODGING -> Color(0xFF6A6F4C)
-        PlaceType.SPA -> Color(0xFF7C6A9B)
-        PlaceType.WALK -> Color(0xFF4F8A5B)
-        PlaceType.OTHER -> Color(0xFF667085)
-    }
+// 히어로 사진 높이. 상단바가 서서히 나타나는 구간(이 높이의 절반)을 계산하는 데도 쓴다.
+// 화면 폭을 꽉 채우게 되면서 예전(240dp, 좌우 여백 있는 카드)보다 키워 몰입감을 준다.
+private val HeroHeight = 300.dp
 
-private fun PlaceType.icon(): ImageVector = when (this) {
-    PlaceType.TOURIST_ATTRACTION -> Icons.Default.PhotoCamera
-    PlaceType.RESTAURANT -> Icons.Default.Restaurant
-    PlaceType.SHOPPING -> Icons.Default.ShoppingBag
-    PlaceType.LODGING -> Icons.Default.Hotel
-    PlaceType.SPA -> Icons.Default.Spa
-    PlaceType.WALK -> Icons.AutoMirrored.Filled.DirectionsWalk
-    PlaceType.OTHER -> Icons.Default.Place
-}
+// 콘텐츠 시트가 히어로 사진 위로 겹쳐 올라오는 양.
+private val SheetOverlap = 28.dp
+
+/**
+ * 사진이 없을 때 히어로에 세우는 마스코트(상세화면 전용 — PlaceHeroSection 참고).
+ *
+ * 앱 전체가 쓰는 분류 기준을 그대로 따른다: RESTAURANT만 "식사", 나머지(SHOPPING/LODGING/SPA/
+ * WALK/OTHER 포함)는 전부 "관광"이다(Place.toMapPin, MapUiState.visiblePlaces와 동일한 기준).
+ * 지도 "관광" 탭에 묶여 있던 장소가 상세에 들어가서 갑자기 다른 종류로 보이지 않게 하려는 것이다.
+ */
+private fun PlaceType.fallbackCharacterImage(): Int =
+    if (this == PlaceType.RESTAURANT) R.drawable.travel_character_food else R.drawable.travel_character
 
 private fun PlaceType.toMapPinType(): MapPinType = if (this == PlaceType.RESTAURANT) MapPinType.FOOD else MapPinType.TOURIST
 

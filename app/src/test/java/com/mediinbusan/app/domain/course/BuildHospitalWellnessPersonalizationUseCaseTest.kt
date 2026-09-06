@@ -3,6 +3,7 @@ package com.mediinbusan.app.domain.course
 import com.mediinbusan.app.data.favorite.Favorite
 import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentlyViewed
 import com.mediinbusan.app.domain.tourism.TourismInteractionProfile
 import org.junit.Assert.assertEquals
@@ -58,7 +59,7 @@ class BuildHospitalWellnessPersonalizationUseCaseTest {
     private fun recent(id: String, subtitle: String, viewedAt: Long) = RecentlyViewed(
         itemId = id,
         itemName = id,
-        itemType = FavoriteItemType.PLACE,
+        itemType = RecentItemType.PLACE,
         imageUrl = null,
         viewedAt = viewedAt,
         subtitle = subtitle

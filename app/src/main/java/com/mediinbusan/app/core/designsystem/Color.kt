@@ -18,6 +18,12 @@ val MediError80 = Color(0xFFFFB4AB)
 val CoralPrimary = Color(0xFFFD6677)
 val CoralPrimaryContainer = Color(0xFFFDECEC)
 
+// 같은 코랄의 "글자용" 짝. CoralPrimary는 흰 배경 대비가 약 2.9:1이라 면(버튼 배경·아이콘 원)으로는
+// 좋지만 작은 글자로 쓰면 흐리게 뜬다 — 특히 CoralPrimaryContainer(#FDECEC)처럼 옅은 코랄 배경 위에
+// 얹으면 거의 안 읽힌다. 면은 CoralPrimary, 그 위/옆의 글자는 이 값을 쓴다(장소 종류 색을
+// color/ink로 나눈 core/ui/PlaceKindVisuals.kt와 같은 규칙).
+val CoralInk = Color(0xFFC8283C)
+
 // S-06 가이드 STEP 상세의 "메디인 팁" 배너 배경 — 옅은 코랄톤 카드(안내 카드 등)와 배경을
 // 통일할 때도 재사용한다.
 val MedinTipCardBackground = Color(0xFFFFF8F8)

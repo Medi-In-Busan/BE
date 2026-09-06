@@ -1,6 +1,7 @@
 package com.mediinbusan.app.core.i18n
 
 import com.mediinbusan.app.core.datastore.SupportedLanguage
+import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
 
 /**
@@ -46,6 +47,57 @@ fun PlaceType.translatedLabel(language: SupportedLanguage): String = when (langu
         PlaceType.SPA -> "スパ"
         PlaceType.WALK -> "散歩"
         PlaceType.OTHER -> "その他"
+    }
+}
+
+/**
+ * [PlaceCategory]의 언어별 표시 문구 — [translatedLabel]의 세부 분류판이다.
+ *
+ * [PlaceCategory.OTHER]는 "기타"가 아니라 **빈 문자열**을 돌려준다. OTHER는 실제로 "그 밖의 무언가"가
+ * 아니라 "세부 분류를 모른다"는 뜻이고(재수집 전 장소, 아직 세분화 대상이 아닌 관광지·숙박·음식점이
+ * 전부 여기 온다), 그런 장소가 대다수다 — 목록 절반에 "기타" 칩이 붙으면 정보가 아니라 잡음이 된다.
+ * 호출부는 빈 문자열이면 [PlaceType.translatedLabel]로 되돌아간다.
+ */
+fun PlaceCategory.translatedLabel(language: SupportedLanguage): String = when (language) {
+    SupportedLanguage.KO -> when (this) {
+        PlaceCategory.DEPARTMENT_STORE -> "백화점"
+        PlaceCategory.DUTY_FREE -> "면세점"
+        PlaceCategory.TRADITIONAL_MARKET -> "전통시장"
+        PlaceCategory.LARGE_MART -> "대형마트"
+        PlaceCategory.SPECIALTY_STORE -> "전문매장"
+        PlaceCategory.LOCAL_PRODUCTS -> "특산물"
+        PlaceCategory.CRAFT_WORKSHOP -> "공예·공방"
+        PlaceCategory.OTHER -> ""
+    }
+    SupportedLanguage.EN -> when (this) {
+        PlaceCategory.DEPARTMENT_STORE -> "Department Store"
+        PlaceCategory.DUTY_FREE -> "Duty Free"
+        PlaceCategory.TRADITIONAL_MARKET -> "Traditional Market"
+        PlaceCategory.LARGE_MART -> "Supermarket"
+        PlaceCategory.SPECIALTY_STORE -> "Specialty Store"
+        PlaceCategory.LOCAL_PRODUCTS -> "Local Products"
+        PlaceCategory.CRAFT_WORKSHOP -> "Craft Workshop"
+        PlaceCategory.OTHER -> ""
+    }
+    SupportedLanguage.ZH -> when (this) {
+        PlaceCategory.DEPARTMENT_STORE -> "百货商店"
+        PlaceCategory.DUTY_FREE -> "免税店"
+        PlaceCategory.TRADITIONAL_MARKET -> "传统市场"
+        PlaceCategory.LARGE_MART -> "大型超市"
+        PlaceCategory.SPECIALTY_STORE -> "专卖店"
+        PlaceCategory.LOCAL_PRODUCTS -> "特产店"
+        PlaceCategory.CRAFT_WORKSHOP -> "工艺工坊"
+        PlaceCategory.OTHER -> ""
+    }
+    SupportedLanguage.JA -> when (this) {
+        PlaceCategory.DEPARTMENT_STORE -> "百貨店"
+        PlaceCategory.DUTY_FREE -> "免税店"
+        PlaceCategory.TRADITIONAL_MARKET -> "伝統市場"
+        PlaceCategory.LARGE_MART -> "大型スーパー"
+        PlaceCategory.SPECIALTY_STORE -> "専門店"
+        PlaceCategory.LOCAL_PRODUCTS -> "特産品店"
+        PlaceCategory.CRAFT_WORKSHOP -> "工芸工房"
+        PlaceCategory.OTHER -> ""
     }
 }
 

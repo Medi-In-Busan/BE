@@ -1,0 +1,11 @@
+-- TourAPI areaBasedList2가 내려주는 분류 코드 cat3(예: A04010300 = 백화점)를 원본 그대로 저장한다.
+--
+-- 왜 코드를 그대로 두는가: place_type(관광지/음식점/숙박/쇼핑)만으로는 "쇼핑" 안에 백화점·전통시장·
+-- 면세점이 전부 뭉쳐 있어 목록에서 구분이 안 된다. 그렇다고 수집 시점에 우리 분류(WellnessPlaceCategory)로
+-- 변환해 저장하면, 나중에 매핑이 틀린 걸 발견했을 때 TourAPI를 다시 전부 긁어야 고칠 수 있다
+-- (areaBasedList2는 일일 트래픽 한도가 있다). 원본 코드를 두고 응답을 만들 때 변환하면
+-- (WellnessDtoMapper) 매핑 수정이 코드 배포만으로 끝난다.
+--
+-- cat1/cat2는 cat3의 접두사라(A04 / A0401 / A04010300) 따로 저장하지 않는다 — 필요하면 잘라 쓴다.
+-- 기존 행은 NULL이다: 값이 채워지려면 ingest(POST /api/wellness/ingest)를 다시 돌려야 한다.
+ALTER TABLE wellness_place ADD COLUMN category_code VARCHAR(20);

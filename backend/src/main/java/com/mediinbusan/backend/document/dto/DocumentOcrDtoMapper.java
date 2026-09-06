@@ -23,22 +23,8 @@ public final class DocumentOcrDtoMapper {
             throw new DocumentOcrFailedException(HttpStatus.BAD_GATEWAY);
         }
 
-        return joinFields(image.fields());
-    }
-
-    // CLOVA는 fields[]를 단어/줄 단위로 쪼개 내려주고, 각 field의 lineBreak로 다음 줄바꿈 여부를 알려준다.
-    private static String joinFields(List<ClovaOcrResponse.Field> fields) {
-        if (fields == null || fields.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder text = new StringBuilder();
-        for (ClovaOcrResponse.Field field : fields) {
-            if (field.inferText() != null) {
-                text.append(field.inferText());
-            }
-            text.append(Boolean.TRUE.equals(field.lineBreak()) ? "\n" : " ");
-        }
-        return text.toString().strip();
+        // 단순히 fields를 이어붙이면 표(처방전 약품 목록)의 열이 서로 섞이므로, 실제 배치 복원은
+        // DocumentTextLayoutBuilder에 맡긴다. 좌표가 없는 응답에서는 거기서 예전 방식으로 폴백한다.
+        return DocumentTextLayoutBuilder.build(image.fields(), image.tables());
     }
 }

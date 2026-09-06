@@ -6,24 +6,50 @@ import android.content.Intent
 import android.net.Uri
 
 /**
- * F-017 외부 지도 앱 연결. 위치 권한 없이도 좌표만으로 동작하는 표준 geo: 인텐트를 사용한다.
- * 좌표가 없으면 주소 텍스트만으로 검색되는 geo: 쿼리로 폴백한다.
+ * F-017 외부 지도 앱 연결(길찾기).
+ *
+ * 예전엔 표준 `geo:` 인텐트(`geo:lat,lng?q=lat,lng(이름)`)를 썼는데, 카카오맵이 이 스킴을 받으면
+ * `q` 값을 **검색어**로 해석한다 — 그래서 길찾기가 아니라 "35.158,129.055" 같은 좌표 문자열이
+ * 검색창에 그대로 박힌 검색 결과 화면이 떴다. 카카오맵 공식 URL 스킴의 길찾기(`kakaomap://route`)를
+ * 먼저 쓰고, 앱이 없을 때만 단계적으로 폴백한다.
+ *
+ * 출발지(`sp`)는 넘기지 않는다 — 이 앱은 위치 권한을 쓰지 않으므로(CLAUDE.md §1) 현재 위치는
+ * 카카오맵이 자기 권한으로 잡게 둔다. 같은 이유로 **대중교통 지정은 1)번 앱 스킴에서만 보장된다** —
+ * 웹 길찾기에서 이동수단까지 지정하려면 `/link/by/traffic/...` 형식이 출발지 좌표를 요구하는데,
+ * 우리는 그 좌표를 만들 수 없다.
  */
 fun Context.launchExternalDirections(latitude: Double?, longitude: Double?, label: String, fallbackAddress: String) {
-    val uri = if (latitude != null && longitude != null) {
-        Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(label)})")
+    if (latitude != null && longitude != null) {
+        // 1) 카카오맵 앱의 길찾기 화면. 외국인 의료관광객이 주 사용자라 대중교통을 기본 수단으로 둔다.
+        // by 값은 카카오맵 URL 스킴 문서 표기대로 소문자다(car/publictransit/foot/bicycle).
+        val routeIntent = Intent(Intent.ACTION_VIEW, Uri.parse("kakaomap://route?ep=$latitude,$longitude&by=publictransit"))
+        if (startActivitySafely(routeIntent)) return
+
+        // 2) 앱이 없으면 웹 길찾기 링크 — 브라우저에서 열리고, 앱이 있는 기기에선 앱으로 이어진다.
+        // 목적지만 지정하는 형식이라 이동수단은 카카오맵 기본값(자동차)으로 열린다(위 주석 참고).
+        val webRoute = Uri.parse("https://map.kakao.com/link/to/${Uri.encode(label)},$latitude,$longitude")
+        if (startActivitySafely(Intent(Intent.ACTION_VIEW, webRoute))) return
+
+        // 3) 마지막 폴백: 표준 geo:(구글맵 등 다른 지도 앱). 길찾기까진 아니어도 위치는 찍힌다.
+        startActivitySafely(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(label)})")))
     } else {
-        Uri.parse("geo:0,0?q=${Uri.encode(fallbackAddress)}")
+        // 좌표가 없으면 길찾기 자체가 성립하지 않는다 — 이때만 주소로 장소를 찾아주는 검색으로 넘긴다.
+        val webSearch = Uri.parse("https://map.kakao.com/link/search/${Uri.encode(fallbackAddress)}")
+        if (startActivitySafely(Intent(Intent.ACTION_VIEW, webSearch))) return
+        startActivitySafely(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(fallbackAddress)}")))
     }
-    launchIntentSafely(Intent(Intent.ACTION_VIEW, uri))
 }
 
 fun Context.launchIntentSafely(intent: Intent) {
-    try {
-        startActivity(intent)
-    } catch (e: ActivityNotFoundException) {
-        // 대상 앱(다이얼러/지도/문자/공유)이 없는 환경(에뮬레이터 등)에서는 조용히 무시한다.
-    }
+    startActivitySafely(intent)
+}
+
+/** 대상 앱이 없으면(에뮬레이터 등) 조용히 false를 돌려준다 — 호출부가 다음 폴백으로 넘어갈 수 있게. */
+private fun Context.startActivitySafely(intent: Intent): Boolean = try {
+    startActivity(intent)
+    true
+} catch (e: ActivityNotFoundException) {
+    false
 }
 
 /**

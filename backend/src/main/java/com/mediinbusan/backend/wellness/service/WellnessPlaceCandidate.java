@@ -9,6 +9,8 @@ record WellnessPlaceCandidate(
     String contentId,
     String name,
     WellnessPlaceType placeType,
+    // TourAPI cat3 원본 코드. TourAPI가 아닌 소스(부산맛집정보 등)에서 온 후보는 null이다.
+    String categoryCode,
     String address,
     Coordinates coordinates,
     String imageUrl,
@@ -32,6 +34,7 @@ record WellnessPlaceCandidate(
             contentId,
             name,
             placeType,
+            categoryCode,
             address,
             coordinates,
             imageUrl,
