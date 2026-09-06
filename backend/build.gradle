@@ -39,6 +39,9 @@ dependencies {
 	runtimeOnly 'com.mysql:mysql-connector-j:26.7.0'
 	// 'h2' 프로필로 도커 없이 로컬 실행할 때도 필요해서 test 스코프가 아니라 runtimeOnly로 둔다.
 	runtimeOnly 'com.h2database:h2:2.4.240'
+	// TourismPlacesCache(TourAPI 관광지 목록 TTL 캐시)가 직접 import하므로 compile 스코프가 필요하다.
+	// 버전은 Spring Boot BOM이 관리한다(명시하지 말 것).
+	implementation 'com.github.ben-manes.caffeine:caffeine'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

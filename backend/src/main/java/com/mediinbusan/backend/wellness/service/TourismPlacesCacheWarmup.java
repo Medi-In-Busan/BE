@@ -33,6 +33,15 @@ public class TourismPlacesCacheWarmup implements ApplicationRunner {
         if (!properties.hasTourApiKey()) {
             return;
         }
+        // TourAPI(apis.data.go.kr)는 연결 자체가 간헐적으로 지연/실패한다. warm-up을 기동 스레드에서
+        // 그대로 기다리면 TourismExternalClient의 타임아웃·재시도만큼(수십 초) ApplicationReadyEvent가
+        // 밀린다 — 캐시를 못 채워도 첫 요청이 라이브 호출로 흘러갈 뿐이므로 데몬 스레드로 떼어낸다.
+        Thread worker = new Thread(this::warmUp, "tourism-places-cache-warmup");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    private void warmUp() {
         try {
             gateway.places(
                 WellnessTourismGatewayService.Language.KO,
