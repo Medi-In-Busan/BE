@@ -92,6 +92,7 @@ import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
+import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
@@ -967,32 +968,6 @@ private fun HotPlaceCompactRow(rank: Int, hotPlace: TourismHotPlace, onClick: ()
         CongestionLevelBadge(congestionRate = hotPlace.congestionRate, height = 27.dp)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(24.dp))
     }
-}
-
-// 혼잡도 4단계(매우 높음/높음/보통/여유) 배지. wellness_verybusy/busyhigh/busymiddle/busychill
-// 4종이 이미 "혼잡도 %s" 문구+아이콘까지 다 포함하고 있어서, 기존 Surface+Text 배지를 그대로
-// 이미지로 교체한다. toHotPlaceLevel()의 텍스트는 접근성용 contentDescription으로만 재사용한다.
-@Composable
-private fun CongestionLevelBadge(congestionRate: Double, height: Dp, modifier: Modifier = Modifier) {
-    val iconRes = when {
-        congestionRate >= 80.0 -> R.drawable.wellness_verybusy
-        congestionRate >= 60.0 -> R.drawable.wellness_busyhigh
-        congestionRate >= 40.0 -> R.drawable.wellness_busymiddle
-        else -> R.drawable.wellness_busychill
-    }
-    Image(
-        painter = painterResource(id = iconRes),
-        contentDescription = LocalAppStrings.current.nearby.crowdingLabelFormat.format(congestionRate.toHotPlaceLevel()),
-        modifier = modifier.height(height)
-    )
-}
-
-@Composable
-private fun Double.toHotPlaceLevel(): String = when {
-    this >= 80.0 -> LocalAppStrings.current.nearby.crowdingVeryHigh
-    this >= 60.0 -> LocalAppStrings.current.nearby.crowdingHigh
-    this >= 40.0 -> LocalAppStrings.current.nearby.crowdingNormal
-    else -> LocalAppStrings.current.nearby.crowdingRelaxed
 }
 
 private fun Double.toHotPlaceRate(): String = if (this % 1.0 == 0.0) {

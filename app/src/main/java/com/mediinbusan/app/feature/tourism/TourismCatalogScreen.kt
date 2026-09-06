@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Search
@@ -40,8 +41,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,6 +92,7 @@ import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
+import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FilterChipPill
@@ -122,6 +122,15 @@ fun TourismCatalogScreen(
     val uiState by viewModel.uiState.collectAsState()
     val language = LocalAppStrings.current.language
     LaunchedEffect(categoryName, language) { viewModel.load(categoryName) }
+
+    // viewModel.load()가 끝나기 전(DataStore 언어 설정을 읽는 동안)에는 uiState.category가 계속
+    // null이다 — 그 사이엔 아래 분기가 전부 안 맞아 TourismCatalogContent로 떨어지는데, 그 화면의
+    // topBar는 uiState.category만 보고 CROWDING 여부를 판단해서 "부산 핫플레이스" 진입 시 순간적으로
+    // 기본 상단바(뒤로가기+"관광 데이터"+지도 아이콘)가 반짝였다가 진짜 헤더로 바뀌는 깜빡임이
+    // 있었다. 네비게이션 인자로 이미 알고 있는 카테고리를 즉시 파싱해 그 공백을 메운다.
+    val initialCategory = remember(categoryName) {
+        runCatching { TourismCatalogCategory.valueOf(categoryName) }.getOrNull()
+    }
 
     if (uiState.category == TourismCatalogCategory.ACCESSIBLE) {
         // 무장애 관광 리스트업 화면만 병원 목록(S-04)과 비슷한 톤의 전용 헤더·검색 UX를 쓴다 — 다른
@@ -162,6 +171,7 @@ fun TourismCatalogScreen(
 
     TourismCatalogContent(
         uiState = uiState,
+        initialCategory = initialCategory,
         onDistrictSelected = viewModel::selectDistrict,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onSortSelected = viewModel::onSortSelected,
@@ -185,6 +195,9 @@ fun TourismCatalogScreen(
 @Composable
 private fun TourismCatalogContent(
     uiState: TourismCatalogUiState,
+    // 로딩 중이라 uiState.category가 아직 null일 때 topBar 종류를 미리 결정하기 위한 값 —
+    // TourismCatalogScreen 참고(첫 프레임 헤더 깜빡임 방지).
+    initialCategory: TourismCatalogCategory?,
     onDistrictSelected: (BusanDistrict) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onSortSelected: (TourismSortOption) -> Unit,
@@ -196,11 +209,22 @@ private fun TourismCatalogContent(
     onBack: () -> Unit
 ) {
     val strings = LocalAppStrings.current
+    val effectiveCategory = uiState.category ?: initialCategory
     Scaffold(
-        containerColor = HomeBackgroundPink,
+        containerColor = if (effectiveCategory == TourismCatalogCategory.CROWDING) Color.White else HomeBackgroundPink,
         topBar = {
-            if (uiState.category == TourismCatalogCategory.CROWDING) {
-                BackOnlyNavigationBar(onBack = onBack, background = HomeBackgroundPink)
+            if (effectiveCategory == TourismCatalogCategory.CROWDING) {
+                BackOnlyNavigationBar(
+                    onBack = onBack,
+                    background = Color.White,
+                    title = strings.tourism.crowdingListTitle,
+                    subtitle = strings.tourism.crowdingListSubtitle,
+                    trailingImageRes = R.drawable.wellness_detail_top,
+                    // Scaffold.topBar는 원래도 스크롤과 무관하게 고정이지만, 배경·헤더가 둘 다
+                    // 흰색이라 리스트와 경계가 안 보여 스크롤에 따라오는 것처럼 보였다 —
+                    // 그림자로 리스트 위에 떠 있는 고정 바임을 시각적으로 분명히 한다.
+                    modifier = Modifier.shadow(elevation = 3.dp, ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
+                )
             } else {
                 CenterAlignedTopAppBar(
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
@@ -919,21 +943,15 @@ private fun CategoryFilterSection(
 @Composable
 private fun DistrictFilter(selectedDistrict: BusanDistrict?, onDistrictSelected: (BusanDistrict) -> Unit) {
     val strings = LocalAppStrings.current
-    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Text(strings.tourism.districtSectionTitle, style = SectionTitleStyle, color = TextPrimary)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(BusanDistrict.entries, key = { it.name }) { district ->
-                FilterChip(
-                    selected = selectedDistrict == district,
-                    onClick = { onDistrictSelected(district) },
-                    label = { Text(district.translatedLabel(strings.language)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = CoralPrimaryContainer,
-                        selectedLabelColor = CoralPrimary,
-                        containerColor = Color.White
-                    )
-                )
-            }
+    // 병원 목록(HospitalSearchListScreen.FilterChipsRow)처럼 헤더 텍스트 없이 검색바 바로 아래
+    // 태그 줄만 보여준다.
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(BusanDistrict.entries, key = { it.name }) { district ->
+            FilterChipPill(
+                label = district.translatedLabel(strings.language),
+                selected = selectedDistrict == district,
+                onClick = { onDistrictSelected(district) }
+            )
         }
     }
 }
@@ -946,7 +964,8 @@ private fun ResultCountAndSortRow(
 ) {
     val strings = LocalAppStrings.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        // 위 필터 칩 줄과의 간격을 다른 아이템 사이(LazyColumn spacedBy 14dp)보다 더 준다.
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1150,6 +1169,7 @@ private fun CrowdingRankCard(
 ) {
     val strings = LocalAppStrings.current
     val congestion = item.details["congestionRate"] ?: item.subtitle.orEmpty()
+    val congestionRate = remember(congestion) { parseCongestionRate(congestion) }
     val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
     Box(modifier = Modifier.fillMaxWidth()) {
         Card(
@@ -1160,11 +1180,12 @@ private fun CrowdingRankCard(
                     alpha = revealProgress
                     translationY = (1f - revealProgress) * 10.dp.toPx()
                 }
+                // 의료기관 리스트(HospitalSearchListScreen.SearchResultCard)와 같은 그림자 톤.
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(16.dp),
-                    ambientColor = Color.Black.copy(alpha = 0.18f),
-                    spotColor = Color.Black.copy(alpha = 0.18f)
+                    ambientColor = Color.Black.copy(alpha = 0.3f),
+                    spotColor = Color.Black.copy(alpha = 0.3f)
                 ),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -1177,16 +1198,30 @@ private fun CrowdingRankCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(width = 64.dp, height = 76.dp)
+                        .size(width = 77.dp, height = 91.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
-                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = Icons.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
+                    if (item.imageUrl != null) {
+                        AsyncImageBox(
+                            model = item.imageUrl,
+                            contentDescription = item.title,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(imageVector = Icons.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
+                        }
+                    }
                     Surface(
+                        // 홈 화면 문서스캔/AI준비체크 유리 버튼(GlassCircleFab)과 같은 흰색 알파 톤.
                         modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
                         shape = CircleShape,
-                        color = Color.White
+                        color = Color.White.copy(alpha = 0.35f)
                     ) {
                         Text(
                             "#$rank",
@@ -1199,28 +1234,40 @@ private fun CrowdingRankCard(
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        item.details["signguNm"] ?: item.address ?: strings.tourism.catalogDefaultTitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    item.details["baseYmd"]?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
                         Text(
-                            "${strings.tourism.detailFieldLabels["baseYmd"].orEmpty()} $it",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
+                            item.details["signguNm"] ?: item.address ?: strings.tourism.catalogDefaultTitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+                    item.details["baseYmd"]?.let {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(12.dp))
+                            Text(
+                                "${strings.tourism.detailFieldLabels["baseYmd"].orEmpty()} ${formatBaseYmd(it)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
                 }
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(congestion, style = MaterialTheme.typography.titleMedium, color = CoralPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                if (congestionRate != null) {
+                    CongestionLevelBadge(
+                        congestionRate = congestionRate,
+                        height = 26.dp,
+                        modifier = Modifier.align(Alignment.Top)
+                    )
+                } else {
                     Text(
-                        strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary,
-                        maxLines = 1
+                        congestion,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CoralPrimary,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Top)
                     )
                 }
             }
@@ -1228,6 +1275,23 @@ private fun CrowdingRankCard(
         if (isRevealAnimated && revealProgress < 1f) {
             ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())
         }
+    }
+}
+
+// RankTourismHotPlacesUseCase.congestionRateOrNull과 같은 규칙 — 원본 문자열에서 숫자만 뽑는다.
+private val CONGESTION_NUMBER_PATTERN = Regex("-?\\d+(?:\\.\\d+)?")
+
+private fun parseCongestionRate(raw: String): Double? =
+    CONGESTION_NUMBER_PATTERN.find(raw)?.value?.toDoubleOrNull()
+
+// baseYmd는 TourAPI 원본 그대로 YYYYMMDD(8자리) 숫자로 온다 — "26.09.06"처럼 보기 좋게 다듬는다.
+// 8자리가 아니면(예상 밖 포맷) 원본을 그대로 보여준다.
+private fun formatBaseYmd(raw: String): String {
+    val digits = raw.filter { it.isDigit() }
+    return if (digits.length == 8) {
+        "${digits.substring(2, 4)}.${digits.substring(4, 6)}.${digits.substring(6, 8)}"
+    } else {
+        raw
     }
 }
 
