@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MedinTipCardBackground
@@ -30,7 +31,8 @@ import com.mediinbusan.app.data.guide.GuidePhase
 
 // S-06 하위 STEP 상세(합본 페이지). 예전에는 STEP 개요 + 항목별 leaf 화면(최대 3개)으로 나뉘어 있던
 // 것을 hero + 섹션들 + MEDIN TIP 배너 하나의 스크롤 페이지로 합쳤다(GuideStepPageContentMapper 참고).
-// leaf 화면 자체와 그 route는 SelfDiagnosis 등 다른 진입점이 계속 쓰므로 그대로 남겨둔다.
+// 대부분의 leaf 화면·route는 클릭 경로가 사라져 삭제했다 — PreInquiryInformationDetail만 여전히
+// navigable = true 항목으로 남아있어 예외로 유지한다.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GuideStepDetailScreen(
@@ -120,7 +122,7 @@ private fun GuideStepSectionBlock(
             GuideStepCardStyle.MEMO -> GuideMemoRow(items = section.rowItems, onNavigableClick = onItemClick)
             GuideStepCardStyle.INFO -> section.rowItems.firstOrNull()?.let { item ->
                 GuideDetailItemCard(
-                    iconResId = item.iconResId,
+                    iconResId = item.iconResId ?: R.drawable.guide_hospital_location_map,
                     title = item.title,
                     description = item.description,
                     onClick = { onItemClick(item) },

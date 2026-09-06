@@ -31,6 +31,10 @@ dependencies {
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
 
+	// TourismPlacesCache(관광 데이터 인메모리 캐시)가 쓴다 — origin/main에 이 클래스가 추가될 때
+	// 의존성 선언이 누락돼 있어서 여기서 보충한다.
+	implementation 'com.github.ben-manes.caffeine:caffeine:3.2.4'
+
 	implementation "io.github.openfeign.querydsl:querydsl-jpa:${queryDslVersion}"
 	annotationProcessor "io.github.openfeign.querydsl:querydsl-apt:${queryDslVersion}:jpa"
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'

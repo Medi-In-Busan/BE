@@ -5,25 +5,31 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.draw.clip
@@ -31,9 +37,15 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.BeachAccess
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Card
@@ -44,6 +56,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,14 +74,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
@@ -100,12 +117,12 @@ import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
-import com.mediinbusan.app.core.ui.rememberCountUpValue
 import com.mediinbusan.app.core.ui.rememberRevealedCount
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
+import com.mediinbusan.app.domain.tourism.placeCategoryCodes
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.foundation.shape.CircleShape
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -139,6 +156,7 @@ fun TourismCatalogScreen(
             uiState = uiState,
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onLoadMore = viewModel::loadNextPage,
+            onToggleFavorite = viewModel::toggleFavorite,
             onItemSelected = { item ->
                 viewModel.selectItem(item)
                 onSelectItem()
@@ -159,6 +177,7 @@ fun TourismCatalogScreen(
             onCategoryFilterSelected = viewModel::onCategoryFilterSelected,
             onResetFilters = viewModel::onResetFilters,
             onLoadMore = viewModel::loadNextPage,
+            onToggleFavorite = viewModel::toggleFavorite,
             onItemSelected = { item ->
                 viewModel.selectItem(item)
                 onSelectItem()
@@ -353,28 +372,29 @@ private fun TourismCatalogContent(
     }
 }
 
-// 무장애 관광(ACCESSIBLE) 전용 리스트업 화면. 다른 관광 카테고리와 달리 배너(CatalogSummaryCard),
-// 카테고리·지역 필터, 정렬 선택, "추천 동선 보기"가 전부 없다 — 정렬은 항상 거리순
-// (TourismCatalogUiState.selectedSort 기본값)으로 고정하고, 검색은 (병원 목록의 디바운스+자동완성+
-// 수동 제출과 달리) 이미 로드된 카탈로그를 타이핑 즉시 클라이언트에서 필터링한다.
+// 무장애 관광(ACCESSIBLE) 전용 리스트업 화면. "부산 관광지"(RecommendedPlacesCatalogContent)와
+// 같은 3열→2열 포토 그리드 디자인으로 맞췄다 — 다만 이 카테고리는 관광지/숙박/맛집 같은 하위
+// 구분이 없는 단일 카테고리라 카테고리 필터 행은 없고, 개인화 추천(FOR YOU) 섹션도 없다(항상
+// visibleItems 하나로만 렌더링). 정렬은 항상 거리순으로 고정하고, 검색은 이미 로드된 카탈로그를
+// 타이핑 즉시 클라이언트에서 필터링한다.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccessibleTourismCatalogContent(
     uiState: TourismCatalogUiState,
     onSearchQueryChanged: (String) -> Unit,
     onLoadMore: () -> Unit,
+    onToggleFavorite: (TourismCatalogItem) -> Unit,
     onItemSelected: (TourismCatalogItem) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
     val strings = LocalAppStrings.current
     Scaffold(
-        containerColor = TourismCanvas,
+        containerColor = Color.White,
         topBar = {
-            TourismListTopAppBar(
-                title = uiState.category?.translatedLabel(strings.language) ?: strings.tourism.catalogDefaultTitle,
-                onBack = onBack
-            )
+            // category.translatedLabel()을 그대로 쓰면 NearbyScreen 슬라이더·허브 화면 등 다른
+            // 화면의 "무장애 관광" 표기까지 다 바뀌므로, 이 화면 전용 타이틀 문구를 따로 둔다.
+            PlacesGridTopAppBar(title = strings.tourism.accessibleListTitle, onBack = onBack)
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
@@ -393,51 +413,62 @@ private fun AccessibleTourismCatalogContent(
                 modifier = Modifier.padding(contentPadding)
             )
             else -> {
-                // 병원 목록(SearchResultList)과 같은 "시그널 리빌" — 새 목록이 도착할 때마다 앞
-                // 6개까지 순차로 스켈레톤→카드 페이드인. core/ui/CardRevealAnimation.kt 참고.
-                val revealedCount = rememberRevealedCount(itemsKey = uiState.visibleItems, itemCount = uiState.visibleItems.size)
-                val listState = rememberLazyListState()
-                LoadNextTourismPageEffect(
-                    listState = listState,
+                // loadGeneration 기준 리빌 — RecommendedPlacesCatalogContent와 같은 이유
+                // (append 때마다 catalog/visibleItems가 새 인스턴스가 돼도 스크롤 중엔 재생 안 함).
+                val revealedCount = rememberRevealedCount(itemsKey = uiState.loadGeneration, itemCount = uiState.visibleItems.size)
+                val gridState = rememberLazyGridState()
+                LoadNextTourismGridPageEffect(
+                    gridState = gridState,
                     hasNextPage = uiState.hasNextPage,
                     isLoadingMore = uiState.isLoadingMore,
                     onLoadMore = onLoadMore
                 )
-                LazyColumn(
-                    state = listState,
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = gridState,
                     modifier = Modifier.padding(top = contentPadding.calculateTopPadding()).fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 20.dp,
-                        top = 16.dp,
+                        top = 0.dp,
                         end = 20.dp,
                         bottom = contentPadding.calculateBottomPadding()
                     ),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    item {
-                        TourismListSearchBar(
+                    fullSpanItem {
+                        PlacesGridSearchBar(
                             query = uiState.searchQuery,
                             onQueryChanged = onSearchQueryChanged,
                             placeholder = strings.tourism.accessibleCatalogSearchPlaceholder
                         )
                     }
-                    item { TourismListResultCountLabel(resultCount = uiState.visibleItems.size) }
+                    fullSpanItem(modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) {
+                        AccessibleHeroHeader(
+                            label = strings.tourism.accessibleHeroLabel,
+                            titleHighlight = strings.tourism.accessibleHeroTitleHighlight,
+                            titleSuffix = strings.tourism.accessibleHeroTitleSuffix,
+                            subtitle = strings.tourism.accessibleHeroSubtitle
+                        )
+                    }
                     if (uiState.visibleItems.isEmpty()) {
-                        item { EmptySearchFilterState(onReset = { onSearchQueryChanged("") }) }
+                        fullSpanItem { EmptySearchFilterState(onReset = { onSearchQueryChanged("") }) }
                     } else {
                         itemsIndexed(
                             items = uiState.visibleItems,
-                            key = { index, item -> "${uiState.category?.name}-${item.id}-$index" }
+                            key = { _, item -> item.id }
                         ) { index, item ->
-                            TourismListDataCard(
+                            TourismGridPlaceCard(
                                 item = item,
+                                isFavorite = uiState.favoriteItemIds.contains(item.id),
+                                onToggleFavorite = { onToggleFavorite(item) },
                                 onClick = { onItemSelected(item) },
                                 isRevealAnimated = index < InitialCardRevealCount,
                                 isRevealed = index < revealedCount
                             )
                         }
                         if (uiState.isLoadingMore) {
-                            item { TourismPageLoadingIndicator() }
+                            fullSpanItem { TourismPageLoadingIndicator() }
                         }
                     }
                 }
@@ -446,32 +477,33 @@ private fun AccessibleTourismCatalogContent(
     }
 }
 
-// "부산 관광지"(언어별 PLACES_KO/EN/JA/ZH) 전용 리스트업 화면. 무장애 관광과 같은 헤더·검색바·
-// 카드 디자인·리빌 애니메이션을 쓰지만, 카테고리·지역 필터가 칩 대신 드롭다운 2개이고(카테고리는
-// 클라이언트 필터, 지역은 서버 재조회), 목록이 "추천" 섹션(개인화 점수 상위)과 "전체" 섹션(TourAPI
-// 원본 목록에서 추천에 뽑히지 않은 나머지) 두 단으로 나뉜다. 정렬 선택지는 없다 — 추천 섹션은
-// 개인화 점수순, 전체 섹션은 서버가 내려준 원본 순서를 그대로 따른다.
+// "부산 관광지"(언어별 PLACES_KO/EN/JA/ZH) 전용 리스트업 화면. wellness_tourism_recommendation_list.png
+// 디자인 기준으로 3열 포토 그리드 + 카테고리 3종(관광지/숙박/맛집) 고정 필터 + 지역 드롭다운으로
+// 개편했다. 카테고리 필터는 클라이언트 필터, 지역은 서버 재조회이며, 목록은 "추천" 섹션(개인화
+// 점수 상위, FOR YOU 헤더)과 "전체" 섹션(TourAPI 원본 목록에서 추천에 뽑히지 않은 나머지) 두
+// 단으로 나뉜다. 정렬 선택지는 없다 — 추천 섹션은 개인화 점수순, 전체 섹션은 서버 원본 순서.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecommendedPlacesCatalogContent(
     uiState: TourismCatalogUiState,
-    onDistrictSelected: (BusanDistrict) -> Unit,
+    onDistrictSelected: (BusanDistrict?) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onCategoryFilterSelected: (String?) -> Unit,
     onResetFilters: () -> Unit,
     onLoadMore: () -> Unit,
+    onToggleFavorite: (TourismCatalogItem) -> Unit,
     onItemSelected: (TourismCatalogItem) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
     val strings = LocalAppStrings.current
     Scaffold(
-        containerColor = TourismCanvas,
+        containerColor = Color.White,
         topBar = {
-            TourismListTopAppBar(
-                title = uiState.category?.translatedLabel(strings.language) ?: strings.tourism.catalogDefaultTitle,
-                onBack = onBack
-            )
+            // category.translatedLabel()은 언어별 소스를 가리키는 내부 구분용 라벨이라(EN이면
+            // "Busan in English") 화면 제목으로 쓰면 "부산 관광지"의 번역이 아니라 이상하게
+            // 보인다 — 이 화면 전용 문구를 따로 둔다(무장애 관광의 accessibleListTitle과 동일 패턴).
+            PlacesGridTopAppBar(title = strings.tourism.busanPlacesListTitle, onBack = onBack)
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
@@ -490,63 +522,77 @@ private fun RecommendedPlacesCatalogContent(
                 modifier = Modifier.padding(contentPadding)
             )
             else -> {
-                val catalog = uiState.catalog
-                val categoryCodes = remember(catalog.items) {
-                    catalog.items.mapNotNull { it.categoryCode }.distinct()
-                }
                 val combinedCount = uiState.recommendedItems.size + uiState.visibleItems.size
-                // 두 섹션을 합친 순서로 리빌 인덱스를 매겨야 "전체" 섹션 카드도 리스트 앞쪽에
-                // 있으면 애니메이션 대상(InitialCardRevealCount 이내)이 된다.
+                // itemsKey를 loadGeneration으로 고정한다 — catalog는 append(무한 스크롤 다음
+                // 페이지)에서도 매번 새 인스턴스(items 병합)라, 그걸 키로 쓰면 스크롤할 때마다
+                // 이미 보이던 카드까지 스켈레톤부터 다시 리빌돼 버벅였다. loadGeneration은 진짜
+                // 새 조회(초기 진입·재시도·지역 변경)에서만 올라가므로 스크롤 중엔 그대로다.
                 val revealedCount = rememberRevealedCount(
-                    itemsKey = uiState.recommendedItems to uiState.visibleItems,
+                    itemsKey = uiState.loadGeneration,
                     itemCount = combinedCount
                 )
-                val listState = rememberLazyListState()
-                LoadNextTourismPageEffect(
-                    listState = listState,
+                val gridState = rememberLazyGridState()
+                LoadNextTourismGridPageEffect(
+                    gridState = gridState,
                     hasNextPage = uiState.hasNextPage,
                     isLoadingMore = uiState.isLoadingMore,
                     onLoadMore = onLoadMore
                 )
-                LazyColumn(
-                    state = listState,
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = gridState,
                     modifier = Modifier.padding(top = contentPadding.calculateTopPadding()).fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 20.dp,
-                        top = 16.dp,
+                        top = 0.dp,
                         end = 20.dp,
                         bottom = contentPadding.calculateBottomPadding()
                     ),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    item {
-                        TourismListSearchBar(
+                    fullSpanItem {
+                        PlacesGridSearchBar(
                             query = uiState.searchQuery,
                             onQueryChanged = onSearchQueryChanged,
-                            placeholder = strings.tourism.catalogSearchPlaceholder
+                            placeholder = strings.tourism.nearHospitalSearchPlaceholder
                         )
                     }
-                    item {
-                        PlacesFilterDropdownRow(
-                            categoryCodes = categoryCodes,
+                    // 그리드 자체의 verticalArrangement(10dp)가 아이템 사이마다 이미 들어가므로,
+                    // 여기 추가 padding은 그 위에 더 얹히는 값이다 — png보다 여백이 넓어 보여서 줄였다.
+                    fullSpanItem(modifier = Modifier.padding(top = 2.dp)) {
+                        PlacesCategoryAndDistrictFilterRow(
+                            category = uiState.category,
                             selectedCategoryCode = uiState.selectedCategoryCode,
                             onCategoryFilterSelected = onCategoryFilterSelected,
                             selectedDistrict = uiState.selectedDistrict,
                             onDistrictSelected = onDistrictSelected
                         )
                     }
-                    item { TourismListResultCountLabel(resultCount = combinedCount) }
+                    // FOR YOU 헤더는 어떤 카테고리 칩을 누르고 있든 항상 보인다 — 특정 카테고리에서
+                    // recommendedItems가 비어도(개인화 신호가 없을 때) 자리는 그대로 유지한다.
+                    fullSpanItem(modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) {
+                        ForYouRecommendationHeader(
+                            forYouLabel = strings.tourism.forYouLabel,
+                            titlePrefix = strings.tourism.nearHospitalRecommendationTitlePrefix,
+                            titleHighlight = strings.tourism.nearHospitalRecommendationTitleHighlight,
+                            subtitle = strings.tourism.nearHospitalRecommendationSubtitle
+                        )
+                    }
                     if (combinedCount == 0) {
-                        item { EmptySearchFilterState(onReset = onResetFilters) }
+                        fullSpanItem { EmptySearchFilterState(onReset = onResetFilters) }
                     } else {
+                        // "부산 관광지 전체" 같은 구분 라벨 없이 추천 다음 전체 목록을 그대로 이어
+                        // 붙인다 — 인스타그램 피드처럼 끊김 없는 한 장의 그리드로 보이게 한다.
                         if (uiState.recommendedItems.isNotEmpty()) {
-                            item { TourismListSectionHeader(strings.tourism.recommendedPlacesSectionTitle) }
                             itemsIndexed(
                                 items = uiState.recommendedItems,
-                                key = { index, item -> "reco-${item.id}-$index" }
+                                key = { _, item -> "reco-${item.id}" }
                             ) { index, item ->
-                                TourismListDataCard(
+                                TourismGridPlaceCard(
                                     item = item,
+                                    isFavorite = uiState.favoriteItemIds.contains(item.id),
+                                    onToggleFavorite = { onToggleFavorite(item) },
                                     onClick = { onItemSelected(item) },
                                     isRevealAnimated = index < InitialCardRevealCount,
                                     isRevealed = index < revealedCount
@@ -554,14 +600,15 @@ private fun RecommendedPlacesCatalogContent(
                             }
                         }
                         if (uiState.visibleItems.isNotEmpty()) {
-                            item { TourismListSectionHeader(strings.tourism.allPlacesSectionTitle) }
                             itemsIndexed(
                                 items = uiState.visibleItems,
-                                key = { index, item -> "all-${item.id}-$index" }
+                                key = { _, item -> "all-${item.id}" }
                             ) { index, item ->
                                 val globalIndex = uiState.recommendedItems.size + index
-                                TourismListDataCard(
+                                TourismGridPlaceCard(
                                     item = item,
+                                    isFavorite = uiState.favoriteItemIds.contains(item.id),
+                                    onToggleFavorite = { onToggleFavorite(item) },
                                     onClick = { onItemSelected(item) },
                                     isRevealAnimated = globalIndex < InitialCardRevealCount,
                                     isRevealed = globalIndex < revealedCount
@@ -569,7 +616,7 @@ private fun RecommendedPlacesCatalogContent(
                             }
                         }
                         if (uiState.isLoadingMore) {
-                            item { TourismPageLoadingIndicator() }
+                            fullSpanItem { TourismPageLoadingIndicator() }
                         }
                     }
                 }
@@ -578,19 +625,31 @@ private fun RecommendedPlacesCatalogContent(
     }
 }
 
+// LazyVerticalGrid에서 검색바·필터·섹션 헤더처럼 3칸을 다 차지해야 하는 항목을 매번
+// span = { GridItemSpan(maxLineSpan) }로 반복 쓰지 않기 위한 축약 확장 함수.
+private fun LazyGridScope.fullSpanItem(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        Box(modifier = modifier) { content() }
+    }
+}
+
+// LoadNextTourismPageEffect의 그리드(LazyVerticalGrid) 버전 — RecommendedPlacesCatalogContent
+// 3열 카드 그리드 전용.
 @Composable
-private fun LoadNextTourismPageEffect(
-    listState: androidx.compose.foundation.lazy.LazyListState,
+private fun LoadNextTourismGridPageEffect(
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
     hasNextPage: Boolean,
     isLoadingMore: Boolean,
     onLoadMore: () -> Unit
 ) {
-    LaunchedEffect(listState, hasNextPage, isLoadingMore) {
+    LaunchedEffect(gridState, hasNextPage, isLoadingMore) {
         if (!hasNextPage || isLoadingMore) return@LaunchedEffect
         snapshotFlow {
-            val layoutInfo = listState.layoutInfo
+            val layoutInfo = gridState.layoutInfo
             val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            layoutInfo.totalItemsCount > 0 && lastVisibleIndex >= layoutInfo.totalItemsCount - 4
+            // 백엔드가 이 카테고리를 캐싱 없이 실시간 프록시해서 페이지당 왕복이 느리다 — 사용자가
+            // 마지막 줄에 닿기 전에 미리 다음 페이지 요청을 걸어 대기 체감을 줄인다(2열 기준 약 5줄분).
+            layoutInfo.totalItemsCount > 0 && lastVisibleIndex >= layoutInfo.totalItemsCount - 10
         }
             .distinctUntilChanged()
             .filter { it }
@@ -612,180 +671,204 @@ private fun TourismPageLoadingIndicator() {
     }
 }
 
+// wellness_tourism_recommendation_list.png 필터 행 — 카테고리 3종(관광지/숙박/맛집, TourAPI
+// contenttypeid 12/32/39 고정) 알약 버튼 + 지역 드롭다운 1개, 총 4개를 한 줄에 배치한다.
+// 카테고리는 재선택 시 해제(전체 보기)되는 단일 선택, 지역은 "전체"를 포함한 전체 목록을 보여준다.
 @Composable
-private fun TourismListSectionHeader(title: String) {
-    Text(text = title, style = SectionTitleStyle, color = TextPrimary, fontWeight = FontWeight.Bold)
-}
-
-// 기존 LazyRow 칩 2줄(카테고리·지역) 대신 나란히 배치한 드롭다운 2개. 지역은 항상 하나가 선택돼
-// 있어야 하고(서버 재조회 트리거) "전체" 옵션이 없다 — 카테고리만 "전체"를 지원한다.
-@Composable
-private fun PlacesFilterDropdownRow(
-    categoryCodes: List<String>,
+private fun PlacesCategoryAndDistrictFilterRow(
+    category: TourismCatalogCategory?,
     selectedCategoryCode: String?,
     onCategoryFilterSelected: (String?) -> Unit,
     selectedDistrict: BusanDistrict?,
-    onDistrictSelected: (BusanDistrict) -> Unit
+    onDistrictSelected: (BusanDistrict?) -> Unit
 ) {
     val strings = LocalAppStrings.current
-    // fillMaxWidth를 안 줘서 한 줄을 다 채우지 않고 내용 크기만큼만 왼쪽부터 나란히 놓인다.
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        TourismFilterDropdown(
-            label = strings.tourism.categorySectionTitle,
-            selectedLabel = selectedCategoryCode?.translatedTourismItemCategoryLabel(strings.language) ?: strings.tourism.focusAll
-        ) { collapse ->
-            BrandDropdownMenuItem(
-                label = strings.tourism.focusAll,
-                selected = selectedCategoryCode == null,
-                onClick = { onCategoryFilterSelected(null); collapse() }
-            )
-            categoryCodes.mapNotNull { code -> code.translatedTourismItemCategoryLabel(strings.language)?.let { code to it } }
-                .forEach { (code, label) ->
-                    BrandDropdownMenuItem(
-                        label = label,
-                        selected = selectedCategoryCode == code,
-                        onClick = { onCategoryFilterSelected(code); collapse() }
+    // TourAPI는 국문 서비스(PLACES_KO)와 외국어 서비스(PLACES_EN/JA/ZH)가 contenttypeid 체계
+    // 자체가 달라서(placeCategoryCodes 참고), "관광지/숙박/맛집" 3개 알약이 실제로 걸어야 하는
+    // 코드도 현재 카테고리에 따라 달라진다 — 코드를 하드코딩하면 영어 등에서 필터가 전부
+    // 빈 결과로 나온다(실제 라이브 API로 확인한 버그).
+    val codes = category?.placeCategoryCodes()
+    // 언어별로 라벨 길이가 크게 다르다(한국어는 2~3자, 영어는 "Attractions"처럼 훨씬 길다) —
+    // 고정 Row라 한국어 기준으로만 맞춰두면 영어 등에서 알약 4개 폭 합이 화면을 넘어 뒤쪽(지역)
+    // 알약이 통째로 잘려 안 보이고, 옆으로 넘기는 인터랙션도 없어서 확인할 방법이 없었다 —
+    // 가로 스크롤을 안전망으로 남겨두되, 라벨을 작게 줄여 대부분은 스크롤 없이 다 보이게 한다.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (codes != null) {
+            PlacesCategoryPill(
+                label = codes.spot.translatedTourismItemCategoryLabel(strings.language).orEmpty(),
+                selected = selectedCategoryCode == codes.spot,
+                onClick = {
+                    onCategoryFilterSelected(if (selectedCategoryCode == codes.spot) null else codes.spot)
+                },
+                icon = { tint ->
+                    // png의 야자수 아이콘을 그대로 크롭해 만든 실루엣 에셋(ic_tourist_spot_palm) —
+                    // Material 아이콘으로 대체하지 않고 컬러필터로 선택 상태 색만 입힌다.
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_tourist_spot_palm),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(tint),
+                        modifier = Modifier.size(17.dp)
                     )
                 }
+            )
+            PlacesCategoryPill(
+                label = codes.lodging.translatedTourismItemCategoryLabel(strings.language).orEmpty(),
+                selected = selectedCategoryCode == codes.lodging,
+                onClick = {
+                    onCategoryFilterSelected(if (selectedCategoryCode == codes.lodging) null else codes.lodging)
+                },
+                icon = { tint -> Icon(Icons.Filled.Hotel, contentDescription = null, tint = tint, modifier = Modifier.size(17.dp)) }
+            )
+            PlacesCategoryPill(
+                label = codes.food.translatedTourismItemCategoryLabel(strings.language).orEmpty(),
+                selected = selectedCategoryCode == codes.food,
+                icon = { tint -> Icon(Icons.Filled.Restaurant, contentDescription = null, tint = tint, modifier = Modifier.size(17.dp)) },
+                onClick = {
+                    onCategoryFilterSelected(if (selectedCategoryCode == codes.food) null else codes.food)
+                }
+            )
         }
-        TourismFilterDropdown(
-            label = strings.tourism.districtSectionTitle,
-            selectedLabel = selectedDistrict?.translatedLabel(strings.language) ?: strings.tourism.districtSectionTitle
-        ) { collapse ->
+        PlacesDistrictDropdownPill(selectedDistrict = selectedDistrict, onDistrictSelected = onDistrictSelected)
+    }
+}
+
+// 선택 시 코랄 배경 채움, 미선택 시 흰 배경 + 옅은 회색 보더. 아이콘+라벨 순서, 코너 14dp로
+// 지역 드롭다운 알약과 톤을 맞춘다.
+@Composable
+private fun PlacesCategoryPill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable (tint: Color) -> Unit
+) {
+    val contentColor = if (selected) PlacesAccentPink else TextPrimary
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) PlacesAccentPinkContainer else Color.White)
+            .border(
+                width = 1.dp,
+                color = if (selected) Color.Transparent else DividerColor,
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 9.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        icon(contentColor)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = contentColor,
+            maxLines = 1
+        )
+    }
+}
+
+// 나머지 3개 카테고리 알약과 같은 코너·패딩. 보더는 평소엔 다른 알약과 같은 옅은 회색이고,
+// 펼쳐졌을 때만(png의 "전체" 팝업이 뜬 스크린샷과 같은 상태) 코랄로 강조한다. 드롭다운 목록
+// 너비를 이 알약 실측 너비에 맞춰(anchorWidth) DropdownMenu 기본 콘텐츠-핏 동작을 덮어쓴다 —
+// 그렇지 않으면 목록 폭이 알약보다 좁거나 넓게 떠서 어긋나 보인다.
+@Composable
+private fun PlacesDistrictDropdownPill(
+    selectedDistrict: BusanDistrict?,
+    onDistrictSelected: (BusanDistrict?) -> Unit
+) {
+    val strings = LocalAppStrings.current
+    val density = LocalDensity.current
+    var expanded by remember { mutableStateOf(false) }
+    var anchorWidthPx by remember { mutableStateOf(0) }
+    Box {
+        Row(
+            modifier = Modifier
+                .onSizeChanged { anchorWidthPx = it.width }
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.White)
+                .border(
+                    width = if (expanded) 1.5.dp else 1.dp,
+                    color = if (expanded) PlacesAccentPink else DividerColor,
+                    shape = RoundedCornerShape(14.dp)
+                )
+                .clickable { expanded = true }
+                .padding(horizontal = 9.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(Icons.Filled.LocationOn, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(17.dp))
+            Text(
+                text = selectedDistrict?.translatedLabel(strings.language) ?: strings.tourism.focusAll,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 1
+            )
+            Icon(
+                imageVector = Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        BrandDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            maxHeight = 280.dp,
+            modifier = Modifier.width(with(density) { anchorWidthPx.toDp() }),
+            // 위쪽 모서리를 각지게 깎아서 바로 위 알약과 하나로 이어지는 느낌을 낸다.
+            shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 14.dp, bottomEnd = 14.dp)
+        ) {
+            BrandDropdownMenuItem(
+                label = strings.tourism.focusAll,
+                selected = selectedDistrict == null,
+                onClick = { onDistrictSelected(null); expanded = false },
+                accentColor = PlacesAccentPink
+            )
             BusanDistrict.entries.forEach { district ->
                 BrandDropdownMenuItem(
                     label = district.translatedLabel(strings.language),
                     selected = selectedDistrict == district,
-                    onClick = { onDistrictSelected(district); collapse() }
+                    onClick = { onDistrictSelected(district); expanded = false },
+                    accentColor = PlacesAccentPink
                 )
             }
         }
     }
 }
 
-// 알약형 검색바와 같은 흰 배경+코랄 보더 톤으로 맞춘 셀렉트 박스. 라벨을 위에 작게, 현재 선택값과
-// 드롭다운 화살표를 아래 박스에 둔다. fillMaxWidth를 안 줘서 내용 크기만큼만 차지한다(한 줄을
-// 다 채우는 큰 박스가 아니라 작은 칩형 선택 버튼). content는 BrandDropdownMenu 안에 그릴 항목들 —
-// 항목 클릭 시 collapse()를 불러 메뉴를 닫는다(BrandDropdownMenuItem의 onClick 안에서 호출).
-// 카테고리·지역 둘 다 항목 수와 무관하게 펼침 높이를 5줄(약 240dp)로 고정해 두 드롭다운이 같은
-// 크기로 보이게 한다 — 항목이 적으면 그만큼만 차지하고, 지역처럼 16개면 안에서 스크롤된다.
-private val FilterDropdownMenuMaxHeight = 240.dp
-
+// 상단 검색바 — wellness_tourism_recommendation_list.png 기준으로 테두리 없는 옅은 회색 배경 +
+// 왼쪽 돋보기 아이콘(회색)으로 다른 관광 화면들의 흰 배경+코랄 보더 검색바와 톤을 다르게 맞췄다.
 @Composable
-private fun TourismFilterDropdown(
-    label: String,
-    selectedLabel: String,
-    modifier: Modifier = Modifier,
-    menuMaxHeight: Dp = FilterDropdownMenuMaxHeight,
-    content: @Composable ColumnScope.(collapse: () -> Unit) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Column(modifier = modifier) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(6.dp))
-        Box {
-            Row(
-                modifier = Modifier
-                    .height(38.dp)
-                    .shadow(
-                        elevation = 3.dp,
-                        shape = RoundedCornerShape(12.dp),
-                        ambientColor = CoralPrimary.copy(alpha = 0.14f),
-                        spotColor = CoralPrimary.copy(alpha = 0.14f)
-                    )
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White)
-                    .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.35f), shape = RoundedCornerShape(12.dp))
-                    .clickable { expanded = true }
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = selectedLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 110.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
-                    contentDescription = null,
-                    tint = CoralPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            BrandDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, maxHeight = menuMaxHeight) {
-                content { expanded = false }
-            }
-        }
-    }
-}
-
-// 설정/언어 아이콘이 있는 병원 목록용 BrandTopAppBar 대신, 뒤로가기 버튼 + 카테고리명만 있는
-// 가벼운 전용 헤더. 로고·설정·언어 전환은 이 화면들의 목적(장소 탐색)과 무관해서 뺐다.
-// CenterAlignedTopAppBar 대신 일반 TopAppBar를 써서 뒤로가기 버튼 옆에 왼쪽 정렬 —
-// 가이드 STEP 상세 헤더(GuideStepDetailScreen)와 같은 패턴이라 앱 전체 톤과도 맞는다.
-// 무장애 관광·부산 관광지 리스트업 화면이 함께 쓴다.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TourismListTopAppBar(title: String, onBack: () -> Unit) {
-    TopAppBar(
-        // 본문 배경(TourismCanvas)과 같은 색으로 맞춰서 헤더-본문 경계가 안 보이게 한다.
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = TourismCanvas),
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = LocalAppStrings.current.common.backContentDescription,
-                    tint = CoralPrimary
-                )
-            }
-        },
-        title = {
-            // 글자 뒤(오른쪽)에 동백꽃 — 글자 크기는 titleMedium 유지.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-                Image(
-                    painter = painterResource(id = R.drawable.guide_camellia_flower_soft),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-        }
-    )
-}
-
-// 병원 목록의 SearchInputBar와 같은 알약형 룩·치수를 쓰되, 돋보기 아이콘을 오른쪽으로 옮긴다.
-// 여기서는 이미 로드된 목록을 타이핑 즉시 클라이언트에서 필터링하므로(TourismCatalogViewModel.
-// applyClientFilters) 오른쪽 돋보기는 병원 목록처럼 "제출" 액션이 아니라 순수 표시 아이콘이다.
-// 무장애 관광·부산 관광지 리스트업 화면이 함께 쓴다(플레이스홀더 문구만 화면마다 다르게 넘긴다).
-@Composable
-private fun TourismListSearchBar(query: String, onQueryChanged: (String) -> Unit, placeholder: String) {
+private fun PlacesGridSearchBar(query: String, onQueryChanged: (String) -> Unit, placeholder: String) {
     val strings = LocalAppStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp)
-            .shadow(
-                elevation = 3.dp,
-                shape = RoundedCornerShapePercent50,
-                ambientColor = CoralPrimary.copy(alpha = 0.14f),
-                spotColor = CoralPrimary.copy(alpha = 0.14f)
-            )
-            .clip(RoundedCornerShapePercent50)
-            .background(Color.White)
-            .border(width = 1.dp, color = CoralPrimary.copy(alpha = 0.35f), shape = RoundedCornerShapePercent50)
-            .padding(start = 20.dp, end = 14.dp),
+            .height(42.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(SearchBarFill)
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(imageVector = Icons.Filled.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
+                // 언어(특히 영어)에 따라 문구 길이가 검색바 폭보다 길어질 수 있어 — 두 줄로
+                // 늘어나 바 모양이 깨지는 대신 한 줄로 유지하고 넘치면 말줄임으로 자른다.
                 Text(
                     text = placeholder,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             BasicTextField(
@@ -805,32 +888,75 @@ private fun TourismListSearchBar(query: String, onQueryChanged: (String) -> Unit
                     .size(18.dp)
                     .clickable { onQueryChanged("") }
             )
-            Spacer(modifier = Modifier.width(10.dp))
         }
-        Icon(
-            imageVector = Icons.Filled.Search,
-            contentDescription = strings.common.searchContentDescription,
-            tint = CoralPrimary,
-            modifier = Modifier.size(18.dp)
-        )
     }
 }
 
-// 병원 목록의 SearchResultCountLabel과 같은 톤 — 라벨은 굵은 검정, 건수만 브랜드 코랄로 강조하고
-// 카운트업 애니메이션을 준다. 무장애 관광·부산 관광지 리스트업 화면이 함께 쓴다(둘 다 정렬 선택지 없음).
+private val SearchBarFill = Color(0xFFF2F1F3)
+
+// wellness_tourism_recommendation_list.png의 메인 포인트 핑크 — 관광지 선택 상태, "추천 장소"
+// 강조 텍스트, 지역 드롭다운 체크 아이콘 등 이 화면(부산 관광지)의 주요 포인트 전용 색이다.
+// 앱 전체에서 쓰는 core/designsystem의 CoralPrimary(#FD6677)와는 다른 값이라 여기서만 따로 둔다.
+private val PlacesAccentPink = Color(0xFFFD3569)
+private val PlacesAccentPinkContainer = Color(0xFFFFE3EA)
+
+// 아이콘 라벨(FOR YOU/EASY TRIP) + 큰 제목(강조 부분만 코랄, 순서는 호출부가 AnnotatedString으로
+// 직접 조립) + 부제. "부산 관광지"·무장애 관광 리스트업 화면이 검색바 밑에서 공용으로 쓴다.
 @Composable
-private fun TourismListResultCountLabel(resultCount: Int) {
-    val strings = LocalAppStrings.current.tourism
-    val animatedCount = rememberCountUpValue(resultCount)
-    val text = buildAnnotatedString {
-        withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) {
-            append(animatedCount.toString())
-        }
-        withStyle(SpanStyle(color = TextPrimary, fontWeight = FontWeight.Bold)) {
-            append(strings.resultCountUnitLabel)
-        }
+private fun PlacesHeroHeader(eyebrowLabel: String, title: AnnotatedString, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(text = eyebrowLabel, style = MaterialTheme.typography.labelMedium, color = PlacesAccentPink, fontWeight = FontWeight.Bold)
+        Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
     }
-    Text(text = text, style = SectionTitleStyle)
+}
+
+// "부산 관광지"(FOR YOU) — 검정 접두사 + 코랄 강조 접미사 순서.
+@Composable
+private fun ForYouRecommendationHeader(forYouLabel: String, titlePrefix: String, titleHighlight: String, subtitle: String) {
+    PlacesHeroHeader(
+        eyebrowLabel = forYouLabel,
+        title = buildAnnotatedString {
+            withStyle(SpanStyle(color = TextPrimary)) { append(titlePrefix) }
+            withStyle(SpanStyle(color = PlacesAccentPink)) { append(titleHighlight) }
+        },
+        subtitle = subtitle
+    )
+}
+
+// 무장애 관광(EASY TRIP) — 코랄 강조 접두사 + 검정 접미사 순서(부산 관광지와 반대).
+@Composable
+private fun AccessibleHeroHeader(label: String, titleHighlight: String, titleSuffix: String, subtitle: String) {
+    PlacesHeroHeader(
+        eyebrowLabel = label,
+        title = buildAnnotatedString {
+            withStyle(SpanStyle(color = PlacesAccentPink)) { append(titleHighlight) }
+            withStyle(SpanStyle(color = TextPrimary)) { append(titleSuffix) }
+        },
+        subtitle = subtitle
+    )
+}
+
+// wellness_tourism_recommendation_list.png 기준 — 뒤로가기 + 완전히 가운데 정렬된 굵은 검정
+// 제목만 있는 가벼운 헤더(동백꽃 장식 없음). RecommendedPlacesCatalogContent 전용.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlacesGridTopAppBar(title: String, onBack: () -> Unit) {
+    CenterAlignedTopAppBar(
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = LocalAppStrings.current.common.backContentDescription,
+                    tint = TextPrimary
+                )
+            }
+        },
+        title = {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+        }
+    )
 }
 
 @Composable
@@ -1119,39 +1245,102 @@ private fun TourismCardBody(item: TourismCatalogItem, distanceLabel: String?) {
     }
 }
 
-// 무장애 관광·부산 관광지 리스트업 화면 전용 카드 — 테두리 대신 코랄 톤 그림자로 배경과 분리하고,
-// 병원 목록과 같은 시그널 리빌(등장 페이드+슬라이드업, 등장 전 ShimmerSkeleton)을 적용한다.
+// wellness_tourism_recommendation_list.png의 3열 포토 그리드 카드 — 사진이 카드 전체를 채우고
+// 하단 그라데이션 위에 흰 글씨로 제목/주소/거리를 얹는다. 우상단 하트는 즐겨찾기 토글.
 @Composable
-private fun TourismListDataCard(
+private fun TourismGridPlaceCard(
     item: TourismCatalogItem,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onClick: () -> Unit,
     isRevealAnimated: Boolean,
     isRevealed: Boolean
 ) {
+    val strings = LocalAppStrings.current
     val distanceLabel = rememberTourismItemDistanceLabel(item)
     val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
-    val cardShape = MaterialTheme.shapes.large
+    val cardShape = RoundedCornerShape(16.dp)
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Column(
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.82f)
+            .graphicsLayer {
+                alpha = revealProgress
+                translationY = (1f - revealProgress) * 10.dp.toPx()
+            }
+            .clip(cardShape)
+            .background(CoralPrimaryContainer)
+            .clickable(onClick = onClick)
+    ) {
+        if (item.imageUrl != null) {
+            AsyncImageBox(model = item.imageUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
+        } else {
+            // TourAPI가 사진을 안 내려준 항목 — CoralPrimaryContainer(옅은 핑크) 배경만 남으면
+            // 흰 화면 위 그리드에서 "빈 카드처럼" 보여서(가운데만 흰 화면으로 보인다는 문의의
+            // 실제 원인 중 하나), 사진이 없다는 걸 분명히 보여주는 아이콘을 얹는다.
+            Icon(
+                imageVector = Icons.Default.Place,
+                contentDescription = null,
+                tint = CoralPrimary.copy(alpha = 0.35f),
+                modifier = Modifier.align(Alignment.Center).size(40.dp)
+            )
+        }
+        Box(
+            modifier = Modifier.fillMaxSize().background(
+                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.72f)))
+            )
+        )
+        Icon(
+            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = if (isFavorite) {
+                strings.tourism.favoriteRemoveContentDescription
+            } else {
+                strings.tourism.favoriteAddContentDescription
+            },
+            tint = Color.White,
+            // minimumInteractiveComponentSize()로 터치 영역을 48dp까지 넓히되, 보이는 아이콘
+            // 크기(20dp)는 그대로 두고 그 안에서 클릭을 받는다 — FavoriteHeartButton.kt와 같은
+            // 순서(minimumInteractiveComponentSize → size → clickable)를 따른다.
             modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    alpha = revealProgress
-                    translationY = (1f - revealProgress) * 10.dp.toPx()
-                }
-                .shadow(
-                    elevation = 6.dp,
-                    shape = cardShape,
-                    ambientColor = CoralPrimary.copy(alpha = 0.22f),
-                    spotColor = CoralPrimary.copy(alpha = 0.22f)
-                )
-                .clip(cardShape)
-                .background(Color.White)
-                .clickable(onClick = onClick),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .minimumInteractiveComponentSize()
+                .size(20.dp)
+                .clickable(onClick = onToggleFavorite)
+        )
+        Column(
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            TourismCardBody(item = item, distanceLabel = distanceLabel)
+            Text(
+                text = item.title,
+                style = CardTitleStyle,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            item.address?.let { address ->
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.78f),
+                        modifier = Modifier.padding(top = 2.dp).size(12.dp)
+                    )
+                    Text(
+                        text = address,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.78f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            distanceLabel?.let {
+                Text(text = it, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+            }
         }
         if (isRevealAnimated && revealProgress < 1f) {
             ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())

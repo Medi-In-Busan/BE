@@ -20,23 +20,10 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
-import com.mediinbusan.app.feature.guide.AirportDeparturePreparationDetailScreen
-import com.mediinbusan.app.feature.guide.EnglishDocumentsResultsDetailScreen
 import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
-import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
-import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
-import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
-import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
-import com.mediinbusan.app.feature.guide.PassportReservationInfoDetailScreen
-import com.mediinbusan.app.feature.guide.PaymentMethodCheckDetailScreen
-import com.mediinbusan.app.feature.guide.PostTreatmentPrecautionsDetailScreen
-import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
-import com.mediinbusan.app.feature.guide.ReceiptInsuranceDocumentsDetailScreen
-import com.mediinbusan.app.feature.guide.TotalCostCoverageCheckDetailScreen
 import com.mediinbusan.app.feature.guide.TreatmentExaminationDetailScreen
-import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
 import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
@@ -162,65 +149,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                     onBack = navController::popBackStack,
                     onItemClick = { item ->
                         when (item.id) {
-                            GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
-                            GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
-                            GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
-                            GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
-                            GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
-                            GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
                             // "병원 정보 확인하기" 카드는 이제 STEP03 합본 페이지에 접수 절차가 직접
                             // 포함돼 있어 중간 화면 없이 바로 지도로 이동한다.
                             GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.MapView(hospitalId = null))
-                            GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
-                            GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
-                            GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
-                            GuideDetailItemId.MEDICATION_SCHEDULE_CHECK -> navController.navigate(Route.MedicationScheduleDetail)
-                            GuideDetailItemId.POST_TREATMENT_PRECAUTIONS_CHECK -> navController.navigate(Route.PostTreatmentPrecautionsDetail)
-                            GuideDetailItemId.ENGLISH_DOCUMENTS_RESULTS_CHECK -> navController.navigate(Route.EnglishDocumentsResultsDetail)
-                            GuideDetailItemId.AIRPORT_DEPARTURE_PREPARATION_CHECK -> navController.navigate(Route.AirportDeparturePreparationDetail)
+                            else -> Unit
                         }
                     }
                 )
             }
-        }
-        composable<Route.VisaEntryCheckDetail> {
-            VisaEntryCheckDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.InsuranceDocumentsDetail> {
-            InsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.HospitalInquiryDetail> {
-            HospitalInquiryDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PreInquiryInformationDetail> {
-            PreInquiryInformationDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PassportReservationInfoDetail> {
-            PassportReservationInfoDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.MedicalRecordsTestResultsDetail> {
-            MedicalRecordsTestResultsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.TotalCostCoverageCheckDetail> {
-            TotalCostCoverageCheckDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PaymentMethodCheckDetail> {
-            PaymentMethodCheckDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.ReceiptInsuranceDocumentsDetail> {
-            ReceiptInsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.MedicationScheduleDetail> {
-            MedicationScheduleDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PostTreatmentPrecautionsDetail> {
-            PostTreatmentPrecautionsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.EnglishDocumentsResultsDetail> {
-            EnglishDocumentsResultsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.AirportDeparturePreparationDetail> {
-            AirportDeparturePreparationDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()

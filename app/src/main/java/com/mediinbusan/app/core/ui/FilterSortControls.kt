@@ -3,27 +3,32 @@ package com.mediinbusan.app.core.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.CoralPrimary
@@ -72,12 +77,17 @@ fun BrandDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     maxHeight: Dp? = null,
+    modifier: Modifier = Modifier,
+    // 앵커(선택 칸) 바로 아래에서 하나로 이어지는 느낌을 내고 싶을 때, 위쪽 모서리만 각지게(0dp)
+    // 깎은 shape를 넘긴다 — 지역 드롭다운(TourismCatalogScreen.PlacesDistrictDropdownPill)이 사용.
+    shape: CornerBasedShape = RoundedCornerShape(16.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier,
+        shape = shape,
         containerColor = Color.White,
         shadowElevation = 6.dp
     ) {
@@ -91,24 +101,37 @@ fun BrandDropdownMenu(
     }
 }
 
+// Material3 DropdownMenuItem 대신 직접 짠 Row — 기본 DropdownMenuItem은 trailingIcon 슬롯을
+// 위해 항상 일정 너비를 예약해서, 앵커 너비에 맞춰 좁힌 드롭다운(지역 선택 등)에서 "부산진구"
+// 같은 4글자 라벨도 줄바꿈되는 문제가 있었다. 체크 아이콘은 selected일 때만 자리를 차지한다.
 @Composable
-fun BrandDropdownMenuItem(label: String, selected: Boolean, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = {
-            Text(
-                text = label,
-                style = SettingsItemTitleStyle.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal),
-                color = if (selected) CoralPrimary else SettingsPrimaryText
-            )
-        },
-        trailingIcon = {
-            if (selected) {
-                Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
-            }
-        },
-        onClick = onClick,
-        modifier = Modifier.background(if (selected) CoralPrimaryContainer else Color.Transparent)
-    )
+fun BrandDropdownMenuItem(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    accentColor: Color = CoralPrimary
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (selected) accentColor.copy(alpha = 0.12f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            style = SettingsItemTitleStyle.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal),
+            color = if (selected) accentColor else SettingsPrimaryText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        if (selected) {
+            Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
+        }
+    }
 }
 
 private val RoundedCornerShapePercent50 = RoundedCornerShape(percent = 50)
