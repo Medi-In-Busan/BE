@@ -223,7 +223,10 @@ class TourismCatalogViewModel @Inject constructor(
                                 current.copy(items = current.items + newItems)
                             }
                         } else {
-                            result.data
+                            // 첫 페이지(또는 지역 변경/재시도)도 append 경로와 동일하게 distinctBy가
+                            // 필요하다 — 원본 API 응답에 중복 id가 섞여 오면 그리드의
+                            // key = { item.id }가 그대로 크래시(IllegalArgumentException)로 이어진다.
+                            result.data.copy(items = result.data.items.distinctBy { it.id })
                         }
                         // "부산 관광지"만 개인화 점수로 재정렬 — 점수>0인 상위 항목이 추천 섹션으로
                         // 상단에 뜨고(applyClientFilters), 나머지는 그 아래 일반 섹션에 남는다.

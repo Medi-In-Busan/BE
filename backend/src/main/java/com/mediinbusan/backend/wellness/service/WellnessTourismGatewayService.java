@@ -41,17 +41,15 @@ public class WellnessTourismGatewayService {
         int pageSize
     ) {
         String cacheKey = TourismPlacesCache.key(language, district, contentTypeId, pageNo, pageSize);
-        return placesCache.get(cacheKey).orElseGet(() -> {
+        return placesCache.getOrLoad(cacheKey, () -> {
             Map<String, Object> params = tourismParams(district, pageNo, pageSize);
             params.put("contentTypeId", contentTypeId);
-            TourismExternalResponse response = request(
+            return request(
                 "tourism-" + language.name().toLowerCase(),
                 language.baseUrl(properties),
                 "areaBasedList2",
                 params
             );
-            placesCache.put(cacheKey, response);
-            return response;
         });
     }
 

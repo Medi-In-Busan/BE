@@ -57,6 +57,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -1273,11 +1274,19 @@ private fun TourismGridPlaceCard(
         )
         Icon(
             imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = strings.tourism.seeAllLabel,
+            contentDescription = if (isFavorite) {
+                strings.tourism.favoriteRemoveContentDescription
+            } else {
+                strings.tourism.favoriteAddContentDescription
+            },
             tint = Color.White,
+            // minimumInteractiveComponentSize()로 터치 영역을 48dp까지 넓히되, 보이는 아이콘
+            // 크기(20dp)는 그대로 두고 그 안에서 클릭을 받는다 — FavoriteHeartButton.kt와 같은
+            // 순서(minimumInteractiveComponentSize → size → clickable)를 따른다.
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(8.dp)
+                .padding(4.dp)
+                .minimumInteractiveComponentSize()
                 .size(20.dp)
                 .clickable(onClick = onToggleFavorite)
         )

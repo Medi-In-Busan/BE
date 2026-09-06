@@ -8,11 +8,16 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 
 /**
@@ -22,9 +27,9 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
  * 때(Error)는 깨진 이미지 아이콘을 보여준다. 둘 다 없으면 카드 배경색만 남아 "빈 흰 카드"처럼
  * 보이는데, 특히 Error는 영영 그 상태로 남는다.
  *
- * onState 콜백으로 별도 상태 변수를 들고 있던 이전 버전 대신 SubcomposeAsyncImage를 쓴다 —
- * Coil이 공식적으로 안내하는 로딩/에러 슬롯 API라 painter 상태와 화면에 그려지는 내용이
- * 어긋날 여지가 없다.
+ * SubcomposeAsyncImage는 로딩/에러 슬롯마다 서브컴포지션을 새로 돌기 때문에, 그리드를 스크롤하며
+ * 카드가 계속 재구성되는 이 화면에서 프레임 드랍(jank)을 유발한다 — 대신 plain AsyncImage +
+ * onState 콜백으로 상태만 별도로 들고 있다가 오버레이를 그린다.
  */
 @Composable
 fun AsyncImageBox(
@@ -33,29 +38,36 @@ fun AsyncImageBox(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop
 ) {
-    SubcomposeAsyncImage(
-        model = model,
-        contentDescription = contentDescription,
-        contentScale = contentScale,
-        modifier = modifier.fillMaxSize(),
-        loading = {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = CoralPrimary,
-                    strokeWidth = 2.dp
-                )
+    var state by remember(model) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
+    Box(modifier = modifier.fillMaxSize()) {
+        AsyncImage(
+            model = model,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = Modifier.fillMaxSize(),
+            onState = { state = it }
+        )
+        when (state) {
+            is AsyncImagePainter.State.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = CoralPrimary,
+                        strokeWidth = 2.dp
+                    )
+                }
             }
-        },
-        error = {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.BrokenImage,
-                    contentDescription = null,
-                    tint = CoralPrimary.copy(alpha = 0.35f),
-                    modifier = Modifier.size(28.dp)
-                )
+            is AsyncImagePainter.State.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.BrokenImage,
+                        contentDescription = null,
+                        tint = CoralPrimary.copy(alpha = 0.35f),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
+            else -> Unit
         }
-    )
+    }
 }
