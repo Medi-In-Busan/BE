@@ -58,6 +58,23 @@ class TourismCatalogCrowdingCacheTest {
         verify(snapshotRepository, never()).save(any());
     }
 
+    @Test
+    void districtFilterUsesBusanSnapshotWithoutCallingExternalApiAgain() {
+        WellnessExternalSnapshot snapshot = snapshot(LocalDate.now());
+        when(snapshotRepository.findBySnapshotKey(todayKey())).thenReturn(Optional.of(snapshot));
+
+        TourismCatalogResponse response = service.getCatalog(
+            TourismCatalogCategory.CROWDING,
+            BusanTourismCodes.District.SUYEONG,
+            null
+        );
+
+        assertThat(response.items()).extracting(item -> item.title())
+            .containsExactly("광안리해수욕장");
+        assertThat(response.items().getFirst().details()).containsEntry("signguCd", "26500");
+        verify(gateway, never()).crowding(any());
+    }
+
     private static WellnessExternalSnapshot snapshot(LocalDate date) {
         return new WellnessExternalSnapshot(
             "crowding-catalog:BUSAN:" + date,
@@ -85,7 +102,7 @@ class TourismCatalogCrowdingCacheTest {
                 "imageUrl":null,
                 "latitude":null,
                 "longitude":null,
-                "details":{"baseYmd":"%s","cnctrRate":"82.4","signguNm":"해운대구","imageLookupAttempted":"true"}
+                "details":{"baseYmd":"%s","cnctrRate":"82.4","signguCd":"26350","signguNm":"해운대구","imageLookupAttempted":"true"}
               },
               {
                 "id":"crowding-2",
@@ -95,7 +112,7 @@ class TourismCatalogCrowdingCacheTest {
                 "imageUrl":null,
                 "latitude":null,
                 "longitude":null,
-                "details":{"baseYmd":"%s","cnctrRate":"99.9","signguNm":"해운대구","imageLookupAttempted":"true"}
+                "details":{"baseYmd":"%s","cnctrRate":"99.9","signguCd":"26350","signguNm":"해운대구","imageLookupAttempted":"true"}
               },
               {
                 "id":"crowding-3",
@@ -105,7 +122,7 @@ class TourismCatalogCrowdingCacheTest {
                 "imageUrl":null,
                 "latitude":null,
                 "longitude":null,
-                "details":{"baseYmd":"%s","cnctrRate":"90.1","signguNm":"수영구","imageLookupAttempted":"true"}
+                "details":{"baseYmd":"%s","cnctrRate":"90.1","signguCd":"26500","signguNm":"수영구","imageLookupAttempted":"true"}
               }
             ]
             """.formatted(today, tomorrow, today);
