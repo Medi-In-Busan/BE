@@ -125,6 +125,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.HospitalDetail>()
             HospitalDetailScreen(
                 hospitalId = route.hospitalId,
+                // "주변 같은 진료과목 병원" 카드 → 그 병원 상세로. 상세 위에 상세가 쌓이는 건
+                // 의도한 동작이다(비교하다 뒤로 가면 원래 보던 병원으로 돌아온다).
+                onSelectHospital = { id -> navController.navigate(Route.HospitalDetail(id)) },
                 onNavigateToGuide = { navController.navigateToTab(Route.Guide) },
                 onNavigateToNearby = { navController.navigate(Route.Nearby(route.hospitalId)) },
                 onNavigateToMap = { navController.navigate(Route.MapView(route.hospitalId)) },
@@ -182,6 +185,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.PlaceDetail>()
             PlaceDetailScreen(
                 placeId = route.placeId,
+                // "주변 같은 종류의 장소" 카드 → 그 장소 상세로. 상세 위에 상세가 쌓이는 건 의도한
+                // 동작이다(병원 상세의 주변 병원 카드와 같다 — 비교하다 뒤로 가면 원래 장소로 온다).
+                onSelectPlace = { id -> navController.navigate(Route.PlaceDetail(id)) },
                 onBack = navController::popBackStack
             )
         }
@@ -243,6 +249,10 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             FavoriteScreen(
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
+                // 빈 상태의 "병원 둘러보기". 즐겨찾기는 탭이 아니라 Home 위에 쌓인 push 라우트라
+                // navigateToTab이 아니라 이쪽을 써야 한다 — 그냥 쓰면 즐겨찾기가 Home 탭의 스택으로
+                // 저장돼서, 나중에 바텀바 "홈"을 누를 때 되살아난다(Route.kt 주석 참고).
+                onBrowseHospitals = { navController.navigateToTabLeavingCurrent(Route.HospitalSearchList) },
                 onBack = navController::popBackStack
             )
         }
@@ -267,6 +277,8 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onSelectHospital = { hospitalId -> navController.navigate(Route.HospitalDetail(hospitalId)) },
                 onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
                 onSelectTourismItem = { itemId -> navController.navigate(Route.TourismCatalogItemDetail(recentItemId = itemId)) },
+                // 즐겨찾기와 같은 이유로 navigateToTabLeavingCurrent를 쓴다.
+                onBrowseHospitals = { navController.navigateToTabLeavingCurrent(Route.HospitalSearchList) },
                 onBack = navController::popBackStack
             )
         }
@@ -310,13 +322,13 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onNavigateToCtaTarget = { target ->
                     when (target) {
                         DiagnosisCtaTarget.HOSPITAL_BROWSE ->
-                            // 다른 진입점과 동일하게 navigateToTab으로 통일한다 — HospitalSearchList로
-                            // 가는 경로가 하나라도 순수 navigate()를 쓰면 바텀바 "홈" 탭이 못 빠져나오는
-                            // 문제가 있다(Route.kt의 navigateToTab 함수 주석 참고).
-                            navController.navigateToTab(Route.HospitalSearchList)
+                            // 자가진단도 탭이 아니라 Home 위에 쌓인 push 라우트라, 즐겨찾기와 같은
+                            // 이유로 navigateToTabLeavingCurrent를 쓴다(Route.kt 주석 참고). 순수
+                            // navigate()를 쓰면 안 되는 이유도 그대로다.
+                            navController.navigateToTabLeavingCurrent(Route.HospitalSearchList)
                         DiagnosisCtaTarget.WELLNESS_PLACES ->
                             // Home과 하단 웰니스 탭의 진입 방식까지 통일해 동일 화면이 중복으로 쌓이지 않게 한다.
-                            navController.navigateToTab(Route.Nearby(hospitalId = "14"))
+                            navController.navigateToTabLeavingCurrent(Route.Nearby(hospitalId = "14"))
                         // 나머지는 진단 결과 전용 신규 화면을 따로 만들지 않고, 이용 가이드(S-06)
                         // STEP 상세를 그대로 재사용한다(사용자 피드백으로 신규 화면은 걷어냄).
                         DiagnosisCtaTarget.GUIDE_STEP01_ENTRY_PREPARATION ->

@@ -24,5 +24,8 @@ data class PlaceDetailUiState(
     val isLoading: Boolean = true,
     val place: Place? = null,
     val isFavorite: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // 이 장소 좌표를 기준으로 조회한, 같은 종류(PlaceType)의 주변 장소들(자기 자신 제외).
+    // 곁들이는 추천이라 실패해도 화면 전체를 오류로 만들지 않는다 — 빈 목록이면 섹션이 사라진다.
+    val nearbySamePlaces: List<Place> = emptyList()
 )

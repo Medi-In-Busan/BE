@@ -118,6 +118,7 @@ import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
+import com.mediinbusan.app.core.ui.rememberFavoriteTogglePop
 import com.mediinbusan.app.core.ui.rememberRevealedCount
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
@@ -281,7 +282,9 @@ private fun TourismCatalogContent(
             )
             uiState.catalog == null || uiState.catalog.items.isEmpty() -> EmptyState(
                 message = strings.tourism.emptyResultMessage,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(innerPadding),
+                actionLabel = strings.common.retryButtonLabel,
+                onAction = onRetry
             )
             else -> {
                 val catalog = uiState.catalog
@@ -412,7 +415,9 @@ private fun AccessibleTourismCatalogContent(
             )
             uiState.catalog == null || uiState.catalog.items.isEmpty() -> EmptyState(
                 message = strings.tourism.emptyResultMessage,
-                modifier = Modifier.padding(contentPadding)
+                modifier = Modifier.padding(contentPadding),
+                actionLabel = strings.common.retryButtonLabel,
+                onAction = onRetry
             )
             else -> {
                 // loadGeneration 기준 리빌 — RecommendedPlacesCatalogContent와 같은 이유
@@ -521,7 +526,9 @@ private fun RecommendedPlacesCatalogContent(
             )
             uiState.catalog == null || uiState.catalog.items.isEmpty() -> EmptyState(
                 message = strings.tourism.emptyResultMessage,
-                modifier = Modifier.padding(contentPadding)
+                modifier = Modifier.padding(contentPadding),
+                actionLabel = strings.common.retryButtonLabel,
+                onAction = onRetry
             )
             else -> {
                 val combinedCount = uiState.recommendedItems.size + uiState.visibleItems.size
@@ -1293,6 +1300,7 @@ private fun TourismGridPlaceCard(
                 Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.72f)))
             )
         )
+        val favoritePop = rememberFavoriteTogglePop(isFavorite = isFavorite, onToggle = onToggleFavorite)
         Icon(
             imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
             contentDescription = if (isFavorite) {
@@ -1304,12 +1312,14 @@ private fun TourismGridPlaceCard(
             // minimumInteractiveComponentSize()로 터치 영역을 48dp까지 넓히되, 보이는 아이콘
             // 크기(20dp)는 그대로 두고 그 안에서 클릭을 받는다 — FavoriteHeartButton.kt와 같은
             // 순서(minimumInteractiveComponentSize → size → clickable)를 따른다.
+            // 팝 스케일은 clickable 뒤에 붙인다 — 앞에 두면 터치 영역까지 같이 줄었다 커진다.
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(4.dp)
                 .minimumInteractiveComponentSize()
                 .size(20.dp)
-                .clickable(onClick = onToggleFavorite)
+                .clickable(onClick = favoritePop.onClick)
+                .then(favoritePop.scaleModifier)
         )
         Column(
             modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp),
