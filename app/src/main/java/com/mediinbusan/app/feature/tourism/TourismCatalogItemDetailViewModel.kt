@@ -52,6 +52,16 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
             } else {
                 recordView(selection.item, selection.category, selection.district)
             }
+        } else {
+            // 보여줄 게 아무것도 없는 진입(프로세스 재생성으로 PendingTourismCatalogItem이 비었거나
+            // 상세 라우트로 직접 들어온 경우) — 화면의 "consumed && selectedTitle == null" 판정이
+            // 뒤로가기를 처리한다. 예전엔 여기서 상태를 그대로 둬서 consumed가 false로 남았고, 그
+            // 조건이 성립하지 않아 뒤로가기도 안 되고 아무것도 안 그려진 빈 화면만 남았다.
+            //
+            // 최근 본 항목으로 들어온 경우엔 화면이 곧바로 loadFromRecent()로 이 상태를 덮어쓰므로
+            // 여기서 뒤로가기 신호를 켜도 안전하다 — 다만 화면이 그 덮어쓰기를 놓치지 않도록
+            // 판정 시점에 상태를 다시 읽어야 한다(TourismCatalogItemDetailScreen의 해당 주석 참고).
+            _uiState.value = TourismCatalogItemDetailUiState(consumed = true)
         }
     }
 
