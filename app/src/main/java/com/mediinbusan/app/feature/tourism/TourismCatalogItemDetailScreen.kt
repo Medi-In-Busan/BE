@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material3.Button
@@ -93,6 +94,8 @@ import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.MediTipContent
 import com.mediinbusan.app.core.ui.TravelerHelpContent
+import com.mediinbusan.app.core.ui.VisitInfo
+import com.mediinbusan.app.core.ui.VisitInfoContent
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.place.toPlaceType
@@ -117,7 +120,14 @@ fun TourismCatalogItemDetailScreen(
     }
 
     LaunchedEffect(uiState.consumed, uiState.selectedTitle) {
-        if (uiState.consumed && uiState.selectedTitle == null) onBack()
+        // 상태를 컴포지션에서 캡처한 값이 아니라 여기서 다시 읽는다.
+        //
+        // 바로 위 LaunchedEffect가 같은 프레임에 loadFromRecent()로 상태를 덮어쓰기 때문이다
+        // (LaunchedEffect는 UNDISPATCHED로 시작해서 첫 중단점까지 동기 실행되고, 선언 순서대로
+        // 돌아간다 — 그래서 이 블록이 돌 때는 이미 덮어써져 있다). 캡처값으로 판정하면 최근 본
+        // 항목에서 들어왔을 때 그 덮어쓰기를 못 보고 상세가 열리자마자 닫힌다.
+        val state = viewModel.uiState.value
+        if (state.consumed && state.selectedTitle == null) onBack()
     }
     if (uiState.selectedTitle == null) return
 
@@ -210,8 +220,16 @@ private fun TourismDetailLoaded(
     val highlightCopy = remember(item.title, placeType, strings.language) {
         resolveBusanHighlight(item.title, placeType)?.translatedCopy(strings.language)
     }
-    val externalLinkUrl = item.details["homepage"]
-        ?: item.details.values.firstOrNull { it.startsWith("http://") || it.startsWith("https://") }
+    // 하단 "관련 링크 열기" 버튼용. 홈페이지는 여기서 제외한다 — 아래 방문 정보 카드가 이미 누를 수
+    // 있는 링크 행으로 보여주고 있어서, 예전처럼 homepage를 먼저 집으면 같은 링크가 한 화면에 둘이
+    // 된다. 이 버튼에 남는 건 GPX 경로(WALKING)·오디오 해설(AUDIO)처럼 방문 정보가 아닌 링크뿐이다.
+    val externalLinkUrl = item.details.entries.firstOrNull { (key, value) ->
+        key !in VisitInfo.DetailKeys && (value.startsWith("http://") || value.startsWith("https://"))
+    }?.value
+    // 방문 정보(운영시간·휴무일·대표메뉴·이용요금·주차·홈페이지)는 아래 일반 details 표가 아니라
+    // 전용 카드로 뺀다 — 라벨+값 한 줄로 취급하기엔 값 길이가 제각각이고(한 줄 ~ 여러 문단),
+    // 대표메뉴처럼 칩으로 흩어야 읽히는 값이 섞여 있다. 카드 내용은 웰니스 장소 상세와 공유한다.
+    val visitInfo = remember(item.details) { VisitInfo.fromDetails(item.details) }
     val labeledDetails = item.details.entries.mapNotNull { (key, value) ->
         strings.tourism.detailFieldLabels[key]?.let { label -> DetailValue(key, label, value) }
     }
@@ -254,6 +272,21 @@ private fun TourismDetailLoaded(
                         .height(260.dp)
                         .clip(RoundedCornerShape(24.dp))
                 )
+            }
+        }
+        // 운영시간·대표메뉴 같은 사실 정보를 소개문보다 먼저 둔다 — 웰니스 장소 상세도
+        // 기본정보 → 방문정보 → 소개 순서라, 같은 장소를 어느 화면으로 들어가든 읽는 순서가 같다.
+        if (!visitInfo.isEmpty) {
+            item {
+                CurationSectionCard(
+                    title = strings.placeCuration.visitInfoTitle,
+                    icon = Icons.Default.Schedule
+                ) {
+                    VisitInfoContent(
+                        visitInfo = visitInfo,
+                        onOpenHomepage = onOpenLink
+                    )
+                }
             }
         }
         // 소개는 이제 사라지지 않는다 — TourAPI subtitle이 비면 부산 명소 큐레이션 한 줄로,
@@ -305,9 +338,14 @@ private fun TourismDetailLoaded(
                 )
             }
         }
-        val secondaryDetails = labeledDetails.filterNot { it.key in setOf("congestionRate", "baseYmd") }
+        // 방문 정보 카드로 빠진 키는 여기서 뺀다 — 같은 값이 두 카드에 겹쳐 나오면 안 된다.
+        val secondaryDetails = labeledDetails.filterNot {
+            it.key in setOf("congestionRate", "baseYmd") || it.key in VisitInfo.DetailKeys
+        }
         if (secondaryDetails.isNotEmpty()) {
-            item { DetailInfoCard(title = sectionLabels.visitInformation, details = secondaryDetails) }
+            // 남는 건 지역·요일·난이도·거리처럼 성격이 제각각인 부수 항목이라 "방문 정보"가 아니라
+            // 병원 상세와 같은 "기타정보"로 부른다(CLAUDE.md §5 — 같은 뜻의 문구를 새로 만들지 않는다).
+            item { DetailInfoCard(title = strings.hospitalDetail.otherInfoSectionTitle, details = secondaryDetails) }
         }
         item {
             CurationSectionCard(
@@ -553,17 +591,18 @@ private fun DetailSurface(content: @Composable () -> Unit) {
     }
 }
 
+// "방문 정보" 라벨은 이제 여기 없다 — 웰니스 장소 상세와 공유하는 카드가 쓰므로 공유 자리
+// (PlaceCurationStrings.visitInfoTitle)로 옮겼다. 두 벌로 두면 같은 카드가 화면마다 다른 문구를 단다.
 private data class DetailSectionLabels(
     val introduction: String,
-    val visitInformation: String,
     val directions: String
 )
 
 private fun SupportedLanguage.detailSectionLabels(): DetailSectionLabels = when (this) {
-    SupportedLanguage.KO -> DetailSectionLabels("장소 소개", "방문 정보", "위치 및 이동")
-    SupportedLanguage.EN -> DetailSectionLabels("About this place", "Visitor information", "Location and directions")
-    SupportedLanguage.JA -> DetailSectionLabels("スポット紹介", "訪問情報", "位置・アクセス")
-    SupportedLanguage.ZH -> DetailSectionLabels("景点介绍", "访问信息", "位置与交通")
+    SupportedLanguage.KO -> DetailSectionLabels("장소 소개", "위치 및 이동")
+    SupportedLanguage.EN -> DetailSectionLabels("About this place", "Location and directions")
+    SupportedLanguage.JA -> DetailSectionLabels("スポット紹介", "位置・アクセス")
+    SupportedLanguage.ZH -> DetailSectionLabels("景点介绍", "位置与交通")
 }
 
 private data class DetailValue(val key: String, val label: String, val value: String) {
@@ -573,6 +612,7 @@ private data class DetailValue(val key: String, val label: String, val value: St
             "distance", "crsDstnc" -> Icons.Default.Route
             "requiredTime", "leadTime", "crsTotlRqrmHour" -> Icons.Default.AccessTime
             "baseYmd", "baseYm", "daywkDivNm" -> Icons.Default.CalendarToday
+            // detailIntro2 방문 정보 키는 여기 오지 않는다 — 전용 카드(VisitInfoContent)가 가져간다.
             else -> Icons.Default.Info
         }
 }

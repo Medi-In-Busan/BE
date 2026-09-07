@@ -20,6 +20,26 @@ data class PlaceCurationStrings(
     val atAGlanceSourceNote: String,
     /** 반대로 진짜 TourAPI에서 온 항목(이름·주소·사진·소개·갱신일)의 출처 표기. 화면 맨 아래 한 줄. */
     val officialDataCreditLabel: String,
+    /*
+     * "방문 정보" 카드(core/ui/VisitInfoSection.kt)의 라벨. 웰니스 장소 상세와 관광 카탈로그 상세가
+     * 같은 컴포넌트를 쓰므로 두 화면 중 한쪽(nearby/tourism)이 아니라 공유 자리인 여기에 둔다.
+     *
+     * 운영시간·홈페이지는 뜻이 겹쳐서 새로 만들지 않고 hospitalDetail의 openingHoursLabel/
+     * homepageLabel을 그대로 재사용한다(CLAUDE.md §5).
+     */
+    val visitInfoTitle: String,
+    val restDateLabel: String,
+    val signatureMenuLabel: String,
+    val usageFeeLabel: String,
+    val parkingLabel: String,
+    /**
+     * 값이 한국어 원문임을 밝히는 각주 — KO 이외의 언어에서만 붙는다.
+     *
+     * 이름·주소·소개와 달리 방문 정보는 언어별 API를 따로 부르지 않아 EN/JA/ZH 사용자도 한국어를
+     * 보게 된다. 라벨만 번역돼 있어 "번역이 덜 됐나"로 읽히기 쉬워서, [atAGlanceSourceNote]와 같은
+     * 방식으로 왜 원문인지 한 줄 밝힌다.
+     */
+    val visitInfoOriginalLanguageNote: String,
     val recoveryFitLabel: String,
     val activityLevelLabel: String,
     val settingLabel: String,
@@ -63,6 +83,12 @@ data class PlaceCurationStrings(
             atAGlanceTitle = "메디인부산 가이드",
             atAGlanceSourceNote = "장소 유형을 기준으로 메디인부산이 정리한 참고 안내입니다 — 관광공사 제공 정보가 아닙니다. 언제부터 다녀도 되는지는 진료받은 의료기관 안내를 우선하세요.",
             officialDataCreditLabel = "이름·주소·사진·소개·갱신일은 한국관광공사 TourAPI 제공 정보입니다.",
+            visitInfoTitle = "방문 정보",
+            restDateLabel = "휴무일",
+            signatureMenuLabel = "대표메뉴",
+            usageFeeLabel = "이용요금",
+            parkingLabel = "주차",
+            visitInfoOriginalLanguageNote = "제공처가 준 원문 그대로입니다.",
             recoveryFitLabel = "방문 시기",
             activityLevelLabel = "활동 강도",
             settingLabel = "환경",
@@ -120,6 +146,12 @@ data class PlaceCurationStrings(
             atAGlanceTitle = "MediIn Busan guide",
             atAGlanceSourceNote = "A MediIn Busan reference guide based on the type of place — not data provided by the Korea Tourism Organization. On when it is safe to go out, follow the guidance of the clinic that treated you.",
             officialDataCreditLabel = "Name, address, photo, description and update date are provided by the Korea Tourism Organization TourAPI.",
+            visitInfoTitle = "Visit info",
+            restDateLabel = "Closed",
+            signatureMenuLabel = "Signature menu",
+            usageFeeLabel = "Admission",
+            parkingLabel = "Parking",
+            visitInfoOriginalLanguageNote = "Shown in Korean, exactly as the provider supplies it.",
             recoveryFitLabel = "When to visit",
             activityLevelLabel = "Effort",
             settingLabel = "Setting",
@@ -177,6 +209,12 @@ data class PlaceCurationStrings(
             atAGlanceTitle = "MediIn Busan 指南",
             atAGlanceSourceNote = "此为 MediIn Busan 依据场所类型整理的参考信息，并非韩国观光公社提供的数据。何时可以外出，请以为您诊疗的医疗机构的说明为准。",
             officialDataCreditLabel = "名称、地址、照片、介绍及更新日期由韩国观光公社 TourAPI 提供。",
+            visitInfoTitle = "访问信息",
+            restDateLabel = "休息日",
+            signatureMenuLabel = "招牌菜",
+            usageFeeLabel = "使用费",
+            parkingLabel = "停车",
+            visitInfoOriginalLanguageNote = "以提供方原文（韩语）显示。",
             recoveryFitLabel = "建议时机",
             activityLevelLabel = "活动强度",
             settingLabel = "环境",
@@ -234,6 +272,12 @@ data class PlaceCurationStrings(
             atAGlanceTitle = "メディインブサン ガイド",
             atAGlanceSourceNote = "場所の種類をもとにメディインブサンがまとめた参考案内です。韓国観光公社提供のデータではありません。いつから出かけてよいかは、診療を受けた医療機関の案内を優先してください。",
             officialDataCreditLabel = "名称・住所・写真・紹介・更新日は韓国観光公社 TourAPI 提供の情報です。",
+            visitInfoTitle = "訪問情報",
+            restDateLabel = "定休日",
+            signatureMenuLabel = "代表メニュー",
+            usageFeeLabel = "利用料金",
+            parkingLabel = "駐車場",
+            visitInfoOriginalLanguageNote = "提供元の原文（韓国語）のまま表示しています。",
             recoveryFitLabel = "訪問の目安",
             activityLevelLabel = "活動量",
             settingLabel = "環境",

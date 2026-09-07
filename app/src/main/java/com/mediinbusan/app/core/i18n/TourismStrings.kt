@@ -170,6 +170,12 @@ data class TourismStrings(
             // 이 맵에 없는 필드는 화면에 표시하지 않는다(TourismCatalogScreen/
             // TourismCatalogItemDetailScreen 참고).
             detailFieldLabels = mapOf(
+                // detailIntro2 방문 정보(businessHours/restDate/signatureMenu/usageFee/parkingInfo)는
+                // 이 표에 없다 — 전용 카드(core/ui/VisitInfoSection.kt)가 가져가고 라벨도 거기서
+                // 공유 문구(PlaceCurationStrings)를 쓴다. 여기 남는 건 그 카드로 안 가는 부수 항목뿐이다.
+                //
+                // 이 표에 라벨이 없는 키는 화면에서 조용히 버려진다 — 백엔드가 새 필드를 내려주기
+                // 시작하면 여기에도 같이 넣어야 보인다(TourismCatalogService.PRIORITY_DETAIL_FIELDS와 짝).
                 "tel" to "전화",
                 "distance" to "거리",
                 "requiredTime" to "소요시간", "leadTime" to "소요시간",

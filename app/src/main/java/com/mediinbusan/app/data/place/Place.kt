@@ -15,7 +15,14 @@ data class Place(
     val distanceFromHospitalMeters: Double? = null,
     val lastModified: String? = null,
     // 현재 조회 언어로 실제 번역된 이름인지(한국어일 땐 항상 true) — 지도 "번역된 장소만" 필터가 쓴다.
-    val isTranslated: Boolean = true
+    val isTranslated: Boolean = true,
+    // 상세 화면 "방문 정보". 대부분의 장소는 이 중 일부만 차 있고, 비면 그 행은 그리지 않는다.
+    val businessHours: String? = null,
+    val restDate: String? = null,
+    val signatureMenu: String? = null,
+    val usageFee: String? = null,
+    val parkingInfo: String? = null,
+    val homepageUrl: String? = null
 )
 
 enum class PlaceType {
