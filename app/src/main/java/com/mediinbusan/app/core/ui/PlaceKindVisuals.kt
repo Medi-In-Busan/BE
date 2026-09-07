@@ -1,5 +1,8 @@
 package com.mediinbusan.app.core.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Brush
@@ -15,8 +18,14 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
@@ -105,3 +114,22 @@ private val LodgingKindInk = Color(0xFF5A49D6)
 private val ShoppingKindInk = Color(0xFF0B7C87)
 private val SpaKindInk = Color(0xFFB23A64)
 private val WalkKindInk = Color(0xFF1B7A4B)
+
+// 사진이 없는 장소의 대체 썸네일 — 종류별 색 그라데이션 + 아이콘 배지. Map 화면(MapPlaceListRow)과
+// 부산관광 홈 슬라이더(NearbyScreen) 등 여러 feature가 같은 톤을 쓰도록 core/ui에 공유해 둔다.
+@Composable
+fun PlaceFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.background(
+            ComposeBrush.verticalGradient(listOf(visual.color.copy(alpha = 0.20f), visual.color.copy(alpha = 0.06f)))
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = visual.icon,
+            contentDescription = null,
+            tint = visual.color,
+            modifier = Modifier.size(26.dp)
+        )
+    }
+}

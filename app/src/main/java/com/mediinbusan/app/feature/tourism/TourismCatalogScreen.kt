@@ -115,6 +115,7 @@ import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FilterChipPill
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberRevealedCount
@@ -123,7 +124,6 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import com.mediinbusan.app.domain.tourism.placeCategoryCodes
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.foundation.shape.CircleShape
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -131,6 +131,8 @@ import kotlinx.coroutines.flow.filter
 @Composable
 fun TourismCatalogScreen(
     categoryName: String,
+    filterCategoryCode: String? = null,
+    searchQuery: String? = null,
     onNavigateToCourse: (category: String, district: String?) -> Unit,
     onSelectItem: () -> Unit,
     onBack: () -> Unit,
@@ -138,7 +140,7 @@ fun TourismCatalogScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val language = LocalAppStrings.current.language
-    LaunchedEffect(categoryName, language) { viewModel.load(categoryName) }
+    LaunchedEffect(categoryName, language) { viewModel.load(categoryName, filterCategoryCode, searchQuery) }
 
     // viewModel.load()가 끝나기 전(DataStore 언어 설정을 읽는 동안)에는 uiState.category가 계속
     // null이다 — 그 사이엔 아래 분기가 전부 안 맞아 TourismCatalogContent로 떨어지는데, 그 화면의
@@ -1397,14 +1399,7 @@ private fun CrowdingRankCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF)))),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Filled.TrendingUp, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(25.dp))
-                        }
+                        MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 25.dp)
                     }
                     Surface(
                         // 홈 화면 문서스캔/AI준비체크 유리 버튼(GlassCircleFab)과 같은 흰색 알파 톤.

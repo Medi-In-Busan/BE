@@ -46,8 +46,17 @@ sealed interface Route {
     @Serializable
     data object TourismHub : Route // S-07 하위 부산 관광 공공데이터 허브
 
+    // filterCategoryCode: 웰니스 서치바 밑 4개 필터 원형 버튼(관광지/숙박/맛집)에서 바로 진입할 때
+    // 카테고리 칩(TourismCatalogViewModel.selectedCategoryCode)을 미리 걸어서 던진다 — 없으면(무장애
+    // 진입 등) 화면 기본 동작(관광지 기본 선택 로직) 그대로.
+    // searchQuery: 웰니스 서치바에서 검색을 실행했을 때 부산 관광지 리스트업의 검색창에 그대로
+    // 이어 붙인다(무장애 관광·핫플레이스까지 아우르는 통합검색은 없다 — NearbyScreen 주석 참고).
     @Serializable
-    data class TourismCatalog(val category: String) : Route // S-07 하위 관광 데이터 카테고리 목록
+    data class TourismCatalog(
+        val category: String,
+        val filterCategoryCode: String? = null,
+        val searchQuery: String? = null
+    ) : Route // S-07 하위 관광 데이터 카테고리 목록
 
     // core/common/PendingTourismCatalogItem을 거쳐 선택 항목을 전달한다(위 TourismCatalog 주석과
     // 같은 이유 — Map 필드가 있는 항목을 타입세이프 인자로 넘기기 어렵고, 항목 단건 조회 API도 없다).
