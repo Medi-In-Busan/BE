@@ -69,7 +69,7 @@ class TourismCatalogViewModel @Inject constructor(
         }
     }
 
-    fun load(categoryName: String) {
+    fun load(categoryName: String, initialCategoryCode: String? = null, initialSearchQuery: String? = null) {
         viewModelScope.launch {
             val preferences = userPreferencesRepository.userPreferences.first()
             val requestedCategory = runCatching { TourismCatalogCategory.valueOf(categoryName) }.getOrNull()
@@ -86,6 +86,16 @@ class TourismCatalogViewModel @Inject constructor(
                 tourismCategoryForLanguage(preferences.languageCode)
             } else {
                 requestedCategory
+            }
+            // 웰니스 필터 원형 버튼(관광지/숙박/맛집)에서 넘어온 경우 — 아래 "관광지 기본 선택"
+            // 로직(selectedCategoryCode == null일 때만 동작)보다 먼저 걸어서 그 기본값을 덮는다.
+            if (initialCategoryCode != null) {
+                _uiState.update { it.copy(selectedCategoryCode = initialCategoryCode) }
+            }
+            // 웰니스 서치바에서 검색 실행 후 넘어온 경우 — loadCatalog()의 Result.Success 마지막에
+            // applyClientFilters()가 이 값을 읽어 그대로 필터링해준다.
+            if (initialSearchQuery != null) {
+                _uiState.update { it.copy(searchQuery = initialSearchQuery) }
             }
             // "부산 관광지"도 다른 구·군 지원 카테고리처럼 첫 진입부터 특정 지역(해운대구) 중심으로
             // 보여준다(wellness_tourism_recommendation_list.png 기준 — "전체"가 아니라 해운대구가

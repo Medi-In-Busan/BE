@@ -166,8 +166,11 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             NearbyScreen(
                 hospitalId = route.hospitalId,
                 onSelectTourismItem = { navController.navigate(Route.TourismCatalogItemDetail()) },
-                onNavigateToTourismCatalog = { category ->
-                    navController.navigate(Route.TourismCatalog(category.name))
+                onNavigateToTourismCatalog = { category, filterCategoryCode ->
+                    navController.navigate(Route.TourismCatalog(category.name, filterCategoryCode))
+                },
+                onSearchTourism = { category, query ->
+                    navController.navigate(Route.TourismCatalog(category.name, searchQuery = query))
                 },
                 onNavigateToSettings = { navController.navigate(Route.Settings) }
             )
@@ -201,6 +204,8 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             val route = backStackEntry.toRoute<Route.TourismCatalog>()
             TourismCatalogScreen(
                 categoryName = route.category,
+                filterCategoryCode = route.filterCategoryCode,
+                searchQuery = route.searchQuery,
                 onSelectItem = { navController.navigate(Route.TourismCatalogItemDetail()) },
                 onNavigateToCourse = { category, district ->
                     navController.navigate(Route.RecommendedTourismCourse(category, district))
