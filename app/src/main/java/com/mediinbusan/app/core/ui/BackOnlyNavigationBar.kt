@@ -99,7 +99,7 @@ fun BackOnlyNavigationBar(
                 IconButton(onClick = onClick) {
                     Icon(
                         imageVector = Icons.Default.Map,
-                        contentDescription = "앱 지도에서 보기",
+                        contentDescription = LocalAppStrings.current.common.mapDetailsContentDescription,
                         tint = CoralPrimary,
                         modifier = Modifier.size(24.dp)
                     )

@@ -44,6 +44,9 @@ import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
  */
 @Composable
 fun FilterChipPill(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // 필터는 화면이 통째로 다시 그려져서 무엇이 바뀌었는지 눈으로 좇기 어렵다 — 누른 순간의
+    // 가벼운 틱이 "내 입력이 먹었다"를 즉시 알려준다. 공용 조각이라 필터를 쓰는 화면 전부에 걸린다.
+    val haptics = rememberHaptics()
     Box(
         modifier = modifier
             .clip(RoundedCornerShapePercent50)
@@ -53,7 +56,7 @@ fun FilterChipPill(label: String, selected: Boolean, onClick: () -> Unit, modifi
                 color = if (selected) CoralPrimaryContainer else SettingsBorder,
                 shape = RoundedCornerShapePercent50
             )
-            .clickable(onClick = onClick)
+            .clickable { haptics.tick(); onClick() }
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(
@@ -111,11 +114,12 @@ fun BrandDropdownMenuItem(
     onClick: () -> Unit,
     accentColor: Color = CoralPrimary
 ) {
+    val haptics = rememberHaptics()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (selected) accentColor.copy(alpha = 0.12f) else Color.Transparent)
-            .clickable(onClick = onClick)
+            .clickable { haptics.tick(); onClick() }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)

@@ -15,6 +15,12 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 // awaitInstance는 Companion의 확장 함수(ProcessCameraProviderExtKt)라 따로 import해야 한다.
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -56,6 +62,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
@@ -75,6 +82,7 @@ import com.mediinbusan.app.BuildConfig
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
+import com.mediinbusan.app.core.ui.rememberHaptics
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -113,6 +121,7 @@ fun DocumentCaptureScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val haptics = rememberHaptics()
 
     val previewView = remember {
         PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }
@@ -169,6 +178,9 @@ fun DocumentCaptureScreen(
         if (isCapturing || camera == null) {
             return
         }
+        // 저장 완료(onImageSaved)가 아니라 누른 순간에 울린다 — 고화질 모드라 저장까지 수백 ms가
+        // 걸리는데, 그때 울리면 셔터를 누른 손과 피드백이 어긋나 두 번 누르게 된다.
+        haptics.confirm()
         isCapturing = true
         val file = createCaptureImageFile(context)
         imageCapture.takePicture(
@@ -191,7 +203,10 @@ fun DocumentCaptureScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 
-        CaptureGuideOverlay(modifier = Modifier.fillMaxSize())
+        CaptureGuideOverlay(
+            isScanning = !isCameraUnavailable && !isCapturing,
+            modifier = Modifier.fillMaxSize()
+        )
 
         Column(
             modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
@@ -272,15 +287,42 @@ fun DocumentCaptureScreen(
 }
 
 /**
- * 가이드 프레임 밖을 어둡게 덮고, 프레임 모서리에 코랄 브래킷을 그린다.
+ * 스캔라인이 가이드 프레임을 한 번 훑는 시간.
+ *
+ * 인트로 히어로(2600ms)·분석 중 오버레이(2200ms)보다 느리다. 앞의 둘은 "지금 읽고 있다"를
+ * 보여주지만 여기는 사용자가 문서를 맞추기를 기다리는 화면이라, 빠르면 이미 처리 중인 줄 알게 된다.
+ */
+private const val CaptureSweepCycleMs = 3000
+
+/**
+ * 가이드 프레임 밖을 어둡게 덮고, 프레임 모서리에 코랄 브래킷을 그린 뒤 그 안을 스캔라인이 훑는다.
  *
  * 스캔 결과 화면의 `ScanFrameCorners`와 같은 톤이지만 그걸 재사용하지 않는다 — 어두운 스크림에
  * 구멍을 뚫는 것과 브래킷을 그리는 것이 **같은 사각형**을 알아야 해서, 둘을 한 번의 그리기 패스에서
- * 같은 좌표로 계산해야 어긋나지 않는다.
+ * 같은 좌표로 계산해야 어긋나지 않는다. 스캔라인도 같은 이유로 여기서 같이 그린다.
+ *
+ * 스캔라인을 넣은 이유: 인트로([DocumentScanIntro])와 분석 중([DocumentScanningOverlay])은 라인이
+ * 도는데 그 사이에 끼는 이 화면만 정지 프레임이라, 세 화면을 잇는 시각 언어가 가운데서 끊겨 있었다.
+ *
+ * @param isScanning 카메라가 살아 있고 촬영 중이 아닐 때만 true. 셔터를 누른 순간 라인이 멈춰
+ *   "잡혔다"는 신호가 되고, 카메라를 못 켠 상태에서 훑고 있는 척하지도 않는다.
  */
 @Composable
-private fun CaptureGuideOverlay(modifier: Modifier = Modifier) {
+private fun CaptureGuideOverlay(isScanning: Boolean, modifier: Modifier = Modifier) {
     val guideDescription = LocalAppStrings.current.documentScan.captureGuideMessage
+    val transition = rememberInfiniteTransition(label = "captureGuide")
+    // 인트로 히어로와 같은 Reverse. 아직 잡아낸 게 없는 대기 상태라 왕복이 잔잔하다
+    // (분석 중 오버레이만 박스를 하나씩 잡는 사이클이라 Restart를 쓴다).
+    val sweep by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = CaptureSweepCycleMs, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "captureGuideSweep"
+    )
+
     Canvas(
         // 스크림에 구멍을 뚫으려면(BlendMode.Clear) 이 레이어가 별도 버퍼에 그려져야 한다.
         // Offscreen이 없으면 화면 전체가 지워진다.
@@ -305,7 +347,52 @@ private fun CaptureGuideOverlay(modifier: Modifier = Modifier) {
             blendMode = BlendMode.Clear
         )
         drawGuideCorners(left = left, top = top, width = guideWidth, height = guideHeight)
+        if (isScanning) {
+            // 구멍(BlendMode.Clear)을 뚫은 뒤에 그려야 라인이 지워지지 않고 남는다.
+            drawGuideSweep(left = left, top = top, width = guideWidth, height = guideHeight, sweep = sweep)
+        }
     }
+}
+
+/**
+ * 가이드 프레임 안쪽만 훑는 스캔라인 + 뒤따르는 글로우.
+ *
+ * 분석 중 오버레이(`drawScanBeam`)와 같은 구성이되 두 가지가 다르다 — 프레임 밖으로 새지 않도록
+ * 가로 범위를 가이드 사각형으로 자르고, 카메라 프리뷰 위라 밝기를 낮춘다(흰 종이 위에서 라인이
+ * 너무 세면 문서를 맞추는 데 방해가 된다).
+ */
+private fun DrawScope.drawGuideSweep(
+    left: Float,
+    top: Float,
+    width: Float,
+    height: Float,
+    sweep: Float
+) {
+    val lineY = top + sweep * height
+    val glowHeight = 64.dp.toPx()
+    // Reverse라 라인이 위로 올라갈 때도 글로우가 아래에 깔린다. 진행 방향을 따라 뒤집지 않는 건
+    // 여기 글로우가 "지나간 자리"가 아니라 라인을 도드라지게 하는 그림자 역할이라서다.
+    val glowTop = (lineY - glowHeight).coerceAtLeast(top)
+
+    if (lineY > glowTop) {
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(Color.Transparent, CoralPrimary.copy(alpha = 0.20f)),
+                startY = glowTop,
+                endY = lineY
+            ),
+            topLeft = Offset(left, glowTop),
+            size = Size(width, lineY - glowTop)
+        )
+    }
+
+    drawLine(
+        color = CoralPrimary.copy(alpha = 0.75f),
+        start = Offset(left, lineY),
+        end = Offset(left + width, lineY),
+        strokeWidth = 2.dp.toPx(),
+        cap = StrokeCap.Round
+    )
 }
 
 private fun DrawScope.drawGuideCorners(left: Float, top: Float, width: Float, height: Float) {

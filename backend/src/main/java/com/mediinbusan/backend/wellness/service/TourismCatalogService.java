@@ -28,7 +28,31 @@ public class TourismCatalogService {
 
     private static final double BUSAN_CENTER_LATITUDE = 35.1796;
     private static final double BUSAN_CENTER_LONGITUDE = 129.0756;
-    private static final int MAX_DETAILS = 8;
+    /**
+     * details 맵에 담는 스칼라 필드 수 상한.
+     *
+     * 8칸이던 시절엔 응답 필드 순서에 그대로 끌려다녔다 — 앞쪽에 내부 코드(areacode/mlevel/
+     * lclsSystm* 등)가 몰려 있는 응답에서는 정작 화면에 그릴 값(거리·소요시간·난이도)이 잘려나가
+     * "방문 정보" 카드가 통째로 비었다. 칸을 늘리고, 그래도 넘칠 때를 대비해 아래
+     * {@link #PRIORITY_DETAIL_FIELDS}를 먼저 담는다.
+     */
+    private static final int MAX_DETAILS = 16;
+
+    /**
+     * 화면에 라벨이 있는 필드 — 이 순서대로 먼저 담는다.
+     *
+     * Android {@code TourismStrings.detailFieldLabels}와 짝이다. 앱은 라벨이 없는 키를 조용히 버리므로
+     * (라벨 없는 값을 원문 필드명 그대로 보여줄 순 없다), 한쪽만 늘리면 늘린 필드가 화면에 안 나온다 —
+     * 새 필드를 노출하려면 <b>양쪽을 같이</b> 고쳐야 한다.
+     */
+    private static final List<String> PRIORITY_DETAIL_FIELDS = List.of(
+        // detailIntro2 방문 정보(TourismPlaceMatchService가 붙인다)
+        "businessHours", "restDate", "signatureMenu", "usageFee", "parkingInfo",
+        "tel", "distance", "requiredTime", "leadTime",
+        "baseYmd", "baseYm", "signguNm", "rlteSignguNm",
+        "crsDstnc", "crsTotlRqrmHour", "crsLevel",
+        "rlteCtgryMclsNm", "hubCtgryMclsNm", "themeCategory", "daywkDivNm"
+    );
     private static final String CROWDING_CACHE_SOURCE = "crowding-catalog";
     private static final String CROWDING_CACHE_SCOPE = "BUSAN";
     private static final int HOT_PLACE_LIMIT = 5;
@@ -450,7 +474,7 @@ public class TourismCatalogService {
             number(item, "mapy", "mapY", "latitude", "lat"),
             number(item, "mapx", "mapX", "longitude", "lng"),
             // contenttypeid(12=관광지, 14=문화시설, 25=여행코스, 28=레포츠, 32=숙박, 38=쇼핑,
-            // 39=음식점) — PLACES_KO/ACCESSIBLE 카테고리 필터 칩에 쓴다. scalarDetails()의 8개
+            // 39=음식점) — PLACES_KO/ACCESSIBLE 카테고리 필터 칩에 쓴다. scalarDetails()의 개수
             // 캡에 걸려 누락될 수 있어 별도 필드로 명시적으로 뽑는다.
             first(item, "contenttypeid"),
             scalarDetails(item)
@@ -466,11 +490,22 @@ public class TourismCatalogService {
 
     private Map<String, String> scalarDetails(JsonNode item) {
         Map<String, String> details = new LinkedHashMap<>();
+        // 라벨이 있는 필드부터 자리를 잡는다 — 남는 칸은 아래에서 응답 순서대로 채운다.
+        for (String field : PRIORITY_DETAIL_FIELDS) {
+            if (details.size() >= MAX_DETAILS) {
+                break;
+            }
+            JsonNode value = item.path(field);
+            if (value.isValueNode() && hasText(value.asText()) && !isPresentationField(field)) {
+                details.put(field, value.asText());
+            }
+        }
         Iterator<Map.Entry<String, JsonNode>> fields = item.fields();
         while (fields.hasNext() && details.size() < MAX_DETAILS) {
             Map.Entry<String, JsonNode> field = fields.next();
             JsonNode value = field.getValue();
-            if (!value.isValueNode() || !hasText(value.asText()) || isPresentationField(field.getKey())) {
+            if (!value.isValueNode() || !hasText(value.asText()) || isPresentationField(field.getKey())
+                || details.containsKey(field.getKey())) {
                 continue;
             }
             details.put(field.getKey(), value.asText());
@@ -486,7 +521,7 @@ public class TourismCatalogService {
                 "cnctrRate", "contenttypeid",
                 // WALKING(Durunubi courseList) 전용: crsIdx/crsKorNm/crsSummary/sigun은 이미
                 // id/title/subtitle/address로 뽑혀서 details에 또 나올 필요가 없고, crsContents·
-                // crsTourInfo·travelerinfo·routeIdx·brdDiv는 장문 텍스트/내부 코드라 details 8개
+                // crsTourInfo·travelerinfo·routeIdx·brdDiv는 장문 텍스트/내부 코드라 한정된 details
                 // 슬롯을 이걸로 채우면 정작 거리·소요시간·난이도·GPX 링크가 밀려서 안 보인다.
                 "crsIdx", "crsKorNm", "crsSummary", "sigun",
                 "crsContents", "crsTourInfo", "travelerinfo", "routeIdx", "brdDiv" -> true;

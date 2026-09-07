@@ -26,6 +26,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +42,7 @@ import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.TipsAndUpdates
@@ -100,6 +104,7 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.AtAGlanceRow
 import com.mediinbusan.app.core.ui.CautionList
 import com.mediinbusan.app.core.ui.EmptyState
+import com.mediinbusan.app.core.ui.fallbackBannerImageFor
 import com.mediinbusan.app.core.ui.DetailPullDismissBox
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.KakaoMapView
@@ -110,8 +115,11 @@ import com.mediinbusan.app.core.ui.PlaceKindVisual
 import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.MediTipContent
 import com.mediinbusan.app.core.ui.TravelerHelpContent
+import com.mediinbusan.app.core.ui.VisitInfo
+import com.mediinbusan.app.core.ui.VisitInfoContent
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
+import com.mediinbusan.app.core.ui.rememberFavoriteTogglePop
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import java.util.Locale
@@ -119,6 +127,7 @@ import java.util.Locale
 @Composable
 fun PlaceDetailScreen(
     placeId: String,
+    onSelectPlace: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: PlaceDetailViewModel = hiltViewModel()
 ) {
@@ -147,6 +156,8 @@ fun PlaceDetailScreen(
             place != null -> PlaceDetailContent(
                 place = place,
                 isFavorite = uiState.isFavorite,
+                nearbyPlaces = uiState.nearbySamePlaces,
+                onSelectPlace = onSelectPlace,
                 onToggleFavorite = viewModel::onToggleFavorite,
                 onBack = onBack
             )
@@ -159,6 +170,8 @@ fun PlaceDetailScreen(
 private fun PlaceDetailContent(
     place: Place,
     isFavorite: Boolean,
+    nearbyPlaces: List<Place>,
+    onSelectPlace: (String) -> Unit,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -284,6 +297,12 @@ private fun PlaceDetailContent(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
+                // 영업시간·휴무일·대표메뉴·이용요금·주차·홈페이지. 이 값들은 백엔드가 TourAPI
+                // detailIntro2(그동안 한 번도 부르지 않던 오퍼레이션)와 부산맛집정보에서 새로 모아
+                // 내려주기 시작한 것이다 — 이 카드가 생기기 전까지 상세 화면은 "언제 여는지"조차
+                // 알려주지 못했다. 값이 하나도 없으면 카드 자체가 나오지 않는다.
+                PlaceVisitInfoSection(place = place)
+
                 // 소개는 이제 사라지지 않는다 — 원문(displayDescription)이 없으면 부산 명소 큐레이션
                 // 한 줄로, 그것도 없으면 유형별 기본 소개문으로 내려간다. 원문이 URL이나 `EX0000`
                 // 코드로 오는 장소가 흔해서(displayDescription이 그걸 걸러낸다) 폴백이 사실상 기본값이다.
@@ -318,6 +337,17 @@ private fun PlaceDetailContent(
                 // 하나로 합치고 나머지는 없앤다.
                 InfoSection(title = strings.hospitalDetail.locationSectionTitle, icon = Icons.Default.Place) {
                     LocationMiniMap(place = place)
+                }
+
+                // 병원 상세(S-05)의 "주변 같은 진료과목 병원"과 같은 자리·같은 구성이다 — 지도로
+                // "여기가 어디인지"를 본 직후에 "이 근처에 같은 종류가 또 뭐가 있는지"가 이어진다.
+                if (nearbyPlaces.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    NearbyPlacesSection(
+                        anchorType = place.type,
+                        places = nearbyPlaces,
+                        onSelectPlace = onSelectPlace
+                    )
                 }
 
                 // 장소와 무관하게 항상 같은 공공 안내(1330·119·결제/교통). 앱이 상담이나 통역사를
@@ -521,6 +551,9 @@ private fun QuickActionRow(
     onCall: () -> Unit
 ) {
     val strings = LocalAppStrings.current
+    // 하트만 누른 순간 팝이 들어간다 — 공유·전화는 화면이 바뀌거나 다이얼러가 떠서 피드백이
+    // 저절로 생기지만, 즐겨찾기는 아이콘이 바뀌는 것 말고 아무 일도 일어나지 않는다.
+    val favoritePop = rememberFavoriteTogglePop(isFavorite = isFavorite, onToggle = onToggleFavorite)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -534,8 +567,9 @@ private fun QuickActionRow(
                 strings.nearby.favoriteAddContentDescription
             },
             filled = isFavorite,
-            onClick = onToggleFavorite,
-            modifier = Modifier.weight(1f)
+            onClick = favoritePop.onClick,
+            modifier = Modifier.weight(1f),
+            iconModifier = favoritePop.scaleModifier
         )
         QuickAction(
             icon = Icons.Default.Share,
@@ -565,7 +599,10 @@ private fun QuickAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     filled: Boolean = false,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    // 아이콘에만 거는 추가 Modifier(즐겨찾기 팝 스케일). 원 배경까지 같이 커지면 옆 버튼을
+    // 밀어내는 것처럼 보여서 아이콘 층에만 건다.
+    iconModifier: Modifier = Modifier
 ) {
     val tint = if (enabled) CoralPrimary else InactiveIcon
     Column(
@@ -586,7 +623,7 @@ private fun QuickAction(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = if (filled) Color.White else tint,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp).then(iconModifier)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -646,6 +683,39 @@ private fun BasicInfoRow(
             )
         }
     }
+}
+
+/**
+ * "방문 정보" 카드 — 운영시간 / 휴무일 / 대표메뉴 / 이용요금 / 주차 / 홈페이지.
+ *
+ * 카드 안의 내용은 core/ui/VisitInfoSection.kt가 관광 카탈로그 상세(feature/tourism)와 공유하고,
+ * 여기서는 이 화면 톤의 껍데기(InfoSection)만 씌운다 — PlaceCurationSections와 같은 규칙이다
+ * (CLAUDE.md §4: feature끼리 직접 import하지 않는다). 같은 장소를 어느 화면으로 들어가든 같은
+ * 줄·같은 아이콘·같은 라벨로 보이게 하려는 것이다.
+ *
+ * 6칸을 다 채워주는 장소는 드물다 — 하나도 없으면 카드 자체를 내보내지 않는다(기본정보 카드와
+ * 같은 규칙: "정보 없음"만 나열된 카드를 만들지 않는다).
+ */
+@Composable
+private fun PlaceVisitInfoSection(place: Place) {
+    val strings = LocalAppStrings.current
+    val context = LocalContext.current
+    val visitInfo = remember(place) {
+        VisitInfo(
+            businessHours = place.businessHours,
+            restDate = place.restDate,
+            signatureMenu = place.signatureMenu,
+            usageFee = place.usageFee,
+            parkingInfo = place.parkingInfo,
+            homepageUrl = place.homepageUrl
+        )
+    }
+    if (visitInfo.isEmpty) return
+
+    InfoSection(title = strings.placeCuration.visitInfoTitle, icon = Icons.Default.Schedule) {
+        VisitInfoContent(visitInfo = visitInfo, onOpenHomepage = { url -> context.openWebPage(url) })
+    }
+    Spacer(modifier = Modifier.height(14.dp))
 }
 
 @Composable
@@ -780,6 +850,145 @@ private fun LocationMiniMap(place: Place) {
 
 // 즐겨찾기는 PlaceTitleSection에 이미 있어(HospitalDetailScreen과 같은 자리) 여기서는 중복으로
 // 넣지 않는다 — 화면 전체에서 유일한 길찾기 진입점인 이 버튼 하나에 폭 전체를 준다.
+/**
+ * "주변 같은 종류의 장소" 가로 스크롤 섹션. 병원 상세(S-05)의 NearbyHospitalsSection과 같은 구성이다
+ * — 목록이 아니라 곁들이는 추천이라 세로로 쌓지 않고 한 줄로 흘리고, 카드가 화면 오른쪽 끝을 넘어가
+ * 잘려 보여야 "더 있다"가 전달되므로 흰 카드로 감싸지 않고 캔버스 위에 직접 얹는다.
+ */
+@Composable
+private fun NearbyPlacesSection(
+    anchorType: PlaceType,
+    places: List<Place>,
+    onSelectPlace: (String) -> Unit
+) {
+    val strings = LocalAppStrings.current.nearby
+    // 제목은 "주변 관광지" / "Nearby: Cafe & dining"처럼 지금 보고 있는 장소의 종류를 그대로 넣는다.
+    val typeLabel = strings.placeTypeLabels[anchorType.name] ?: strings.allLabel
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.NearMe,
+                    contentDescription = null,
+                    tint = CoralPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = strings.nearbySameTypeTitleFormat.format(typeLabel),
+                    style = SectionTitleStyle,
+                    color = TextPrimary
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            // 이 목록이 무엇을 기준으로 뽑힌 건지 한 줄로 밝힌다 — 근거 없는 추천처럼 보이지 않게.
+            Text(
+                text = strings.nearbySameTypeSubtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(items = places, key = { it.id }) { nearby ->
+                NearbyPlaceCard(place = nearby, onClick = { onSelectPlace(nearby.id) })
+            }
+        }
+    }
+}
+
+/** 썸네일 + 거리 배지 + 이름 + 세부 분류 한 줄짜리 카드. */
+@Composable
+private fun NearbyPlaceCard(place: Place, onClick: () -> Unit) {
+    val language = LocalAppStrings.current.language
+    val visual = remember(place.type, place.category) { placeKindVisual(place.type, place.category) }
+    Column(
+        modifier = Modifier
+            .width(164.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f)
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .background(DividerColor)
+        ) {
+            // 사진이 없는 장소가 많다. 상세 히어로의 마스코트 일러스트가 아니라 목록·카드용 폴백
+            // 배너를 쓴다 — 같은 캐릭터를 카드마다 반복하면 카드가 전부 똑같아 보여 구분이 안 된다.
+            if (place.imageUrl != null) {
+                AsyncImageBox(
+                    model = place.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = fallbackBannerImageFor(place.id)),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 배지를 아예 안 단다.
+            place.distanceFromHospitalMeters?.let { meters ->
+                Text(
+                    text = meters.toDistanceLabel(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = CoralInk,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(Color.White.copy(alpha = 0.92f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(
+                text = place.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                // 이름이 한 줄인 카드와 두 줄인 카드가 섞이면 아래 분류 줄의 높이가 어긋난다 —
+                // 두 줄 자리를 항상 잡아 카드들의 바닥선을 맞춘다.
+                minLines = 2
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = visual.icon,
+                    contentDescription = null,
+                    tint = visual.ink,
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = place.category.translatedLabel(language),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun BottomActionBar(
     onDirectionsClick: () -> Unit,
@@ -887,6 +1096,13 @@ private fun Context.launchDirections(place: Place) {
         label = place.name,
         fallbackAddress = place.address
     )
+}
+
+// 홈페이지 값은 백엔드가 앵커 태그(<a href="...">)에서 URL만 뽑아 내려준다 — 앱은 그대로 연다.
+// 열 수 있는 앱이 없을 때 크래시하지 않는 건 launchIntentSafely가 처리한다(전화·공유와 같은 규칙).
+private fun Context.openWebPage(url: String) {
+    if (url.isBlank()) return
+    launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 }
 
 private fun Context.dialPhone(phoneNumber: String?) {

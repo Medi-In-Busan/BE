@@ -42,6 +42,8 @@ class DocumentScanViewModel @Inject constructor(
                 _uiState.update { it.copy(languageCode = preferences.languageCode) }
             }
         }
+        // 지난 세션에 남은 촬영본 정리. 프로세스가 복원된 경우엔 위에서 되살린 선택만 남긴다.
+        cleanUpCapturedImages(keep = _uiState.value.selectedImageUri)
     }
 
     fun onImageSelected(uri: Uri) {
@@ -49,6 +51,7 @@ class DocumentScanViewModel @Inject constructor(
         _uiState.update {
             it.copy(selectedImageUri = uri, extractedText = null, translatedText = null, isAnalysisError = false, analysisError = null)
         }
+        cleanUpCapturedImages(keep = uri)
     }
 
     fun onImageCleared() {
@@ -56,6 +59,24 @@ class DocumentScanViewModel @Inject constructor(
         _uiState.update {
             it.copy(selectedImageUri = null, extractedText = null, translatedText = null, isAnalysisError = false, analysisError = null)
         }
+        cleanUpCapturedImages(keep = null)
+    }
+
+    /**
+     * 캐시에 쌓인 촬영본 중 [keep]만 남기고 지운다.
+     *
+     * 예전에는 화면에서 `LaunchedEffect(uiState.selectedImageUri)`로 돌렸는데, 촬영 화면
+     * (Route.DocumentCapture)이 별도 목적지가 되면서 깨졌다 — 촬영을 끝내고 pop해 돌아오면 이 화면이
+     * 새로 컴포즈되는데, 그 첫 프레임의 selectedImageUri는 아직 **촬영 전 값(null)** 이다(촬영 결과는
+     * NavBackStackEntry의 savedStateHandle에만 있고 ViewModel엔 아직 안 들어왔다). 그래서 정리가
+     * keep=null로 돌아 방금 찍은 파일을 지웠고, 그 뒤 상태가 갱신돼 미리보기는 이미 없는 파일을
+     * 가리켰다 — 촬영 직후 사진이 안 보이던 원인이다.
+     *
+     * 정리 시점을 컴포지션이 아니라 **선택 상태가 실제로 바뀌는 순간**으로 옮겨 같은 일이 다시
+     * 생기지 않게 한다. 여기서는 지울 대상이 무엇인지가 항상 확정돼 있다.
+     */
+    private fun cleanUpCapturedImages(keep: Uri?) {
+        viewModelScope.launch(Dispatchers.IO) { clearCapturedImages(context, keep = keep) }
     }
 
     fun onAnalyzeClick() {
