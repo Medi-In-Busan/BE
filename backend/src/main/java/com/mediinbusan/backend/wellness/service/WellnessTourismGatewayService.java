@@ -87,6 +87,21 @@ public class WellnessTourismGatewayService {
         return request("tourism-ko", properties.tourApiBaseUrl(), "detailCommon2", params);
     }
 
+    /**
+     * 방문 정보(영업시간·휴무일·대표메뉴·이용요금·주차) 조회. detailCommon2와 달리
+     * <b>contentTypeId가 필수</b>이고, 같은 뜻의 값을 타입마다 다른 필드명으로 내려준다 —
+     * 그 필드명 표는 WellnessIngestionService.toVisitInfo 한 곳에만 둔다(수집 경로와 이 카탈로그
+     * 상세 경로가 같은 장소에서 다른 값을 보여주지 않게 하려는 것이다).
+     */
+    public TourismExternalResponse placeIntro(String contentId, String contentTypeId) {
+        Map<String, Object> params = pageParams();
+        params.put("MobileOS", MOBILE_OS);
+        params.put("MobileApp", MOBILE_APP);
+        params.put("contentId", contentId);
+        params.put("contentTypeId", contentTypeId);
+        return request("tourism-ko", properties.tourApiBaseUrl(), "detailIntro2", params);
+    }
+
     public TourismExternalResponse related(BusanTourismCodes.District district, String baseYm) {
         return request("related-tourism", properties.relatedTourismBaseUrl(), "areaBasedList1", bigdataParams(district, baseYm));
     }

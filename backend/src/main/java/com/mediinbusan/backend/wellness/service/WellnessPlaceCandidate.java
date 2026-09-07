@@ -16,7 +16,9 @@ record WellnessPlaceCandidate(
     String imageUrl,
     String description,
     String phoneNumber,
-    LocalDate modifiedDate
+    LocalDate modifiedDate,
+    // 영업시간·휴무일·대표메뉴 등 상세 화면용 방문 정보. 소스가 안 주면 WellnessVisitInfo.EMPTY다.
+    WellnessVisitInfo visitInfo
 ) {
     boolean isValid() {
         return hasText(contentId)
@@ -26,10 +28,11 @@ record WellnessPlaceCandidate(
     }
 
     /**
-     * areaBasedList2엔 전화번호·상세설명이 없어, detailCommon2로 따로 받아온 값을 채워 넣을 때 쓴다.
-     * 두 값 다 null이면(그 항목만 detailCommon2 조회를 못 했거나 실제로 비어있는 경우) 기존 값을 유지한다.
+     * areaBasedList2엔 전화번호·상세설명·방문 정보가 없어, detailCommon2/detailIntro2로 따로 받아온
+     * 값을 채워 넣을 때 쓴다. 값이 null이면(그 항목만 상세 조회를 못 했거나 실제로 비어있는 경우)
+     * 기존 값을 유지한다 — 방문 정보도 칸 단위로 같은 규칙이다(WellnessVisitInfo.merge).
      */
-    WellnessPlaceCandidate withDetail(String phoneNumber, String description) {
+    WellnessPlaceCandidate withDetail(String phoneNumber, String description, WellnessVisitInfo visitInfo) {
         return new WellnessPlaceCandidate(
             contentId,
             name,
@@ -40,7 +43,8 @@ record WellnessPlaceCandidate(
             imageUrl,
             description != null ? description : this.description,
             phoneNumber != null ? phoneNumber : this.phoneNumber,
-            modifiedDate
+            modifiedDate,
+            this.visitInfo.merge(visitInfo)
         );
     }
 

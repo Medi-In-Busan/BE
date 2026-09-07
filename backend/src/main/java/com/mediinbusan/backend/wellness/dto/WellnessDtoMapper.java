@@ -24,7 +24,14 @@ public final class WellnessDtoMapper {
             place.getModifiedDate() != null ? place.getModifiedDate().toString() : null,
             distanceFromHospitalMeters,
             isTranslated(place, lang),
-            categoryOf(place.getCategoryCode()).name()
+            categoryOf(place.getCategoryCode()).name(),
+            // 방문 정보는 언어별 컬럼이 없다 — 원문 그대로 나간다(이유는 WellnessVisitInfo 주석 참고).
+            place.getBusinessHours(),
+            place.getRestDate(),
+            place.getSignatureMenu(),
+            place.getUsageFee(),
+            place.getParkingInfo(),
+            place.getHomepageUrl()
         );
     }
 
