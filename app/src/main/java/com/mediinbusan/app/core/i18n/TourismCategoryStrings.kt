@@ -108,18 +108,21 @@ fun TourismCatalogCategory.translatedDescription(language: SupportedLanguage): S
 }
 
 /**
- * TourismCatalogItem.categoryCode는 TourAPI contenttypeid 원본 값이다(12=관광지, 14=문화시설,
- * 25=여행코스, 28=레포츠, 32=숙박, 38=쇼핑, 39=음식점) — PLACES_KO/ACCESSIBLE 리스트업 화면의
- * 카테고리 필터 칩에 쓴다. 매핑에 없는 코드(예: 15=축제/공연/행사)는 null을 반환해 필터 칩에서 제외한다.
+ * TourismCatalogItem.categoryCode는 TourAPI contenttypeid 원본 값이다. 국문 서비스(PLACES_KO)와
+ * 외국어 서비스(PLACES_EN/JA/ZH)가 완전히 다른 코드를 쓴다(실제 라이브 API로 확인한 값):
+ * 국문 12=관광지/14=문화시설/25=여행코스/28=레포츠/32=숙박/38=쇼핑/39=음식점,
+ * 외국어 75=레포츠/76=관광지/78=문화시설/79=쇼핑/80=숙박/82=음식점/85=축제행사.
+ * PLACES_KO/ACCESSIBLE 리스트업 화면의 카테고리 필터 칩에 쓴다. 매핑에 없는 코드(예: 15=축제/
+ * 공연/행사의 국문 코드)는 null을 반환해 필터 칩에서 제외한다.
  */
 fun String.translatedTourismItemCategoryLabel(language: SupportedLanguage): String? = when (this) {
-    "12" -> when (language) {
+    "12", "76" -> when (language) {
         SupportedLanguage.KO -> "관광지"
         SupportedLanguage.EN -> "Attractions"
         SupportedLanguage.ZH -> "景点"
         SupportedLanguage.JA -> "観光地"
     }
-    "14" -> when (language) {
+    "14", "78" -> when (language) {
         SupportedLanguage.KO -> "문화시설"
         SupportedLanguage.EN -> "Culture"
         SupportedLanguage.ZH -> "文化设施"
@@ -131,29 +134,35 @@ fun String.translatedTourismItemCategoryLabel(language: SupportedLanguage): Stri
         SupportedLanguage.ZH -> "旅游路线"
         SupportedLanguage.JA -> "旅行コース"
     }
-    "28" -> when (language) {
+    "28", "75" -> when (language) {
         SupportedLanguage.KO -> "레포츠"
         SupportedLanguage.EN -> "Activities"
         SupportedLanguage.ZH -> "休闲运动"
         SupportedLanguage.JA -> "レジャースポーツ"
     }
-    "32" -> when (language) {
+    "32", "80" -> when (language) {
         SupportedLanguage.KO -> "숙박"
         SupportedLanguage.EN -> "Lodging"
         SupportedLanguage.ZH -> "住宿"
         SupportedLanguage.JA -> "宿泊"
     }
-    "38" -> when (language) {
+    "38", "79" -> when (language) {
         SupportedLanguage.KO -> "쇼핑"
         SupportedLanguage.EN -> "Shopping"
         SupportedLanguage.ZH -> "购物"
         SupportedLanguage.JA -> "ショッピング"
     }
-    "39" -> when (language) {
+    "39", "82" -> when (language) {
         SupportedLanguage.KO -> "음식점"
         SupportedLanguage.EN -> "Restaurants"
         SupportedLanguage.ZH -> "餐厅"
         SupportedLanguage.JA -> "飲食店"
+    }
+    "85" -> when (language) {
+        SupportedLanguage.KO -> "축제·행사"
+        SupportedLanguage.EN -> "Festivals"
+        SupportedLanguage.ZH -> "节庆活动"
+        SupportedLanguage.JA -> "祭り・イベント"
     }
     else -> null
 }

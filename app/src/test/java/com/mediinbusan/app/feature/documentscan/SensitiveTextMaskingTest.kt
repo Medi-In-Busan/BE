@@ -46,4 +46,13 @@ class SensitiveTextMaskingTest {
         assertEquals("2026 년 7 월 27일", maskSensitiveText("2026 년 7 월 27일"))
         assertEquals("연번호 19-7001", maskSensitiveText("연번호 19-7001"))
     }
+
+    @Test
+    fun `줄이 다르면 서로 무관한 숫자로 본다`() {
+        // 구분자가 개행까지 받으면 줄 끝 6자리와 다음 줄 첫 7자리가 주민번호로 오인되고,
+        // 치환하면서 줄바꿈까지 먹어 두 줄이 한 줄로 합쳐진다.
+        val text = "요양기관번호  123456\n1234567 원장"
+
+        assertEquals(text, maskSensitiveText(text))
+    }
 }

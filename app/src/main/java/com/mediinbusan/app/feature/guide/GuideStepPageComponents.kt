@@ -411,7 +411,7 @@ private fun GuideOfficialLinkCard(
             }
 
             Image(
-                painter = painterResource(id = item.iconResId),
+                painter = painterResource(id = item.iconResId ?: R.drawable.guide_global_guide),
                 contentDescription = null,
                 modifier = Modifier
                     .padding(

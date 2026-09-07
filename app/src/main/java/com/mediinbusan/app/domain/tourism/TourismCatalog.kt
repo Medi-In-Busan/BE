@@ -24,16 +24,34 @@ data class TourismCatalogItem(
 )
 
 // TourismCatalogItem.categoryCode(contenttypeid)를 부산관광 슬라이드 태그 3종으로 묶는다 —
-// 관광지/문화시설/레포츠/쇼핑/여행코스는 SPOT 하나로, 32(숙박)는 LODGING, 39(음식점)는 FOOD.
+// 관광지/문화시설/레포츠/쇼핑/여행코스는 SPOT 하나로, 숙박은 LODGING, 음식점은 FOOD.
 // NearbyScreen.kt(태그 이미지 표시)와 NearbyViewModel.kt(미리보기 항목 균형 배분)가 같이 쓴다.
+// TourAPI는 국문 서비스(PLACES_KO)와 외국어 서비스(PLACES_EN/JA/ZH)가 완전히 다른 contenttypeid
+// 체계를 쓴다 — 실제 라이브 API로 확인한 값: 국문 12=관광지/14=문화시설/25=여행코스/28=레포츠/
+// 32=숙박/38=쇼핑/39=음식점, 외국어 75=레포츠/76=관광지/78=문화시설/79=쇼핑/80=숙박/82=음식점/
+// 85=축제행사. 코드 값 자체가 두 체계 사이에서 겹치지 않아 하나의 when으로 같이 처리해도 된다.
 enum class TourismTagGroup { SPOT, LODGING, FOOD }
 
 fun String.toTourismTagGroup(): TourismTagGroup? = when (this) {
     "12", "14", "25", "28", "38" -> TourismTagGroup.SPOT
     "32" -> TourismTagGroup.LODGING
     "39" -> TourismTagGroup.FOOD
+    "75", "76", "78", "79", "85" -> TourismTagGroup.SPOT
+    "80" -> TourismTagGroup.LODGING
+    "82" -> TourismTagGroup.FOOD
     else -> null
 }
+
+// "부산 관광지" 리스트업 화면의 카테고리 필터 3종(관광지/숙박/맛집)이 실제로 봐야 하는 단일
+// contenttypeid — PLACES_KO만 국문 서비스 코드를 쓰고, PLACES_EN/JA/ZH는 외국어 서비스 코드를 쓴다.
+data class TourismPlaceCategoryCodes(val spot: String, val lodging: String, val food: String)
+
+fun TourismCatalogCategory.placeCategoryCodes(): TourismPlaceCategoryCodes =
+    if (this == TourismCatalogCategory.PLACES_KO) {
+        TourismPlaceCategoryCodes(spot = "12", lodging = "32", food = "39")
+    } else {
+        TourismPlaceCategoryCodes(spot = "76", lodging = "80", food = "82")
+    }
 
 enum class TourismCatalogGroup(val label: String, val description: String) {
     PLACES("관광지 탐색", "부산의 장소와 이동 편의 정보를 확인해요."),

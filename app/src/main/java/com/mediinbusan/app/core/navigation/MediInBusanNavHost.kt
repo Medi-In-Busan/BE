@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,23 +22,10 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.ui.launchIntentSafely
 import com.mediinbusan.app.data.guide.GuidePhase
 import com.mediinbusan.app.feature.favorite.FavoriteScreen
-import com.mediinbusan.app.feature.guide.AirportDeparturePreparationDetailScreen
-import com.mediinbusan.app.feature.guide.EnglishDocumentsResultsDetailScreen
 import com.mediinbusan.app.feature.guide.GuideDetailItemId
 import com.mediinbusan.app.feature.guide.GuideScreen
 import com.mediinbusan.app.feature.guide.GuideStepDetailScreen
-import com.mediinbusan.app.feature.guide.HospitalInquiryDetailScreen
-import com.mediinbusan.app.feature.guide.InsuranceDocumentsDetailScreen
-import com.mediinbusan.app.feature.guide.MedicalRecordsTestResultsDetailScreen
-import com.mediinbusan.app.feature.guide.MedicationScheduleDetailScreen
-import com.mediinbusan.app.feature.guide.PassportReservationInfoDetailScreen
-import com.mediinbusan.app.feature.guide.PaymentMethodCheckDetailScreen
-import com.mediinbusan.app.feature.guide.PostTreatmentPrecautionsDetailScreen
-import com.mediinbusan.app.feature.guide.PreInquiryInformationDetailScreen
-import com.mediinbusan.app.feature.guide.ReceiptInsuranceDocumentsDetailScreen
-import com.mediinbusan.app.feature.guide.TotalCostCoverageCheckDetailScreen
 import com.mediinbusan.app.feature.guide.TreatmentExaminationDetailScreen
-import com.mediinbusan.app.feature.guide.VisaEntryCheckDetailScreen
 import com.mediinbusan.app.feature.home.HomeScreen
 import com.mediinbusan.app.feature.hospitaldetail.HospitalDetailScreen
 import com.mediinbusan.app.feature.hospitalsearchlist.HospitalSearchListScreen
@@ -51,6 +40,7 @@ import com.mediinbusan.app.feature.settings.NotificationSettingsScreen
 import com.mediinbusan.app.feature.settings.SettingsInfoDetailScreen
 import com.mediinbusan.app.feature.settings.SettingsScreen
 import com.mediinbusan.app.feature.splash.SplashScreen
+import com.mediinbusan.app.feature.documentscan.DocumentCaptureScreen
 import com.mediinbusan.app.feature.documentscan.DocumentScanScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogItemDetailScreen
 import com.mediinbusan.app.feature.tourism.TourismCatalogScreen
@@ -162,65 +152,14 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                     onBack = navController::popBackStack,
                     onItemClick = { item ->
                         when (item.id) {
-                            GuideDetailItemId.VISA_ENTRY_CHECK -> navController.navigate(Route.VisaEntryCheckDetail)
-                            GuideDetailItemId.INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.InsuranceDocumentsDetail)
-                            GuideDetailItemId.HOSPITAL_INQUIRY -> navController.navigate(Route.HospitalInquiryDetail)
-                            GuideDetailItemId.PRE_INQUIRY_INFORMATION -> navController.navigate(Route.PreInquiryInformationDetail)
-                            GuideDetailItemId.PASSPORT_RESERVATION_INFO -> navController.navigate(Route.PassportReservationInfoDetail)
-                            GuideDetailItemId.MEDICAL_RECORDS_TEST_RESULTS -> navController.navigate(Route.MedicalRecordsTestResultsDetail)
                             // "병원 정보 확인하기" 카드는 이제 STEP03 합본 페이지에 접수 절차가 직접
                             // 포함돼 있어 중간 화면 없이 바로 지도로 이동한다.
                             GuideDetailItemId.HOSPITAL_LOCATION_CHECKIN_GUIDE -> navController.navigate(Route.MapView(hospitalId = null))
-                            GuideDetailItemId.TOTAL_COST_COVERAGE_CHECK -> navController.navigate(Route.TotalCostCoverageCheckDetail)
-                            GuideDetailItemId.PAYMENT_METHOD_AVAILABLE_CHECK -> navController.navigate(Route.PaymentMethodCheckDetail)
-                            GuideDetailItemId.RECEIPT_INSURANCE_DOCUMENT_CHECK -> navController.navigate(Route.ReceiptInsuranceDocumentsDetail)
-                            GuideDetailItemId.MEDICATION_SCHEDULE_CHECK -> navController.navigate(Route.MedicationScheduleDetail)
-                            GuideDetailItemId.POST_TREATMENT_PRECAUTIONS_CHECK -> navController.navigate(Route.PostTreatmentPrecautionsDetail)
-                            GuideDetailItemId.ENGLISH_DOCUMENTS_RESULTS_CHECK -> navController.navigate(Route.EnglishDocumentsResultsDetail)
-                            GuideDetailItemId.AIRPORT_DEPARTURE_PREPARATION_CHECK -> navController.navigate(Route.AirportDeparturePreparationDetail)
+                            else -> Unit
                         }
                     }
                 )
             }
-        }
-        composable<Route.VisaEntryCheckDetail> {
-            VisaEntryCheckDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.InsuranceDocumentsDetail> {
-            InsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.HospitalInquiryDetail> {
-            HospitalInquiryDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PreInquiryInformationDetail> {
-            PreInquiryInformationDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PassportReservationInfoDetail> {
-            PassportReservationInfoDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.MedicalRecordsTestResultsDetail> {
-            MedicalRecordsTestResultsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.TotalCostCoverageCheckDetail> {
-            TotalCostCoverageCheckDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PaymentMethodCheckDetail> {
-            PaymentMethodCheckDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.ReceiptInsuranceDocumentsDetail> {
-            ReceiptInsuranceDocumentsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.MedicationScheduleDetail> {
-            MedicationScheduleDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.PostTreatmentPrecautionsDetail> {
-            PostTreatmentPrecautionsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.EnglishDocumentsResultsDetail> {
-            EnglishDocumentsResultsDetailScreen(onBack = navController::popBackStack)
-        }
-        composable<Route.AirportDeparturePreparationDetail> {
-            AirportDeparturePreparationDetailScreen(onBack = navController::popBackStack)
         }
         composable<Route.Nearby> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Nearby>()
@@ -326,8 +265,29 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 onBack = navController::popBackStack
             )
         }
-        composable<Route.DocumentScan> {
-            DocumentScanScreen(onMenuClick = { navController.navigate(Route.Settings) })
+        composable<Route.DocumentScan> { entry ->
+            // 촬영 화면이 pop하면서 넣어준 Uri를 여기서 받아 화면에 넘긴다. 화면이 반영한 뒤
+            // 곧바로 null로 지워야(onCapturedImageHandled) 탭을 다시 열 때 되살아나지 않는다.
+            val capturedImageUri by entry.savedStateHandle
+                .getStateFlow<String?>(CapturedImageUriKey, null)
+                .collectAsStateWithLifecycle()
+            DocumentScanScreen(
+                onMenuClick = { navController.navigate(Route.Settings) },
+                onNavigateToCapture = { navController.navigate(Route.DocumentCapture) },
+                capturedImageUri = capturedImageUri?.let(Uri::parse),
+                onCapturedImageHandled = { entry.savedStateHandle[CapturedImageUriKey] = null }
+            )
+        }
+        composable<Route.DocumentCapture> {
+            DocumentCaptureScreen(
+                onImageCaptured = { uri ->
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(CapturedImageUriKey, uri.toString())
+                    navController.popBackStack()
+                },
+                onClose = navController::popBackStack
+            )
         }
         composable<Route.SelfDiagnosis> {
             val guideStrings = LocalAppStrings.current.guide

@@ -39,6 +39,10 @@ exifinterface = "1.4.2"
 # Map
 kakaoMapSdk = "2.13.5"
 
+# Camera (feature/documentscan 자체 촬영 UI). camera-compose는 아직 alpha라 쓰지 않고
+# camera-view(PreviewView) + AndroidView 조합으로 간다 — KakaoMapView와 같은 패턴이다.
+camerax = "1.6.2"
+
 # UI effects (glassmorphism/backdrop blur). 2.x는 아직 alpha라 stable인 1.7.2 고정.
 haze = "1.7.2"
 
@@ -87,6 +91,11 @@ coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp"
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 kakao-map-sdk = { group = "com.kakao.maps.open", name = "android", version.ref = "kakaoMapSdk" }
+
+androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 
 haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 haze-materials = { group = "dev.chrisbanes.haze", name = "haze-materials", version.ref = "haze" }

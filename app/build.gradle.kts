@@ -174,6 +174,12 @@ dependencies {
     // Map
     implementation(libs.kakao.map.sdk)
 
+    // Camera — feature/documentscan의 자체 문서 촬영 화면(DocumentCaptureScreen).
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+
     // UI effects — BottomNavBar의 실시간 backdrop blur(glassmorphism)에 사용.
     implementation(libs.haze)
     implementation(libs.haze.materials)

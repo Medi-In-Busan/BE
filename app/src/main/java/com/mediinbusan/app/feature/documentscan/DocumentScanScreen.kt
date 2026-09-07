@@ -1,7 +1,6 @@
 package com.mediinbusan.app.feature.documentscan
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -31,20 +30,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -55,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,7 +64,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -81,15 +77,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.mediinbusan.app.BuildConfig
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
-import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.StatusOpenGreen
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -99,8 +92,9 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
+import kotlinx.coroutines.withContext
 
 /**
  * 진단서·처방전 OCR 번역(문서 스캔) 화면. 바텀바 5번째 탭.
@@ -110,14 +104,27 @@ import java.io.File
 @Composable
 fun DocumentScanScreen(
     onMenuClick: () -> Unit = {},
+    onNavigateToCapture: () -> Unit = {},
+    capturedImageUri: Uri? = null,
+    onCapturedImageHandled: () -> Unit = {},
     viewModel: DocumentScanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // 촬영 화면(Route.DocumentCapture)이 백스택으로 돌려준 결과. 한 번 반영하고 즉시 비워야
+    // 화면을 다시 열 때 지난 촬영본이 되살아나지 않는다.
+    LaunchedEffect(capturedImageUri) {
+        capturedImageUri?.let {
+            viewModel.onImageSelected(it)
+            onCapturedImageHandled()
+        }
+    }
 
     DocumentScanContent(
         uiState = uiState,
         onMenuClick = onMenuClick,
         onLanguageSelected = viewModel::onLanguageSelected,
+        onCaptureRequested = onNavigateToCapture,
         onImageSelected = viewModel::onImageSelected,
         onImageCleared = viewModel::onImageCleared,
         onAnalyzeClick = viewModel::onAnalyzeClick
@@ -130,6 +137,7 @@ private fun DocumentScanContent(
     uiState: DocumentScanUiState,
     onMenuClick: () -> Unit,
     onLanguageSelected: (String) -> Unit,
+    onCaptureRequested: () -> Unit,
     onImageSelected: (Uri) -> Unit,
     onImageCleared: () -> Unit,
     onAnalyzeClick: () -> Unit
@@ -145,37 +153,22 @@ private fun DocumentScanContent(
         coroutineScope.launch { snackbarHostState.showSnackbar(strings.copiedMessage) }
     }
 
-    // 에뮬레이터·카메라가 없는 기기에서는 hasSystemFeature가 false거나, true여도 실제 촬영
-    // 액티비티를 처리할 카메라 앱이 없을 수 있다 — 전자는 여기서, 후자는 launchCamera의
-    // try/catch로 막는다. 둘 다 없으면 launch()가 ActivityNotFoundException으로 크래시한다.
+    // 선택이 바뀌거나 해제될 때마다 지금 쓰는 촬영본만 남기고 캐시를 정리한다. 촬영할 때마다
+    // 진단서 사진이 앱 캐시에 쌓이는 걸 막는 지점이다(clearCapturedImages 주석 참고).
+    // 화면에 들어올 때도 한 번 도는데, 그때는 이전 세션에 남은 파일까지 같이 정리된다.
+    // 남은 하나(지금 선택된 촬영본)는 화면이 백스택에서 빠질 때 DocumentScanViewModel.onCleared가 지운다.
+    LaunchedEffect(uiState.selectedImageUri) {
+        withContext(Dispatchers.IO) { clearCapturedImages(context, keep = uiState.selectedImageUri) }
+    }
+
+    // 카메라가 없는 기기(에뮬레이터 등)에서는 촬영 화면으로 보내봐야 검은 화면만 나온다 —
+    // 여기서 미리 걸러 갤러리 경로만 쓰게 안내한다. CameraX 바인딩 자체가 실패하는 경우는
+    // DocumentCaptureScreen이 따로 처리한다.
     val hasCameraHardware = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
-
-    // TakePicture()는 결과를 Bitmap이 아니라 우리가 미리 만들어 넘긴 Uri에 저장한다 — 그 Uri를
-    // 콜백 시점까지 들고 있어야 해서 별도 상태로 보관한다. Uri는 Parcelable이라 프로세스가
-    // 죽었다 복원돼도(카메라 앱 전환 중 메모리 회수 등) rememberSaveable이 그대로 복원해준다.
-    var pendingCaptureUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) {
-            pendingCaptureUri?.let(onImageSelected)
-        }
-        pendingCaptureUri = null
-    }
-
-    fun launchCamera() {
-        val uri = createCaptureImageUri(context)
-        try {
-            pendingCaptureUri = uri
-            cameraLauncher.launch(uri)
-        } catch (e: ActivityNotFoundException) {
-            pendingCaptureUri = null
-            coroutineScope.launch { snackbarHostState.showSnackbar(strings.cameraUnavailableMessage) }
-        }
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            launchCamera()
+            onCaptureRequested()
         } else {
             coroutineScope.launch { snackbarHostState.showSnackbar(strings.cameraPermissionDeniedMessage) }
         }
@@ -193,7 +186,7 @@ private fun DocumentScanContent(
         }
         val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            launchCamera()
+            onCaptureRequested()
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -251,86 +244,6 @@ private fun DocumentScanContent(
 }
 
 @Composable
-private fun DocumentScanIntro(
-    strings: DocumentScanStrings,
-    onCaptureClick: () -> Unit,
-    onGalleryClick: () -> Unit
-) {
-    Spacer(modifier = Modifier.height(24.dp))
-    // 아이콘·문구·버튼을 배경에 바로 흩뿌리는 대신 살짝 뜬 흰 카드 하나에 담아, 유틸리티
-    // 화면치고 밋밋했던 인트로에 시선이 머무는 지점을 만든다(soft-ui 스타일: 옅은 코랄 톤 섀도우).
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            // 페이지 배경(HomeBackgroundPink = 0xFFFFFAFA)이 거의 흰색에 가까워서, 흰 카드 위에
-            // 옅은 코랄 톤 섀도우는 명도 대비가 거의 없어 안 보이는 거나 마찬가지였다. 검정 계열로
-            // 확실하게 대비를 주고 elevation도 크게 올린다.
-            .shadow(
-                elevation = 32.dp,
-                shape = RoundedCornerShape(28.dp),
-                ambientColor = Color.Black.copy(alpha = 0.28f),
-                spotColor = Color.Black.copy(alpha = 0.38f)
-            )
-            .clip(RoundedCornerShape(28.dp))
-            .background(Color.White)
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(
-                    brush = Brush.radialGradient(listOf(CoralPrimaryContainer, Color.White)),
-                    shape = CircleShape
-                )
-                .border(width = 1.5.dp, color = CoralPrimary.copy(alpha = 0.18f), shape = CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Description,
-                contentDescription = null,
-                tint = CoralPrimary,
-                modifier = Modifier.size(42.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(text = strings.introTitle, style = SectionTitleStyle, color = TextPrimary, textAlign = TextAlign.Center)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = strings.introSubtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
-        Spacer(modifier = Modifier.height(28.dp))
-        Button(
-            onClick = onCaptureClick,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp)
-        ) {
-            Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = strings.captureButton, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onGalleryClick,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = MaterialTheme.shapes.extraLarge
-        ) {
-            Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = strings.galleryButton)
-        }
-        // 이전엔 이 카드 밖에 흰 알약(pill) 배경으로 따로 떠 있었다 — 카드와 분리돼 보이던 걸
-        // 같은 그림자 카드 안으로 끌어올려 하나로 합친다.
-        Spacer(modifier = Modifier.height(20.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = strings.privacyNote, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
-        }
-    }
-}
-
-@Composable
 private fun DocumentScanPreview(
     strings: DocumentScanStrings,
     imageUri: Uri,
@@ -343,12 +256,14 @@ private fun DocumentScanPreview(
     onAnalyze: () -> Unit,
     onCopyClick: (String) -> Unit
 ) {
-    // 분석을 시작한 뒤(로딩/에러/결과)에는 실물 사진이 결과 카드와 같은 비중으로 붙어있으면
-    // "사진 모드"와 "텍스트 결과 모드"가 한 화면에서 부딪혀 보인다 — 원본 사진은 작은 썸네일로
-    // 접어서 결과 카드가 화면의 주인공이 되게 한다.
-    val hasStartedAnalysis = isAnalyzing || isAnalysisError || extractedText != null
+    // 결과(또는 에러)가 도착한 뒤에는 실물 사진이 결과 카드와 같은 비중으로 붙어있으면 "사진
+    // 모드"와 "텍스트 결과 모드"가 한 화면에서 부딪혀 보인다 — 원본 사진은 작은 썸네일로 접어서
+    // 결과 카드가 화면의 주인공이 되게 한다.
+    // 반면 분석 중(isAnalyzing)에는 큰 사진을 그대로 둔다. 스캔 오버레이(DocumentScanningOverlay)를
+    // 얹을 자리가 사진 그 자체라, 여기서 접어버리면 연출할 화면이 없어진다.
+    val showLargePreview = !isAnalysisError && extractedText == null
 
-    if (!hasStartedAnalysis) {
+    if (showLargePreview) {
         // Crop으로 320dp 박스를 꽉 채우면 문서 가장자리가 잘려서 원본을 못 보게 되니, 여기서만
         // Fit으로 전체 사진이 다 보이게 하고 남는 여백은 옅은 배경으로 채운다. 스캐너 앱 특유의
         // 모서리 브래킷(ScanFrameCorners)을 얹어 "문서를 인식했다"는 느낌을 준다.
@@ -376,23 +291,34 @@ private fun DocumentScanPreview(
                     .background(DividerColor)
             )
             ScanFrameCorners(modifier = Modifier.fillMaxSize().padding(10.dp))
+            // 정지 프레임(위) 위에 움직이는 스캔라인·인식 박스를 겹친다. 패딩은 사진과 똑같이
+            // 10dp를 줘서 오버레이가 사진 영역 밖으로 새지 않게 한다.
+            if (isAnalyzing) {
+                DocumentScanningOverlay(modifier = Modifier.fillMaxSize().padding(10.dp))
+            }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(
-                onClick = onRetake,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Text(text = strings.retakeButton)
-            }
-            Button(
-                onClick = onAnalyze,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary)
-            ) {
-                Text(text = strings.analyzeButton, fontWeight = FontWeight.Bold)
+        // 분석 중에는 버튼을 비활성화하는 대신 캡션으로 아예 교체한다 — 눌러도 되는 것처럼 보이는
+        // 흐린 버튼보다, 지금 할 일이 기다리는 것뿐임을 그대로 말해주는 편이 덜 헷갈린다.
+        if (isAnalyzing) {
+            DocumentScanningCaption(message = strings.analyzingMessage)
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onRetake,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = MaterialTheme.shapes.extraLarge
+                ) {
+                    Text(text = strings.retakeButton)
+                }
+                Button(
+                    onClick = onAnalyze,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary)
+                ) {
+                    Text(text = strings.analyzeButton, fontWeight = FontWeight.Bold)
+                }
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
@@ -436,25 +362,8 @@ private fun DocumentScanPreview(
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
+    // 분석 중 표시는 위 큰 프리뷰의 오버레이+캡션이 담당하므로 여기엔 결과/에러만 남는다.
     when {
-        isAnalyzing -> Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = 2.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    ambientColor = CoralPrimary.copy(alpha = 0.15f),
-                    spotColor = CoralPrimary.copy(alpha = 0.15f)
-                )
-                .clip(RoundedCornerShape(20.dp))
-                .background(CoralPrimaryContainer)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = CoralPrimary)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(text = strings.analyzingMessage, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-        }
         // 에러 메시지 바로 아래 재시도 버튼을 둬서(위 썸네일 줄에 흩어져 있던 것과 달리) 문제와
         // 해결 행동이 한 카드 안에 붙어 있게 한다.
         isAnalysisError -> Column(
@@ -734,6 +643,7 @@ private fun DocumentTextBlockList(blocks: List<DocumentTextBlock>) {
  */
 @Composable
 private fun DocumentTextTable(table: DocumentTextBlock.Table) {
+    val weights = remember(table) { columnWeights(table) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -743,6 +653,7 @@ private fun DocumentTextTable(table: DocumentTextBlock.Table) {
     ) {
         DocumentTextTableRow(
             cells = table.header,
+            weights = weights,
             textStyle = MaterialTheme.typography.bodySmall,
             textColor = TextSecondary,
             fontWeight = FontWeight.Bold,
@@ -752,6 +663,7 @@ private fun DocumentTextTable(table: DocumentTextBlock.Table) {
             HorizontalDivider(color = DividerColor)
             DocumentTextTableRow(
                 cells = row,
+                weights = weights,
                 textStyle = MaterialTheme.typography.bodySmall,
                 textColor = TextPrimary,
                 fontWeight = FontWeight.Normal,
@@ -761,9 +673,32 @@ private fun DocumentTextTable(table: DocumentTextBlock.Table) {
     }
 }
 
+/**
+ * 열 폭을 그 열에서 가장 긴 글자 수에 비례해 잡는다. 예전엔 첫 열만 1.6배로 고정하고 나머지를
+ * 똑같이 나눴는데, 그러면 주소처럼 긴 값이 좁은 열에 갇혀 서너 글자마다 줄바꿈된다.
+ *
+ * 위아래로 묶는 이유: 아주 짧은 열도 최소 폭은 있어야 숫자 한 글자가 세로로 서지 않고, 아주 긴
+ * 열 하나가 나머지를 다 굶기지 않아야 한다.
+ */
+private fun columnWeights(table: DocumentTextBlock.Table): List<Float> {
+    val allRows = listOf(table.header) + table.rows
+    // 파서는 모든 행의 칸 수를 헤더와 맞춰서 내려주지만(DocumentTextBlock.Table 참고), 열 수를
+    // 헤더가 아니라 가장 긴 행 기준으로 잡아 둔다 — 그 불변식이 깨져도 열이 통째로 안 그려지거나
+    // 행마다 다른 비율로 어긋나는 대신 빈 칸만 남는다.
+    val columnCount = allRows.maxOf { it.size }
+    return (0 until columnCount).map { column ->
+        val longest = allRows.maxOf { it.getOrNull(column)?.length ?: 0 }
+        longest.toFloat().coerceIn(MinColumnWeight, MaxColumnWeight)
+    }
+}
+
+private const val MinColumnWeight = 3f
+private const val MaxColumnWeight = 20f
+
 @Composable
 private fun DocumentTextTableRow(
     cells: List<String>,
+    weights: List<Float>,
     textStyle: TextStyle,
     textColor: Color,
     fontWeight: FontWeight,
@@ -772,30 +707,20 @@ private fun DocumentTextTableRow(
     Row(
         modifier = Modifier.fillMaxWidth().background(background).padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        cells.forEachIndexed { index, cell ->
+        // 칸이 모자란 행도 열 수만큼 빈 칸을 채워 그린다 — 그래야 위아래 행의 열이 같은 자리에 선다.
+        weights.forEachIndexed { index, weight ->
             if (index > 0) {
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(
-                text = cell,
+                text = cells.getOrElse(index) { "" },
                 style = textStyle,
                 color = textColor,
                 fontWeight = fontWeight,
-                // 첫 열(약품명 등)이 가장 길어서 나머지보다 넓게 잡는다.
-                modifier = Modifier.weight(if (index == 0) FirstColumnWeight else 1f)
+                modifier = Modifier.weight(weight)
             )
         }
     }
-}
-
-private const val FirstColumnWeight = 1.6f
-
-// FileProvider로 앱 캐시 디렉토리 안의 임시 파일을 가리키는 content:// Uri를 만든다. 촬영한 원본
-// 이미지를 TakePicture()가 이 Uri에 직접 써준다. res/xml/file_paths.xml의 cache-path와 짝을 이룬다.
-private fun createCaptureImageUri(context: Context): Uri {
-    val imagesDir = File(context.cacheDir, "images").apply { mkdirs() }
-    val file = File(imagesDir, "document_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", file)
 }
 
 @Preview(name = "DocumentScan - 이미지 선택 전", showBackground = true)
@@ -806,6 +731,7 @@ private fun DocumentScanContentEmptyPreview() {
             uiState = DocumentScanUiState(),
             onMenuClick = {},
             onLanguageSelected = {},
+            onCaptureRequested = {},
             onImageSelected = {},
             onImageCleared = {},
             onAnalyzeClick = {}

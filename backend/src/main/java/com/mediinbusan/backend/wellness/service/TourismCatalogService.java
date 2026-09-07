@@ -66,8 +66,15 @@ public class TourismCatalogService {
         int pageSize,
         String language
     ) {
-        if (category == TourismCatalogCategory.CROWDING && district == null) {
-            return translationService.localize(getBusanCrowdingCatalog(), language);
+        if (category == TourismCatalogCategory.CROWDING) {
+            TourismCatalogResponse crowding = getBusanCrowdingCatalog();
+            if (district != null) {
+                List<TourismCatalogItemResponse> districtItems = crowding.items().stream()
+                    .filter(item -> district.bigdataSignguCd().equals(item.details().get("signguCd")))
+                    .toList();
+                crowding = withCrowdingItems(crowding, districtItems, crowding.retrievedAt());
+            }
+            return translationService.localize(crowding, language);
         }
         BusanTourismCodes.District resolvedDistrict = district == null ? BusanTourismCodes.District.HAEUNDAE : district;
         String resolvedBaseYm = hasText(baseYm) ? baseYm : YearMonth.now().minusMonths(2).format(DateTimeFormatter.ofPattern("yyyyMM"));

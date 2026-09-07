@@ -101,4 +101,67 @@ class DocumentTextBlocksTest {
 
         assertEquals(DocumentTextBlock.Field("병록번호", "12257"), blocks.single())
     }
+
+    @Test
+    fun `자간을 벌린 제목은 항목으로 쪼개지 않는다`() {
+        // `진   단   서`처럼 자간을 벌려 인쇄한 제목은 백엔드가 열 경계(공백 2칸)로 내려준다 —
+        // 그대로 쪼개면 라벨 `진` / 값 `단 서`라는 엉뚱한 항목이 된다.
+        assertEquals(DocumentTextBlock.Paragraph("진단서"), parseDocumentText("진   단   서").single())
+        assertEquals(DocumentTextBlock.Paragraph("처방전"), parseDocumentText("처  방  전").single())
+    }
+
+    @Test
+    fun `자간을 벌린 라벨은 되붙여서 값과 짝짓는다`() {
+        val blocks = parseDocumentText("병      명  급성 기관지염  질병분류기호  J20.9")
+
+        assertEquals(
+            listOf(
+                DocumentTextBlock.Field("병명", "급성 기관지염"),
+                DocumentTextBlock.Field("질병분류기호", "J20.9")
+            ),
+            blocks
+        )
+    }
+
+    @Test
+    fun `표의 한 글자 셀은 되붙이지 않는다`() {
+        // 자간 병합을 파이프 줄에도 적용하면 `1 | 3 | 3`이 `133`으로 뭉개진다.
+        val blocks = parseDocumentText(
+            """
+            약품명 | 1회 투약량 | 1일 투여횟수 | 총 투약일수
+            타이레놀정500mg | 1 | 3 | 3
+            """.trimIndent()
+        )
+
+        assertEquals(
+            DocumentTextBlock.Table(
+                header = listOf("약품명", "1회 투약량", "1일 투여횟수", "총 투약일수"),
+                rows = listOf(listOf("타이레놀정500mg", "1", "3", "3"))
+            ),
+            blocks.single()
+        )
+    }
+
+    @Test
+    fun `첫 행에만 값이 있는 열은 버리고 서식으로 되돌린다`() {
+        // 진단서를 표로 인식한 경우. 뒤 두 칸은 첫 줄만 쓰고 아래 줄들은 비어 있다 — 그대로 두면
+        // 첫 줄이 헤더로 칠해지고 빈 열이 폭을 절반 가까이 가져가 값이 서너 글자마다 줄바꿈된다.
+        val blocks = parseDocumentText(
+            """
+            병록번호 | 12257 | 연번호 | 19-7001
+            환자의 성명 | 홍종민 |  | 
+            환자의 주소 | 부산광역시 북구 시랑로 131번길 33 |  | 
+            """.trimIndent()
+        )
+
+        assertEquals(
+            listOf(
+                DocumentTextBlock.Field("병록번호", "12257"),
+                DocumentTextBlock.Field("연번호", "19-7001"),
+                DocumentTextBlock.Field("환자의 성명", "홍종민"),
+                DocumentTextBlock.Field("환자의 주소", "부산광역시 북구 시랑로 131번길 33")
+            ),
+            blocks
+        )
+    }
 }

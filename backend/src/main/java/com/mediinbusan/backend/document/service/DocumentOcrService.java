@@ -66,13 +66,18 @@ public class DocumentOcrService {
         return new DocumentOcrResponse(text, translatedText, appliedTargetLanguage);
     }
 
+    /**
+     * 번역은 원문을 제3자(Papago, NAVER Cloud)로 내보내므로 고유식별번호를 가린 뒤 보낸다.
+     * 응답의 원문(text)은 촬영한 본인에게 TLS로 돌려주는 것이라 가리지 않는다 — 앱이 화면에
+     * 그릴 때 다시 마스킹하고, 사용자가 눈 아이콘으로 직접 해제할 수 있어야 한다.
+     */
     private String translate(String text, String targetLanguage) {
         if (targetLanguage == null || targetLanguage.isBlank()) {
             return null;
         }
 
         try {
-            return papagoTranslationClient.translate(text, targetLanguage);
+            return papagoTranslationClient.translate(SensitiveTextMasker.mask(text), targetLanguage);
         } catch (PapagoTranslationAuthenticationException e) {
             log.error("Papago 번역 인증에 실패했습니다. PAPAGO_TRANSLATION_CLIENT_ID/SECRET 설정을 확인하세요. 원문만 반환합니다.");
             return null;
