@@ -26,6 +26,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -64,10 +66,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -94,6 +98,9 @@ import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
+import com.mediinbusan.app.core.ui.PlaceKindVisual
+import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
@@ -105,6 +112,7 @@ import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismTagGroup
+import com.mediinbusan.app.domain.tourism.placeCategoryCodes
 import com.mediinbusan.app.domain.tourism.toTourismTagGroup
 import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 
@@ -112,7 +120,8 @@ import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 fun NearbyScreen(
     hospitalId: String,
     onSelectTourismItem: () -> Unit,
-    onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
+    onNavigateToTourismCatalog: (TourismCatalogCategory, String?) -> Unit,
+    onSearchTourism: (TourismCatalogCategory, String) -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: NearbyViewModel = hiltViewModel()
 ) {
@@ -134,6 +143,7 @@ fun NearbyScreen(
             onSelectTourismItem()
         },
         onNavigateToTourismCatalog = onNavigateToTourismCatalog,
+        onSearchTourism = onSearchTourism,
         onNavigateToSettings = onNavigateToSettings,
         onLanguageSelected = viewModel::onLanguageSelected,
         onRetry = { viewModel.load(hospitalId) }
@@ -146,7 +156,8 @@ private fun NearbyContent(
     uiState: NearbyUiState,
     onSelectHotPlace: (TourismHotPlace) -> Unit,
     onSelectCatalogItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
-    onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
+    onNavigateToTourismCatalog: (TourismCatalogCategory, String?) -> Unit,
+    onSearchTourism: (TourismCatalogCategory, String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onRetry: () -> Unit
@@ -179,6 +190,7 @@ private fun NearbyContent(
                 onSelectHotPlace = onSelectHotPlace,
                 onSelectCatalogItem = onSelectCatalogItem,
                 onNavigateToTourismCatalog = onNavigateToTourismCatalog,
+                onSearchTourism = onSearchTourism,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -190,7 +202,8 @@ private fun NearbyLoadedContent(
     uiState: NearbyUiState,
     onSelectHotPlace: (TourismHotPlace) -> Unit,
     onSelectCatalogItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
-    onNavigateToTourismCatalog: (TourismCatalogCategory) -> Unit,
+    onNavigateToTourismCatalog: (TourismCatalogCategory, String?) -> Unit,
+    onSearchTourism: (TourismCatalogCategory, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -201,7 +214,7 @@ private fun NearbyLoadedContent(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         item {
-            WellnessSearchAndFilterSection()
+            WellnessSearchAndFilterSection(onSelectCategory = onNavigateToTourismCatalog, onSearch = onSearchTourism)
         }
 
         item {
@@ -210,7 +223,7 @@ private fun NearbyLoadedContent(
                 isLoading = uiState.isHotPlacesLoading,
                 errorMessage = uiState.hotPlacesError,
                 onSelectHotPlace = onSelectHotPlace,
-                onSeeAll = { onNavigateToTourismCatalog(TourismCatalogCategory.CROWDING) },
+                onSeeAll = { onNavigateToTourismCatalog(TourismCatalogCategory.CROWDING, null) },
                 // 위 필터 원형 버튼들과 이 섹션 사이가 너무 붙어 보여서 위쪽에만 여백을 더 준다.
                 modifier = Modifier.padding(start = 10.dp, top = 20.dp, end = 10.dp)
             )
@@ -221,7 +234,7 @@ private fun NearbyLoadedContent(
                 tourismPreviews = uiState.tourismPreviews,
                 accessiblePreviews = uiState.accessiblePreviews,
                 onSelectItem = onSelectCatalogItem,
-                onNavigate = onNavigateToTourismCatalog,
+                onNavigate = { category -> onNavigateToTourismCatalog(category, null) },
                 // 위 핫플레이스 랭킹 영역과의 간격도 필터↔랭킹 영역과 같은 폭(위쪽 20dp 추가)으로 맞춘다.
                 modifier = Modifier.padding(start = 20.dp, top = 20.dp, end = 20.dp)
             )
@@ -230,24 +243,31 @@ private fun NearbyLoadedContent(
     }
 }
 
-// F-011/F-014 웰니스 서치+필터 배치. 아직 포맷(레이아웃)만 잡는 단계라 검색어 입력/카테고리
-// 선택 모두 로컬 상태로만 갖고 있고 실제 목록 필터링에는 연결하지 않았다. 필터 아이콘은
-// wellness_tour/wellness_rest/wellness_food/wellness_mujange 4종 에셋을 그대로 쓴다.
+// F-011/F-014 웰니스 서치+필터 배치. 필터 4종(관광지/숙박/맛집/무장애)은 각각 부산 관광지·무장애
+// 관광 리스트업으로 바로 던지고, 서치바는 검색 실행(키보드 검색/엔터) 시 부산 관광지 리스트업으로
+// 쿼리를 넘긴다 — 핫플레이스·무장애 관광까지 아우르는 통합검색은 없다(그 둘은 각자 화면에 자체
+// 검색바가 있다). 부산 관광지가 관광지/숙박/맛집 필터의 도착지와 같아 일관성이 있고, 백엔드에
+// 3개 도메인을 합치는 통합 검색 API가 없어 이 이상은 서버 작업이 필요하다.
 @Composable
-private fun WellnessSearchAndFilterSection(modifier: Modifier = Modifier) {
+private fun WellnessSearchAndFilterSection(
+    onSelectCategory: (TourismCatalogCategory, String?) -> Unit,
+    onSearch: (TourismCatalogCategory, String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // 요청: 서치바는 필터 원형 버튼(20dp 여백 유지)보다 살짝 더 넓게 — 좌우 여백을 1dp씩 줄여
         // 총 2dp 더 길어 보이게 한다.
-        WellnessCatalogSearchBar(modifier = Modifier.padding(horizontal = 19.dp))
-        WellnessCategoryFilterRow(modifier = Modifier.padding(horizontal = 20.dp))
+        WellnessCatalogSearchBar(onSearch = onSearch, modifier = Modifier.padding(horizontal = 19.dp))
+        WellnessCategoryFilterRow(onSelectCategory = onSelectCategory, modifier = Modifier.padding(horizontal = 20.dp))
     }
 }
 
 // 요청: 코랄 외곽선 대신 회색 베이스(테두리 없음)로, 돋보기 아이콘은 왼쪽에 회색으로 배치.
 @Composable
-private fun WellnessCatalogSearchBar(modifier: Modifier = Modifier) {
+private fun WellnessCatalogSearchBar(onSearch: (TourismCatalogCategory, String) -> Unit, modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
     val strings = LocalAppStrings.current
+    val tourismCategory = tourismCategoryForLanguage(strings.language.code)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -273,23 +293,43 @@ private fun WellnessCatalogSearchBar(modifier: Modifier = Modifier) {
                 singleLine = true,
                 textStyle = TextStyle(color = TextPrimary, fontSize = MaterialTheme.typography.bodyMedium.fontSize),
                 cursorBrush = Brush.verticalGradient(listOf(CoralPrimary, CoralPrimary)),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        val trimmed = query.trim()
+                        if (trimmed.isNotEmpty()) onSearch(tourismCategory, trimmed)
+                    }
+                ),
                 modifier = Modifier.fillMaxWidth()
             )
         }
     }
 }
 
-private data class WellnessFilterOption(val key: String, val label: String, @param:androidx.annotation.DrawableRes val iconRes: Int)
+private data class WellnessFilterOption(
+    val key: String,
+    val label: String,
+    @param:androidx.annotation.DrawableRes val iconRes: Int,
+    val category: TourismCatalogCategory,
+    val categoryCode: String?
+)
 
 @Composable
-private fun WellnessCategoryFilterRow(modifier: Modifier = Modifier) {
+private fun WellnessCategoryFilterRow(
+    onSelectCategory: (TourismCatalogCategory, String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val strings = LocalAppStrings.current.nearby
     val language = LocalAppStrings.current.language
+    // 언어별로 TourAPI contenttypeid 체계가 달라(PLACES_KO=12/32/39, EN/JA/ZH=76/80/82 — placeCategoryCodes
+    // 참고) 코드를 하드코딩하지 않고 현재 언어에 맞는 부산 관광지 카테고리에서 직접 가져온다.
+    val tourismCategory = tourismCategoryForLanguage(language.code)
+    val placeCodes = tourismCategory.placeCategoryCodes()
     val options = listOf(
-        WellnessFilterOption("12", "12".translatedTourismItemCategoryLabel(language).orEmpty(), R.drawable.wellness_tour),
-        WellnessFilterOption("32", "32".translatedTourismItemCategoryLabel(language).orEmpty(), R.drawable.wellness_rest),
-        WellnessFilterOption("39", strings.wellnessFilterFoodLabel, R.drawable.wellness_food),
-        WellnessFilterOption(TourismCatalogCategory.ACCESSIBLE.name, strings.wellnessFilterAccessibleLabel, R.drawable.wellness_mujange)
+        WellnessFilterOption("12", "12".translatedTourismItemCategoryLabel(language).orEmpty(), R.drawable.wellness_tour, tourismCategory, placeCodes.spot),
+        WellnessFilterOption("32", "32".translatedTourismItemCategoryLabel(language).orEmpty(), R.drawable.wellness_rest, tourismCategory, placeCodes.lodging),
+        WellnessFilterOption("39", strings.wellnessFilterFoodLabel, R.drawable.wellness_food, tourismCategory, placeCodes.food),
+        WellnessFilterOption(TourismCatalogCategory.ACCESSIBLE.name, strings.wellnessFilterAccessibleLabel, R.drawable.wellness_mujange, TourismCatalogCategory.ACCESSIBLE, null)
     )
     var selectedKey by remember { mutableStateOf<String?>(null) }
     // 4dp로는 시각적으로 서치바 끝선과 거의 같아 보였다 — 확실히 그 안쪽이라고 보이도록 살짝만 더 당긴다.
@@ -304,7 +344,10 @@ private fun WellnessCategoryFilterRow(modifier: Modifier = Modifier) {
                 iconRes = option.iconRes,
                 label = option.label,
                 selected = option.key == selectedKey,
-                onClick = { selectedKey = if (selectedKey == option.key) null else option.key }
+                onClick = {
+                    selectedKey = if (selectedKey == option.key) null else option.key
+                    onSelectCategory(option.category, option.categoryCode)
+                }
             )
         }
     }
@@ -447,7 +490,11 @@ private fun TourismPlaceSlider(
             // spacedBy는 0으로), 위 2dp/아래 10dp(하단 스팟 그림자가 더 진해서 더 크게).
             LazyRow(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                    TourismRevealContent(index = index, revealedCount = revealedCount) {
+                    TourismRevealContent(
+                        index = index,
+                        revealedCount = revealedCount,
+                        skeletonPadding = PaddingValues(start = 6.dp, top = 2.dp, end = 6.dp, bottom = 10.dp)
+                    ) {
                         Box(
                             modifier = Modifier.padding(start = 6.dp, top = 2.dp, end = 6.dp, bottom = 10.dp)
                         ) {
@@ -485,10 +532,24 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: In
             .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.16f), CoralPrimaryContainer)))
             .clickable(onClick = onClick)
     ) {
-        item.imageUrl?.let { AsyncImageBox(it, item.title, Modifier.fillMaxSize()) }
+        val imageUrl = item.imageUrl
+        if (imageUrl != null) {
+            AsyncImageBox(imageUrl, item.title, Modifier.fillMaxSize())
+        } else {
+            // 사진이 없으면 태그 종류(관광지/숙박/음식)에 맞는 디폴트를 쓴다. Map의 PlaceFallbackThumbnail은
+            // 흰 배경 위 작은 인라인 썸네일 전용이라(6~20% 저채도 틴트) 이 카드 자체 배경(대각선
+            // 그라데이션) 위에 얹으면 반투명이 겹쳐 탁한 사각형처럼 보인다 — 그래서 여기 전용으로
+            // 카드 배경을 완전히 덮는 불투명 파스텔 그라데이션 버전을 따로 쓴다(Map 쪽은 그대로 둔다).
+            when (tagRes) {
+                R.drawable.wellness_busanrest -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.LODGING), Modifier.fillMaxSize())
+                R.drawable.wellness_busaneat -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.RESTAURANT), Modifier.fillMaxSize())
+                else -> MapMarkerFallbackThumbnail(Modifier.fillMaxSize(), iconSize = 32.dp)
+            }
+        }
+        // 요청: 카드 전체를 덮던 그림자를 원래의 40% 수준으로 옅게 낮춘다.
         Box(
             Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0.76f)))
+                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.03f), Color.Black.copy(alpha = 0.30f)))
             )
         )
         // 핫플레이스 1/2/3등 배지(HotPlaceRankBadge)와 같은 위치·같은 렌더링 방식으로, 카테고리
@@ -528,6 +589,25 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: In
                 )
             }
         }
+    }
+}
+
+// TourismPlaceCard(140x180 포토카드) 전용 폴백 — Map의 PlaceFallbackThumbnail(작은 인라인
+// 썸네일용, 6~20% 저채도 틴트)과 달리 카드 배경을 완전히 덮어야 해서, 종류 색을 흰색과
+// 섞어 만든 불투명 파스텔로 그라데이션을 건다(MapMarkerFallbackThumbnail과 같은 방식).
+@Composable
+private fun TourismCardFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifier) {
+    val pastel = visual.color.copy(alpha = 0.18f).compositeOver(Color.White)
+    Box(
+        modifier = modifier.background(Brush.linearGradient(listOf(pastel, Color.White))),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = visual.icon,
+            contentDescription = null,
+            tint = visual.color,
+            modifier = Modifier.size(32.dp)
+        )
     }
 }
 
@@ -767,6 +847,10 @@ private fun TourismRevealContent(
     index: Int,
     revealedCount: Int,
     modifier: Modifier = Modifier,
+    // TourismPlaceSlider처럼 content() 안쪽에 그림자용 여유 패딩(6/2/6/10dp)이 들어있는 경우, 그
+    // 패딩까지 matchParentSize로 그대로 덮으면 스켈레톤이 옆 카드 스켈레톤과 여백 없이 붙어 보인다
+    // — 실제 카드가 앉는 자리만큼만 스켈레톤도 안쪽으로 밀어 넣는다(같은 값을 그대로 전달).
+    skeletonPadding: PaddingValues = PaddingValues(),
     content: @Composable () -> Unit
 ) {
     val isAnimated = index < InitialCardRevealCount
@@ -783,7 +867,7 @@ private fun TourismRevealContent(
             content()
         }
         if (isAnimated && revealProgress < 1f) {
-            ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize())
+            ShimmerSkeleton(alpha = 1f - revealProgress, modifier = Modifier.matchParentSize().padding(skeletonPadding))
         }
     }
 }
@@ -800,9 +884,12 @@ private fun HotPlaceRankBadge(iconRes: Int, height: Dp, modifier: Modifier = Mod
 }
 
 @Composable
-private fun HotPlaceThumbnailImage(hotPlace: TourismHotPlace, modifier: Modifier = Modifier) {
-    hotPlace.item.imageUrl?.let { imageUrl ->
+private fun HotPlaceThumbnailImage(hotPlace: TourismHotPlace, modifier: Modifier = Modifier, iconSize: Dp = 28.dp) {
+    val imageUrl = hotPlace.item.imageUrl
+    if (imageUrl != null) {
         AsyncImageBox(imageUrl, hotPlace.item.title, modifier)
+    } else {
+        MapMarkerFallbackThumbnail(modifier, iconSize)
     }
 }
 
@@ -811,24 +898,20 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 200.dp)
+            // 200dp였을 때는 2/3위(고정 180dp)와 육안으로 거의 구분이 안 됐다 — 1위임이 분명히 보이도록 더 키운다.
+            .heightIn(min = 260.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color.White)))
             .clickable(onClick = onClick)
     ) {
-        HotPlaceThumbnailImage(hotPlace, Modifier.fillMaxSize())
-        // 1위 카드는 heightIn(min=...)라 2/3위(고정 180dp)보다 실제 높이가 훨씬 커질 수 있어서,
-        // 2-stop 그라데이션을 그대로 쓰면 하단 텍스트 영역까지의 어두워지는 구간이 상대적으로
-        // 옅어 보인다 — 중간 stop을 추가해 어두워지는 시점을 앞당기고 최종 alpha도 더 올린다.
+        // heightIn(min=...)는 최댓값이 없어 카드 실제 높이가 사진/제목 줄바꿈에 따라 늘어난다 —
+        // fillMaxSize()는 이 "최종 높이"보다 먼저 스스로의 콘텐츠 크기로 측정돼 위쪽에 붙어버리므로,
+        // 다른 형제(뱃지/텍스트)까지 다 정해진 뒤의 실제 박스 크기에 맞춰지는 matchParentSize를 쓴다.
+        HotPlaceThumbnailImage(hotPlace, Modifier.matchParentSize(), iconSize = 44.dp)
+        // 2·3등과 같은 패턴 — 사진 전체를 덮지 않고 텍스트가 앉는 하단 구간에만 그라데이션을 건다.
         Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0f to Color.Black.copy(alpha = 0.05f),
-                        0.45f to Color.Black.copy(alpha = 0.30f),
-                        1f to Color.Black.copy(alpha = 0.85f)
-                    )
-                )
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(120.dp).background(
+                Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.82f)))
             )
         )
         HotPlaceRankBadge(
@@ -891,10 +974,11 @@ private fun HotPlaceGridCard(
             .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color.White)))
             .clickable(onClick = onClick)
     ) {
-        HotPlaceThumbnailImage(hotPlace, Modifier.fillMaxSize())
+        HotPlaceThumbnailImage(hotPlace, Modifier.fillMaxSize(), iconSize = 36.dp)
+        // 사진 전체를 어둡게 덮지 않고 텍스트가 앉는 하단 구간에만 그라데이션을 건다 — 위쪽 사진은 원본 밝기 그대로 보인다.
         Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0.76f)))
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(90.dp).background(
+                Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f)))
             )
         )
         val rankBadgeRes = if (rank == 2) R.drawable.wellness_2nd else R.drawable.wellness_3rd
@@ -956,7 +1040,7 @@ private fun HotPlaceCompactRow(rank: Int, hotPlace: TourismHotPlace, onClick: ()
         Box(
             modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(CoralPrimaryContainer)
         ) {
-            HotPlaceThumbnailImage(hotPlace, Modifier.fillMaxSize())
+            HotPlaceThumbnailImage(hotPlace, Modifier.fillMaxSize(), iconSize = 20.dp)
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(hotPlace.item.title, style = CardTitleStyle, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)

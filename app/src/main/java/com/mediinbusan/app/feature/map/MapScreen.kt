@@ -142,6 +142,7 @@ import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.PlaceFallbackThumbnail
 import com.mediinbusan.app.core.ui.PlaceKindVisual
 import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.RouteStop
@@ -1621,28 +1622,6 @@ private fun PlaceThumbnail(place: Place, modifier: Modifier = Modifier) {
         AsyncImageBox(model = place.imageUrl, contentDescription = place.name, modifier = modifier)
     } else {
         PlaceFallbackThumbnail(visual = placeKindVisual(place.type, place.category), modifier = modifier)
-    }
-}
-
-// 사진이 없는 장소의 대체 썸네일 — 종류별 색 그라데이션 + 아이콘 배지를 작은 카드 썸네일 크기에
-// 맞춰 줄인 것. 아이콘·색은 core/ui/PlaceKindVisuals.kt 한 곳에서 받아 쓴다(예전엔 이 파일과
-// PlaceDetailScreen이 각자 다른 팔레트를 들고 있어 같은 장소가 화면마다 다른 색으로 보였다).
-@Composable
-private fun PlaceFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                listOf(visual.color.copy(alpha = 0.20f), visual.color.copy(alpha = 0.06f))
-            )
-        ),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = visual.icon,
-            contentDescription = null,
-            tint = visual.color,
-            modifier = Modifier.size(26.dp)
-        )
     }
 }
 
