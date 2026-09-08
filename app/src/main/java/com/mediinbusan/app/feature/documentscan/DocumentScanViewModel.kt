@@ -39,7 +39,12 @@ class DocumentScanViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             userPreferencesRepository.userPreferences.collect { preferences ->
-                _uiState.update { it.copy(languageCode = preferences.languageCode) }
+                _uiState.update {
+                    it.copy(
+                        languageCode = preferences.languageCode,
+                        cameraPermissionRequested = preferences.cameraPermissionRequested
+                    )
+                }
             }
         }
         // 지난 세션에 남은 촬영본 정리. 프로세스가 복원된 경우엔 위에서 되살린 선택만 남긴다.
@@ -104,6 +109,13 @@ class DocumentScanViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    /** 시스템 카메라 권한 팝업을 띄우는 순간 기록한다(DocumentScanUiState.cameraPermissionRequested 주석 참고). */
+    fun onCameraPermissionRequested() {
+        viewModelScope.launch {
+            userPreferencesRepository.setCameraPermissionRequested(true)
         }
     }
 

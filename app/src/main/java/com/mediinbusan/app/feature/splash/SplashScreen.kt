@@ -49,6 +49,7 @@ private val pillHeights = listOf(8.dp, 12.dp, 16.dp, 28.dp, 16.dp, 12.dp, 8.dp)
 @Composable
 fun SplashScreen(
     onNavigateToHome: () -> Unit,
+    onNavigateToPermissionNotice: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -56,6 +57,7 @@ fun SplashScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             SplashUiState.NavigateToHome -> onNavigateToHome()
+            SplashUiState.NavigateToPermissionNotice -> onNavigateToPermissionNotice()
             SplashUiState.Loading -> Unit
         }
     }

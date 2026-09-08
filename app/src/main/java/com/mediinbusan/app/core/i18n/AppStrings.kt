@@ -10,6 +10,7 @@ import com.mediinbusan.app.core.datastore.SupportedLanguage
 data class AppStrings(
     val language: SupportedLanguage,
     val common: CommonStrings,
+    val permissionNotice: PermissionNoticeStrings,
     val home: HomeStrings,
     val settings: SettingsStrings,
     val search: SearchStrings,
@@ -31,6 +32,7 @@ data class AppStrings(
 private val KoreanAppStrings = AppStrings(
     language = SupportedLanguage.KO,
     common = CommonStrings.Ko,
+    permissionNotice = PermissionNoticeStrings.Ko,
     home = HomeStrings.Ko,
     settings = SettingsStrings.Ko,
     search = SearchStrings.Ko,
@@ -52,6 +54,7 @@ private val KoreanAppStrings = AppStrings(
 private val EnglishAppStrings = AppStrings(
     language = SupportedLanguage.EN,
     common = CommonStrings.En,
+    permissionNotice = PermissionNoticeStrings.En,
     home = HomeStrings.En,
     settings = SettingsStrings.En,
     search = SearchStrings.En,
@@ -73,6 +76,7 @@ private val EnglishAppStrings = AppStrings(
 private val ChineseAppStrings = AppStrings(
     language = SupportedLanguage.ZH,
     common = CommonStrings.Zh,
+    permissionNotice = PermissionNoticeStrings.Zh,
     home = HomeStrings.Zh,
     settings = SettingsStrings.Zh,
     search = SearchStrings.Zh,
@@ -94,6 +98,7 @@ private val ChineseAppStrings = AppStrings(
 private val JapaneseAppStrings = AppStrings(
     language = SupportedLanguage.JA,
     common = CommonStrings.Ja,
+    permissionNotice = PermissionNoticeStrings.Ja,
     home = HomeStrings.Ja,
     settings = SettingsStrings.Ja,
     search = SearchStrings.Ja,
