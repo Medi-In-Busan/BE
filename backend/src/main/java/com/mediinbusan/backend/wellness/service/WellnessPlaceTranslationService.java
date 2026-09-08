@@ -176,7 +176,10 @@ public class WellnessPlaceTranslationService {
     private static WellnessPlaceResponse translatedResponse(WellnessPlaceResponse source, WellnessPlaceTranslation translation) {
         return new WellnessPlaceResponse(source.contentId(), translation.name(), source.contentTypeId(), translation.address(),
             source.latitude(), source.longitude(), source.imageUrl(), translation.description(), source.phoneNumber(),
-            source.modifiedDate(), source.distanceFromHospitalMeters(), true, source.placeCategory());
+            source.modifiedDate(), source.distanceFromHospitalMeters(), true, source.placeCategory(),
+            // 방문 정보는 번역 대상이 아니다 — 원문(한국어)을 그대로 통과시킨다(WellnessVisitInfo 주석 참고).
+            source.businessHours(), source.restDate(), source.signatureMenu(),
+            source.usageFee(), source.parkingInfo(), source.homepageUrl());
     }
 
     private record PendingTranslation(

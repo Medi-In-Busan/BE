@@ -14,6 +14,12 @@ package com.mediinbusan.app.core.i18n
  */
 data class NearbyStrings(
     val viewCourseRouteButtonLabel: String,
+    /** 추천 코스 카드 하단 요약. %s는 총 거리(km 단위 숫자). */
+    val routeDistanceSummaryFormat: String,
+    // 장소 상세 하단 "주변 같은 종류의 장소" 섹션. %s에는 placeTypeLabels의 종류 라벨이 들어간다
+    // ("주변 관광지", "Nearby: Cafe & dining"). 이 장소 좌표 기준이라 "내 주변"이 아니다.
+    val nearbySameTypeTitleFormat: String,
+    val nearbySameTypeSubtitle: String,
     val placeNotFoundMessage: String,
     val introSectionTitle: String,
     val distanceLabel: String,
@@ -82,6 +88,9 @@ data class NearbyStrings(
     companion object {
         val Ko = NearbyStrings(
             viewCourseRouteButtonLabel = "이 코스 동선 보기",
+            routeDistanceSummaryFormat = "%skm · 동선 보기",
+            nearbySameTypeTitleFormat = "주변 %s",
+            nearbySameTypeSubtitle = "이 곳 주변에 있는 같은 종류의 장소예요.",
             placeNotFoundMessage = "장소 정보를 찾을 수 없습니다.",
             introSectionTitle = "소개",
             distanceLabel = "거리",
@@ -112,6 +121,9 @@ data class NearbyStrings(
         )
         val En = NearbyStrings(
             viewCourseRouteButtonLabel = "View route on map",
+            routeDistanceSummaryFormat = "%s km · View route",
+            nearbySameTypeTitleFormat = "Nearby: %s",
+            nearbySameTypeSubtitle = "Places of the same kind near here.",
             placeNotFoundMessage = "Place information not found.",
             introSectionTitle = "About",
             distanceLabel = "Distance",
@@ -142,6 +154,9 @@ data class NearbyStrings(
         )
         val Zh = NearbyStrings(
             viewCourseRouteButtonLabel = "在地图上查看路线",
+            routeDistanceSummaryFormat = "%s公里 · 查看路线",
+            nearbySameTypeTitleFormat = "附近的%s",
+            nearbySameTypeSubtitle = "本地点附近同类型的场所。",
             placeNotFoundMessage = "未找到场所信息。",
             introSectionTitle = "介绍",
             distanceLabel = "距离",
@@ -172,6 +187,9 @@ data class NearbyStrings(
         )
         val Ja = NearbyStrings(
             viewCourseRouteButtonLabel = "このコースの経路を見る",
+            routeDistanceSummaryFormat = "%skm · 経路を見る",
+            nearbySameTypeTitleFormat = "近くの%s",
+            nearbySameTypeSubtitle = "この場所の近くにある同じタイプのスポットです。",
             placeNotFoundMessage = "スポット情報が見つかりません。",
             introSectionTitle = "紹介",
             distanceLabel = "距離",

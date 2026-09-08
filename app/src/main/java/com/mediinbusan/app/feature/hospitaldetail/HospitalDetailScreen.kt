@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -42,6 +44,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Share
@@ -56,8 +59,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,21 +73,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.MedicalCategory
+import com.mediinbusan.app.core.common.resolveHospitalThumbnailRes
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.HospitalDetailStrings
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.BadgeOutline
+import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
@@ -102,14 +112,17 @@ import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.WrapRow
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
+import com.mediinbusan.app.core.ui.rememberFavoriteTogglePop
 import com.mediinbusan.app.core.ui.toLanguageDisplayName
 import com.mediinbusan.app.data.hospital.Hospital
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
 fun HospitalDetailScreen(
     hospitalId: String,
+    onSelectHospital: (String) -> Unit,
     onNavigateToGuide: () -> Unit,
     onNavigateToNearby: () -> Unit,
     onNavigateToMap: () -> Unit,
@@ -143,6 +156,8 @@ fun HospitalDetailScreen(
             hospital != null -> HospitalDetailContent(
                 hospital = hospital,
                 isFavorite = uiState.isFavorite,
+                nearbyHospitals = uiState.nearbyHospitals,
+                onSelectHospital = onSelectHospital,
                 onToggleFavorite = viewModel::onToggleFavorite,
                 onNavigateToGuide = onNavigateToGuide,
                 onNavigateToNearby = onNavigateToNearby,
@@ -159,6 +174,8 @@ fun HospitalDetailScreen(
 private fun HospitalDetailContent(
     hospital: Hospital,
     isFavorite: Boolean,
+    nearbyHospitals: List<Hospital>,
+    onSelectHospital: (String) -> Unit,
     onToggleFavorite: () -> Unit,
     onNavigateToGuide: () -> Unit,
     onNavigateToNearby: () -> Unit,
@@ -171,21 +188,41 @@ private fun HospitalDetailContent(
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
-    // 5개 섹션(병원소개/기본정보/진료과목/위치/기타정보)의 스크롤 콘텐츠 내 세로 위치(px) —
-    // 아래 축약 탭바에서 탭을 고르면 이 위치로 스크롤한다. onGloballyPositioned로 매 배치마다
-    // 갱신되므로 콘텐츠 높이가 언어/데이터에 따라 달라져도 항상 최신 위치를 가리킨다.
-    var introSectionTop by remember { mutableIntStateOf(0) }
-    var basicInfoSectionTop by remember { mutableIntStateOf(0) }
-    var specialtiesSectionTop by remember { mutableIntStateOf(0) }
-    var locationSectionTop by remember { mutableIntStateOf(0) }
-    var otherInfoSectionTop by remember { mutableIntStateOf(0) }
+    // 값이 없는 정보는 "정보 없음" 행으로 채우지 않고 아예 그리지 않는다. 장소 상세(S-07)가 먼저
+    // 이렇게 바꿨는데(PlaceDetailScreen의 기본정보 카드 주석 참고) 병원 상세만 예전 방식으로 남아,
+    // 값이 비면 "정보 없음"이 네 줄 찍힌 카드가 화면 한가운데를 차지했다.
+    val openingHours = hospital.openingHours?.takeUnless { it.isBlank() }
+    val phoneNumber = hospital.phoneNumber?.takeUnless { it.isBlank() }
+    val homepageUrl = hospital.homepageUrl?.takeUnless { it.isBlank() }
+    val supportedLanguages = hospital.supportedLanguages
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString(" · ") { it.toLanguageDisplayName() }
+    val description = hospital.description?.takeUnless { it.isBlank() }
+
+    // 실제로 그려지는 섹션만 축약 탭바에 올린다. 예전에는 라벨 5개를 항상 그려서, 진료과목이 없는
+    // 병원에서 "진료과목" 탭을 누르면 위치를 못 찾고(top이 0으로 남아) 화면 맨 위로 튀었다.
+    val visibleSections = buildList {
+        if (description != null) add(HospitalDetailSection.INTRO)
+        if (openingHours != null || phoneNumber != null || homepageUrl != null || supportedLanguages != null) {
+            add(HospitalDetailSection.BASIC_INFO)
+        }
+        if (hospital.specialties.isNotEmpty()) add(HospitalDetailSection.SPECIALTIES)
+        add(HospitalDetailSection.LOCATION)
+        // 주변 병원은 조회 결과가 있을 때만. 좌표가 없거나 겹치는 과목이 없으면 ViewModel이 아예
+        // 요청하지 않아 빈 목록으로 남고, 그러면 이 섹션도 탭도 함께 사라진다.
+        if (nearbyHospitals.isNotEmpty()) add(HospitalDetailSection.NEARBY)
+        add(HospitalDetailSection.OTHER_INFO)
+    }
+
+    // 각 섹션의 스크롤 콘텐츠 내 세로 위치(px). onGloballyPositioned로 매 배치마다 갱신되므로
+    // 콘텐츠 높이가 언어/데이터에 따라 달라져도 항상 최신 위치를 가리킨다.
+    val sectionTops = remember { mutableStateMapOf<HospitalDetailSection, Int>() }
 
     // 의료기관 목록(HospitalSearchListScreen)의 필터바 접힘/펼침과 같은 델타 기반 스크롤 방향
     // 감지 로직을 그대로 가져오되, 방향은 반대다 — 거기서는 아래로 스크롤하면 필터바가 접히고
     // (숨고) 위로 올리면 펼쳐지는데, 여기서는 아래로 스크롤하면 축약 헤더(탑바 타이틀+섹션
     // 탭바)가 나타나고, 위로 스크롤하거나 맨 위 근처로 돌아오면 다시 기본 구성으로 사라진다.
     var showCollapsedHeader by remember { mutableStateOf(false) }
-    var selectedTabIndex by remember { mutableStateOf<Int?>(null) }
     // 탭을 눌러 animateScrollTo로 위쪽 섹션까지 프로그램적으로 스크롤할 때도 scrollState.value가
     // 위로 흐르면서 아래 델타 감지에 "사용자가 위로 스크롤함"으로 잡혀 축약 헤더가 꺼져버렸다.
     // 탭 이동 중에는 이 플래그로 방향 감지를 잠깐 꺼서, 실제 손가락 스크롤일 때만 사라지게 한다.
@@ -202,6 +239,24 @@ private fun HospitalDetailContent(
                 }
             }
             previousValue = value
+        }
+    }
+
+    // 밑줄은 손으로 스크롤할 때도 따라와야 한다 — 예전에는 탭을 눌렀을 때만 바뀌어서, 3번 섹션을
+    // 보고 있어도 밑줄은 1번에 남아 있었다. 화면 위에서 조금 아래를 기준선 삼아, 그 선을 지난
+    // 마지막 섹션을 활성으로 본다.
+    val sectionActivateOffset = with(LocalDensity.current) { 140.dp.roundToPx() }
+    val activeSectionIndex by remember(visibleSections, sectionActivateOffset) {
+        derivedStateOf {
+            val scroll = scrollState.value
+            // 맨 아래에서는 마지막 섹션이 기준선까지 못 올라오는 게 정상이라 따로 잡아준다.
+            if (scrollState.maxValue != Int.MAX_VALUE && scroll >= scrollState.maxValue - 8) {
+                visibleSections.lastIndex
+            } else {
+                visibleSections
+                    .indexOfLast { (sectionTops[it] ?: Int.MAX_VALUE) <= scroll + sectionActivateOffset }
+                    .coerceAtLeast(0)
+            }
         }
     }
 
@@ -228,17 +283,10 @@ private fun HospitalDetailContent(
                 fadeOut(animationSpec = tween(durationMillis = 280))
         ) {
             HospitalDetailSectionTabsBar(
-                strings = strings,
-                selectedIndex = selectedTabIndex,
+                labels = visibleSections.map { it.label(strings) },
+                selectedIndex = activeSectionIndex,
                 onTabSelected = { index ->
-                    selectedTabIndex = index
-                    val targetTop = when (index) {
-                        0 -> introSectionTop
-                        1 -> basicInfoSectionTop
-                        2 -> specialtiesSectionTop
-                        3 -> locationSectionTop
-                        else -> otherInfoSectionTop
-                    }
+                    val targetTop = sectionTops[visibleSections[index]] ?: 0
                     coroutineScope.launch {
                         isNavigatingToSection = true
                         scrollState.animateScrollTo(targetTop)
@@ -285,12 +333,21 @@ private fun HospitalDetailContent(
                 // 즐겨찾기(흰 원 배경 없이 아이콘만)와 공유(기존 shareHospital 로직). 크기는
                 // 그대로 유지하고, 둘 사이 간격만 탑바 홈/길찾기보다 살짝 더 좁힌다(offset 8dp → 12dp).
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val favoritePop = rememberFavoriteTogglePop(
+                        isFavorite = isFavorite,
+                        onToggle = onToggleFavorite
+                    )
                     Box(modifier = Modifier.offset(x = 12.dp)) {
-                        IconButton(onClick = onToggleFavorite) {
+                        IconButton(onClick = favoritePop.onClick) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
-                                tint = CoralPrimary
+                                contentDescription = if (isFavorite) {
+                                    LocalAppStrings.current.common.favoriteRemoveContentDescription
+                                } else {
+                                    LocalAppStrings.current.common.favoriteAddContentDescription
+                                },
+                                tint = CoralPrimary,
+                                modifier = favoritePop.scaleModifier
                             )
                         }
                     }
@@ -321,35 +378,77 @@ private fun HospitalDetailContent(
             // 위치 서브타이틀-병원소개 사이는 다른 섹션 간 여백(14dp)의 약 3배를 둬서 "타이틀
             // 블록"과 "카드형 정보 섹션들" 사이를 시각적으로 크게 구분한다.
             Spacer(modifier = Modifier.height(42.dp))
-            Box(modifier = Modifier.onGloballyPositioned { introSectionTop = it.positionInParent().y.roundToInt() }) {
-                InfoSection(title = strings.introSectionTitle) {
-                    Text(
-                        text = hospital.description ?: strings.introEmpty,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
-                    )
+
+            // 소개가 없으면 "등록된 소개 정보가 없습니다" 카드를 남기지 않고 섹션째 뺀다 — 위
+            // 기본정보와 같은 규칙이다. 위 visibleSections에서 탭도 같이 빠지므로 어긋나지 않는다.
+            description?.let { introText ->
+                Box(
+                    modifier = Modifier.onGloballyPositioned {
+                        sectionTops[HospitalDetailSection.INTRO] = it.positionInParent().y.roundToInt()
+                    }
+                ) {
+                    InfoSection(title = strings.introSectionTitle, icon = Icons.Default.Info) {
+                        Text(
+                            text = introText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-            Box(modifier = Modifier.onGloballyPositioned { basicInfoSectionTop = it.positionInParent().y.roundToInt() }) {
-                InfoSection(title = strings.basicInfoSectionTitle) {
-                    BasicInfoRow(iconRes = R.drawable.hospital_detail_runtime, label = strings.openingHoursLabel, value = hospital.openingHours ?: strings.infoNotAvailable)
-                    BasicInfoRow(iconRes = R.drawable.hospital_detail_phone, label = strings.phoneLabel, value = hospital.phoneNumber ?: strings.infoNotAvailable)
-                    BasicInfoRow(iconRes = R.drawable.hospital_detail_homepage, label = strings.homepageLabel, value = hospital.homepageUrl ?: strings.infoNotAvailable)
-                    BasicInfoRow(
-                        iconRes = R.drawable.home_languege,
-                        label = strings.supportedLanguagesLabel,
-                        value = hospital.supportedLanguages.takeIf { it.isNotEmpty() }
-                            ?.joinToString(" · ") { it.toLanguageDisplayName() }
-                            ?: strings.infoNotAvailable
-                    )
+            if (visibleSections.contains(HospitalDetailSection.BASIC_INFO)) {
+                Box(
+                    modifier = Modifier.onGloballyPositioned {
+                        sectionTops[HospitalDetailSection.BASIC_INFO] = it.positionInParent().y.roundToInt()
+                    }
+                ) {
+                    InfoSection(title = strings.basicInfoSectionTitle) {
+                        openingHours?.let {
+                            BasicInfoRow(
+                                iconRes = R.drawable.hospital_detail_runtime,
+                                label = strings.openingHoursLabel,
+                                value = it
+                            )
+                        }
+                        // 전화·홈페이지는 그 자체가 액션을 겸한다. 예전에는 값을 눈으로 읽기만 할 수
+                        // 있어서, 전화를 걸려면 화면 맨 아래 "기타정보" 카드까지 스크롤해야 했고
+                        // 홈페이지는 아예 열 방법이 없었다(값이 여기 텍스트로만 있었다).
+                        phoneNumber?.let {
+                            BasicInfoRow(
+                                iconRes = R.drawable.hospital_detail_phone,
+                                label = strings.phoneLabel,
+                                value = it,
+                                onClick = { context.dialPhone(it) }
+                            )
+                        }
+                        homepageUrl?.let {
+                            BasicInfoRow(
+                                iconRes = R.drawable.hospital_detail_homepage,
+                                label = strings.homepageLabel,
+                                value = it,
+                                onClick = { context.launchHomepage(it) }
+                            )
+                        }
+                        supportedLanguages?.let {
+                            BasicInfoRow(
+                                iconRes = R.drawable.home_languege,
+                                label = strings.supportedLanguagesLabel,
+                                value = it
+                            )
+                        }
+                    }
                 }
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
             if (hospital.specialties.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Box(modifier = Modifier.onGloballyPositioned { specialtiesSectionTop = it.positionInParent().y.roundToInt() }) {
+                Box(
+                    modifier = Modifier.onGloballyPositioned {
+                        sectionTops[HospitalDetailSection.SPECIALTIES] = it.positionInParent().y.roundToInt()
+                    }
+                ) {
                     InfoSection(title = strings.specialtiesSectionTitle) {
                         val language = LocalAppStrings.current.language
                         // 한글 라벨("피부·미용" 4자)은 한 줄에 다 들어가지만 영어 번역("Obstetrics &
@@ -369,28 +468,45 @@ private fun HospitalDetailContent(
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-            Box(modifier = Modifier.onGloballyPositioned { locationSectionTop = it.positionInParent().y.roundToInt() }) {
-                InfoSection(title = strings.locationSectionTitle) {
+            Box(
+                modifier = Modifier.onGloballyPositioned {
+                    sectionTops[HospitalDetailSection.LOCATION] = it.positionInParent().y.roundToInt()
+                }
+            ) {
+                // 주소는 타이틀 바로 아래 서브타이틀로 이미 한 번 보여준다 — 같은 문자열을 이 카드에
+                // 또 적으면 한 화면에 두 번 나오는 셈이라, 여기는 지도만 남긴다.
+                InfoSection(title = strings.locationSectionTitle, icon = Icons.Default.LocationOn) {
                     LocationMiniMap(hospital = hospital, onExpandClick = onNavigateToMap, strings = strings)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = hospital.address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                }
+            }
+
+            // 위치(지도) 바로 다음에 둔다 — "여기가 어디인지"를 본 직후라 "이 근처에 또 뭐가 있는지"가
+            // 자연스럽게 이어진다. 카드가 화면 끝까지 스크롤돼 나가야 가로로 더 있다는 게 보이므로,
+            // 흰 카드(InfoSection)로 감싸지 않고 배경 위에 직접 얹는다.
+            if (nearbyHospitals.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Box(
+                    modifier = Modifier.onGloballyPositioned {
+                        sectionTops[HospitalDetailSection.NEARBY] = it.positionInParent().y.roundToInt()
                     }
+                ) {
+                    NearbyHospitalsSection(
+                        hospitals = nearbyHospitals,
+                        strings = strings,
+                        onSelectHospital = onSelectHospital
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            Box(modifier = Modifier.onGloballyPositioned { otherInfoSectionTop = it.positionInParent().y.roundToInt() }) {
+            Box(
+                modifier = Modifier.onGloballyPositioned {
+                    sectionTops[HospitalDetailSection.OTHER_INFO] = it.positionInParent().y.roundToInt()
+                }
+            ) {
                 SectionCard(innerPadding = 0.dp) {
                     Text(
                         text = strings.otherInfoSectionTitle,
@@ -511,17 +627,10 @@ private fun HospitalDetailTopBar(
 // 스크롤된다(호출부의 onTabSelected 참고).
 @Composable
 private fun HospitalDetailSectionTabsBar(
-    strings: HospitalDetailStrings,
-    selectedIndex: Int?,
+    labels: List<String>,
+    selectedIndex: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    val labels = listOf(
-        strings.introSectionTitle,
-        strings.basicInfoSectionTitle,
-        strings.specialtiesSectionTitle,
-        strings.locationSectionTitle,
-        strings.otherInfoSectionTitle
-    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -674,9 +783,22 @@ private fun translatedSpecialtyLabel(specialty: String, language: SupportedLangu
 // 배치하는 표준 형태이고, SectionCard는 제목 없이 카드만 필요한 곳(상단 정보 블록, 바로가기
 // 묶음)에 쓰는 더 낮은 레벨의 래퍼다.
 @Composable
-private fun InfoSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun InfoSection(
+    title: String,
+    // 제목 앞 작은 코랄 아이콘. 텍스트만 있는 섹션(소개/위치)이 눈에 더 잘 띄게 하려고 열어뒀다 —
+    // 장소 상세(PlaceDetailScreen)의 InfoSection과 같은 패턴이고, 거기처럼 모든 섹션에 다 붙이지는
+    // 않는다(다 붙이면 아이콘이 배경 무늬가 되어 아무것도 강조하지 못한다).
+    icon: ImageVector? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
     SectionCard {
-        Text(text = title, style = SectionTitleStyle, color = TextPrimary)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            icon?.let {
+                Icon(imageVector = it, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(text = title, style = SectionTitleStyle, color = TextPrimary)
+        }
         Spacer(modifier = Modifier.height(12.dp))
         content()
     }
@@ -708,9 +830,18 @@ private fun SectionCard(
 }
 
 @Composable
-private fun BasicInfoRow(iconRes: Int, label: String, value: String) {
+private fun BasicInfoRow(
+    iconRes: Int,
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -730,10 +861,12 @@ private fun BasicInfoRow(iconRes: Int, label: String, value: String) {
             color = TextSecondary,
             modifier = Modifier.width(72.dp)
         )
+        // 누를 수 있는 값(전화·홈페이지)만 코랄 글자색으로 구분한다 — 장소 상세의 BasicInfoRow와
+        // 같은 규칙이다. 면이 아니라 글자라서 CoralPrimary가 아니라 CoralInk를 쓴다.
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = TextPrimary,
+            color = if (onClick != null) CoralInk else TextPrimary,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
@@ -815,6 +948,161 @@ private fun Context.launchDirections(hospital: Hospital) {
         label = hospital.name,
         fallbackAddress = hospital.address
     )
+}
+
+/**
+ * "주변 같은 진료과목 병원" 가로 스크롤 섹션.
+ *
+ * 목록 화면이 아니라 곁들이는 추천이라 세로로 쌓지 않고 한 줄로 흘린다 — 카드가 화면 오른쪽 끝을
+ * 넘어가 잘려 보여야 "더 있다"가 전달되므로, contentPadding으로 여백을 주고 카드 자체는 화면 끝까지
+ * 스크롤되게 둔다(흰 카드로 감싸면 그 효과가 사라진다).
+ */
+@Composable
+private fun NearbyHospitalsSection(
+    hospitals: List<Hospital>,
+    strings: HospitalDetailStrings,
+    onSelectHospital: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocalHospital,
+                    contentDescription = null,
+                    tint = CoralPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = strings.nearbySameSpecialtyTitle, style = SectionTitleStyle, color = TextPrimary)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            // 이 목록이 무엇을 기준으로 뽑힌 건지 한 줄로 밝힌다 — 근거 없는 추천처럼 보이지 않게.
+            Text(
+                text = strings.nearbySameSpecialtySubtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(items = hospitals, key = { it.id }) { nearby ->
+                NearbyHospitalCard(hospital = nearby, onClick = { onSelectHospital(nearby.id) })
+            }
+        }
+    }
+}
+
+/** 썸네일 + 거리 배지 + 이름 + 대표 진료과목 한 줄짜리 카드. */
+@Composable
+private fun NearbyHospitalCard(hospital: Hospital, onClick: () -> Unit) {
+    val language = LocalAppStrings.current.language
+    Column(
+        modifier = Modifier
+            .width(164.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f)
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .background(DividerColor)
+        ) {
+            // 병원마다 실제 사진이 없는 경우가 많아, 목록 화면과 같은 규칙(이름 키워드 → 태그 순)으로
+            // 진료과목별 대표 사진을 고른다(core/common/MedicalCategory.kt의 resolveHospitalThumbnailRes).
+            if (hospital.imageUrl != null) {
+                AsyncImageBox(
+                    model = hospital.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Image(
+                    painter = painterResource(
+                        id = resolveHospitalThumbnailRes(hospital.name, hospital.specialties)
+                    ),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 배지를 아예 안 단다.
+            hospital.distanceMeters?.let { meters ->
+                Text(
+                    text = meters.toDistanceLabel(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = CoralInk,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(Color.White.copy(alpha = 0.92f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(
+                text = hospital.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                // 이름이 한 줄인 카드와 두 줄인 카드가 섞이면 아래 과목 줄의 높이가 어긋난다 —
+                // 두 줄 자리를 항상 잡아 카드들의 바닥선을 맞춘다.
+                minLines = 2
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = hospital.specialties.firstOrNull()
+                    ?.let { translatedSpecialtyLabel(it, language) }
+                    .orEmpty(),
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/** 1km 미만은 10m 단위 미터로, 그 이상은 소수 한 자리 km로. */
+private fun Double.toDistanceLabel(): String =
+    if (this < 1000) "${(this / 10).roundToInt() * 10}m" else String.format(Locale.US, "%.1fkm", this / 1000)
+
+/** 축약 탭바가 가리키는 본문 섹션. 실제로 그려지는 것만 탭에 올라간다. */
+private enum class HospitalDetailSection { INTRO, BASIC_INFO, SPECIALTIES, LOCATION, NEARBY, OTHER_INFO }
+
+private fun HospitalDetailSection.label(strings: HospitalDetailStrings): String = when (this) {
+    HospitalDetailSection.INTRO -> strings.introSectionTitle
+    HospitalDetailSection.BASIC_INFO -> strings.basicInfoSectionTitle
+    HospitalDetailSection.SPECIALTIES -> strings.specialtiesSectionTitle
+    HospitalDetailSection.LOCATION -> strings.locationSectionTitle
+    HospitalDetailSection.NEARBY -> strings.nearbySameSpecialtyTitle
+    HospitalDetailSection.OTHER_INFO -> strings.otherInfoSectionTitle
+}
+
+/**
+ * 병원 공식 홈페이지를 기기 브라우저로 연다.
+ *
+ * 백엔드가 주는 website 값에 스킴이 빠져 있는 경우가 있어(`www.example.com`) 그대로 넘기면
+ * ACTION_VIEW가 받아줄 앱이 없다 — 없으면 https를 붙인다.
+ */
+private fun Context.launchHomepage(url: String) {
+    val normalized = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+    launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(normalized)))
 }
 
 private fun Context.dialPhone(phoneNumber: String?) {

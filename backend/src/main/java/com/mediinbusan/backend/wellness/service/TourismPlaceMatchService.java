@@ -92,19 +92,63 @@ public class TourismPlaceMatchService {
         ObjectNode normalizedBody = mapper.createObjectNode();
         normalizedBody.putObject("items").putArray("item").add(merged);
         TourismCatalogItemResponse item = catalogService.normalizeItems(normalizedBody).getFirst();
-        Map<String, String> extra = new LinkedHashMap<>(item.details());
+        // 방문 정보를 먼저 담아 details 맵의 앞자리를 잡는다 — 상세 화면(DetailInfoCard)은 이 순서
+        // 그대로 그리므로, 나중에 담으면 영업시간이 지역·요일 같은 부수 필드 아래로 밀린다.
+        Map<String, String> extra = new LinkedHashMap<>();
+        addVisitInfo(extra, contentId, merged.path("contenttypeid").asText(""));
+        extra.putAll(item.details());
         for (String field : List.of("tel", "cpyrhtDivCd")) {
             String value = merged.path(field).asText("");
             if (!value.isBlank()) extra.put(field, value);
         }
-        String homepage = merged.path("homepage").asText("").strip();
-        if (homepage.startsWith("https://") || homepage.startsWith("http://")) {
+        // homepage는 순수 URL이 아니라 <a href="...">...</a> 앵커 태그로 온다 — 예전엔 raw 값이
+        // "http"로 시작하는지만 봐서, 태그가 붙은 대다수 장소에서 "관련 링크 열기" 버튼이 조용히
+        // 사라졌다. 수집 경로와 같은 추출기를 쓴다.
+        String homepage = WellnessIngestionService.extractUrl(merged.path("homepage").asText(""));
+        if (homepage != null) {
             extra.put("homepage", homepage);
         }
         return new TourismPlaceMatchResponse(true, new TourismCatalogItemResponse(
             item.id(), item.title(), item.subtitle(), item.address(), item.imageUrl(),
             item.latitude(), item.longitude(), item.categoryCode(), extra
         ));
+    }
+
+    /**
+     * detailIntro2의 방문 정보(영업시간·휴무일·대표메뉴·이용요금·주차)를 details 맵에 붙인다.
+     *
+     * 키 이름은 웰니스 장소 상세(WellnessPlaceResponse)와 똑같이 맞춘다 — 같은 장소를 관광 카탈로그로
+     * 들어오든 웰니스 목록으로 들어오든 앱이 같은 이름으로 읽고 같은 라벨(TourismStrings.detailFieldLabels /
+     * NearbyStrings)을 붙일 수 있어야 한다.
+     *
+     * 실패하면 조용히 넘어간다 — 방문 정보 하나 때문에 이미 매칭에 성공한 상세 전체를 못 보게 만들
+     * 이유가 없다(사진·주소·지도·소개는 그대로 나간다).
+     */
+    private void addVisitInfo(Map<String, String> extra, String contentId, String contentTypeId) {
+        if (contentTypeId.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode body = mapper.valueToTree(gateway.placeIntro(contentId, contentTypeId).data());
+            List<JsonNode> rows = items(body);
+            if (rows.isEmpty()) {
+                return;
+            }
+            WellnessVisitInfo visitInfo = WellnessIngestionService.toVisitInfo(rows.getFirst());
+            putIfPresent(extra, "businessHours", visitInfo.businessHours());
+            putIfPresent(extra, "restDate", visitInfo.restDate());
+            putIfPresent(extra, "signatureMenu", visitInfo.signatureMenu());
+            putIfPresent(extra, "usageFee", visitInfo.usageFee());
+            putIfPresent(extra, "parkingInfo", visitInfo.parkingInfo());
+        } catch (RuntimeException ignored) {
+            // 위 주석 참고.
+        }
+    }
+
+    private static void putIfPresent(Map<String, String> target, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            target.put(key, value);
+        }
     }
 
     private static boolean samePlace(JsonNode item, String name, BusanTourismCodes.District district) {

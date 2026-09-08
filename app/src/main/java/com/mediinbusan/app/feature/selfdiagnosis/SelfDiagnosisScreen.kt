@@ -93,6 +93,7 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.ChatStrings
 import com.mediinbusan.app.core.i18n.DiagnosisAnswerOptionStrings
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.ui.rememberHaptics
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -520,8 +521,9 @@ private fun TypingDots() {
 private fun SuggestedReplyChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     // 핑크(CoralPrimary)는 '내가 보낸 답변' 말풍선에만 남기고, 아직 선택 전인 제안 칩은
     // 중립 hairline 테두리 + 진한 텍스트로 가장 조용하게 보여준다.
+    val haptics = rememberHaptics()
     Surface(
-        onClick = onClick,
+        onClick = { haptics.tick(); onClick() },
         modifier = modifier,
         shape = RoundedCornerShape(percent = 50),
         color = Color.White,

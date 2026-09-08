@@ -60,6 +60,30 @@ public class WellnessPlace {
     @Column(name = "modified_date")
     private LocalDate modifiedDate;
 
+    /*
+     * 방문 정보 6종 — TourAPI detailIntro2(콘텐츠 타입별로 필드명이 다르다)와 부산맛집정보
+     * getFoodKr에서 채운다. 어느 소스도 전부 주지는 않아서 대부분의 장소는 이 중 일부만 차 있다.
+     *
+     * 값은 API 원문(한국어)이다 — 이유는 WellnessVisitInfo 주석 참고.
+     */
+    @Column(name = "business_hours", length = 500)
+    private String businessHours;
+
+    @Column(name = "rest_date", length = 300)
+    private String restDate;
+
+    @Column(name = "signature_menu", length = 500)
+    private String signatureMenu;
+
+    @Column(name = "usage_fee", length = 500)
+    private String usageFee;
+
+    @Column(name = "parking_info", length = 500)
+    private String parkingInfo;
+
+    @Column(name = "homepage_url", length = 500)
+    private String homepageUrl;
+
     // 부산맛집정보(getFoodEn/getFoodJa/getFoodZhs) 등 다국어 소스로 채워지는 번역 — 없으면 null이고
     // WellnessDtoMapper가 name/address/description(한국어 원문)으로 폴백한다. Hospital의
     // descriptionEn/Zh/Ja(HospitalDtoMapper 참고)와 같은 규칙.
@@ -161,6 +185,54 @@ public class WellnessPlace {
         return modifiedDate;
     }
 
+    public String getBusinessHours() {
+        return businessHours;
+    }
+
+    public String getRestDate() {
+        return restDate;
+    }
+
+    public String getSignatureMenu() {
+        return signatureMenu;
+    }
+
+    public String getUsageFee() {
+        return usageFee;
+    }
+
+    public String getParkingInfo() {
+        return parkingInfo;
+    }
+
+    public String getHomepageUrl() {
+        return homepageUrl;
+    }
+
+    /**
+     * 방문 정보를 채운다. {@link #applyTranslation}과 같은 규칙으로 <b>빈 값은 무시</b>한다 —
+     * 이번 ingest에서 값을 못 받았다고 지난번에 받아둔 영업시간·대표메뉴를 지우지 않는다.
+     *
+     * 이게 중요한 이유: TourAPI 상세 조회는 일일 트래픽 한도 때문에 매번 앞쪽 N건만 부른다
+     * ({@code tourApiIntroFetchLimit}). 덮어쓰기로 만들면 한도 밖으로 밀려난 장소의 방문 정보가
+     * ingest를 돌릴 때마다 지워졌다 채워졌다 한다.
+     */
+    public void applyVisitInfo(
+        String businessHours,
+        String restDate,
+        String signatureMenu,
+        String usageFee,
+        String parkingInfo,
+        String homepageUrl
+    ) {
+        if (hasText(businessHours)) this.businessHours = businessHours;
+        if (hasText(restDate)) this.restDate = restDate;
+        if (hasText(signatureMenu)) this.signatureMenu = signatureMenu;
+        if (hasText(usageFee)) this.usageFee = usageFee;
+        if (hasText(parkingInfo)) this.parkingInfo = parkingInfo;
+        if (hasText(homepageUrl)) this.homepageUrl = homepageUrl;
+    }
+
     public String getNameEn() {
         return nameEn;
     }
@@ -248,8 +320,20 @@ public class WellnessPlace {
         this.address = address;
         this.coordinates = coordinates;
         this.imageUrl = imageUrl;
-        this.description = description;
-        this.phoneNumber = phoneNumber;
+        // 설명·전화번호도 categoryCode와 같은 규칙으로 빈 값은 무시한다.
+        //
+        // 이 둘은 목록 응답(areaBasedList2)에 아예 없고 detailCommon2를 따로 불러야만 채워지는데,
+        // 그 호출은 일일 트래픽 한도 때문에 매 ingest마다 일부 장소에만 돌아간다. 예전처럼 무조건
+        // 덮어쓰면 이번에 호출 대상이 아니었던 장소는 candidate.description이 null인 채로 들어가
+        // 지난 ingest에서 받아둔 설명이 매번 지워졌다 — 그래서 아무리 여러 번 돌려도 저장된 설명
+        // 수가 한도(300건)를 넘지 못하고 제자리걸음이었다(실측: 관광지 351건 중 정확히 300건).
+        // 빈 값을 무시해야 여러 번의 ingest가 비로소 누적된다(applyVisitInfo와 같은 규칙).
+        if (hasText(description)) {
+            this.description = description;
+        }
+        if (hasText(phoneNumber)) {
+            this.phoneNumber = phoneNumber;
+        }
         this.modifiedDate = modifiedDate;
     }
 }

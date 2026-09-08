@@ -78,6 +78,7 @@ fun RecentlyViewedScreen(
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
     onSelectTourismItem: (String) -> Unit,
+    onBrowseHospitals: () -> Unit,
     onBack: () -> Unit,
     viewModel: RecentlyViewedViewModel = hiltViewModel()
 ) {
@@ -94,7 +95,8 @@ fun RecentlyViewedScreen(
             }
         },
         onRemove = { viewModel.onRemove(it.itemId) },
-        onRemoveAll = viewModel::onRemoveAll
+        onRemoveAll = viewModel::onRemoveAll,
+        onBrowseHospitals = onBrowseHospitals
     )
 }
 
@@ -104,7 +106,8 @@ private fun RecentlyViewedContent(
     onBack: () -> Unit,
     onSelectItem: (RecentlyViewed) -> Unit,
     onRemove: (RecentlyViewed) -> Unit,
-    onRemoveAll: () -> Unit
+    onRemoveAll: () -> Unit,
+    onBrowseHospitals: () -> Unit
 ) {
     val appStrings = LocalAppStrings.current
     // Settings와 동일한 톤: 공용 탑바/하단 탭바 없이, 배경은 Home과 같은 HomeBackgroundPink,
@@ -160,7 +163,12 @@ private fun RecentlyViewedContent(
             Spacer(modifier = Modifier.height(14.dp))
             Box(modifier = Modifier.weight(1f)) {
                 if (items.isEmpty()) {
-                    EmptyState(message = appStrings.recentlyViewed.emptyMessage)
+                    // 아직 본 게 없으면 이 화면은 완전히 비어 있다 — 볼 것을 찾으러 보낸다.
+                    EmptyState(
+                        message = appStrings.recentlyViewed.emptyMessage,
+                        actionLabel = appStrings.common.browseHospitalsLabel,
+                        onAction = onBrowseHospitals
+                    )
                 } else {
                     // items가 새 리스트로 바뀔 때마다(최초 로딩/삭제 등) 앞쪽 카드부터 순차 공개한다.
                     val revealedCount = rememberRevealedCount(itemsKey = items, itemCount = items.size)
@@ -373,7 +381,8 @@ private fun RecentlyViewedContentPreview() {
             onBack = {},
             onSelectItem = {},
             onRemove = {},
-            onRemoveAll = {}
+            onRemoveAll = {},
+            onBrowseHospitals = {}
         )
     }
 }

@@ -68,6 +68,13 @@ wellness:
     # detailCommon2 하나당 호출 1건 — areaBasedList2 페이지네이션과 별개의 일일 트래픽(개발계정 1,000/일)을
     # 쓰므로 넉넉히 잡지 않는다. 늘리려면 공공데이터포털에서 이 오퍼레이션 트래픽을 별도로 올려야 한다.
     tour-api-detail-fetch-limit: 300
+    # detailIntro2 하나당 호출 1건 — detailCommon2와 별개의 오퍼레이션이라 트래픽도 따로 잡힌다.
+    # 상세 화면의 영업시간·휴무일·대표메뉴·주차가 전부 여기서 온다. 0으로 두면 방문 정보 보강만 끈다.
+    tour-api-intro-fetch-limit: 300
+    # 상세 보강(detailCommon2/detailIntro2) 동시 호출 수. 총 호출 수는 위 두 한도 그대로고 걸리는
+    # 시간만 줄어든다(600건 기준 3~10분 → 1~2분). data.go.kr은 일일 한도와 별개로 초당·동시 호출
+    # 제한이 있어서 무작정 올리면 거부당한다 — 로그의 "실패 N건"이 늘면 낮추고, 1로 두면 순차 실행이다.
+    tour-api-fetch-concurrency: 6
     busan-food-rows-per-page: 100
 
 clova:

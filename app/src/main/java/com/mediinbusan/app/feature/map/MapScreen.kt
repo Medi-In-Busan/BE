@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -127,7 +128,7 @@ import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BusanDefaultCenter
-import com.mediinbusan.app.core.ui.DetailPullCommitDurationMs
+import com.mediinbusan.app.core.ui.DetailPullCommitSpec
 import com.mediinbusan.app.core.ui.DetailPullMaxFade
 import com.mediinbusan.app.core.ui.DetailPullResistance
 import com.mediinbusan.app.core.ui.DetailPullSettleSpec
@@ -721,9 +722,18 @@ private fun BrowseMap(
             cardLiftPx = 0f
             isOpeningDetail = false
         }
-        val settleCardLift: () -> Unit = {
+        // 손을 뗀 시점의 속도(px/s, 위로가 음수)를 이어받아야 튕겨 올린 기세가 그대로 이어진다 —
+        // detectVerticalDragGestures는 속도를 주지 않으므로 드래그 중에 직접 모아 둔다.
+        val liftVelocityTracker = remember { VelocityTracker() }
+        // cardLiftPx는 위로 갈수록 커지는데 화면 좌표는 위가 음수라, 부호를 뒤집어 넘긴다.
+        val settleCardLift: (Float) -> Unit = { velocityY ->
             liftScope.launch {
-                animate(cardLiftPx, 0f, animationSpec = DetailPullSettleSpec) { value, _ -> cardLiftPx = value }
+                animate(
+                    initialValue = cardLiftPx,
+                    targetValue = 0f,
+                    initialVelocity = -velocityY,
+                    animationSpec = DetailPullSettleSpec
+                ) { value, _ -> cardLiftPx = value }
             }
         }
 
@@ -769,29 +779,36 @@ private fun BrowseMap(
             detectVerticalDragGestures(
                 onDragEnd = {
                     dragAccumPx.floatValue = 0f
+                    val flingVelocityY = liftVelocityTracker.calculateVelocity().y
+                    liftVelocityTracker.resetTracking()
                     if (!isSelectionActive || isOpeningDetail) return@detectVerticalDragGestures
                     if (cardLiftPx >= pullThresholdPx) {
                         isOpeningDetail = true
+                        // 카드가 다 올라가기를 기다렸다 넘어가면 그 사이 화면이 한 번 멈춘다 —
+                        // 남은 거리를 계속 올리는 동안 화면 전환도 같이 시작해 두 움직임을 겹친다.
+                        // 지도는 detailPullUnderlayHold()가 전환 시간만큼 붙잡아 두므로, 그동안
+                        // 이 애니메이션도 화면에 남아 끝까지 이어진다.
                         liftScope.launch {
-                            // 남은 거리를 마저 올려 카드를 화면 밖으로 보낸 뒤 넘어간다 —
-                            // 올라가던 움직임을 상세화면 등장 애니메이션이 그대로 이어받는다.
                             animate(
-                                cardLiftPx,
-                                pullTravelPx,
-                                animationSpec = tween(DetailPullCommitDurationMs)
+                                initialValue = cardLiftPx,
+                                targetValue = pullTravelPx,
+                                initialVelocity = -flingVelocityY,
+                                animationSpec = DetailPullCommitSpec
                             ) { value, _ -> cardLiftPx = value }
-                            openSelectedDetail()
                         }
+                        openSelectedDetail()
                     } else {
-                        settleCardLift()
+                        settleCardLift(flingVelocityY)
                     }
                 },
                 onDragCancel = {
                     dragAccumPx.floatValue = 0f
-                    if (isSelectionActive && !isOpeningDetail) settleCardLift()
+                    liftVelocityTracker.resetTracking()
+                    if (isSelectionActive && !isOpeningDetail) settleCardLift(0f)
                 },
                 onVerticalDrag = { change, dragAmount ->
                     change.consume()
+                    liftVelocityTracker.addPosition(change.uptimeMillis, change.position)
                     if (isSelectionActive) {
                         // 아래로 끌어 내리는 건 0에서 막는다 — 카드를 닫는 건 X 버튼과 지도 탭이 맡는다.
                         if (!isOpeningDetail) {

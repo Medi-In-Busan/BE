@@ -21,6 +21,10 @@ data class HospitalDetailStrings(
     val guideQuickLink: String,
     val nearbyQuickLink: String,
     val otherInfoSectionTitle: String,
+    // 상세 하단 "주변 같은 진료과목 병원" 섹션. 이 병원 좌표를 기준으로 조회하므로(기기 GPS는
+    // 쓰지 않는다) 문구도 "내 주변"이 아니라 "이 병원 주변"이라는 뜻이어야 한다.
+    val nearbySameSpecialtyTitle: String,
+    val nearbySameSpecialtySubtitle: String,
     val callButton: String,
     val smsInquiryTemplateFormat: String,
     val genericErrorFallback: String
@@ -47,6 +51,8 @@ data class HospitalDetailStrings(
             guideQuickLink = "의료 이용 가이드 보기",
             nearbyQuickLink = "주변 관광·웰니스 보기",
             otherInfoSectionTitle = "기타정보",
+            nearbySameSpecialtyTitle = "주변 같은 진료과목 병원",
+            nearbySameSpecialtySubtitle = "이 병원 주변에서 같은 진료과목을 보는 곳이에요.",
             callButton = "전화 문의하기",
             smsInquiryTemplateFormat = "[메디인부산] %s 문의드립니다.",
             genericErrorFallback = "오류가 발생했습니다."
@@ -72,6 +78,8 @@ data class HospitalDetailStrings(
             guideQuickLink = "View medical guide",
             nearbyQuickLink = "View nearby tourism & wellness",
             otherInfoSectionTitle = "Other info",
+            nearbySameSpecialtyTitle = "Nearby hospitals, same specialty",
+            nearbySameSpecialtySubtitle = "Other places near this hospital that treat the same specialty.",
             callButton = "Call now",
             smsInquiryTemplateFormat = "[MediIn Busan] Inquiry regarding %s.",
             genericErrorFallback = "Something went wrong."
@@ -97,6 +105,8 @@ data class HospitalDetailStrings(
             guideQuickLink = "查看医疗利用指南",
             nearbyQuickLink = "查看周边观光·养生信息",
             otherInfoSectionTitle = "其他信息",
+            nearbySameSpecialtyTitle = "附近同科室医院",
+            nearbySameSpecialtySubtitle = "本院附近提供相同诊疗科目的医疗机构。",
             callButton = "电话咨询",
             smsInquiryTemplateFormat = "[MediIn Busan] 关于%s的咨询。",
             genericErrorFallback = "发生了错误。"
@@ -122,6 +132,8 @@ data class HospitalDetailStrings(
             guideQuickLink = "医療利用ガイドを見る",
             nearbyQuickLink = "周辺の観光・ウェルネスを見る",
             otherInfoSectionTitle = "その他情報",
+            nearbySameSpecialtyTitle = "近くの同じ診療科の病院",
+            nearbySameSpecialtySubtitle = "この病院の近くで同じ診療科を扱う医療機関です。",
             callButton = "電話で問い合わせる",
             smsInquiryTemplateFormat = "【メディインブサン】%sについてお問い合わせします。",
             genericErrorFallback = "エラーが発生しました。"

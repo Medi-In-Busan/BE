@@ -74,6 +74,7 @@ import com.mediinbusan.app.data.favorite.FavoriteItemType
 fun FavoriteScreen(
     onSelectHospital: (String) -> Unit,
     onSelectPlace: (String) -> Unit,
+    onBrowseHospitals: () -> Unit,
     onBack: () -> Unit,
     viewModel: FavoriteViewModel = hiltViewModel()
 ) {
@@ -89,7 +90,8 @@ fun FavoriteScreen(
             }
         },
         onRemove = viewModel::onRemove,
-        onRemoveAll = viewModel::onRemoveAll
+        onRemoveAll = viewModel::onRemoveAll,
+        onBrowseHospitals = onBrowseHospitals
     )
 }
 
@@ -99,7 +101,8 @@ private fun FavoriteContent(
     onBack: () -> Unit,
     onSelectFavorite: (Favorite) -> Unit,
     onRemove: (Favorite) -> Unit,
-    onRemoveAll: () -> Unit
+    onRemoveAll: () -> Unit,
+    onBrowseHospitals: () -> Unit
 ) {
     val favorites = uiState.displayedFavorites
     val strings = LocalAppStrings.current.favorite
@@ -157,7 +160,13 @@ private fun FavoriteContent(
             Spacer(modifier = Modifier.height(14.dp))
             Box(modifier = Modifier.weight(1f)) {
                 if (favorites.isEmpty()) {
-                    EmptyState(message = strings.emptyMessage)
+                    // 저장한 게 없으면 이 화면에서 할 수 있는 일이 하나도 없다 — 저장할 것을
+                    // 찾으러 갈 길을 열어준다.
+                    EmptyState(
+                        message = strings.emptyMessage,
+                        actionLabel = LocalAppStrings.current.common.browseHospitalsLabel,
+                        onAction = onBrowseHospitals
+                    )
                 } else {
                     // favorites가 새 리스트로 바뀔 때마다(최초 로딩/삭제 등) 앞쪽 카드부터 순차 공개한다.
                     val revealedCount = rememberRevealedCount(itemsKey = favorites, itemCount = favorites.size)
@@ -351,7 +360,8 @@ private fun FavoriteContentPreview() {
             onBack = {},
             onSelectFavorite = {},
             onRemove = {},
-            onRemoveAll = {}
+            onRemoveAll = {},
+            onBrowseHospitals = {}
         )
     }
 }

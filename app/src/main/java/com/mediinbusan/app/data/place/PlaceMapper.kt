@@ -13,7 +13,13 @@ fun PlaceDto.toDomain(): Place = Place(
     phoneNumber = phoneNumber,
     distanceFromHospitalMeters = distanceFromHospitalMeters,
     lastModified = modifiedDate,
-    isTranslated = translated
+    isTranslated = translated,
+    businessHours = businessHours,
+    restDate = restDate,
+    signatureMenu = signatureMenu,
+    usageFee = usageFee,
+    parkingInfo = parkingInfo,
+    homepageUrl = homepageUrl
 )
 
 /**

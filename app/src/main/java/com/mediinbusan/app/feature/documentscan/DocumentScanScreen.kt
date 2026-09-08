@@ -92,9 +92,7 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * 진단서·처방전 OCR 번역(문서 스캔) 화면. 바텀바 5번째 탭.
@@ -153,13 +151,9 @@ private fun DocumentScanContent(
         coroutineScope.launch { snackbarHostState.showSnackbar(strings.copiedMessage) }
     }
 
-    // 선택이 바뀌거나 해제될 때마다 지금 쓰는 촬영본만 남기고 캐시를 정리한다. 촬영할 때마다
-    // 진단서 사진이 앱 캐시에 쌓이는 걸 막는 지점이다(clearCapturedImages 주석 참고).
-    // 화면에 들어올 때도 한 번 도는데, 그때는 이전 세션에 남은 파일까지 같이 정리된다.
-    // 남은 하나(지금 선택된 촬영본)는 화면이 백스택에서 빠질 때 DocumentScanViewModel.onCleared가 지운다.
-    LaunchedEffect(uiState.selectedImageUri) {
-        withContext(Dispatchers.IO) { clearCapturedImages(context, keep = uiState.selectedImageUri) }
-    }
+    // 촬영본 캐시 정리는 DocumentScanViewModel이 한다 — 여기서 컴포지션에 맞춰 돌리면 촬영 후
+    // 돌아온 첫 프레임의 selectedImageUri가 아직 촬영 전 값이라 방금 찍은 파일을 지운다
+    // (DocumentScanViewModel.cleanUpCapturedImages 주석 참고).
 
     // 카메라가 없는 기기(에뮬레이터 등)에서는 촬영 화면으로 보내봐야 검은 화면만 나온다 —
     // 여기서 미리 걸러 갤러리 경로만 쓰게 안내한다. CameraX 바인딩 자체가 실패하는 경우는

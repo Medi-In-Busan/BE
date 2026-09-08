@@ -42,6 +42,30 @@ class PlaceRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getPlacesNear(
+        latitude: Double,
+        longitude: Double,
+        radiusMeters: Double?,
+        languageCode: String
+    ): Flow<Result<List<Place>>> = flow {
+        // 전체 목록 캐시(allPlacesCache)는 쓰지 않는다 — 좌표·반경마다 결과가 다르고, 거리도 서버가
+        // 계산해 채워주는 값이라 캐시된 전체 목록에서는 얻을 수 없다.
+        emit(Result.Loading)
+        try {
+            val places = tourismApi.getPlaces(
+                latitude = latitude,
+                longitude = longitude,
+                radiusMeters = radiusMeters,
+                language = languageCode
+            ).map { it.toDomain() }
+            emit(Result.Success(places))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emit(Result.Error(throwable = e, message = "주변 장소를 불러오지 못했습니다."))
+        }
+    }
+
     override fun getAllPlaces(languageCode: String): Flow<Result<List<Place>>> = flow {
         allPlacesCache.get(languageCode)?.let { cached ->
             emit(Result.Success(cached))

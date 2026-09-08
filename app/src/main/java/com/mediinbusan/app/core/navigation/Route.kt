@@ -134,3 +134,23 @@ internal fun NavHostController.navigateToTab(route: Route) {
         restoreState = true
     }
 }
+
+/**
+ * 탭이 아닌 push 라우트(즐겨찾기·최근 본 항목·자가진단처럼 Home 위에 쌓이는 화면)에서 탭으로
+ * 빠져나갈 때 쓴다.
+ *
+ * 여기서 [navigateToTab]을 그대로 쓰면 안 된다. 그 함수의 `popUpTo(Home) { saveState = true }`는
+ * "지금 탭의 스택을 저장해 뒀다가 그 탭으로 돌아올 때 되살린다"는 뜻인데, 이런 화면에서는 Home 위에
+ * 쌓여 있는 게 탭이 아니라 이 push 라우트다 — 그래서 즐겨찾기 화면이 Home 탭의 스택으로 저장되고,
+ * 나중에 바텀바 "홈"을 누르면 Home이 아니라 즐겨찾기가 되살아났다(실제로 겪은 버그다:
+ * 즐겨찾기 빈 상태 → "병원 둘러보기" → 의료기관 탭 → "홈" → 즐겨찾기).
+ *
+ * 그래서 저장하지 않고 Home까지 먼저 걷어낸 뒤 탭 전환을 한다. 두고 나가는 화면이라 되돌아올
+ * 이유가 없고, 걷어낸 뒤에는 [navigateToTab]이 팝할 것도 저장할 것도 없어 탭 사이 상태 보존
+ * 규칙(Home 탭 ↔ 다른 탭)은 그대로 유지된다.
+ */
+internal fun NavHostController.navigateToTabLeavingCurrent(route: Route) {
+    // Home이 스택에 없으면 false를 돌려주고 아무 일도 하지 않는다 — 그 경우엔 아래 탭 전환만 돈다.
+    popBackStack(Route.Home, inclusive = false)
+    navigateToTab(route)
+}

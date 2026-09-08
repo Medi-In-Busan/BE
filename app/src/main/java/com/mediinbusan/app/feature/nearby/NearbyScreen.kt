@@ -181,9 +181,13 @@ private fun NearbyContent(
                 modifier = Modifier.padding(innerPadding),
                 onRetry = onRetry
             )
+            // 서버가 빈 목록을 준 경우다. 필터로 좁혀서 빈 게 아니라 받은 게 없는 것이라,
+            // 되돌릴 필터가 없고 다시 불러오는 것 말고 할 수 있는 일이 없다.
             uiState.places.isEmpty() -> EmptyState(
                 message = LocalAppStrings.current.nearby.emptyNearbyMessage,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(innerPadding),
+                actionLabel = LocalAppStrings.current.common.retryButtonLabel,
+                onAction = onRetry
             )
             else -> NearbyLoadedContent(
                 uiState = uiState,
@@ -1168,7 +1172,8 @@ private fun RecommendedRouteCard(route: HospitalWellnessRoute, title: String, on
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "${route.totalDistanceKm.formatDistance()}km · 동선 보기",
+                        text = LocalAppStrings.current.nearby.routeDistanceSummaryFormat
+                            .format(route.totalDistanceKm.formatDistance()),
                         style = MaterialTheme.typography.labelSmall,
                         color = CoralPrimary,
                         modifier = Modifier.weight(1f)
