@@ -65,6 +65,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 외부 지도 연결 | F-017 | `core/ui/MapIntents.kt`의 `launchExternalDirections` — 구현됨(`geo:` 인텐트로 기기 기본 지도 앱 실행) |
 | 문서 스캔(OCR·번역) | 원 기능명세에 없던 추가 기능 | `feature/documentscan` — 하단 탭 5번째. `backend/document`(CLOVA OCR + Papago) 호출 |
 | 자가진단 | 원 기능명세에 없던 추가 기능 | `feature/selfdiagnosis` — 온보딩 직후 또는 독립 진입, `Route.SelfDiagnosis(fromOnboarding)` |
+| 앱 접근권한 고지 | 법정 고지(원스토어 검증 대응) | `feature/permission` — 최초 실행 시 스플래시 다음에 1회(`Route.AppPermissionNotice(fromSplash = true)`), 이후에는 설정(S-10) > 정보 > 앱 접근권한에서 상시 열람. 아래 §10 참고 |
 
 하단 탭바는 5개: 홈 / 의료기관 / 가이드 / 지도 / 문서스캔 (`core/navigation/MediInBusanApp.kt`의 `bottomNavTabs`). 설정·즐겨찾기·자가진단 등은 탭이 아니라 다른 화면에서 진입하는 push 라우트다.
 
@@ -140,3 +141,15 @@ Kakao Map은 실제로 렌더링된다(`core/ui/KakaoMapView.kt`) — `KAKAO_NAT
 - F-014 웰니스 코스 실제 큐레이션 로직 (`domain/course/AssembleWellnessCourseUseCase.kt`는 데모용 임시 로직)
 - F-016 최근 본 항목을 홈/즐겨찾기 화면에 직접 노출하는 카드 (전용 화면·데이터 계층은 이미 있음 — §3 참고)
 - 백엔드 `guide/`, `place/` 패키지 구현 (현재 `package-info.java`만 존재 — `place/` 관련 요청은 이미 `wellness/`가 커버 중일 수 있으니 새로 만들기 전에 확인)
+
+## 10. 앱 접근권한 고지·동의 (법정 요구사항 — 임의로 걷어내지 말 것)
+
+원스토어 검증 의견(2026-09-02, OA01008717)에서 "카메라 접근권한을 요구하면서 사전 고지·동의 절차가 없다"는 지적을 받아 추가한 구조다. 근거는 정보통신망법 제22조의2와 방송미디어통신위원회 「앱 접근권한 동의 가이드라인」이고, 요구사항은 ① 필수/선택 접근권한 구분, ② 권한별 필요 기능과 목적, ③ 선택 권한은 동의하지 않아도 서비스 이용이 가능하다는 사실, ④ 철회 방법 안내 네 가지다.
+
+구현 위치:
+- `core/i18n/PermissionNoticeStrings.kt` — 고지 문구 전부(4개 언어). 설정 리스트 행 문구까지 여기 있다(다른 행은 `SettingsStrings`에 있지만, 법정 고지 문구는 화면·다이얼로그와 한 파일에서 관리한다).
+- `feature/permission/AppPermissionNoticeScreen.kt` — 고지 화면. `fromSplash=true`(최초 실행)면 뒤로가기 없이 "확인했습니다"로만 진행하고, 그때 `UserPreferencesKeys.PERMISSION_NOTICE_ACKNOWLEDGED`를 저장해 다음 실행부터는 뜨지 않는다. `SplashViewModel`이 이 값을 읽어 Home/고지 화면 중 어디로 보낼지 정한다.
+- `feature/documentscan/CameraPermissionDialogs.kt` — 시스템 권한 팝업 **직전** 사전 고지 다이얼로그와, 영구 거부 상태에서 뜨는 설정 안내 다이얼로그. `shouldShowRequestPermissionRationale`은 "아직 안 물어봄"과 "다시 묻지 않음"을 둘 다 false로 주므로 `UserPreferencesKeys.CAMERA_PERMISSION_REQUESTED`(요청 이력)와 함께 봐야 두 상태가 갈린다.
+- `core/ui/AppSettingsIntents.kt` — 철회 경로(시스템 앱 상세 설정) 열기.
+
+새 런타임 권한을 추가한다면 위 네 곳의 문구·분기를 반드시 같이 갱신해야 한다(고지 없는 권한 요구는 재검증에서 다시 걸린다).
