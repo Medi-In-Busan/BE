@@ -49,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,6 +67,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -99,6 +102,7 @@ import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
 import com.mediinbusan.app.core.designsystem.SettingsSecondaryText
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.navigation.BottomBarScaleController
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandTopAppBar
@@ -112,6 +116,7 @@ import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberCountUpValue
 import com.mediinbusan.app.core.ui.rememberRevealedCount
+import com.mediinbusan.app.core.ui.rememberScrollShrinkAnimation
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.data.hospital.Hospital
@@ -231,6 +236,12 @@ private fun HospitalSearchListContent(
             }
     }
 
+    // Home과 같은 하단 탭바 축소 연출 — feature끼리 직접 참조 못 하는 규칙(CLAUDE.md §4) 때문에
+    // BottomBarScaleController 싱글턴으로만 scale을 전달한다(core/ui/BottomBarScrollShrink.kt).
+    val (bottomBarScrollConnection, bottomBarScale) = rememberScrollShrinkAnimation(resultListState)
+    LaunchedEffect(bottomBarScale) { BottomBarScaleController.setScale(bottomBarScale) }
+    DisposableEffect(Unit) { onDispose { BottomBarScaleController.setScale(1f) } }
+
     Scaffold(
         // Home과 같은 맨 뒤 배경(연분홍) — 기본값(테마 background)이 Home과 달라 화면 전환 시
         // 배경색이 순간 바뀌어 보이던 것을 통일한다.
@@ -333,7 +344,8 @@ private fun HospitalSearchListContent(
                                 selectedSort = uiState.selectedSort,
                                 onLoadMore = onLoadMore,
                                 onSelectHospital = onSelectHospital,
-                                bottomContentPadding = contentPadding.calculateBottomPadding()
+                                bottomContentPadding = contentPadding.calculateBottomPadding(),
+                                scrollConnection = bottomBarScrollConnection
                             )
                         }
                     }
@@ -630,7 +642,8 @@ private fun SearchResultList(
     selectedSort: SearchSortOption,
     onLoadMore: () -> Unit,
     onSelectHospital: (String) -> Unit,
-    bottomContentPadding: Dp
+    bottomContentPadding: Dp,
+    scrollConnection: NestedScrollConnection
 ) {
     // 정렬을 바꿨을 때 결과는 바로 재배열되지만, 이미 아래로 스크롤한 상태면 화면엔 안 보여서
     // 위로 직접 스크롤해야 하는 불편함이 있었다 — 애니메이션 없이 즉시 맨 위로 리프레시한다.
@@ -658,7 +671,7 @@ private fun SearchResultList(
     // 벌려줘서 마지막 카드는 여전히 바텀바에 가려 클릭 안 되는 일이 없다.
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollConnection),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 0.dp)
     ) {
         itemsIndexed(results, key = { _, hospital -> hospital.id }) { index, hospital ->

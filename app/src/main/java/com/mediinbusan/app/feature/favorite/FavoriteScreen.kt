@@ -53,7 +53,6 @@ import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.core.common.toDistanceLabel
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -107,9 +106,10 @@ private fun FavoriteContent(
     val favorites = uiState.displayedFavorites
     val strings = LocalAppStrings.current.favorite
 
-    // Settings와 동일한 톤: 공용 탑바/하단 탭바 없이, 배경은 Home과 같은 HomeBackgroundPink,
-    // 뒤로가기는 원형 배경 없는 화살표 아이콘을 타이틀 위에 직접 배치한다.
-    Scaffold(containerColor = HomeBackgroundPink) { innerPadding ->
+    // Settings와 동일한 톤: 공용 탑바/하단 탭바 없이, 뒤로가기는 원형 배경 없는 화살표 아이콘을
+    // 타이틀 위에 직접 배치한다. 배경은 흰색 — 별도 topBar 슬롯이 없어 Scaffold containerColor
+    // 하나가 타이틀 줄까지 포함한 화면 전체 배경을 겸한다.
+    Scaffold(containerColor = Color.White) { innerPadding ->
         // 상태바 인셋을 원래의 절반만 먹여서 뒤로가기 아이콘을 원래 위치에서 절반 정도 위로 당긴다.
         Column(
             modifier = Modifier
@@ -196,20 +196,27 @@ private fun FavoriteContent(
     }
 }
 
-// HospitalSearchListScreen의 검색결과 N건 라벨과 같은 톤 — 접두어는 진한 텍스트, 건수는 코랄핑크.
+// RecentlyViewedScreen과 같은 톤으로 맞춘다 — 숫자만 코랄핑크, "총"/"건" 같은 정적 텍스트는 검정,
+// 크기는 14sp보다 크게 키워 눈에 잘 띄게 한다.
 @Composable
 private fun FavoriteTotalCountLabel(count: Int) {
     val strings = LocalAppStrings.current.favorite
     val animatedCount = rememberCountUpValue(count)
+    // totalCountSuffixFormat("%d건" 등)에서 숫자 자리(%d)만 코랄로 물들이고 나머지 정적 텍스트는
+    // 접두어와 같은 검정으로 둔다 — 모든 언어에서 %d가 맨 앞이라 뒤쪽만 떼어내면 된다.
+    val suffixStatic = strings.totalCountSuffixFormat.replace("%d", "")
     val text = buildAnnotatedString {
         withStyle(SpanStyle(color = SettingsPrimaryText, fontWeight = FontWeight.Bold)) {
             append(strings.totalCountPrefix)
         }
         withStyle(SpanStyle(color = CoralPrimary, fontWeight = FontWeight.Bold)) {
-            append(strings.totalCountSuffixFormat.format(animatedCount))
+            append(animatedCount.toString())
+        }
+        withStyle(SpanStyle(color = SettingsPrimaryText, fontWeight = FontWeight.Bold)) {
+            append(suffixStatic)
         }
     }
-    Text(text = text, style = SettingsDescriptionStyle.copy(fontSize = 14.sp))
+    Text(text = text, style = SettingsDescriptionStyle.copy(fontSize = 18.sp))
 }
 
 // HospitalSearchListScreen의 SearchResultCard와 완전히 같은 카드 양식(태그, 타이틀, 위치, 거리
@@ -268,14 +275,18 @@ private fun FavoriteRow(
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f).padding(vertical = 20.dp).padding(end = 32.dp)) {
-                Text(
-                    text = favorite.subtitle,
-                    style = SettingsDescriptionStyle,
-                    color = SettingsSecondaryText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                // subtitle이 비어 있으면(값이 없는 항목) 빈 줄 + 여백만 차지해서 타이틀이 그만큼
+                // 아래로 밀려 카드 안에서 아래쪽으로 치우쳐 보였다 — 값이 있을 때만 그린다.
+                if (favorite.subtitle.isNotBlank()) {
+                    Text(
+                        text = favorite.subtitle,
+                        style = SettingsDescriptionStyle,
+                        color = SettingsSecondaryText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 Text(
                     text = favorite.name,
                     style = SettingsItemTitleStyle,
