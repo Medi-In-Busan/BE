@@ -18,7 +18,10 @@ fun MedicalCategory.translatedLabel(language: SupportedLanguage): String = when 
         MedicalCategory.REHABILITATION -> "Rehabilitation"
         MedicalCategory.WELLNESS -> "Wellness"
         MedicalCategory.PLASTIC_SURGERY -> "Plastic Surgery"
-        MedicalCategory.OBSTETRICS_GYNECOLOGY -> "Obstetrics & Gynecology"
+        // "&"와 "Gynecology" 사이는 줄바꿈 없는 공백( )으로 묶는다 — 일반 공백이면 좁은
+        // 칩에서 줄바꿈이 "Obstetrics &" / "Gynecology"로 갈라져 "&"가 첫 줄 끝에 어색하게 남는다.
+        // 이렇게 하면 "Obstetrics" / "& Gynecology"로 줄바꿈이 "&" 앞에서 일어난다.
+        MedicalCategory.OBSTETRICS_GYNECOLOGY -> "Obstetrics & Gynecology"
         MedicalCategory.OPHTHALMOLOGY -> "Ophthalmology"
         MedicalCategory.ETC -> "Other"
     }

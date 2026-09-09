@@ -12,7 +12,11 @@ import javax.inject.Inject
 data class UserPreferences(
     val languageCode: String = SupportedLanguage.DEFAULT.code,
     val medicalPurpose: MedicalCategory? = null,
-    val notificationsEnabled: Boolean = true
+    val notificationsEnabled: Boolean = true,
+    /** 앱 접근권한 사전 고지 화면을 이미 확인했는지(최초 실행 1회 노출 판단용). */
+    val permissionNoticeAcknowledged: Boolean = false,
+    /** 카메라 권한을 시스템에 한 번이라도 요청했는지(UserPreferencesKeys 주석 참고). */
+    val cameraPermissionRequested: Boolean = false
 )
 
 interface UserPreferencesRepository {
@@ -20,6 +24,8 @@ interface UserPreferencesRepository {
     suspend fun setLanguageCode(languageCode: String)
     suspend fun setMedicalPurpose(purpose: MedicalCategory?)
     suspend fun setNotificationsEnabled(enabled: Boolean)
+    suspend fun setPermissionNoticeAcknowledged(acknowledged: Boolean)
+    suspend fun setCameraPermissionRequested(requested: Boolean)
 }
 
 class UserPreferencesRepositoryImpl @Inject constructor(
@@ -35,7 +41,9 @@ class UserPreferencesRepositoryImpl @Inject constructor(
                 MedicalCategory.entries.find { it.name == stored }
                     ?: MedicalCategory.entries.find { it.label == stored }
             },
-            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true
+            notificationsEnabled = prefs[UserPreferencesKeys.NOTIFICATIONS_ENABLED] ?: true,
+            permissionNoticeAcknowledged = prefs[UserPreferencesKeys.PERMISSION_NOTICE_ACKNOWLEDGED] ?: false,
+            cameraPermissionRequested = prefs[UserPreferencesKeys.CAMERA_PERMISSION_REQUESTED] ?: false
         )
     }
 
@@ -55,5 +63,13 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[UserPreferencesKeys.NOTIFICATIONS_ENABLED] = enabled }
+    }
+
+    override suspend fun setPermissionNoticeAcknowledged(acknowledged: Boolean) {
+        dataStore.edit { it[UserPreferencesKeys.PERMISSION_NOTICE_ACKNOWLEDGED] = acknowledged }
+    }
+
+    override suspend fun setCameraPermissionRequested(requested: Boolean) {
+        dataStore.edit { it[UserPreferencesKeys.CAMERA_PERMISSION_REQUESTED] = requested }
     }
 }

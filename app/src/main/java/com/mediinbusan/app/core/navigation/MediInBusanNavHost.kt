@@ -33,6 +33,7 @@ import com.mediinbusan.app.feature.map.MapScreen
 import com.mediinbusan.app.feature.nearby.NearbyScreen
 import com.mediinbusan.app.feature.nearby.PlaceDetailScreen
 import com.mediinbusan.app.feature.nearby.WellnessCourseMapScreen
+import com.mediinbusan.app.feature.permission.AppPermissionNoticeScreen
 import com.mediinbusan.app.feature.recent.RecentlyViewedScreen
 import com.mediinbusan.app.feature.selfdiagnosis.DiagnosisCtaTarget
 import com.mediinbusan.app.feature.selfdiagnosis.SelfDiagnosisScreen
@@ -77,7 +78,27 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                     navController.navigate(Route.Home) {
                         popUpTo(Route.Splash) { inclusive = true }
                     }
+                },
+                // 최초 실행에서는 접근권한 고지를 먼저 거친다. Splash는 여기서도 백스택에서 빼서
+                // 고지 화면에서 뒤로가면(시스템 back) 스플래시로 되돌아가지 않게 한다.
+                onNavigateToPermissionNotice = {
+                    navController.navigate(Route.AppPermissionNotice(fromSplash = true)) {
+                        popUpTo(Route.Splash) { inclusive = true }
+                    }
                 }
+            )
+        }
+        composable<Route.AppPermissionNotice> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.AppPermissionNotice>()
+            AppPermissionNoticeScreen(
+                fromSplash = route.fromSplash,
+                // 확인을 누르면 고지 화면 자체를 걷어내고 Home으로 — 앱 시작 흐름에서 한 번만 지나가는 화면이다.
+                onAcknowledged = {
+                    navController.navigate(Route.Home) {
+                        popUpTo(Route.AppPermissionNotice(fromSplash = true)) { inclusive = true }
+                    }
+                },
+                onBack = navController::popBackStack
             )
         }
         composable<Route.Home> {
@@ -260,6 +281,7 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             SettingsScreen(
                 onBack = navController::popBackStack,
                 onNavigateToInfoDetail = { infoId -> navController.navigate(Route.SettingsInfoDetail(infoId)) },
+                onNavigateToAppPermission = { navController.navigate(Route.AppPermissionNotice()) },
                 onNavigateToNotificationSettings = { navController.navigate(Route.NotificationSettings) },
                 onNavigateToFavoriteManage = { navController.navigate(Route.Favorite) },
                 onNavigateToRecentlyViewed = { navController.navigate(Route.RecentlyViewed) }

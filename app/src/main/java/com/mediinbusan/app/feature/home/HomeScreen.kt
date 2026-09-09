@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,6 +71,7 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -102,11 +104,13 @@ import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.navigation.BottomBarScaleController
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LanguageBadge
 import com.mediinbusan.app.core.ui.LoadingState
+import com.mediinbusan.app.core.ui.rememberScrollShrinkAnimation
 import com.mediinbusan.app.core.ui.toLanguageBadgeLabel
 import com.mediinbusan.app.data.hospital.Hospital
 import dev.chrisbanes.haze.HazeState
@@ -211,6 +215,13 @@ private fun HomeContent(
         }
     }
 
+    // 공용 하단 탭바(core/navigation의 MediInBusanApp)가 이 화면 밖에 떠 있는 오버레이라, feature끼리
+    // 직접 참조하지 못하는 규칙(CLAUDE.md §4) 때문에 BottomBarScaleController 싱글턴으로만 scale
+    // 값을 전달한다 — 바텀바 자신의 디자인/블러/기존 애니메이션(BottomNavBar.kt)은 건드리지 않는다.
+    val (bottomBarScrollConnection, bottomBarScale) = rememberScrollShrinkAnimation(homeScrollState)
+    LaunchedEffect(bottomBarScale) { BottomBarScaleController.setScale(bottomBarScale) }
+    DisposableEffect(Unit) { onDispose { BottomBarScaleController.setScale(1f) } }
+
     Scaffold(
         // 기본값(colorScheme.background, 거의 흰색)보다 살짝 더 연한 코랄핑크로 — Home 페이지
         // 맨 뒤 배경 전용 톤. 아래 HomeTopAppBar에도 같은 색을 줘서 탑바-본문 경계가 안 보이게 한다.
@@ -284,6 +295,7 @@ private fun HomeContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .hazeSource(state = fabHazeState)
+                        .nestedScroll(bottomBarScrollConnection)
                         .verticalScroll(homeScrollState)
                         .padding(top = contentPadding.calculateTopPadding())
                 ) {

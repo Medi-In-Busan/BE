@@ -12,6 +12,12 @@ sealed interface Route {
     @Serializable
     data object Splash : Route // S-01
 
+    // 앱 접근권한 사전 고지(정보통신망법 제22조의2 / 방송미디어통신위원회 가이드라인).
+    // fromSplash=true면 최초 실행 흐름 — 확인 버튼을 눌러야 Home으로 넘어가고 뒤로가기가 없다.
+    // false면 설정(S-10) > 정보 > 앱 접근권한에서 다시 열어본 것이라 일반 push 화면으로 동작한다.
+    @Serializable
+    data class AppPermissionNotice(val fromSplash: Boolean = false) : Route
+
     @Serializable
     data object Home : Route // S-03
 
