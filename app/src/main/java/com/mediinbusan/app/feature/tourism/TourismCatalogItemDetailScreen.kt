@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -86,18 +89,19 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.AtAGlanceRow
 import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.CautionList
-import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.MediTipContent
+import com.mediinbusan.app.core.ui.NearbyPlacesSection
 import com.mediinbusan.app.core.ui.TravelerHelpContent
 import com.mediinbusan.app.core.ui.VisitInfo
 import com.mediinbusan.app.core.ui.VisitInfoContent
 import com.mediinbusan.app.core.ui.launchExternalDirections
 import com.mediinbusan.app.core.ui.launchIntentSafely
+import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.toPlaceType
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
@@ -107,6 +111,7 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 fun TourismCatalogItemDetailScreen(
     onBack: () -> Unit,
     onNavigateHome: () -> Unit,
+    onSelectPlace: (String) -> Unit,
     recentItemId: String? = null,
     viewModel: TourismCatalogItemDetailViewModel = hiltViewModel()
 ) {
@@ -156,6 +161,10 @@ fun TourismCatalogItemDetailScreen(
             TourismDetailLoaded(
                 item = item,
                 category = category,
+                // 관광공사 상세가 붙지 않은 채(목록에서 넘어온 원본만으로) 그리는 중이라는 표시.
+                showMatchNotice = uiState.matchNotFound,
+                nearbyPlaces = uiState.nearbySamePlaces,
+                onSelectPlace = onSelectPlace,
                 mapFocusRequestId = mapFocusRequestId,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 onOpenMap = {
@@ -191,10 +200,6 @@ fun TourismCatalogItemDetailScreen(
                 Modifier.padding(innerPadding),
                 viewModel::retry
             )
-            uiState.matchNotFound -> EmptyState(
-                strings.tourism.placeMatchNotFoundMessage,
-                Modifier.padding(innerPadding)
-            )
         }
     }
 }
@@ -203,6 +208,9 @@ fun TourismCatalogItemDetailScreen(
 private fun TourismDetailLoaded(
     item: TourismCatalogItem,
     category: TourismCatalogCategory,
+    showMatchNotice: Boolean,
+    nearbyPlaces: List<Place>,
+    onSelectPlace: (String) -> Unit,
     mapFocusRequestId: Int,
     onOpenMap: () -> Unit,
     onOpenLink: (String) -> Unit,
@@ -249,14 +257,26 @@ private fun TourismDetailLoaded(
         }
     }
 
+    // 이 화면에는 하단 바가 없고 루트 Scaffold도 인셋을 하나도 소비하지 않으므로(MediInBusanApp의
+    // contentWindowInsets = WindowInsets(0.dp)), 마지막 카드가 기기 제스처/내비게이션 바에 그대로
+    // 깔린다 — 그만큼을 콘텐츠 아래 여백에 더한다.
+    val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(bottom = 32.dp + navigationBarInset),
+        verticalArrangement = Arrangement.spacedBy(SectionSpacing)
     ) {
         item { TourismHero(item = item) }
-        item { TourismSummaryCard(item = item, category = category) }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(SectionSpacing)) {
+                // 별도 item으로 빼지 않는다 — 아래 TOURISM_DETAIL_MAP_ITEM_INDEX가 가리키는 지도
+                // 카드 위치가 이 배너의 유무에 따라 달라지면 안 된다.
+                if (showMatchNotice) MatchNotFoundNotice()
+                TourismSummaryCard(item = item, category = category)
+            }
+        }
         item {
             CurationSectionCard(title = strings.placeCuration.atAGlanceTitle) {
                 AtAGlanceRow(profile = careProfile)
@@ -355,18 +375,36 @@ private fun TourismDetailLoaded(
                 TravelerHelpContent(onDial = { context.dialPhone(it) })
             }
         }
-        item {
-            DetailSurface {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(sectionLabels.directions, style = SectionTitleStyle, color = TextPrimary)
-                    ActionButtons(
-                        canOpenMap = item.latitude != null && item.longitude != null || item.address != null,
-                        externalLinkUrl = externalLinkUrl,
-                        category = category,
-                        onOpenMap = onOpenMap,
-                        onOpenLink = onOpenLink
-                    )
+        // 좌표·주소·외부 링크가 하나도 없는 항목(관광공사 매칭에 실패한 핫플레이스 등)에서는
+        // 버튼이 한 개도 안 그려져 제목만 남은 빈 카드가 됐다 — 그럴 땐 섹션째 뺀다.
+        val canOpenMap = item.latitude != null && item.longitude != null || item.address != null
+        if (canOpenMap || externalLinkUrl != null) {
+            item {
+                DetailSurface {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(sectionLabels.directions, style = SectionTitleStyle, color = TextPrimary)
+                        ActionButtons(
+                            canOpenMap = canOpenMap,
+                            externalLinkUrl = externalLinkUrl,
+                            category = category,
+                            onOpenMap = onOpenMap,
+                            onOpenLink = onOpenLink
+                        )
+                    }
                 }
+            }
+        }
+        // 병원 상세(S-05)·장소 상세와 같은 자리·같은 구성이다 — 이 항목을 다 읽은 뒤 "그럼 근처의
+        // 같은 종류는?"으로 이어지도록 본문 제일 아래에 둔다(아래 출처 각주는 섹션이 아니라 푸터라
+        // 그대로 맨 끝에 남는다). 좌표가 없는 항목(관광사진·혼잡도 등)에서는 ViewModel이 조회 자체를
+        // 하지 않아 목록이 비고, 그러면 이 섹션도 통째로 빠진다.
+        if (nearbyPlaces.isNotEmpty()) {
+            item {
+                NearbyPlacesSection(
+                    anchorType = placeType,
+                    places = nearbyPlaces,
+                    onSelectPlace = onSelectPlace
+                )
             }
         }
         // 이 화면도 앱이 직접 쓴 안내(가이드·팁·진료 전후 체크)와 TourAPI 원문이 섞여 있어,
@@ -382,6 +420,33 @@ private fun TourismDetailLoaded(
         }
     }
 }
+
+/**
+ * 관광공사(TourAPI) 관광지 DB에서 이 항목과 일치하는 곳을 못 찾았을 때, 화면 위쪽에 다는 안내.
+ *
+ * 화면을 막지 않고 알리기만 한다 — 아래로는 목록에서 이미 본 이름·구·군·혼잡도가 그대로 이어진다.
+ * 문구는 예전 빈 화면이 쓰던 것(placeMatchNotFoundMessage)을 그대로 재사용한다(CLAUDE.md §5).
+ */
+@Composable
+private fun MatchNotFoundNotice() {
+    val strings = LocalAppStrings.current.tourism
+    DetailSurface {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+            Icon(Icons.Default.Info, null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
+            Text(
+                text = strings.placeMatchNotFoundMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+    }
+}
+
+/**
+ * 섹션(카드) 사이 세로 여백. 병원 상세(feature/hospitaldetail)·장소 상세(feature/nearby)의 같은 이름
+ * 상수와 값을 맞춰, 세 상세 화면의 리듬을 통일한다.
+ */
+private val SectionSpacing = 20.dp
 
 // 히어로 / 요약카드 / 한눈에 보기 다음이 지도다 — 앞에 item을 끼우거나 빼면 이 값도 같이 고쳐야
 // 지도 보기 버튼(mapFocusRequestId)이 엉뚱한 카드로 스크롤되지 않는다.

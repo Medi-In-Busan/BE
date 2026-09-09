@@ -253,6 +253,9 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
             TourismCatalogItemDetailScreen(
                 onBack = navController::popBackStack,
                 onNavigateHome = { navController.navigateToTab(Route.Home) },
+                // "주변 같은 종류의 장소" 카드는 웰니스 장소라 장소 상세로 보낸다(관광 카탈로그
+                // 상세가 아니다) — 두 화면은 출처가 다르고, 그 카드의 id는 웰니스 DB 것이다.
+                onSelectPlace = { placeId -> navController.navigate(Route.PlaceDetail(placeId)) },
                 recentItemId = route.recentItemId
             )
         }
