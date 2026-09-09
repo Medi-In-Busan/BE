@@ -92,6 +92,7 @@ import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
+import com.mediinbusan.app.core.ui.openAppPermissionSettings
 import kotlinx.coroutines.launch
 
 /**
@@ -122,6 +123,7 @@ fun DocumentScanScreen(
         uiState = uiState,
         onMenuClick = onMenuClick,
         onLanguageSelected = viewModel::onLanguageSelected,
+        onCameraPermissionRequested = viewModel::onCameraPermissionRequested,
         onCaptureRequested = onNavigateToCapture,
         onImageSelected = viewModel::onImageSelected,
         onImageCleared = viewModel::onImageCleared,
@@ -135,6 +137,7 @@ private fun DocumentScanContent(
     uiState: DocumentScanUiState,
     onMenuClick: () -> Unit,
     onLanguageSelected: (String) -> Unit,
+    onCameraPermissionRequested: () -> Unit,
     onCaptureRequested: () -> Unit,
     onImageSelected: (Uri) -> Unit,
     onImageCleared: () -> Unit,
@@ -160,12 +163,38 @@ private fun DocumentScanContent(
     // DocumentCaptureScreen이 따로 처리한다.
     val hasCameraHardware = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
 
+    // 카메라는 선택 접근권한이라 시스템 팝업을 바로 띄우지 않는다 — 목적을 먼저 알리는 사전 고지
+    // 다이얼로그를 거친다(방송미디어통신위원회 "앱 접근권한 동의 가이드라인", 원스토어 검증 의견).
+    // 거부돼 있으면(특히 "다시 묻지 않음") 시스템 팝업이 아예 안 뜨므로 설정 경로를 안내한다.
+    var showCameraRationale by rememberSaveable { mutableStateOf(false) }
+    var showCameraDenied by rememberSaveable { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             onCaptureRequested()
         } else {
             coroutineScope.launch { snackbarHostState.showSnackbar(strings.cameraPermissionDeniedMessage) }
         }
+    }
+
+    if (showCameraRationale) {
+        CameraPermissionRationaleDialog(
+            onAllow = {
+                showCameraRationale = false
+                onCameraPermissionRequested()
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            },
+            onDismiss = { showCameraRationale = false }
+        )
+    }
+    if (showCameraDenied) {
+        CameraPermissionDeniedDialog(
+            onOpenSettings = {
+                showCameraDenied = false
+                context.openAppPermissionSettings()
+            },
+            onDismiss = { showCameraDenied = false }
+        )
     }
 
     // 갤러리 선택은 Android 13+ Photo Picker 기반이라 런타임 권한이 필요 없다.
@@ -179,10 +208,14 @@ private fun DocumentScanContent(
             return
         }
         val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            onCaptureRequested()
-        } else {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+        when {
+            hasPermission -> onCaptureRequested()
+            // 아직 물어본 적이 없거나, 한 번 거부했어도 다시 물을 수 있는 상태
+            // (shouldShowRequestPermissionRationale=true)면 사전 고지 후 시스템 팝업으로 간다.
+            // 그 외(영구 거부)에는 팝업이 아예 뜨지 않으므로 설정에서 바꾸는 방법을 안내한다.
+            !uiState.cameraPermissionRequested -> showCameraRationale = true
+            context.shouldShowCameraPermissionRationale() -> showCameraRationale = true
+            else -> showCameraDenied = true
         }
     }
 
@@ -725,6 +758,7 @@ private fun DocumentScanContentEmptyPreview() {
             uiState = DocumentScanUiState(),
             onMenuClick = {},
             onLanguageSelected = {},
+            onCameraPermissionRequested = {},
             onCaptureRequested = {},
             onImageSelected = {},
             onImageCleared = {},

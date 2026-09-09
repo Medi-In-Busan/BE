@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -82,6 +84,7 @@ import com.mediinbusan.app.core.ui.BrandSnackbarHost
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToInfoDetail: (String) -> Unit,
+    onNavigateToAppPermission: () -> Unit,
     onNavigateToNotificationSettings: () -> Unit,
     onNavigateToFavoriteManage: () -> Unit,
     onNavigateToRecentlyViewed: () -> Unit,
@@ -94,6 +97,7 @@ fun SettingsScreen(
         onBack = onBack,
         onLanguageSelected = viewModel::onLanguageSelected,
         onNavigateToInfoDetail = onNavigateToInfoDetail,
+        onNavigateToAppPermission = onNavigateToAppPermission,
         onNavigateToNotificationSettings = onNavigateToNotificationSettings,
         onNavigateToFavoriteManage = onNavigateToFavoriteManage,
         onNavigateToRecentlyViewed = onNavigateToRecentlyViewed,
@@ -108,12 +112,14 @@ private fun SettingsContent(
     onBack: () -> Unit,
     onLanguageSelected: (String) -> Unit,
     onNavigateToInfoDetail: (String) -> Unit,
+    onNavigateToAppPermission: () -> Unit,
     onNavigateToNotificationSettings: () -> Unit,
     onNavigateToFavoriteManage: () -> Unit,
     onNavigateToRecentlyViewed: () -> Unit,
     onClearCacheConfirmed: () -> Unit
 ) {
     val strings = LocalAppStrings.current.settings
+    val permissionStrings = LocalAppStrings.current.permissionNotice
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.cacheClearedEventId) {
@@ -210,6 +216,14 @@ private fun SettingsContent(
                             strings.privacyPolicyTitle,
                             strings.privacyPolicyDescription,
                             onClick = { onNavigateToInfoDetail(SettingsInfoType.PRIVACY_POLICY.infoId) }
+                        ),
+                        // 앱 접근권한 고지는 언제든 다시 볼 수 있어야 한다(방송미디어통신위원회
+                        // "앱 접근권한 동의 가이드라인" — 고지 내용과 철회 방법의 상시 열람).
+                        SettingsRowItem(
+                            icon = Icons.Outlined.Lock,
+                            title = permissionStrings.screenTitle,
+                            description = permissionStrings.settingsRowDescription,
+                            onClick = onNavigateToAppPermission
                         ),
                         SettingsRowItem(
                             R.drawable.setting_condition,
@@ -308,16 +322,25 @@ private fun LanguageSegmentButton(label: String, selected: Boolean, onClick: () 
 // SECTION 2/3: 카드 안에 여러 Row + Divider. onClick이 null이면 분기 페이지가 없다는 뜻으로,
 // 행을 클릭 불가능하게 두고 우측 화살표(chevron)도 표시하지 않는다(데이터 출처 등).
 private data class SettingsRowItem(
-    val iconRes: Int,
+    // 전용 PNG 리소스가 있는 행은 iconRes를, 아직 없는 행(앱 접근권한)은 icon(벡터)을 쓴다.
+    // 기존 행들이 iconRes/title/description을 위치 인자로 넘기고 있어 그 순서는 그대로 둔다.
+    val iconRes: Int? = null,
     val title: String,
     val description: String,
-    val onClick: (() -> Unit)? = {}
+    val onClick: (() -> Unit)? = {},
+    val icon: ImageVector? = null
 )
 
 @Composable
 private fun SettingsRows(items: List<SettingsRowItem>) {
     items.forEachIndexed { index, item ->
-        SettingsRow(iconRes = item.iconRes, title = item.title, description = item.description, onClick = item.onClick)
+        SettingsRow(
+            iconRes = item.iconRes,
+            icon = item.icon,
+            title = item.title,
+            description = item.description,
+            onClick = item.onClick
+        )
         if (index != items.lastIndex) {
             HorizontalDivider(color = SettingsDivider, modifier = Modifier.padding(horizontal = 20.dp))
         }
@@ -326,7 +349,8 @@ private fun SettingsRows(items: List<SettingsRowItem>) {
 
 @Composable
 private fun SettingsRow(
-    iconRes: Int,
+    iconRes: Int?,
+    icon: ImageVector? = null,
     title: String,
     description: String,
     onClick: (() -> Unit)? = {}
@@ -339,7 +363,7 @@ private fun SettingsRow(
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RowIconImage(imageRes = iconRes)
+        RowIconImage(imageRes = iconRes, icon = icon)
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
@@ -507,7 +531,7 @@ private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> U
 // Home 카테고리 원(CategoryCircleItem)과 같은 톤 — 흰 배경 + 경계선 원 안에 이미지.
 // 크기(40dp 원)는 기존에 쓰던 코랄톤 원형 아이콘과 동일하게 유지한다.
 @Composable
-private fun RowIconImage(imageRes: Int) {
+private fun RowIconImage(imageRes: Int?, icon: ImageVector? = null) {
     Box(
         modifier = Modifier
             .size(40.dp)
@@ -516,7 +540,12 @@ private fun RowIconImage(imageRes: Int) {
             .border(width = 1.dp, color = DividerColor, shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Image(painter = painterResource(id = imageRes), contentDescription = null, modifier = Modifier.size(24.dp))
+        when {
+            imageRes != null ->
+                Image(painter = painterResource(id = imageRes), contentDescription = null, modifier = Modifier.size(24.dp))
+            icon != null ->
+                Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(22.dp))
+        }
     }
 }
 
@@ -558,6 +587,7 @@ private fun SettingsContentPreview() {
             onBack = {},
             onLanguageSelected = {},
             onNavigateToInfoDetail = {},
+            onNavigateToAppPermission = {},
             onNavigateToNotificationSettings = {},
             onNavigateToFavoriteManage = {},
             onNavigateToRecentlyViewed = {},
