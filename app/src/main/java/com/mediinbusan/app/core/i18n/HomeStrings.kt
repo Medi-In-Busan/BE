@@ -77,7 +77,9 @@ data class HomeStrings(
             courseStopsSuffix = "-stop course",
             quickLinkHospitalList = "Find hospitals",
             quickLinkGuide = "Medical guide",
-            quickLinkWellness = "Recommended wellness",
+            // 이 필드는 Home 퀵링크 칩과 하단 탭바 라벨(MediInBusanApp.kt)이 같이 쓴다 — 탭바는
+            // 폭이 좁아 "Recommended wellness"가 두 줄로 감기며 보기 안 좋았다. "Wellness"로 줄인다.
+            quickLinkWellness = "Wellness",
             quickLinkMap = "View on map",
             quickLinkSelfDiagnosis = "Prep Check",
             quickLinkFavorite = "Favorites"

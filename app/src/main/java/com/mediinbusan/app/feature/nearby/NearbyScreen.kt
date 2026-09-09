@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -52,6 +54,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,6 +70,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -91,6 +96,7 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedTourismItemCategoryLabel
+import com.mediinbusan.app.core.navigation.BottomBarScaleController
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.AsyncImageBox
@@ -105,6 +111,7 @@ import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberRevealedCount
+import com.mediinbusan.app.core.ui.rememberScrollShrinkAnimation
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.HospitalWellnessRoute
@@ -162,6 +169,13 @@ private fun NearbyContent(
     onLanguageSelected: (String) -> Unit,
     onRetry: () -> Unit
 ) {
+    // Home/병원목록과 같은 하단 탭바 축소 연출 — feature끼리 직접 참조 못 하는 규칙(CLAUDE.md §4)
+    // 때문에 BottomBarScaleController 싱글턴으로만 scale을 전달한다(core/ui/BottomBarScrollShrink.kt).
+    val listState = rememberLazyListState()
+    val (bottomBarScrollConnection, bottomBarScale) = rememberScrollShrinkAnimation(listState)
+    LaunchedEffect(bottomBarScale) { BottomBarScaleController.setScale(bottomBarScale) }
+    DisposableEffect(Unit) { onDispose { BottomBarScaleController.setScale(1f) } }
+
     Scaffold(
         containerColor = Color.White,
         topBar = {
@@ -195,6 +209,8 @@ private fun NearbyContent(
                 onSelectCatalogItem = onSelectCatalogItem,
                 onNavigateToTourismCatalog = onNavigateToTourismCatalog,
                 onSearchTourism = onSearchTourism,
+                listState = listState,
+                scrollConnection = bottomBarScrollConnection,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -208,10 +224,13 @@ private fun NearbyLoadedContent(
     onSelectCatalogItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
     onNavigateToTourismCatalog: (TourismCatalogCategory, String?) -> Unit,
     onSearchTourism: (TourismCatalogCategory, String) -> Unit,
+    listState: LazyListState,
+    scrollConnection: NestedScrollConnection,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        state = listState,
+        modifier = modifier.fillMaxSize().nestedScroll(scrollConnection),
         // 좌우 여백은 아이템마다 직접 준다 — 핫플레이스 TOP5(1/2/3등 사진 영역)만 다른 섹션보다
         // 좁은 여백(10dp)을 둬서 가로로 더 넓게 보이게 하기 위함.
         contentPadding = PaddingValues(top = 14.dp, bottom = BottomNavBarHeight + 32.dp),

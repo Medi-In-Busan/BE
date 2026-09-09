@@ -17,12 +17,18 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocalHospital
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Spa
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
@@ -66,6 +72,10 @@ private fun MediInBusanAppContent() {
     // feature/map은 이 core/navigation 패키지를 모르므로 BottomBarVisibilityController(순수 Kotlin
     // object 싱글턴)를 통해서만 신호를 받는다.
     val mapSelectionActive by BottomBarVisibilityController.mapSelectionActive.collectAsState()
+    // Home(feature/home)에서 아래로 스크롤하면 65%로 축소되는 연출 — Home이 이 값을 직접 갱신하고
+    // 여기서는 graphicsLayer로 적용만 한다(BottomNavBar.kt 내부 디자인/블러는 건드리지 않는다).
+    val bottomBarScale by BottomBarScaleController.scale.collectAsState()
+    val bottomBarLayer = rememberGraphicsLayer()
 
     Scaffold(
         // 기본값(systemBars)을 그대로 두면 상태바/제스처 인셋만큼 여백이 자동으로 생겨
@@ -83,10 +93,31 @@ private fun MediInBusanAppContent() {
                 enter = fadeIn(tween(durationMillis = 300, delayMillis = 150)),
                 exit = fadeOut(tween(150))
             ) {
-                BottomNavBar(
-                    tabs = bottomNavTabs(navController, currentDestination),
-                    hazeState = hazeState
-                )
+                // BottomNavBar 내부 hazeEffect(실시간 배경 블러)는 "정상 크기로 그려진 결과"를
+                // 기준으로만 자기 영역을 올바르게 추적한다 — graphicsLayer로 축소 스케일을 먼저
+                // 걸어버리면(이전 시도) 블러가 그 영역을 놓쳐 캡슐 오른쪽이 안 채워진 채로 남았다.
+                // 그래서 스케일 없이 정상 크기로 오프스크린 레이어에 그려 넣은(record) 다음, 이미
+                // 완성된 그 결과물만 화면에 축소해서 얹는다(drawLayer) — Haze는 항상 1:1로 렌더링만
+                // 하고, 축소는 그 결과 이미지에 대한 순수한 후처리라 이음새/미채움이 생기지 않는다.
+                Box(
+                    modifier = Modifier.drawWithContent {
+                        bottomBarLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        scale(
+                            scaleX = bottomBarScale,
+                            scaleY = bottomBarScale,
+                            pivot = Offset(size.width / 2f, size.height) // 아래 기준 축소
+                        ) {
+                            drawLayer(bottomBarLayer)
+                        }
+                    }
+                ) {
+                    BottomNavBar(
+                        tabs = bottomNavTabs(navController, currentDestination),
+                        hazeState = hazeState
+                    )
+                }
             }
         }
     ) {

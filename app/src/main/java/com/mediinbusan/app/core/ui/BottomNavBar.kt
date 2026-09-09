@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
@@ -323,10 +324,14 @@ private fun RowScope.GlassTabItem(tab: BottomNavTabUiModel) {
             modifier = Modifier.size(20.dp).scale(iconScale)
         )
         Spacer(modifier = Modifier.height(2.dp))
+        // 라벨이 2줄로 감기면(특히 긴 언어의 "추천 웰니스" 탭) 축소 스케일 아래에서 캡슐 경계를
+        // 뚫고 나가 배경이 갈라져 보인다 — 항상 1줄로 고정하고 넘치면 말줄임으로 처리한다.
         Text(
             text = tab.label,
             color = contentColor,
             fontWeight = if (tab.selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.85f
             )

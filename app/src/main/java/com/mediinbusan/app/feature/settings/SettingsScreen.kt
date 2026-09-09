@@ -1,5 +1,7 @@
 package com.mediinbusan.app.feature.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -50,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -77,6 +80,7 @@ import com.mediinbusan.app.core.designsystem.SettingsSectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.ui.BrandSnackbarHost
+import com.mediinbusan.app.core.ui.launchIntentSafely
 
 @Composable
 fun SettingsScreen(
@@ -365,9 +369,15 @@ private fun SettingsRow(
     }
 }
 
+// 원스토어 심의 통과 후 배정된 PID(0001008717) 기준 축약 딥링크 — 원스토어 앱이 깔려 있으면 앱 내
+// 상세페이지로, 없으면 자동으로 웹(m.onestore.co.kr) 상세페이지로 리다이렉트된다(원스토어 공식
+// 연동규격 권장 방식이라 별도 설치 여부 분기가 필요 없다).
+private const val OneStoreUpdateUrl = "https://onesto.re/0001008717"
+
 @Composable
 private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> Unit) {
     var showClearCacheDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     if (showClearCacheDialog) {
         AlertDialog(
@@ -452,10 +462,10 @@ private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> U
                     color = SettingsSecondaryText
                 )
             }
-            // 분기용 화살표(">") 대신 캐시삭제 버튼과 같은 양식의 "업데이트" 버튼. 배포 전이라
-            // 아직 실제 업데이트 라우팅은 걸지 않는다(onClick 비워둠).
+            // 분기용 화살표(">") 대신 캐시삭제 버튼과 같은 양식의 "업데이트" 버튼. 누르면 원스토어
+            // 상세페이지(설치돼 있으면 앱, 아니면 웹)로 이동한다.
             Button(
-                onClick = {},
+                onClick = { context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(OneStoreUpdateUrl))) },
                 modifier = Modifier.height(34.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White),
