@@ -73,7 +73,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -1188,11 +1191,30 @@ private fun RecommendedCourseCard(course: HomeRecommendedCourse, onClick: () -> 
                 4 -> R.drawable.home_course4
                 else -> R.drawable.home_course5
             }
-            Image(
-                painter = painterResource(id = stopsBadgeRes),
-                contentDescription = "${course.course.stops.size}${strings.courseStopsSuffix}",
-                modifier = Modifier.align(Alignment.TopStart).padding(9.dp).height(40.dp)
-            )
+            val stopsBadgeHeight = 40.dp
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(id = stopsBadgeRes),
+                    contentDescription = null,
+                    modifier = Modifier.height(stopsBadgeHeight)
+                )
+                Text(
+                    text = strings.courseStopsBadgeUnit,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = with(LocalDensity.current) { (stopsBadgeHeight * 0.35f).toSp() },
+                    modifier = Modifier
+                        .offset(x = (-6).dp, y = 3.dp)
+                        .semantics {
+                            contentDescription = "${course.course.stops.size}${strings.courseStopsSuffix}"
+                        }
+                )
+            }
         }
         Column(modifier = Modifier.padding(12.dp)) {
             Text(

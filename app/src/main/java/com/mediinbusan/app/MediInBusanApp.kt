@@ -1,12 +1,29 @@
 package com.mediinbusan.app
 
 import android.app.Application
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.memory.MemoryCache
 import com.kakao.vectormap.KakaoMapSdk
 import com.mediinbusan.app.core.ui.KakaoMapAvailability
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class MediInBusanApp : Application() {
+class MediInBusanApp : Application(), SingletonImageLoader.Factory {
+    // 웰니스/부산관광/무장애관광처럼 스크롤로 카드가 계속 재구성되는 화면에서, 기본 메모리
+    // 캐시 비율(20%)로는 이미 본 이미지가 다른 이미지에 밀려나 스크롤로 다시 볼 때마다 로딩
+    // 스피너가 다시 뜨는 일이 잦았다 — 비율을 넉넉하게 올려 같은 세션에서 재요청 자체를 줄인다.
+    override fun newImageLoader(context: PlatformContext): ImageLoader {
+        return ImageLoader.Builder(context)
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, percent = 0.4)
+                    .build()
+            }
+            .build()
+    }
+
     override fun onCreate() {
         super.onCreate()
         // Kakao Maps SDK 네이티브 라이브러리(libK3fAndroid.so)는 arm64-v8a/armeabi-v7a로만 배포되어

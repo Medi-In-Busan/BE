@@ -31,11 +31,14 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.Card
@@ -70,9 +73,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +89,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.BadgeText
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
+import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
@@ -423,7 +429,7 @@ private fun TourismCatalogEntrySection(
             category = tourismCategory,
             items = tourismPreviews,
             accent = SkyBlue,
-            tagResFor = { item -> item.categoryCode?.toTourismTagRes() },
+            tagFor = { item -> item.categoryCode?.toTourismPlaceTag() },
             onSelectItem = onSelectItem,
             onSeeAll = onNavigate
         )
@@ -435,7 +441,7 @@ private fun TourismCatalogEntrySection(
             items = accessiblePreviews,
             accent = CoralPrimary,
             // 무장애관광은 세분화하지 않고 항목 전부 같은 태그를 붙인다.
-            tagResFor = { R.drawable.wellness_busanmujange },
+            tagFor = { TourismPlaceTag.ACCESSIBLE },
             onSelectItem = onSelectItem,
             onSeeAll = onNavigate
         )
@@ -453,7 +459,7 @@ private fun TourismPlaceSlider(
     category: TourismCatalogCategory,
     items: List<TourismCatalogItem>,
     accent: Color,
-    tagResFor: (TourismCatalogItem) -> Int?,
+    tagFor: (TourismCatalogItem) -> TourismPlaceTag?,
     onSelectItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
     onSeeAll: (TourismCatalogCategory) -> Unit
 ) {
@@ -524,7 +530,7 @@ private fun TourismPlaceSlider(
                             TourismPlaceCard(
                                 item = item,
                                 accent = accent,
-                                tagRes = tagResFor(item),
+                                tag = tagFor(item),
                                 onClick = { onSelectItem(category, item) }
                             )
                         }
@@ -536,7 +542,7 @@ private fun TourismPlaceSlider(
 }
 
 @Composable
-private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: Int?, onClick: () -> Unit) {
+private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tag: TourismPlaceTag?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             // 화면에 카드가 1.5개 정도 보이던 걸 2.5개 정도 보이게 폭을 줄인다(210dp -> 140dp).
@@ -563,9 +569,9 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: In
             // 흰 배경 위 작은 인라인 썸네일 전용이라(6~20% 저채도 틴트) 이 카드 자체 배경(대각선
             // 그라데이션) 위에 얹으면 반투명이 겹쳐 탁한 사각형처럼 보인다 — 그래서 여기 전용으로
             // 카드 배경을 완전히 덮는 불투명 파스텔 그라데이션 버전을 따로 쓴다(Map 쪽은 그대로 둔다).
-            when (tagRes) {
-                R.drawable.wellness_busanrest -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.LODGING), Modifier.fillMaxSize())
-                R.drawable.wellness_busaneat -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.RESTAURANT), Modifier.fillMaxSize())
+            when (tag) {
+                TourismPlaceTag.LODGING -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.LODGING), Modifier.fillMaxSize())
+                TourismPlaceTag.FOOD -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.RESTAURANT), Modifier.fillMaxSize())
                 else -> MapMarkerFallbackThumbnail(Modifier.fillMaxSize(), iconSize = 32.dp)
             }
         }
@@ -576,10 +582,10 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tagRes: In
             )
         )
         // 핫플레이스 1/2/3등 배지(HotPlaceRankBadge)와 같은 위치·같은 렌더링 방식으로, 카테고리
-        // 태그 사진(관광지/숙박/맛집/무장애관광)을 좌상단에 얹는다.
-        if (tagRes != null) {
-            HotPlaceRankBadge(
-                iconRes = tagRes,
+        // 태그(관광지/숙소/맛집/무장애)를 좌상단에 얹는다.
+        if (tag != null) {
+            TourismTagBadge(
+                tag = tag,
                 height = 24.dp,
                 modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
             )
@@ -634,13 +640,65 @@ private fun TourismCardFallbackThumbnail(visual: PlaceKindVisual, modifier: Modi
     }
 }
 
-// 그룹(domain/tourism/TourismCatalog.kt의 TourismTagGroup)을 실제 태그 사진으로 매핑한다.
+// 관광지/숙소/맛집/무장애 태그 배지 종류. 예전엔 wellness_busantour/busanrest/busaneat/
+// busanmujange 4종 이미지에 문구가 통째로 그려져 있어 언어를 바꿔도 한국어 그대로 남았다.
+private enum class TourismPlaceTag { TOUR, LODGING, FOOD, ACCESSIBLE }
+
+// 그룹(domain/tourism/TourismCatalog.kt의 TourismTagGroup)을 태그 종류로 매핑한다.
 // 그룹 분류 자체는 NearbyViewModel.kt의 미리보기 균형 배분과 공유한다(같은 기준 유지).
-private fun String.toTourismTagRes(): Int? = when (toTourismTagGroup()) {
-    TourismTagGroup.SPOT -> R.drawable.wellness_busantour
-    TourismTagGroup.LODGING -> R.drawable.wellness_busanrest
-    TourismTagGroup.FOOD -> R.drawable.wellness_busaneat
+private fun String.toTourismPlaceTag(): TourismPlaceTag? = when (toTourismTagGroup()) {
+    TourismTagGroup.SPOT -> TourismPlaceTag.TOUR
+    TourismTagGroup.LODGING -> TourismPlaceTag.LODGING
+    TourismTagGroup.FOOD -> TourismPlaceTag.FOOD
     null -> null
+}
+
+// 핫플레이스 순위 배지(HotPlaceRankBadge)·혼잡도 배지(CongestionLevelBadge)와 같은 방식 —
+// 배경/아이콘/문구를 전부 Compose로 직접 그려서 문구가 LocalAppStrings를 따라가게 한다.
+@Composable
+private fun TourismTagBadge(tag: TourismPlaceTag, height: Dp, modifier: Modifier = Modifier) {
+    val strings = LocalAppStrings.current.nearby
+    val (accentColor, icon, label) = when (tag) {
+        TourismPlaceTag.TOUR -> Triple(CoralInk, Icons.Default.Place, strings.placeTypeLabels["TOURIST_ATTRACTION"].orEmpty())
+        TourismPlaceTag.LODGING -> Triple(SkyBlue, Icons.Default.Hotel, strings.placeTypeLabels["LODGING"].orEmpty())
+        TourismPlaceTag.FOOD -> Triple(Color(0xFFB2650A), Icons.Default.Restaurant, strings.wellnessFilterFoodLabel)
+        TourismPlaceTag.ACCESSIBLE -> Triple(Color(0xFF1E9E63), Icons.AutoMirrored.Filled.Accessible, strings.wellnessFilterAccessibleLabel)
+    }
+    val fillColor = lerp(Color.White, accentColor, 0.16f)
+    val density = LocalDensity.current
+    Row(
+        modifier = modifier
+            .height(height)
+            .clip(CircleShape)
+            .background(fillColor)
+            .padding(start = height * 0.14f, end = height * 0.32f),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(height * 0.16f)
+    ) {
+        // 원본 태그 사진은 동그라미가 배지 안에서 여백을 두고 떠 있다 — 꽉 채우지 않는다.
+        Box(
+            modifier = Modifier
+                .size(height * 0.72f)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(height * 0.4f)
+            )
+        }
+        Text(
+            text = label,
+            color = accentColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = with(density) { (height * 0.42f).toSp() },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable
@@ -895,15 +953,37 @@ private fun TourismRevealContent(
     }
 }
 
-// 1/2/3위 전용 순위 배지(wellness_1st/2nd/3rd). 사진이 이미 여백 없이 알약 모양대로 잘려있어서
-// 별도 크롭/확대 없이 높이만 지정하면 원본 비율대로 너비가 자동으로 맞춰진다.
+// 1/2/3위 전용 순위 배지. 예전엔 wellness_1st/2nd/3rd 이미지에 "1위 · 지금 가장 핫함" 같은 문구가
+// 통째로 그려져 있어 언어를 바꿔도 한국어 그대로 남았다 — 배경/아이콘/문구를 전부 Compose로 직접
+// 그려서 문구가 LocalAppStrings를 따라가게 한다.
 @Composable
-private fun HotPlaceRankBadge(iconRes: Int, height: Dp, modifier: Modifier = Modifier) {
-    Image(
-        painter = painterResource(id = iconRes),
-        contentDescription = null,
-        modifier = modifier.height(height)
-    )
+private fun HotPlaceRankBadge(rank: Int, height: Dp, modifier: Modifier = Modifier) {
+    val strings = LocalAppStrings.current.nearby
+    val (background, emoji, label) = when (rank) {
+        1 -> Triple(Brush.linearGradient(listOf(Color(0xFF232329), Color(0xFF17171B))), "🔥", strings.hotPlaceRank1Label)
+        2 -> Triple(Brush.linearGradient(listOf(Color(0xFFEE4C86), Color(0xFFFF9472))), "✨", strings.hotPlaceRank2Label)
+        else -> Triple(Brush.linearGradient(listOf(Color(0xFF2FC08C), Color(0xFF8CEFC0))), "🌱", strings.hotPlaceRank3Label)
+    }
+    val density = LocalDensity.current
+    Row(
+        modifier = modifier
+            .height(height)
+            .clip(CircleShape)
+            .background(background)
+            .padding(horizontal = height * 0.32f),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(height * 0.12f)
+    ) {
+        Text(text = emoji, fontSize = with(density) { (height * 0.5f).toSp() })
+        Text(
+            text = label,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = with(density) { (height * 0.42f).toSp() },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable
@@ -938,8 +1018,8 @@ private fun HotPlaceFeaturedCard(hotPlace: TourismHotPlace, onClick: () -> Unit)
             )
         )
         HotPlaceRankBadge(
-            iconRes = R.drawable.wellness_1st,
-            height = 42.dp,
+            rank = 1,
+            height = 34.dp,
             modifier = Modifier.align(Alignment.TopStart).padding(14.dp)
         )
         Column(
@@ -1004,10 +1084,9 @@ private fun HotPlaceGridCard(
                 Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f)))
             )
         )
-        val rankBadgeRes = if (rank == 2) R.drawable.wellness_2nd else R.drawable.wellness_3rd
         HotPlaceRankBadge(
-            iconRes = rankBadgeRes,
-            height = 24.dp,
+            rank = rank,
+            height = 22.dp,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
         )
         Column(

@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,13 +35,27 @@ private const val CardRevealBaseDelayMs = 500L
 private const val CardRevealStaggerMs = 220L
 private const val CardRevealDurationMs = 500
 
-/** itemsKey(보통 리스트 그 자체)가 바뀔 때마다 0부터 다시 순차 공개되는 인덱스 카운트. */
+/**
+ * itemsKey(보통 리스트 그 자체)가 바뀔 때마다 0부터 다시 순차 공개되는 인덱스 카운트.
+ *
+ * `rememberSaveable`을 쓴다 — 이 섹션을 담은 LazyColumn 아이템이 화면 밖으로 멀리 스크롤됐다가
+ * 돌아오면 Compose가 해당 서브트리를 통째로 폐기했다 다시 만드는데, 그냥 `remember`였다면
+ * revealedCount가 0으로 리셋되면서 이미 다 본 카드들이 스크롤해서 다시 볼 때마다 매번 처음처럼
+ * 재생됐다. 저장 가능한 상태로 바꿔서 "처음 진입할 때 한 번"만 재생되게 한다.
+ *
+ * `revealedCount` 값 자체는 복원돼도, 아래 `LaunchedEffect`는 재구성될 때마다 무조건 다시
+ * 실행된다(같은 itemsKey라도 컴포저블이 폐기됐다 새로 생기면 "처음 실행"이라 재생을 건너뛸
+ * 근거가 없다) — 그래서 이미 다 공개된 상태(revealTarget에 도달)면 즉시 반환해 스태거 시퀀스를
+ * 처음부터 다시 돌리지 않게 막는다. 이 가드가 없으면 rememberSaveable로 값은 복원돼도, 그 값이
+ * 이 가드 없는 시퀀스에 곧바로 덮어써져 애니메이션만 다시 재생되는 문제가 있었다.
+ */
 @Composable
 fun rememberRevealedCount(itemsKey: Any, itemCount: Int): Int {
-    var revealedCount by remember(itemsKey) { mutableStateOf(0) }
+    var revealedCount by rememberSaveable(itemsKey) { mutableStateOf(0) }
     LaunchedEffect(itemsKey) {
         if (itemCount == 0) return@LaunchedEffect
         val revealTarget = minOf(itemCount, InitialCardRevealCount)
+        if (revealedCount >= revealTarget) return@LaunchedEffect
         delay(CardRevealBaseDelayMs)
         repeat(revealTarget) { index ->
             revealedCount = index + 1
