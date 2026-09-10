@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Place
@@ -128,6 +129,7 @@ fun PlaceDetailScreen(
     placeId: String,
     onSelectPlace: (String) -> Unit,
     onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
     viewModel: PlaceDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -158,7 +160,8 @@ fun PlaceDetailScreen(
                 nearbyPlaces = uiState.nearbySamePlaces,
                 onSelectPlace = onSelectPlace,
                 onToggleFavorite = viewModel::onToggleFavorite,
-                onBack = onBack
+                onBack = onBack,
+                onNavigateHome = onNavigateHome
             )
             else -> EmptyState(message = LocalAppStrings.current.nearby.placeNotFoundMessage)
         }
@@ -172,7 +175,8 @@ private fun PlaceDetailContent(
     nearbyPlaces: List<Place>,
     onSelectPlace: (String) -> Unit,
     onToggleFavorite: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateHome: () -> Unit
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -194,17 +198,9 @@ private fun PlaceDetailContent(
     // 가려지거나 반대로 그 사이에 빈 여백이 남지 않고 정확히 맞닿게 한다(HospitalDetailScreen과 동일).
     var bottomBarHeight by remember { mutableStateOf(0.dp) }
     val scrollState = rememberScrollState()
-    // 히어로 사진을 지나 스크롤하면 상단바가 서서히 나타난다 — 예전엔 흰 배경 위에 코랄 화살표만
-    // 덩그러니 떠서 본문(주소 줄)과 겹쳐 보였다. 사진 높이의 절반쯤 지나면 완전히 불투명해진다.
-    // 사진이 없는 장소도 이제 마스코트 일러스트가 그 자리를 채우므로(PlaceHeroSection) 사진과
-    // 같은 높이를 쓴다 — 아이콘 배지 하나뿐이라 화면 위쪽이 휑하던 시절엔 한 단계 낮춰뒀었다.
+    // 상단바 없이, 뒤로가기·홈 아이콘은 히어로 사진 위에만 떠 있다(PlaceHeroSection) — 사진이
+    // 없는 장소도 이제 마스코트 일러스트가 그 자리를 채우므로 사진과 같은 높이를 쓴다.
     val heroHeight = HeroHeight
-    val topBarAlpha by remember(heroHeight) {
-        derivedStateOf {
-            val fadeDistancePx = with(density) { (heroHeight / 2).toPx() }
-            (scrollState.value / fadeDistancePx).coerceIn(0f, 1f)
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -214,7 +210,13 @@ private fun PlaceDetailContent(
                     .verticalScroll(scrollState)
                     .padding(bottom = bottomBarHeight)
             ) {
-                PlaceHeroSection(place = place, height = heroHeight, kindColor = visual.color)
+                PlaceHeroSection(
+                    place = place,
+                    height = heroHeight,
+                    kindColor = visual.color,
+                    onBack = onBack,
+                    onNavigateHome = onNavigateHome
+                )
 
                 // 사진 위로 콘텐츠 시트를 끌어올려 겹친다 — 사진이 카드처럼 따로 떠 있던 예전
                 // 레이아웃보다 화면이 한 장으로 이어져 보인다(장소/숙소 앱들의 표준 상세 패턴).
@@ -388,68 +390,30 @@ private fun PlaceDetailContent(
                     }
             )
         }
-        // 스크롤에 따라 나타나는 상단바 — 사진 위에서는 투명하고(사진을 가리지 않는다), 본문
-        // 구간에서는 흰 배경 + 장소 이름이 떠서 지금 뭘 보고 있는지가 계속 보인다.
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .graphicsLayer { alpha = topBarAlpha },
-            color = Color.White,
-            shadowElevation = if (topBarAlpha > 0.95f) 3.dp else 0.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(start = 56.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = place.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        // 뒤로가기는 사진 위(어두운 배경)와 흰 본문 위 양쪽에 얹히므로, 아이콘만 두면 한쪽에서
-        // 반드시 묻힌다 — 반투명 흰 원을 깔아 어디서든 같은 대비를 유지한다.
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(8.dp)
-                .size(40.dp)
-                .shadow(elevation = 2.dp, shape = CircleShape, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.2f))
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.92f))
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.ChevronLeft,
-                contentDescription = LocalAppStrings.current.common.backContentDescription,
-                tint = CoralPrimary,
-                modifier = Modifier.size(28.dp)
-            )
-        }
     }
 }
 
 @Composable
-private fun PlaceHeroSection(place: Place, height: Dp, kindColor: Color) {
+private fun PlaceHeroSection(
+    place: Place,
+    height: Dp,
+    kindColor: Color,
+    onBack: () -> Unit,
+    onNavigateHome: () -> Unit
+) {
     // 사진은 사진 역할만 한다 — 예전엔 이 위에 카테고리 라벨과 장소 이름을 얹었는데, 바로 아래
     // PlaceTitleSection이 같은 배지와 같은 제목을 한 번 더 보여줘서 화면 상단에 같은 문구가 두 번
     // 나왔다. 텍스트를 전부 아래 타이틀 블록으로 몰아, 사진이 없는 장소에서도 레이아웃이 같아진다.
-    // 좌우 여백 없이 화면 폭을 꽉 채우고 상태바 아래까지 올라간다 — 여백을 두고 둥글게 잘린
-    // "사진 카드"보다 몰입감이 크고, 바로 아래 콘텐츠 시트가 이 위로 겹쳐 올라오면서 화면이 한 장으로 읽힌다.
+    // 관광 상세(TourismCatalogItemDetailScreen.TourismHero)와 같은 톤 — 좌우 여백을 두고 둥글게
+    // 잘린 카드로, 상태바 아래 여백은 카드 바깥(statusBarsPadding)에서 준다(풀블리드로 한번
+    // 바꿨다가 요청으로 되돌림).
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 20.dp, top = 10.dp, end = 20.dp)
             .height(height)
+            .clip(RoundedCornerShape(28.dp))
     ) {
         if (place.imageUrl != null) {
             AsyncImageBox(
@@ -493,11 +457,59 @@ private fun PlaceHeroSection(place: Place, height: Dp, kindColor: Color) {
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
-                        // 위는 상태바와 떠 있는 뒤로가기 버튼이, 아래는 겹쳐 올라오는 콘텐츠
-                        // 시트(SheetOverlap)가 덮는 자리다 — 캐릭터의 모자와 발이 그 밑으로
-                        // 잘리지 않게 그만큼 비워두고 그 안에 맞춰 넣는다.
-                        .statusBarsPadding()
+                        // 아래는 겹쳐 올라오는 콘텐츠 시트(SheetOverlap)가 덮는 자리다 — 캐릭터의
+                        // 발이 그 밑으로 잘리지 않게 그만큼 비워두고 그 안에 맞춰 넣는다.
                         .padding(bottom = SheetOverlap)
+                )
+            }
+            // 사진 없는 폴백 배경은 밝은 톤이라 흰 아이콘이 묻힌다 — 사진 쪽과 같은 어두운
+            // 그라데이션을 위쪽에만 살짝 깔아 대비를 맞춘다.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Black.copy(alpha = 0.18f), Color.Transparent),
+                            endY = 320f
+                        )
+                    )
+            )
+        }
+        // 탑바 없이, 뒤로가기(좌상단)·홈(우상단) 흰색 아이콘을 사진 위에 바로 얹는다. 위쪽에
+        // 깔린 어두운 그라데이션이 대비를 만들어줘 별도 배경 없이도 잘 보인다 — 본문(콘텐츠
+        // 시트)으로 스크롤해 내려가면 이 사진과 함께 같이 사라진다(탑바 자체가 없다).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = LocalAppStrings.current.common.backContentDescription,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onNavigateHome),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = LocalAppStrings.current.common.bottomNavHomeLabel,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -982,9 +994,9 @@ private fun Context.sharePlace(place: Place) {
 // PlaceType.label/recoveryHint의 언어별 문구는 core/i18n/PlaceTypeStrings.kt(translatedLabel/
 // translatedRecoveryHint)로 옮겼다 — 여기 있던 한글 하드코딩 버전은 삭제한다.
 
-// 히어로 사진 높이. 상단바가 서서히 나타나는 구간(이 높이의 절반)을 계산하는 데도 쓴다.
-// 화면 폭을 꽉 채우게 되면서 예전(240dp, 좌우 여백 있는 카드)보다 키워 몰입감을 준다.
-private val HeroHeight = 300.dp
+// 히어로 사진 높이 — 관광 상세(TourismCatalogItemDetailScreen.TourismHeroHeight)와 같은 값으로
+// 맞춘다.
+private val HeroHeight = 260.dp
 
 // 콘텐츠 시트가 히어로 사진 위로 겹쳐 올라오는 양.
 /**

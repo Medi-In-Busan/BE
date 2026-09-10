@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
@@ -68,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.common.careProfile
@@ -139,47 +143,40 @@ fun TourismCatalogItemDetailScreen(
     val item = uiState.item
     val category = uiState.category
     if (item != null && category != null) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(HomeBackgroundPink)
-        ) {
-            BackOnlyNavigationBar(
-                onBack = onBack,
-                background = HomeBackgroundPink,
-                onHomeClick = onNavigateHome,
-                onMapDetailsClick = if (
-                    category != TourismCatalogCategory.CROWDING &&
-                    item.latitude != null &&
-                    item.longitude != null
-                ) {
-                    { mapFocusRequestId++ }
-                } else {
-                    null
-                }
-            )
-            TourismDetailLoaded(
-                item = item,
-                category = category,
-                // 관광공사 상세가 붙지 않은 채(목록에서 넘어온 원본만으로) 그리는 중이라는 표시.
-                showMatchNotice = uiState.matchNotFound,
-                nearbyPlaces = uiState.nearbySamePlaces,
-                onSelectPlace = onSelectPlace,
-                mapFocusRequestId = mapFocusRequestId,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                onOpenMap = {
-                    context.launchExternalDirections(
-                        latitude = item.latitude,
-                        longitude = item.longitude,
-                        label = item.title,
-                        fallbackAddress = item.address.orEmpty()
-                    )
-                },
-                onOpenLink = { url ->
-                    context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                }
-            )
-        }
+        // 탑바(BackOnlyNavigationBar) 없이, 뒤로가기·지도·홈 아이콘을 히어로 사진 위에 흰색으로
+        // 바로 얹는다(TourismHero) — 사진이 화면 폭을 꽉 채우고 상태바 아래까지 올라간다.
+        TourismDetailLoaded(
+            item = item,
+            category = category,
+            // 관광공사 상세가 붙지 않은 채(목록에서 넘어온 원본만으로) 그리는 중이라는 표시.
+            showMatchNotice = uiState.matchNotFound,
+            nearbyPlaces = uiState.nearbySamePlaces,
+            onSelectPlace = onSelectPlace,
+            mapFocusRequestId = mapFocusRequestId,
+            modifier = Modifier.fillMaxSize().background(HomeBackgroundPink),
+            onOpenMap = {
+                context.launchExternalDirections(
+                    latitude = item.latitude,
+                    longitude = item.longitude,
+                    label = item.title,
+                    fallbackAddress = item.address.orEmpty()
+                )
+            },
+            onOpenLink = { url ->
+                context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            },
+            onBack = onBack,
+            onNavigateHome = onNavigateHome,
+            onMapDetailsClick = if (
+                category != TourismCatalogCategory.CROWDING &&
+                item.latitude != null &&
+                item.longitude != null
+            ) {
+                { mapFocusRequestId++ }
+            } else {
+                null
+            }
+        )
         return
     }
 
@@ -214,6 +211,9 @@ private fun TourismDetailLoaded(
     mapFocusRequestId: Int,
     onOpenMap: () -> Unit,
     onOpenLink: (String) -> Unit,
+    onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onMapDetailsClick: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -268,7 +268,14 @@ private fun TourismDetailLoaded(
         contentPadding = PaddingValues(bottom = 32.dp + navigationBarInset),
         verticalArrangement = Arrangement.spacedBy(SectionSpacing)
     ) {
-        item { TourismHero(item = item) }
+        item {
+            TourismHero(
+                item = item,
+                onBack = onBack,
+                onNavigateHome = onNavigateHome,
+                onMapDetailsClick = onMapDetailsClick
+            )
+        }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(SectionSpacing)) {
                 // 별도 item으로 빼지 않는다 — 아래 TOURISM_DETAIL_MAP_ITEM_INDEX가 가리키는 지도
@@ -452,13 +459,24 @@ private val SectionSpacing = 20.dp
 // 지도 보기 버튼(mapFocusRequestId)이 엉뚱한 카드로 스크롤되지 않는다.
 private const val TOURISM_DETAIL_MAP_ITEM_INDEX = 3
 
+// 탑바(BackOnlyNavigationBar) 없이 뒤로가기·지도·홈 아이콘을 이 사진 위에 흰색으로 바로
+// 얹는다. 사진 자체는 예전처럼 좌우 여백을 두고 둥근 모서리로 자른다(풀블리드로 한번 바꿨다가
+// 요청으로 되돌림) — 상태바 아래 여백은 이 카드 바깥(statusBarsPadding)에서 준다. 위쪽 어두운
+// 그라데이션이 흰 아이콘의 대비를 만들어주고, 아이콘이 이 사진에만 붙어 있어 아래로 스크롤하면
+// 사진과 함께 같이 사라진다(탑바 자체가 없다).
 @Composable
-private fun TourismHero(item: TourismCatalogItem) {
+private fun TourismHero(
+    item: TourismCatalogItem,
+    onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onMapDetailsClick: (() -> Unit)?
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(start = 20.dp, top = 10.dp, end = 20.dp)
-            .height(260.dp)
+            .height(TourismHeroHeight)
             .clip(RoundedCornerShape(28.dp))
             .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF))))
     ) {
@@ -481,8 +499,71 @@ private fun TourismHero(item: TourismCatalogItem) {
                 }
             }
         }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = if (item.imageUrl != null) 0.28f else 0.18f), Color.Transparent),
+                        endY = 260f
+                    )
+                )
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TourismHeroIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = LocalAppStrings.current.common.backContentDescription,
+                onClick = onBack
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                onMapDetailsClick?.let { onClick ->
+                    TourismHeroIconButton(
+                        icon = Icons.Default.Map,
+                        contentDescription = LocalAppStrings.current.common.mapDetailsContentDescription,
+                        onClick = onClick,
+                        iconSize = 22.dp
+                    )
+                }
+                TourismHeroIconButton(
+                    icon = Icons.Default.Home,
+                    contentDescription = LocalAppStrings.current.common.bottomNavHomeLabel,
+                    onClick = onNavigateHome
+                )
+            }
+        }
     }
 }
+
+@Composable
+private fun TourismHeroIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    iconSize: Dp = 24.dp
+) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(iconSize)
+        )
+    }
+}
+
+private val TourismHeroHeight = 260.dp
 
 @Composable
 private fun TourismSummaryCard(item: TourismCatalogItem, category: TourismCatalogCategory) {
