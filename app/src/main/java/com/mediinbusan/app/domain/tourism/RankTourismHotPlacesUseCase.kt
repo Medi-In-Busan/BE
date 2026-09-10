@@ -25,20 +25,4 @@ class RankTourismHotPlacesUseCase @Inject constructor() {
         .mapNotNull { duplicates -> duplicates.maxByOrNull(TourismHotPlace::congestionRate) }
         .sortedByDescending(TourismHotPlace::congestionRate)
         .take(limit)
-
-    private fun TourismCatalogItem.congestionRateOrNull(): Double? {
-        val rawValue = details.entries.firstOrNull { (key, _) ->
-            key.equals("tatsCnctrRate", ignoreCase = true) ||
-                key.equals("cnctrRate", ignoreCase = true) ||
-                key.equals("congestionRate", ignoreCase = true)
-        }?.value ?: subtitle
-        return rawValue
-            ?.replace(",", "")
-            ?.let { NUMBER_PATTERN.find(it)?.value }
-            ?.toDoubleOrNull()
-    }
-
-    private companion object {
-        val NUMBER_PATTERN = Regex("-?\\d+(?:\\.\\d+)?")
-    }
 }

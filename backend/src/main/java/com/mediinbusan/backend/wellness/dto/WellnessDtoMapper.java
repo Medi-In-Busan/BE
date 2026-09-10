@@ -45,6 +45,8 @@ public final class WellnessDtoMapper {
      * <p>코드-분류 대응은 한국관광공사 서비스 분류체계(data.visitkorea.or.kr/resource/A04) 기준이다:
      * A04010100 쇼핑센터 / A04010200 시장 / A04010300 백화점 / A04010400 대형마트 / A04010500 면세점 /
      * A04010600 외국인전용 기념품점 / A04010700 전통공예품점 / A04010900 특산품판매점 / A04011000 사후면세점.
+     * 음식(A05)은 A05020100 한식 / A05020200 서양식 / A05020300 일식 / A05020400 중식 /
+     * A05020700 이색음식점 / A05020900 카페·전통찻집이다.
      * 표에 없는 코드는 전부 {@link WellnessPlaceCategory#OTHER}로 떨어지므로, 새 코드가 생겨도 목록이
      * 깨지지는 않고 세분화만 안 될 뿐이다.
      */
@@ -64,6 +66,14 @@ public final class WellnessDtoMapper {
             case "A04010100", "A04010600" -> WellnessPlaceCategory.SPECIALTY_STORE;
             case "A04010700" -> WellnessPlaceCategory.CRAFT_WORKSHOP;
             case "A04010900" -> WellnessPlaceCategory.LOCAL_PRODUCTS;
+            // 음식(A0502) — 지도 "음식" 탭 필터가 쓴다. 클럽(A05021000)처럼 식사와 상관없는 코드는
+            // 일부러 안 넣는다(표에 없는 코드는 아래 default로 떨어져 세분화만 안 될 뿐이다).
+            case "A05020100" -> WellnessPlaceCategory.KOREAN_FOOD;
+            case "A05020200" -> WellnessPlaceCategory.WESTERN_FOOD;
+            case "A05020300" -> WellnessPlaceCategory.JAPANESE_FOOD;
+            case "A05020400" -> WellnessPlaceCategory.CHINESE_FOOD;
+            case "A05020700" -> WellnessPlaceCategory.FUSION_FOOD;
+            case "A05020900" -> WellnessPlaceCategory.CAFE;
             default -> WellnessPlaceCategory.OTHER;
         };
     }

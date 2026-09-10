@@ -463,7 +463,14 @@ private fun TourismPlaceSlider(
     onSelectItem: (TourismCatalogCategory, TourismCatalogItem) -> Unit,
     onSeeAll: (TourismCatalogCategory) -> Unit
 ) {
-    val revealedCount = rememberRevealedCount(itemsKey = items, itemCount = items.size)
+    // 카드 등장 연출은 앱 실행 중 섹션별로 첫 진입 한 번만 — "전체보기"로 리스트업에 들어갔다
+    // 뒤로 나오면 화면이 새로 구성되면서(백스택 엔트리가 살아 있어도 컴포저블은 폐기·재생성된다)
+    // 미리보기를 다시 조회하는데, 그때마다 스켈레톤부터 다시 재생돼 매번 로딩하는 화면처럼 보였다.
+    val revealedCount = rememberRevealedCount(
+        itemsKey = items,
+        itemCount = items.size,
+        revealOnceKey = "nearby-tourism-${category.name}"
+    )
     // 요청: 헤더↔카드 목록 여백을 거의 붙을 정도(2dp)로 좁힌다. 실제 시각적 간격은 아래
     // LazyRow 카드 래퍼의 top padding(2dp)이 만들어주므로 여기 자체 간격은 0으로 둔다.
     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -804,7 +811,12 @@ private fun HotTourismTopFiveSection(
     onSeeAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val revealedCount = rememberRevealedCount(itemsKey = hotPlaces, itemCount = hotPlaces.size)
+    // 위 TourismPlaceSlider와 같은 이유로 앱 실행 중 한 번만 재생한다.
+    val revealedCount = rememberRevealedCount(
+        itemsKey = hotPlaces,
+        itemCount = hotPlaces.size,
+        revealOnceKey = "nearby-hot-places"
+    )
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // 요청: LIVE/타이틀/서브텍스트가 1st 카드 내부 콘텐츠(버튼/텍스트 시작점, 16dp 들여쓰기)보다

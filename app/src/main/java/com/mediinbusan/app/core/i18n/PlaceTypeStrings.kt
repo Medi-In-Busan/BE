@@ -67,6 +67,12 @@ fun PlaceCategory.translatedLabel(language: SupportedLanguage): String = when (l
         PlaceCategory.SPECIALTY_STORE -> "전문매장"
         PlaceCategory.LOCAL_PRODUCTS -> "특산물"
         PlaceCategory.CRAFT_WORKSHOP -> "공예·공방"
+        PlaceCategory.KOREAN_FOOD -> "한식"
+        PlaceCategory.WESTERN_FOOD -> "양식"
+        PlaceCategory.JAPANESE_FOOD -> "일식"
+        PlaceCategory.CHINESE_FOOD -> "중식"
+        PlaceCategory.FUSION_FOOD -> "이색음식"
+        PlaceCategory.CAFE -> "카페·찻집"
         PlaceCategory.OTHER -> ""
     }
     SupportedLanguage.EN -> when (this) {
@@ -77,6 +83,12 @@ fun PlaceCategory.translatedLabel(language: SupportedLanguage): String = when (l
         PlaceCategory.SPECIALTY_STORE -> "Specialty Store"
         PlaceCategory.LOCAL_PRODUCTS -> "Local Products"
         PlaceCategory.CRAFT_WORKSHOP -> "Craft Workshop"
+        PlaceCategory.KOREAN_FOOD -> "Korean"
+        PlaceCategory.WESTERN_FOOD -> "Western"
+        PlaceCategory.JAPANESE_FOOD -> "Japanese"
+        PlaceCategory.CHINESE_FOOD -> "Chinese"
+        PlaceCategory.FUSION_FOOD -> "World Cuisine"
+        PlaceCategory.CAFE -> "Cafe & Tea"
         PlaceCategory.OTHER -> ""
     }
     SupportedLanguage.ZH -> when (this) {
@@ -87,6 +99,12 @@ fun PlaceCategory.translatedLabel(language: SupportedLanguage): String = when (l
         PlaceCategory.SPECIALTY_STORE -> "专卖店"
         PlaceCategory.LOCAL_PRODUCTS -> "特产店"
         PlaceCategory.CRAFT_WORKSHOP -> "工艺工坊"
+        PlaceCategory.KOREAN_FOOD -> "韩餐"
+        PlaceCategory.WESTERN_FOOD -> "西餐"
+        PlaceCategory.JAPANESE_FOOD -> "日餐"
+        PlaceCategory.CHINESE_FOOD -> "中餐"
+        PlaceCategory.FUSION_FOOD -> "异国料理"
+        PlaceCategory.CAFE -> "咖啡·茶馆"
         PlaceCategory.OTHER -> ""
     }
     SupportedLanguage.JA -> when (this) {
@@ -97,6 +115,12 @@ fun PlaceCategory.translatedLabel(language: SupportedLanguage): String = when (l
         PlaceCategory.SPECIALTY_STORE -> "専門店"
         PlaceCategory.LOCAL_PRODUCTS -> "特産品店"
         PlaceCategory.CRAFT_WORKSHOP -> "工芸工房"
+        PlaceCategory.KOREAN_FOOD -> "韓国料理"
+        PlaceCategory.WESTERN_FOOD -> "洋食"
+        PlaceCategory.JAPANESE_FOOD -> "和食"
+        PlaceCategory.CHINESE_FOOD -> "中華"
+        PlaceCategory.FUSION_FOOD -> "各国料理"
+        PlaceCategory.CAFE -> "カフェ・茶屋"
         PlaceCategory.OTHER -> ""
     }
 }

@@ -107,3 +107,44 @@ enum class BusanDistrict(val label: String) {
     HAEUNDAE("해운대구"), SAHA("사하구"), GEUMJEONG("금정구"), GANGSEO("강서구"),
     YEONJE("연제구"), SUYEONG("수영구"), SASANG("사상구"), GIJANG("기장군")
 }
+
+/**
+ * 혼잡도 지수(관광지 혼잡도 = TatsCnctrRateService)를 항목에서 뽑아낸다.
+ *
+ * 필드명이 한 군데로 정해지지 않는다 — 원본 응답은 `cnctrRate`(문서엔 `tatsCnctrRate`로 적혀 있다),
+ * 상세 화면으로 넘길 때는 `congestionRate`로 옮겨 담고, 아무 키도 없으면 subtitle에 지수 문자열만
+ * 들어온다. 그래서 후보를 전부 보고 첫 숫자를 집는다.
+ *
+ * 핫플레이스 랭킹(RankTourismHotPlacesUseCase)·혼잡도 카드(TourismCatalogScreen)·상세 진입 정규화
+ * (core/common/PendingTourismCatalogItem)가 같은 규칙을 봐야 해서 여기 한 곳에 둔다.
+ */
+fun TourismCatalogItem.congestionRateOrNull(): Double? {
+    val rawValue = details.entries.firstOrNull { (key, _) ->
+        key.equals("tatsCnctrRate", ignoreCase = true) ||
+            key.equals("cnctrRate", ignoreCase = true) ||
+            key.equals("congestionRate", ignoreCase = true)
+    }?.value ?: subtitle
+    return rawValue
+        ?.replace(",", "")
+        ?.let { CONGESTION_NUMBER_PATTERN.find(it)?.value }
+        ?.toDoubleOrNull()
+}
+
+/**
+ * 항목이 어느 구·군 것인지 이름 필드/주소로 판정한다. 판정할 근거가 없으면 null.
+ *
+ * 혼잡도 항목엔 좌표가 없어서(구·군 코드와 관광지 이름만 온다) 상세 화면이 관광공사 상세를 이름으로
+ * 재조회할 때(TourismCatalogRepository.findMatchingPlace) 구·군을 꼭 같이 넘겨야 한다 — 핫플레이스
+ * 카드에서 들어오든 혼잡도 리스트에서 들어오든 같은 구·군으로 판정되어야 같은 상세가 나온다.
+ */
+fun TourismCatalogItem.busanDistrictOrNull(): BusanDistrict? {
+    val districtText = listOfNotNull(
+        details["signguNm"],
+        details["signguName"],
+        address
+    ).joinToString(" ")
+
+    return BusanDistrict.entries.firstOrNull { districtText.contains(it.label) }
+}
+
+private val CONGESTION_NUMBER_PATTERN = Regex("-?[0-9]+(?:[.][0-9]+)?")

@@ -12,9 +12,14 @@ package com.mediinbusan.backend.wellness.domain;
  * {@code MedicalSpecialty} ↔ {@code MedicalCategory}와 같은 규칙이다(backend/CLAUDE.md 참고).
  * 한쪽만 바꾸면 Android가 모르는 이름을 받아 조용히 {@link #OTHER}로 떨어진다.
  *
- * <p>지금은 쇼핑(cat1=A04) 하위만 채운다. cat3 원본 코드는 모든 타입에 대해 저장되므로
- * (wellness_place.category_code), 관광지·숙박 세분화가 필요해지면 값과
- * {@code WellnessDtoMapper.categoryOf}의 분기만 늘리면 된다 — 재수집은 필요 없다.
+ * <p>지금은 쇼핑(cat1=A04)과 음식(cat1=A05) 하위를 채운다. 음식 세분화는 Android 지도(S-08)의
+ * "음식" 탭 필터가 쓴다 — 그 탭은 전부 같은 {@code RESTAURANT} 타입이라 이 분류가 없으면 걸러낼
+ * 기준 자체가 없다. 다만 음식점은 TourAPI 외에 부산맛집정보(cat3 없음)에서도 들어오므로, 그쪽에서
+ * 온 장소는 계속 {@link #OTHER}로 남는다.
+ *
+ * <p>cat3 원본 코드는 모든 타입에 대해 저장되므로(wellness_place.category_code), 관광지·숙박
+ * 세분화가 필요해지면 값과 {@code WellnessDtoMapper.categoryOf}의 분기만 늘리면 된다 — 재수집은
+ * 필요 없다.
  */
 public enum WellnessPlaceCategory {
     /** 백화점 */
@@ -31,6 +36,18 @@ public enum WellnessPlaceCategory {
     LOCAL_PRODUCTS,
     /** 공예·공방 */
     CRAFT_WORKSHOP,
+    /** 한식 */
+    KOREAN_FOOD,
+    /** 양식 */
+    WESTERN_FOOD,
+    /** 일식 */
+    JAPANESE_FOOD,
+    /** 중식 */
+    CHINESE_FOOD,
+    /** 이색음식점 — 위 네 가지에 안 들어가는 각국 요리·특수 메뉴점. */
+    FUSION_FOOD,
+    /** 카페·전통찻집 */
+    CAFE,
     /** 코드가 없거나(아직 재수집 전) 위 어디에도 해당하지 않는 경우. */
     OTHER
 }

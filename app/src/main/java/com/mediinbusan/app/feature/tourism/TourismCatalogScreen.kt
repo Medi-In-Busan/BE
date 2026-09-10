@@ -113,6 +113,7 @@ import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.FilterChipPill
+import com.mediinbusan.app.core.ui.CardRevealPace
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
@@ -123,6 +124,7 @@ import com.mediinbusan.app.core.ui.rememberRevealedCount
 import com.mediinbusan.app.domain.tourism.BusanDistrict
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
+import com.mediinbusan.app.domain.tourism.congestionRateOrNull
 import com.mediinbusan.app.domain.tourism.isLanguageVariant
 import com.mediinbusan.app.domain.tourism.placeCategoryCodes
 import androidx.compose.foundation.shape.CircleShape
@@ -295,7 +297,8 @@ private fun TourismCatalogContent(
                 }
                 val revealedCount = rememberRevealedCount(
                     itemsKey = uiState.visibleItems,
-                    itemCount = uiState.visibleItems.size
+                    itemCount = uiState.visibleItems.size,
+                    revealOnceKey = revealOnceKeyFor(uiState.category)
                 )
                 LazyColumn(
                     modifier = Modifier.padding(innerPadding).fillMaxSize(),
@@ -339,6 +342,10 @@ private fun TourismCatalogContent(
                         ResultCountAndSortRow(
                             resultCount = uiState.visibleItems.size,
                             selectedSort = uiState.selectedSort,
+                            // 혼잡도 목록은 정렬 선택지를 안 준다 — 혼잡도 순서가 곧 이 목록의
+                            // 내용이라 다른 순서로 세우면 "#N" 순위 배지와 어긋난다(ViewModel의
+                            // applyClientFilters도 같은 이유로 이 카테고리만 재정렬하지 않는다).
+                            showSort = uiState.category != TourismCatalogCategory.CROWDING,
                             onSortSelected = onSortSelected
                         )
                     }
@@ -422,7 +429,12 @@ private fun AccessibleTourismCatalogContent(
             else -> {
                 // loadGeneration 기준 리빌 — RecommendedPlacesCatalogContent와 같은 이유
                 // (append 때마다 catalog/visibleItems가 새 인스턴스가 돼도 스크롤 중엔 재생 안 함).
-                val revealedCount = rememberRevealedCount(itemsKey = uiState.loadGeneration, itemCount = uiState.visibleItems.size)
+                val revealedCount = rememberRevealedCount(
+                    itemsKey = uiState.loadGeneration,
+                    itemCount = uiState.visibleItems.size,
+                    revealOnceKey = revealOnceKeyFor(uiState.category),
+                    pace = CardRevealPace.GRID
+                )
                 val gridState = rememberLazyGridState()
                 LoadNextTourismGridPageEffect(
                     gridState = gridState,
@@ -470,7 +482,7 @@ private fun AccessibleTourismCatalogContent(
                                 isFavorite = uiState.favoriteItemIds.contains(item.id),
                                 onToggleFavorite = { onToggleFavorite(item) },
                                 onClick = { onItemSelected(item) },
-                                isRevealAnimated = index < InitialCardRevealCount,
+                                isRevealAnimated = index < CardRevealPace.GRID.count,
                                 isRevealed = index < revealedCount
                             )
                         }
@@ -538,7 +550,9 @@ private fun RecommendedPlacesCatalogContent(
                 // 새 조회(초기 진입·재시도·지역 변경)에서만 올라가므로 스크롤 중엔 그대로다.
                 val revealedCount = rememberRevealedCount(
                     itemsKey = uiState.loadGeneration,
-                    itemCount = combinedCount
+                    itemCount = combinedCount,
+                    revealOnceKey = revealOnceKeyFor(uiState.category),
+                    pace = CardRevealPace.GRID
                 )
                 val gridState = rememberLazyGridState()
                 LoadNextTourismGridPageEffect(
@@ -603,7 +617,7 @@ private fun RecommendedPlacesCatalogContent(
                                     isFavorite = uiState.favoriteItemIds.contains(item.id),
                                     onToggleFavorite = { onToggleFavorite(item) },
                                     onClick = { onItemSelected(item) },
-                                    isRevealAnimated = index < InitialCardRevealCount,
+                                    isRevealAnimated = index < CardRevealPace.GRID.count,
                                     isRevealed = index < revealedCount
                                 )
                             }
@@ -619,7 +633,7 @@ private fun RecommendedPlacesCatalogContent(
                                     isFavorite = uiState.favoriteItemIds.contains(item.id),
                                     onToggleFavorite = { onToggleFavorite(item) },
                                     onClick = { onItemSelected(item) },
-                                    isRevealAnimated = globalIndex < InitialCardRevealCount,
+                                    isRevealAnimated = globalIndex < CardRevealPace.GRID.count,
                                     isRevealed = globalIndex < revealedCount
                                 )
                             }
@@ -633,6 +647,12 @@ private fun RecommendedPlacesCatalogContent(
         }
     }
 }
+
+// 카드 등장 연출은 앱 실행 중 카테고리별로 첫 진입 한 번만 재생한다 — 목록을 보고 상세로 들어갔다
+// 뒤로 나오는 건 이 화면에서 가장 잦은 왕복인데, 그때마다 스켈레톤부터 다시 재생되면 "매번 새로
+// 로딩하는 화면"처럼 보인다(백스택 엔트리가 새로 생기므로 화면 안의 상태로는 구분할 수 없다).
+private fun revealOnceKeyFor(category: TourismCatalogCategory?): String =
+    "tourism-catalog-${category?.name ?: "unknown"}"
 
 // LazyVerticalGrid에서 검색바·필터·섹션 헤더처럼 3칸을 다 차지해야 하는 항목을 매번
 // span = { GridItemSpan(maxLineSpan) }로 반복 쓰지 않기 위한 축약 확장 함수.
@@ -1095,6 +1115,7 @@ private fun DistrictFilter(selectedDistrict: BusanDistrict?, onDistrictSelected:
 private fun ResultCountAndSortRow(
     resultCount: Int,
     selectedSort: TourismSortOption,
+    showSort: Boolean,
     onSortSelected: (TourismSortOption) -> Unit
 ) {
     val strings = LocalAppStrings.current
@@ -1105,7 +1126,9 @@ private fun ResultCountAndSortRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(String.format(strings.tourism.resultCountFormat, resultCount), style = SectionTitleStyle, color = TextPrimary)
-        TourismSortDropdown(selected = selectedSort, onSortSelected = onSortSelected)
+        if (showSort) {
+            TourismSortDropdown(selected = selectedSort, onSortSelected = onSortSelected)
+        }
     }
 }
 
@@ -1267,91 +1290,101 @@ private fun TourismGridPlaceCard(
 ) {
     val strings = LocalAppStrings.current
     val distanceLabel = rememberTourismItemDistanceLabel(item)
-    val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
+    val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed, CardRevealPace.GRID)
     val cardShape = RoundedCornerShape(16.dp)
 
+    // 바깥 Box가 카드 자리(크기)를 잡고, 페이드 인(alpha) 대상은 그 안쪽 카드뿐이다.
+    // 예전엔 이 바깥 Box에 alpha를 걸고 스켈레톤을 그 자식으로 뒀는데, 그러면 스켈레톤까지 같이
+    // 투명해져서 아직 등장하지 않은 카드가 스켈레톤도 없는 순수 공백으로 보였다 — 리빌이 끝나기
+    // 전에 스크롤을 내리면 그리드 중간이 뚫린 것처럼 보이던 원인이다(목록 카드
+    // TourismDataCard/CrowdingRankCard는 처음부터 스켈레톤을 형제로 두고 있었다).
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.82f)
-            .graphicsLayer {
-                alpha = revealProgress
-                translationY = (1f - revealProgress) * 10.dp.toPx()
-            }
-            .clip(cardShape)
-            .background(CoralPrimaryContainer)
-            .clickable(onClick = onClick)
     ) {
-        if (item.imageUrl != null) {
-            AsyncImageBox(model = item.imageUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
-        } else {
-            // TourAPI가 사진을 안 내려준 항목 — CoralPrimaryContainer(옅은 핑크) 배경만 남으면
-            // 흰 화면 위 그리드에서 "빈 카드처럼" 보여서(가운데만 흰 화면으로 보인다는 문의의
-            // 실제 원인 중 하나), 사진이 없다는 걸 분명히 보여주는 아이콘을 얹는다.
-            Icon(
-                imageVector = Icons.Default.Place,
-                contentDescription = null,
-                tint = CoralPrimary.copy(alpha = 0.35f),
-                modifier = Modifier.align(Alignment.Center).size(40.dp)
-            )
-        }
         Box(
-            modifier = Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.72f)))
-            )
-        )
-        val favoritePop = rememberFavoriteTogglePop(isFavorite = isFavorite, onToggle = onToggleFavorite)
-        Icon(
-            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = if (isFavorite) {
-                strings.tourism.favoriteRemoveContentDescription
-            } else {
-                strings.tourism.favoriteAddContentDescription
-            },
-            tint = Color.White,
-            // minimumInteractiveComponentSize()로 터치 영역을 48dp까지 넓히되, 보이는 아이콘
-            // 크기(20dp)는 그대로 두고 그 안에서 클릭을 받는다 — FavoriteHeartButton.kt와 같은
-            // 순서(minimumInteractiveComponentSize → size → clickable)를 따른다.
-            // 팝 스케일은 clickable 뒤에 붙인다 — 앞에 두면 터치 영역까지 같이 줄었다 커진다.
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .minimumInteractiveComponentSize()
-                .size(20.dp)
-                .clickable(onClick = favoritePop.onClick)
-                .then(favoritePop.scaleModifier)
-        )
-        Column(
-            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            Text(
-                text = item.title,
-                style = CardTitleStyle,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            item.address?.let { address ->
-                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.78f),
-                        modifier = Modifier.padding(top = 2.dp).size(12.dp)
-                    )
-                    Text(
-                        text = address,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.78f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                .matchParentSize()
+                .graphicsLayer {
+                    alpha = revealProgress
+                    translationY = (1f - revealProgress) * 10.dp.toPx()
                 }
+                .clip(cardShape)
+                .background(CoralPrimaryContainer)
+                .clickable(onClick = onClick)
+        ) {
+            if (item.imageUrl != null) {
+                AsyncImageBox(model = item.imageUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
+            } else {
+                // TourAPI가 사진을 안 내려준 항목 — CoralPrimaryContainer(옅은 핑크) 배경만 남으면
+                // 흰 화면 위 그리드에서 "빈 카드처럼" 보여서(가운데만 흰 화면으로 보인다는 문의의
+                // 실제 원인 중 하나), 사진이 없다는 걸 분명히 보여주는 아이콘을 얹는다.
+                Icon(
+                    imageVector = Icons.Default.Place,
+                    contentDescription = null,
+                    tint = CoralPrimary.copy(alpha = 0.35f),
+                    modifier = Modifier.align(Alignment.Center).size(40.dp)
+                )
             }
-            distanceLabel?.let {
-                Text(text = it, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.05f), Color.Black.copy(alpha = 0.72f)))
+                )
+            )
+            val favoritePop = rememberFavoriteTogglePop(isFavorite = isFavorite, onToggle = onToggleFavorite)
+            Icon(
+                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (isFavorite) {
+                    strings.tourism.favoriteRemoveContentDescription
+                } else {
+                    strings.tourism.favoriteAddContentDescription
+                },
+                tint = Color.White,
+                // minimumInteractiveComponentSize()로 터치 영역을 48dp까지 넓히되, 보이는 아이콘
+                // 크기(20dp)는 그대로 두고 그 안에서 클릭을 받는다 — FavoriteHeartButton.kt와 같은
+                // 순서(minimumInteractiveComponentSize → size → clickable)를 따른다.
+                // 팝 스케일은 clickable 뒤에 붙인다 — 앞에 두면 터치 영역까지 같이 줄었다 커진다.
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .minimumInteractiveComponentSize()
+                    .size(20.dp)
+                    .clickable(onClick = favoritePop.onClick)
+                    .then(favoritePop.scaleModifier)
+            )
+            Column(
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = item.title,
+                    style = CardTitleStyle,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                item.address?.let { address ->
+                    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.78f),
+                            modifier = Modifier.padding(top = 2.dp).size(12.dp)
+                        )
+                        Text(
+                            text = address,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.78f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                distanceLabel?.let {
+                    Text(text = it, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
         if (isRevealAnimated && revealProgress < 1f) {
@@ -1369,8 +1402,9 @@ private fun CrowdingRankCard(
     isRevealed: Boolean
 ) {
     val strings = LocalAppStrings.current
-    val congestion = item.details["congestionRate"] ?: item.subtitle.orEmpty()
-    val congestionRate = remember(congestion) { parseCongestionRate(congestion) }
+    val congestionRate = remember(item) { item.congestionRateOrNull() }
+    // 지수를 숫자로 읽지 못했을 때 그대로 보여줄 원문.
+    val congestionText = item.details["congestionRate"] ?: item.subtitle.orEmpty()
     val revealProgress = rememberCardRevealProgress(isRevealAnimated, isRevealed)
     Box(modifier = Modifier.fillMaxWidth()) {
         Card(
@@ -1457,7 +1491,7 @@ private fun CrowdingRankCard(
                     )
                 } else {
                     Text(
-                        congestion,
+                        congestionText,
                         style = MaterialTheme.typography.titleMedium,
                         color = CoralPrimary,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -1471,12 +1505,6 @@ private fun CrowdingRankCard(
         }
     }
 }
-
-// RankTourismHotPlacesUseCase.congestionRateOrNull과 같은 규칙 — 원본 문자열에서 숫자만 뽑는다.
-private val CONGESTION_NUMBER_PATTERN = Regex("-?\\d+(?:\\.\\d+)?")
-
-private fun parseCongestionRate(raw: String): Double? =
-    CONGESTION_NUMBER_PATTERN.find(raw)?.value?.toDoubleOrNull()
 
 // baseYmd는 TourAPI 원본 그대로 YYYYMMDD(8자리) 숫자로 온다 — "26.09.06"처럼 보기 좋게 다듬는다.
 // 8자리가 아니면(예상 밖 포맷) 원본을 그대로 보여준다.
