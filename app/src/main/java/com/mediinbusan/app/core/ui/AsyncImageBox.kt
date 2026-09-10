@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import kotlinx.coroutines.delay
 
 /**
  * F-019: 이미지가 없는 병원/장소 카드에서도 화면이 깨지지 않도록 감싸는 공용 컴포넌트.
@@ -39,6 +41,19 @@ fun AsyncImageBox(
     contentScale: ContentScale = ContentScale.Crop
 ) {
     var state by remember(model) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
+    // 스크롤로 카드가 재구성되며 이미지가 다시 요청될 때, 메모리 캐시에서 밀려났어도 디스크
+    // 캐시 재요청은 대개 금방 끝나는데도 스피너가 한 프레임 반짝여 "카드가 다시 로딩되는 것처럼"
+    // 보였다 — Loading이 이 시간(280ms) 넘게 지속될 때만 스피너를 보여줘, 디스크 캐시 재요청처럼
+    // 금방 끝나는 건 스피너 없이 넘어가게 한다.
+    var showLoadingSpinner by remember(model) { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        if (state is AsyncImagePainter.State.Loading) {
+            delay(280)
+            showLoadingSpinner = true
+        } else {
+            showLoadingSpinner = false
+        }
+    }
     Box(modifier = modifier.fillMaxSize()) {
         AsyncImage(
             model = model,
@@ -47,8 +62,8 @@ fun AsyncImageBox(
             modifier = Modifier.fillMaxSize(),
             onState = { state = it }
         )
-        when (state) {
-            is AsyncImagePainter.State.Loading -> {
+        when {
+            state is AsyncImagePainter.State.Loading && showLoadingSpinner -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
@@ -57,7 +72,7 @@ fun AsyncImageBox(
                     )
                 }
             }
-            is AsyncImagePainter.State.Error -> {
+            state is AsyncImagePainter.State.Error -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Filled.BrokenImage,
