@@ -102,7 +102,11 @@ class TourismCatalogViewModel @Inject constructor(
                 initialCategoryCode.orEmpty(),
                 initialSearchQuery.orEmpty()
             ).joinToString("|")
-            if (loadedEntryKey == entryKey && _uiState.value.catalog != null) return@launch
+            // 오류 상태는 "이미 불러왔다"로 치지 않는다 — 지역 변경 등 뒤이은 조회가 실패하면
+            // 직전 성공 목록(catalog)은 남아 있는데 화면은 ErrorState라, 이 조건에 catalog만 보면
+            // 화면을 나갔다 들어와도 재조회가 막혀 "다시 시도"를 누르기 전까지 오류 화면에 갇힌다.
+            val alreadyLoaded = _uiState.value.catalog != null && _uiState.value.errorMessage == null
+            if (loadedEntryKey == entryKey && alreadyLoaded) return@launch
             loadedEntryKey = entryKey
             // 웰니스 필터 원형 버튼(관광지/숙박/맛집)에서 넘어온 경우 — 아래 "관광지 기본 선택"
             // 로직(selectedCategoryCode == null일 때만 동작)보다 먼저 걸어서 그 기본값을 덮는다.

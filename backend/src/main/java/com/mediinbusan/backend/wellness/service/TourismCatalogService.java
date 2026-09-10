@@ -68,6 +68,17 @@ public class TourismCatalogService {
      * 저장한다 — 몇 번 오가는 사이 목록 전체가 채워지고, 그 뒤로는 캐시라 공짜다.
      */
     private static final int IMAGE_LOOKUP_BATCH = 8;
+    /**
+     * 한 요청에서 정밀 매칭(TourismPlaceMatchService)까지 갈 최대 개수.
+     *
+     * 정밀 매칭은 키워드 변형마다 여러 페이지를 훑고 상세까지 다시 확인하는지라 한 건에 외부 호출이
+     * 여럿이다. 위 {@link #IMAGE_LOOKUP_BATCH}는 후보 수만 제한할 뿐이라, 상위 후보가 전부 간이
+     * 검색에 실패하면 한 요청이 정밀 매칭을 다섯 번까지 돌 수 있었다 — 이 메서드는
+     * {@link #getBusanCrowdingCatalog()}의 synchronized 블록 안에서 도는 탓에 그동안 다른 혼잡도
+     * 요청이 전부 대기한다. 그래서 요청당 이만큼만 하고, 못 간 항목은 시도 표시를 남기지 않아
+     * 다음 요청에서 이어서 처리한다.
+     */
+    private static final int PRECISE_MATCH_BATCH = 2;
     private static final String IMAGE_LOOKUP_ATTEMPTED = "imageLookupAttempted";
     /**
      * 사진 보강을 시도했다는 표시의 값(= 그때 쓴 매칭 로직의 세대).
@@ -328,7 +339,10 @@ public class TourismCatalogService {
             .toList();
 
         Map<String, TourismCatalogItemResponse> matches = new HashMap<>();
+        // 값은 "이번 요청에서 할 수 있는 시도를 다 했는지" — false면 시도 표시를 남기지 않아
+        // 다음 요청이 같은 항목을 다시 집는다(정밀 매칭 한도에 걸려 못 간 경우).
         Map<String, Boolean> attemptedTitles = new HashMap<>();
+        int preciseMatchesUsed = 0;
         for (TourismCatalogItemResponse candidate : candidates) {
             String titleKey = canonicalTitle(candidate.title());
             attemptedTitles.put(titleKey, true);
@@ -346,19 +360,25 @@ public class TourismCatalogService {
                             canonicalTitle(keyword).contains(canonicalTitle(item.title())))
                         .findFirst()
                         .orElse(null));
-                // 위 한 페이지짜리 검색은 이름이 거의 그대로 걸릴 때만 맞는다. 못 찾으면 상세
-                // 화면이 쓰는 것과 같은 매칭(TourismPlaceMatchService — 키워드 변형·여러 페이지·
-                // 상세 재확인까지 한다)으로 한 번 더 시도한다. 이게 없으면 같은 장소인데 목록에는
-                // 썸네일이 없고 상세로 들어가면 사진이 나오는 어긋남이 생긴다.
-                // 간이 검색이 사진 있는 항목을 못 집었을 때(아예 못 찾았거나, 찾았어도 사진이 없는
-                // 항목일 때) 상세와 같은 매칭기로 한 번 더 간다 — 상세에는 사진이 나오는데 목록만
-                // 비어 있는 어긋남을 없애는 게 목적이라, 사진이 붙는 결과가 나오면 그쪽을 쓴다.
+                // 위 한 페이지짜리 검색은 이름이 거의 그대로 걸릴 때만 맞는다. 사진 있는 항목을
+                // 못 집었으면(아예 못 찾았거나, 찾았어도 사진이 없으면) 상세 화면이 쓰는 것과 같은
+                // 매칭(TourismPlaceMatchService — 키워드 변형·여러 페이지·상세 재확인)으로 한 번 더
+                // 간다. 이게 없으면 같은 장소인데 목록에는 썸네일이 없고 상세로 들어가면 사진이
+                // 나오는 어긋남이 생긴다. 비싼 경로라 상위 항목에만, 그것도 요청당
+                // PRECISE_MATCH_BATCH개까지만 쓴다.
                 if ((match == null || match.imageUrl() == null) && hotPlaceKeys.contains(titleKey)) {
-                    // 상세 화면이 넘기는 것과 똑같이 원본 제목을 그대로 준다(간이 검색용으로 다듬은
-                    // keyword가 아니다) — 같은 입력·같은 매칭기여야 목록과 상세가 같은 결과를 본다.
-                    TourismCatalogItemResponse matched = matchPlaceForImage(candidate.title(), district);
-                    if (matched != null) {
-                        match = matched;
+                    if (preciseMatchesUsed >= PRECISE_MATCH_BATCH) {
+                        // 이번 요청 몫을 다 썼다 — 시도한 걸로 치지 않고 다음 요청에 넘긴다.
+                        attemptedTitles.put(titleKey, false);
+                    } else {
+                        preciseMatchesUsed++;
+                        // 상세 화면이 넘기는 것과 똑같이 원본 제목을 그대로 준다(간이 검색용으로
+                        // 다듬은 keyword가 아니다) — 같은 입력·같은 매칭기여야 목록과 상세가 같은
+                        // 결과를 본다.
+                        TourismCatalogItemResponse matched = matchPlaceForImage(candidate.title(), district);
+                        if (matched != null) {
+                            match = matched;
+                        }
                     }
                 }
                 if (match != null) {
@@ -379,7 +399,10 @@ public class TourismCatalogService {
             }
             TourismCatalogItemResponse match = matches.get(titleKey);
             Map<String, String> details = new LinkedHashMap<>(item.details());
-            details.put(IMAGE_LOOKUP_ATTEMPTED, IMAGE_LOOKUP_GENERATION);
+            // 이번 요청에서 할 수 있는 시도를 다 한 항목만 표시를 남긴다.
+            if (Boolean.TRUE.equals(attemptedTitles.get(titleKey))) {
+                details.put(IMAGE_LOOKUP_ATTEMPTED, IMAGE_LOOKUP_GENERATION);
+            }
             if (match == null) {
                 return new TourismCatalogItemResponse(
                     item.id(), item.title(), item.subtitle(), item.address(), item.imageUrl(),
