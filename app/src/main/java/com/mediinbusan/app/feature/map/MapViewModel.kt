@@ -10,7 +10,9 @@ import com.mediinbusan.app.data.favorite.FavoriteItemType
 import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.hospital.HospitalRepository
+import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceRepository
+import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.AssembleWellnessCourseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -219,7 +221,16 @@ class MapViewModel @Inject constructor(
             } else {
                 // 탭을 바꾸면 "이 위치에서 검색"으로 좁혀둔 범위는 푼다 — 새 카테고리를 고른 건
                 // 다시 전체에서 보겠다는 뜻에 가깝다.
-                it.copy(selectedCategory = category, markersActivated = true, selectedMarkerId = null, areaCenter = null)
+                // 장소 세부 필터도 같이 푼다 — 관광/음식은 필터 축(종류/요리 종류)이 서로 달라서,
+                // 탭을 옮긴 뒤에도 남아 있으면 눌러둔 적 없는 조건이 조용히 걸려 있게 된다.
+                it.copy(
+                    selectedCategory = category,
+                    markersActivated = true,
+                    selectedMarkerId = null,
+                    areaCenter = null,
+                    selectedPlaceTypes = emptySet(),
+                    selectedPlaceCategories = emptySet()
+                )
             }
         }
         if (wasAreaNarrowed) reloadAllHospitals()
@@ -260,6 +271,34 @@ class MapViewModel @Inject constructor(
 
     fun onSpecialtyFiltersCleared() {
         _uiState.update { it.copy(selectedSpecialties = emptySet()) }
+    }
+
+    /** "관광" 탭의 종류 필터. 진료과목 필터와 같은 방식으로 이미 받아둔 allPlaces만 거른다. */
+    fun onPlaceTypeFilterToggled(type: PlaceType) {
+        _uiState.update { state ->
+            val updated = if (type in state.selectedPlaceTypes) {
+                state.selectedPlaceTypes - type
+            } else {
+                state.selectedPlaceTypes + type
+            }
+            state.copy(selectedPlaceTypes = updated)
+        }
+    }
+
+    /** "음식" 탭의 요리 종류 필터. */
+    fun onPlaceCategoryFilterToggled(category: PlaceCategory) {
+        _uiState.update { state ->
+            val updated = if (category in state.selectedPlaceCategories) {
+                state.selectedPlaceCategories - category
+            } else {
+                state.selectedPlaceCategories + category
+            }
+            state.copy(selectedPlaceCategories = updated)
+        }
+    }
+
+    fun onPlaceFiltersCleared() {
+        _uiState.update { it.copy(selectedPlaceTypes = emptySet(), selectedPlaceCategories = emptySet()) }
     }
 
     // 이미 받아둔 allPlaces에서 MapUiState.visiblePlaces가 Place.isTranslated로 클라이언트 필터링만

@@ -3,6 +3,7 @@ package com.mediinbusan.app.feature.map
 import com.mediinbusan.app.core.common.haversineDistanceMeters
 import com.mediinbusan.app.data.hospital.Hospital
 import com.mediinbusan.app.data.place.Place
+import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
 import com.mediinbusan.app.domain.course.WellnessCourse
 
@@ -50,6 +51,12 @@ data class MapUiState(
     // MedicalCategory.label(한국어) 값의 집합 — HospitalSearchListUiState의 SearchFilterChip과 같은
     // 식별자 규칙을 따른다. 비어있으면 진료과목으로 거르지 않는다(필터 미적용).
     val selectedSpecialties: Set<String> = emptySet(),
+    // "관광" 탭의 종류 필터(관광지/쇼핑/숙소/스파/산책). 진료과목 필터가 병원 탭에서 하는 일을
+    // 장소 탭에서 그대로 한다 — 비어있으면 미적용. 탭을 바꾸면 ViewModel이 비운다.
+    val selectedPlaceTypes: Set<PlaceType> = emptySet(),
+    // "음식" 탭의 요리 종류 필터(한식/일식/중식/양식/이색/카페). 음식 탭은 전부 같은
+    // PlaceType.RESTAURANT라 종류로는 못 가르고, 한 단계 아래인 PlaceCategory로만 갈린다.
+    val selectedPlaceCategories: Set<PlaceCategory> = emptySet(),
     // "번역된 장소만" 필터 — 켜져 있으면 visiblePlaces에서 Place.isTranslated == false인 장소를
     // 숨긴다(병원은 이름·주소가 번역 대상이 아니라 영향 없음). 한국어일 땐 의미가 없어(전부
     // isTranslated=true) MapScreen에서 토글 자체를 숨긴다.
@@ -83,7 +90,16 @@ data class MapUiState(
                 MapCategory.FOOD -> allPlaces.filter { it.type == PlaceType.RESTAURANT }
                 MapCategory.HOSPITAL -> emptyList()
             }
-            val byQuery = if (searchQuery.isBlank()) byCategory else byCategory.filter { it.name.contains(searchQuery, ignoreCase = true) }
+            // 탭별 세부 필터(관광=종류, 음식=요리 종류). 병원 탭의 진료과목 필터와 같은 자리·같은
+            // 규칙이다 — 아무것도 안 고르면 미적용.
+            val byKind = when (selectedCategory) {
+                MapCategory.TOURIST ->
+                    if (selectedPlaceTypes.isEmpty()) byCategory else byCategory.filter { it.type in selectedPlaceTypes }
+                MapCategory.FOOD ->
+                    if (selectedPlaceCategories.isEmpty()) byCategory else byCategory.filter { it.category in selectedPlaceCategories }
+                MapCategory.ALL, MapCategory.HOSPITAL -> byCategory
+            }
+            val byQuery = if (searchQuery.isBlank()) byKind else byKind.filter { it.name.contains(searchQuery, ignoreCase = true) }
             val byLanguage = if (languageFilterEnabled) byQuery.filter { it.isTranslated } else byQuery
             // "이 위치에서 검색"을 누른 뒤에는 그 지점 반경 안의 장소만 남긴다(병원은 서버 조회
             // 자체가 그 지점 기준이라 이 필터가 필요 없다).
@@ -93,6 +109,26 @@ data class MapUiState(
                 val lng = place.longitude ?: return@filter false
                 haversineDistanceMeters(center.latitude, center.longitude, lat, lng) <= AREA_SEARCH_RADIUS_METERS
             }
+        }
+
+    /**
+     * "관광" 탭 필터 칩으로 내놓을 종류 — 지금 지도에 올라와 있는 장소에 실제로 있는 것만 고른다.
+     * 있지도 않은 종류를 눌러 "검색 결과 없음"을 보게 만들지 않으려는 것이다.
+     */
+    val tourPlaceTypeOptions: List<PlaceType>
+        get() = PlaceType.entries.filter { type ->
+            type != PlaceType.RESTAURANT && allPlaces.any { it.type == type }
+        }
+
+    /**
+     * "음식" 탭 필터 칩으로 내놓을 요리 종류. [PlaceCategory.OTHER]는 "분류를 모른다"는 뜻이라
+     * 칩으로 내지 않는다(부산맛집정보에서 온 음식점은 분류 코드 자체가 없다) — 대신 아무 칩도
+     * 고르지 않은 기본 상태에서는 그 장소들도 전부 보인다.
+     */
+    val foodPlaceCategoryOptions: List<PlaceCategory>
+        get() = PlaceCategory.entries.filter { category ->
+            category != PlaceCategory.OTHER &&
+                allPlaces.any { it.type == PlaceType.RESTAURANT && it.category == category }
         }
 
     // visibleHospitals와 달리 "관광"/"음식" 탭에서는 병원을 숨긴다 — visiblePlaces가 이미 카테고리별로

@@ -7,13 +7,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.DinnerDining
 import androidx.compose.material.icons.filled.Hotel
+import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocalMall
+import androidx.compose.material.icons.filled.LocalPizza
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.RamenDining
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RiceBowl
+import androidx.compose.material.icons.filled.SetMeal
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Spa
@@ -61,6 +67,10 @@ fun placeKindVisual(type: PlaceType?, category: PlaceCategory = PlaceCategory.OT
     if (type == PlaceType.SHOPPING) {
         shoppingVisual(category)?.let { return it }
     }
+    // 음식도 같은 규칙 — 한식/일식/중식/양식/카페는 색(FoodKindColor)을 공유하고 아이콘만 나뉜다.
+    if (type == PlaceType.RESTAURANT) {
+        restaurantVisual(category)?.let { return it }
+    }
     return when (type) {
         PlaceType.TOURIST_ATTRACTION -> PlaceKindVisual(Icons.Default.PhotoCamera, TouristKindColor, TouristKindInk)
         PlaceType.RESTAURANT -> PlaceKindVisual(Icons.Default.Restaurant, FoodKindColor, FoodKindInk)
@@ -88,9 +98,30 @@ private fun shoppingVisual(category: PlaceCategory): PlaceKindVisual? {
         PlaceCategory.SPECIALTY_STORE -> Icons.Default.ShoppingBag
         PlaceCategory.LOCAL_PRODUCTS -> Icons.Default.Redeem
         PlaceCategory.CRAFT_WORKSHOP -> Icons.Default.Brush
+        // 음식 하위 분류와 OTHER는 쇼핑이 아니다 — 아래 restaurantVisual/장소 종류로 내려보낸다.
+        PlaceCategory.KOREAN_FOOD,
+        PlaceCategory.WESTERN_FOOD,
+        PlaceCategory.JAPANESE_FOOD,
+        PlaceCategory.CHINESE_FOOD,
+        PlaceCategory.FUSION_FOOD,
+        PlaceCategory.CAFE,
         PlaceCategory.OTHER -> return null
     }
     return PlaceKindVisual(icon, ShoppingKindColor, ShoppingKindInk)
+}
+
+/** [shoppingVisual]의 음식판 — 색은 [FoodKindColor] 하나로 묶고 아이콘만 요리 종류로 나눈다. */
+private fun restaurantVisual(category: PlaceCategory): PlaceKindVisual? {
+    val icon = when (category) {
+        PlaceCategory.KOREAN_FOOD -> Icons.Default.RiceBowl
+        PlaceCategory.WESTERN_FOOD -> Icons.Default.LocalPizza
+        PlaceCategory.JAPANESE_FOOD -> Icons.Default.SetMeal
+        PlaceCategory.CHINESE_FOOD -> Icons.Default.RamenDining
+        PlaceCategory.FUSION_FOOD -> Icons.Default.DinnerDining
+        PlaceCategory.CAFE -> Icons.Default.LocalCafe
+        else -> return null
+    }
+    return PlaceKindVisual(icon, FoodKindColor, FoodKindInk)
 }
 
 // 색은 지도 핀 세 가지(KakaoMapView의 clusterColor)를 기준으로 삼고, 핀 하나에 여러 종류가 묶이는

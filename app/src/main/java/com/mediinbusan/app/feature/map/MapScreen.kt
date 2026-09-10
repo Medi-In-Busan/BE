@@ -206,6 +206,9 @@ fun MapScreen(
             onSearchThisArea = viewModel::searchThisArea,
             onSpecialtyFilterToggled = viewModel::onSpecialtyFilterToggled,
             onSpecialtyFiltersCleared = viewModel::onSpecialtyFiltersCleared,
+            onPlaceTypeFilterToggled = viewModel::onPlaceTypeFilterToggled,
+            onPlaceCategoryFilterToggled = viewModel::onPlaceCategoryFilterToggled,
+            onPlaceFiltersCleared = viewModel::onPlaceFiltersCleared,
             onLanguageFilterToggled = viewModel::onLanguageFilterToggled,
             onListExpandedChange = viewModel::onListExpandedChange
         )
@@ -420,6 +423,9 @@ private fun BrowseMap(
     onSearchThisArea: (latitude: Double, longitude: Double) -> Unit,
     onSpecialtyFilterToggled: (String) -> Unit,
     onSpecialtyFiltersCleared: () -> Unit,
+    onPlaceTypeFilterToggled: (PlaceType) -> Unit,
+    onPlaceCategoryFilterToggled: (PlaceCategory) -> Unit,
+    onPlaceFiltersCleared: () -> Unit,
     onLanguageFilterToggled: () -> Unit,
     onListExpandedChange: (Boolean) -> Unit
 ) {
@@ -427,10 +433,30 @@ private fun BrowseMap(
     val language = LocalAppStrings.current.language
     // "필터" 버튼을 누르면 진료과목 칩 줄을 펼쳤다 접었다 한다 — 예전엔 버튼만 있고 실제 필터
     // 기능이 없는 자리표시자였다.
-    var showSpecialtyFilters by remember { mutableStateOf(false) }
+    var showFilters by remember { mutableStateOf(false) }
     // 진료과목 필터가 실제로 뭔가를 거르는 탭인지 — 병원이 목록에 나오는 탭(병원/전체)뿐이다.
     val specialtyFilterApplies = uiState.selectedCategory == MapCategory.HOSPITAL ||
         uiState.selectedCategory == MapCategory.ALL
+    // 장소 탭(관광/음식)의 세부 필터. 거는 축이 서로 다르다 — 관광은 장소 종류(관광지/쇼핑/숙소…),
+    // 음식은 전부 같은 종류라 요리 분류(한식/일식…)로 가른다. 지금 지도에 올라와 있는 장소에
+    // 실제로 있는 값만 칩으로 내므로, 낼 게 없으면 버튼도 안 나온다.
+    val placeTypeOptions = if (uiState.selectedCategory == MapCategory.TOURIST) {
+        uiState.tourPlaceTypeOptions
+    } else {
+        emptyList()
+    }
+    val placeCategoryOptions = if (uiState.selectedCategory == MapCategory.FOOD) {
+        uiState.foodPlaceCategoryOptions
+    } else {
+        emptyList()
+    }
+    val placeFilterApplies = placeTypeOptions.isNotEmpty() || placeCategoryOptions.isNotEmpty()
+    val filterApplies = specialtyFilterApplies || placeFilterApplies
+    val activeFilterCount = when {
+        specialtyFilterApplies -> uiState.selectedSpecialties.size
+        uiState.selectedCategory == MapCategory.TOURIST -> uiState.selectedPlaceTypes.size
+        else -> uiState.selectedPlaceCategories.size
+    }
     // 카드영역: 기본은 "미리보기"(손잡이 + 리스트 첫 항목만 66% 노출) 상태로 접혀있고, 손잡이를
     // 위로 드래그(또는 탭)하면 검색바까지 덮는 전체 리스트 페이지로 펼쳐진다. 마커를 새로 선택하면
     // 그 항목을 미리보기로 보여주면 되므로, 펼쳐져 있었어도 미리보기로 되돌아간다.
@@ -565,29 +591,43 @@ private fun BrowseMap(
                     placeholder = mapStrings.searchPlaceholder,
                     modifier = Modifier.weight(1f)
                 )
-                // 진료과목 필터는 병원에만 걸린다(MapUiState.visibleHospitals) — 관광/음식 탭에서는
-                // 눌러도 아무 일이 없는데 배지 숫자만 남아 "걸려 있는데 왜 안 걸러지지?"로 읽혔다.
-                // 장소 탭에서는 버튼 자체를 숨긴다.
-                if (specialtyFilterApplies) {
+                // 탭마다 거는 대상이 다르다 — 병원 탭은 진료과목, 관광/음식 탭은 장소 세부 분류.
+                // 어느 쪽도 걸 게 없는 탭에서는 버튼 자체를 숨긴다. 눌러도 아무 일이 없는데 배지
+                // 숫자만 남으면 "걸려 있는데 왜 안 걸러지지?"로 읽힌다.
+                if (filterApplies) {
                     Spacer(modifier = Modifier.width(8.dp))
                     FilterPillButton(
                         contentDescription = mapStrings.filterLabel,
-                        active = showSpecialtyFilters || uiState.selectedSpecialties.isNotEmpty(),
-                        badgeCount = uiState.selectedSpecialties.size,
-                        onClick = { showSpecialtyFilters = !showSpecialtyFilters }
+                        active = showFilters || activeFilterCount > 0,
+                        badgeCount = activeFilterCount,
+                        onClick = { showFilters = !showFilters }
                     )
                 }
             }
-            AnimatedVisibility(visible = showSpecialtyFilters && specialtyFilterApplies) {
+            AnimatedVisibility(visible = showFilters && filterApplies) {
                 Column {
                     Spacer(modifier = Modifier.height(10.dp))
-                    SpecialtyFilterRow(
-                        language = language,
-                        selectedSpecialties = uiState.selectedSpecialties,
-                        resetLabel = LocalAppStrings.current.search.resetFiltersButton,
-                        onSpecialtyToggled = onSpecialtyFilterToggled,
-                        onCleared = onSpecialtyFiltersCleared
-                    )
+                    if (specialtyFilterApplies) {
+                        SpecialtyFilterRow(
+                            language = language,
+                            selectedSpecialties = uiState.selectedSpecialties,
+                            resetLabel = LocalAppStrings.current.search.resetFiltersButton,
+                            onSpecialtyToggled = onSpecialtyFilterToggled,
+                            onCleared = onSpecialtyFiltersCleared
+                        )
+                    } else {
+                        PlaceKindFilterRow(
+                            language = language,
+                            typeOptions = placeTypeOptions,
+                            selectedTypes = uiState.selectedPlaceTypes,
+                            categoryOptions = placeCategoryOptions,
+                            selectedCategories = uiState.selectedPlaceCategories,
+                            resetLabel = LocalAppStrings.current.search.resetFiltersButton,
+                            onTypeToggled = onPlaceTypeFilterToggled,
+                            onCategoryToggled = onPlaceCategoryFilterToggled,
+                            onCleared = onPlaceFiltersCleared
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -1136,6 +1176,51 @@ private fun SpecialtyFilterRow(
             )
         }
         if (selectedSpecialties.isNotEmpty()) {
+            item(key = "reset") {
+                FilterChipPill(label = resetLabel, selected = false, onClick = onCleared)
+            }
+        }
+    }
+}
+
+/**
+ * [SpecialtyFilterRow]의 장소판 — "관광" 탭은 장소 종류로, "음식" 탭은 요리 종류로 거른다.
+ *
+ * 두 축을 한 컴포저블로 합친 건 자리·모양·동작이 같아서다(검색바 아래 한 줄, 같은 칩, 하나라도
+ * 고르면 맨 뒤에 초기화 칩). 호출부가 지금 탭에 해당하는 목록만 채워 보내고 나머지는 빈 리스트로 둔다.
+ */
+@Composable
+private fun PlaceKindFilterRow(
+    language: SupportedLanguage,
+    typeOptions: List<PlaceType>,
+    selectedTypes: Set<PlaceType>,
+    categoryOptions: List<PlaceCategory>,
+    selectedCategories: Set<PlaceCategory>,
+    resetLabel: String,
+    onTypeToggled: (PlaceType) -> Unit,
+    onCategoryToggled: (PlaceCategory) -> Unit,
+    onCleared: () -> Unit
+) {
+    val hasSelection = selectedTypes.isNotEmpty() || selectedCategories.isNotEmpty()
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(typeOptions, key = { type -> "type-" + type.name }) { type ->
+            FilterChipPill(
+                label = type.translatedLabel(language),
+                selected = type in selectedTypes,
+                onClick = { onTypeToggled(type) }
+            )
+        }
+        items(categoryOptions, key = { category -> "category-" + category.name }) { category ->
+            FilterChipPill(
+                label = category.translatedLabel(language),
+                selected = category in selectedCategories,
+                onClick = { onCategoryToggled(category) }
+            )
+        }
+        if (hasSelection) {
             item(key = "reset") {
                 FilterChipPill(label = resetLabel, selected = false, onClick = onCleared)
             }
