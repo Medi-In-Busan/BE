@@ -209,7 +209,8 @@ fun MediInBusanNavHost(navController: NavHostController, modifier: Modifier = Mo
                 // "주변 같은 종류의 장소" 카드 → 그 장소 상세로. 상세 위에 상세가 쌓이는 건 의도한
                 // 동작이다(병원 상세의 주변 병원 카드와 같다 — 비교하다 뒤로 가면 원래 장소로 온다).
                 onSelectPlace = { id -> navController.navigate(Route.PlaceDetail(id)) },
-                onBack = navController::popBackStack
+                onBack = navController::popBackStack,
+                onNavigateHome = { navController.navigateToTab(Route.Home) }
             )
         }
         composable<Route.WellnessCourseMap> { backStackEntry ->
