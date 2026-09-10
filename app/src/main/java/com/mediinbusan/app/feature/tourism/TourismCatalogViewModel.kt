@@ -61,6 +61,15 @@ class TourismCatalogViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var loadMoreJob: Job? = null
 
+    /**
+     * 이미 목록을 받아둔 진입 조건(카테고리+언어+라우트 인자). 화면이 다시 구성될 때마다
+     * [load]가 불리는데(상세로 갔다 뒤로가기 하면 컴포저블이 새로 만들어진다) 그때마다 다시
+     * 조회하면 페이지·필터가 1페이지로 되감기고 스크롤 위치도 맨 위로 튄다 — 조건이 그대로면
+     * 받아둔 목록을 그대로 쓴다. 지역/카테고리 변경·재시도는 이 경로가 아니라 loadCatalog를
+     * 직접 부르므로 영향이 없다.
+     */
+    private var loadedEntryKey: String? = null
+
     init {
         viewModelScope.launch {
             favoriteRepository.observeFavorites().collect { favorites ->
@@ -87,6 +96,14 @@ class TourismCatalogViewModel @Inject constructor(
             } else {
                 requestedCategory
             }
+            val entryKey = listOf(
+                category.name,
+                preferences.languageCode,
+                initialCategoryCode.orEmpty(),
+                initialSearchQuery.orEmpty()
+            ).joinToString("|")
+            if (loadedEntryKey == entryKey && _uiState.value.catalog != null) return@launch
+            loadedEntryKey = entryKey
             // 웰니스 필터 원형 버튼(관광지/숙박/맛집)에서 넘어온 경우 — 아래 "관광지 기본 선택"
             // 로직(selectedCategoryCode == null일 때만 동작)보다 먼저 걸어서 그 기본값을 덮는다.
             if (initialCategoryCode != null) {
@@ -97,12 +114,14 @@ class TourismCatalogViewModel @Inject constructor(
             if (initialSearchQuery != null) {
                 _uiState.update { it.copy(searchQuery = initialSearchQuery) }
             }
-            // "부산 관광지"도 다른 구·군 지원 카테고리처럼 첫 진입부터 특정 지역(해운대구) 중심으로
-            // 보여준다(wellness_tourism_recommendation_list.png 기준 — "전체"가 아니라 해운대구가
-            // 기본 체크돼 있음). "전체"는 지역 드롭다운에서 사용자가 직접 선택했을 때만 적용된다.
+            // "부산 관광지"는 첫 진입부터 부산 전체를 보여준다 — 지역 드롭다운도 "전체"로 시작하고,
+            // 특정 구·군으로 좁히는 건 사용자가 직접 고를 때만이다(백엔드가 구·군 코드를 안 넘기면
+            // 부산 전역으로 조회한다). 나머지 구·군 종속 카테고리(무장애 관광·함께 둘러보기·지역
+            // 허브)는 지역을 안 주면 응답 범위가 너무 넓어 지금처럼 해운대구로 시작한다.
             val district = when {
                 category == TourismCatalogCategory.CROWDING -> null
-                category.isLanguageVariant || category.supportsDistrict -> _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
+                category.isLanguageVariant -> _uiState.value.selectedDistrict
+                category.supportsDistrict -> _uiState.value.selectedDistrict ?: BusanDistrict.HAEUNDAE
                 else -> null
             }
             // "부산 관광지" 화면의 카테고리 필터 3종(관광지/숙박/맛집) 중 "관광지" 기본 선택은
@@ -240,11 +259,19 @@ class TourismCatalogViewModel @Inject constructor(
                         }
                         // "부산 관광지"만 개인화 점수로 재정렬 — 점수>0인 상위 항목이 추천 섹션으로
                         // 상단에 뜨고(applyClientFilters), 나머지는 그 아래 일반 섹션에 남는다.
-                        val (catalog, personalizedItemIds) = if (category.isLanguageVariant) {
-                            val recommendation = recommendPlaces(mergedCatalog)
-                            recommendation.catalog to recommendation.personalizedItemIds
-                        } else {
-                            mergedCatalog to emptySet()
+                        //
+                        // 재정렬은 진짜 새 조회(첫 페이지·재시도·지역/카테고리 변경)에서만 한다.
+                        // append(무한 스크롤 다음 페이지)에서도 누적 목록 전체를 다시 점수 매겨
+                        // 정렬하면, 이미 보고 있던 카드들의 순서와 추천 셋이 매번 뒤바뀌어 스크롤을
+                        // 내릴 때마다 목록이 통째로 바뀌는 것처럼 보였다. 새 페이지는 서버가 준
+                        // 순서 그대로 뒤에 붙이기만 한다.
+                        val (catalog, personalizedItemIds) = when {
+                            !category.isLanguageVariant -> mergedCatalog to emptySet()
+                            append -> mergedCatalog to _uiState.value.personalizedItemIds
+                            else -> {
+                                val recommendation = recommendPlaces(mergedCatalog)
+                                recommendation.catalog to recommendation.personalizedItemIds
+                            }
                         }
                         // "관광지" 기본 선택(wellness_tourism_recommendation_list.png 기준)은 실제로
                         // 받아온 첫 페이지에 그 카테고리 항목이 있을 때만 건다 — 사용자가 아직 아무
@@ -368,7 +395,12 @@ class TourismCatalogViewModel @Inject constructor(
 
                 // "부산 관광지"는 정렬 선택지가 없다 — 추천 섹션은 개인화 점수순, 나머지는
                 // catalog.items의 원본(서버) 순서를 그대로 따른다.
-                if (isLanguageVariant) {
+                if (state.category == TourismCatalogCategory.CROWDING) {
+                    // 혼잡도 목록은 서버가 준 혼잡도 순서 그대로다 — 카드에 붙는 "#N"이 곧 혼잡도
+                    // 순위라, 이름·거리로 다시 정렬하면 그 숫자가 아무 뜻도 아니게 된다(사진 보강이
+                    // 붙은 항목만 좌표가 있어서, 거리순은 사실상 "사진 있는 것부터"가 되기도 한다).
+                    emptyList<TourismCatalogItem>() to filtered
+                } else if (isLanguageVariant) {
                     val recommended = filtered.filter { it.id in state.personalizedItemIds }
                     val rest = filtered.filterNot { it.id in state.personalizedItemIds }
                     recommended to rest
