@@ -27,8 +27,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,6 +112,7 @@ import com.mediinbusan.app.core.ui.MapPinType
 import com.mediinbusan.app.core.ui.PlaceKindVisual
 import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.MediTipContent
+import com.mediinbusan.app.core.ui.NearbyPlacesSection
 import com.mediinbusan.app.core.ui.TravelerHelpContent
 import com.mediinbusan.app.core.ui.VisitInfo
 import com.mediinbusan.app.core.ui.VisitInfoContent
@@ -228,7 +227,7 @@ private fun PlaceDetailContent(
                 Spacer(modifier = Modifier.height(26.dp))
                 PlaceTitleSection(place = place, visual = visual)
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
                 // 예전엔 즐겨찾기·공유가 제목 옆 작은 아이콘 두 개였고 전화는 정보 표 안에 묻혀
                 // 있었다 — 세 가지를 같은 크기의 액션 줄로 끌어올린다(길찾기는 하단 CTA 하나로
                 // 유지: 화면에 길찾기 진입점을 둘로 늘리지 않는다).
@@ -247,7 +246,7 @@ private fun PlaceDetailContent(
                 // 정보인지 앱이 쓴 안내인지 구분할 단서가 없었다. 다른 카드들과 같은 섹션으로 감싸
                 // "메디인부산 가이드"라는 이름을 붙인다 — 출처 각주는 AtAGlanceRow가 직접 달아서
                 // 이 컴포넌트를 쓰는 화면 어디서도 빠질 수 없게 했다(core/ui/PlaceCurationSections.kt).
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
                 InfoSection(
                     title = strings.placeCuration.atAGlanceTitle,
                     icon = Icons.Default.TipsAndUpdates
@@ -255,7 +254,7 @@ private fun PlaceDetailContent(
                     AtAGlanceRow(profile = careProfile, modifier = Modifier.fillMaxWidth())
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
                 // HospitalDetailScreen의 기본정보(BasicInfoRow: 운영시간/전화/홈페이지/언어) 카드와
                 // 같은 아이콘 원형+라벨+값 구성 — 전화·거리에 더해, 지금까지 화면 어디에도 없던
                 // "정보 갱신일"(place.lastModified, 웰니스 API 원본에 실려 오지만 그동안 안 쓰였다)을
@@ -294,7 +293,7 @@ private fun PlaceDetailContent(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(SectionSpacing))
                 }
 
                 // 영업시간·휴무일·대표메뉴·이용요금·주차·홈페이지. 이 값들은 백엔드가 TourAPI
@@ -313,7 +312,7 @@ private fun PlaceDetailContent(
                     InfoSection(title = strings.nearby.introSectionTitle, icon = Icons.Default.Info) {
                         Text(text = description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(SectionSpacing))
                 }
 
                 // 부산 대표 명소로 매칭됐을 때만 붙는 카드. 매칭이 없는 평범한 장소에서는 통째로
@@ -325,12 +324,12 @@ private fun PlaceDetailContent(
                     ) {
                         MediTipContent(copy = copy)
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(SectionSpacing))
                 }
 
                 RecoveryNoticeSection(place = place)
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
                 // 이 미니맵은 이제 순수 미리보기다 — 예전엔 지도 자체도 눌리고(외부 길찾기), 그 바로
                 // 아래 "길찾기" 버튼도 있고, 화면 맨 아래 고정바에도 같은 "길찾기" 버튼이 있어 한
                 // 화면에 길찾기 진입점이 4개(액션 pill/지도/버튼/하단바)였다 — 하단 고정 CTA
@@ -339,20 +338,9 @@ private fun PlaceDetailContent(
                     LocationMiniMap(place = place)
                 }
 
-                // 병원 상세(S-05)의 "주변 같은 진료과목 병원"과 같은 자리·같은 구성이다 — 지도로
-                // "여기가 어디인지"를 본 직후에 "이 근처에 같은 종류가 또 뭐가 있는지"가 이어진다.
-                if (nearbyPlaces.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(18.dp))
-                    NearbyPlacesSection(
-                        anchorType = place.type,
-                        places = nearbyPlaces,
-                        onSelectPlace = onSelectPlace
-                    )
-                }
-
                 // 장소와 무관하게 항상 같은 공공 안내(1330·119·결제/교통). 앱이 상담이나 통역사를
                 // 연결하는 게 아니라 공개된 번호를 안내만 한다(CLAUDE.md §1 MVP 하드 제약).
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
                 InfoSection(
                     title = strings.placeCuration.travelerHelpTitle,
                     icon = Icons.Default.SupportAgent
@@ -360,10 +348,22 @@ private fun PlaceDetailContent(
                     TravelerHelpContent(onDial = { context.dialPhone(it) })
                 }
 
+                // 병원 상세(S-05)의 "주변 같은 진료과목 병원"과 같은 자리·같은 구성이다 — 이 장소를
+                // 다 읽은 뒤 "그럼 근처의 같은 종류는?"으로 이어지도록 본문 제일 아래에 둔다(아래
+                // 출처 각주는 섹션이 아니라 화면 푸터라 그대로 맨 끝에 남는다).
+                if (nearbyPlaces.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(SectionSpacing))
+                    NearbyPlacesSection(
+                        anchorType = place.type,
+                        places = nearbyPlaces,
+                        onSelectPlace = onSelectPlace
+                    )
+                }
+
                 // 위 카드들 중 실제로 한국관광공사 TourAPI에서 온 항목이 어디까지인지 밝힌다 —
                 // 같은 화면에 앱이 직접 쓴 안내(가이드·팁·진료 전후 체크)가 섞여 있어서, 어느 쪽이
                 // 공식 데이터인지 구분할 단서가 화면 어디에도 없었다.
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
                 Text(
                     text = strings.placeCuration.officialDataCreditLabel,
                     style = MaterialTheme.typography.labelSmall,
@@ -372,7 +372,7 @@ private fun PlaceDetailContent(
                 )
                         // 시트를 위로 끌어올린 만큼(SheetOverlap) 아래에서 다시 채워, 마지막 카드와
                         // 하단 액션바 사이 간격이 예전과 같게 유지한다.
-                        Spacer(modifier = Modifier.height(14.dp + SheetOverlap))
+                        Spacer(modifier = Modifier.height(SectionSpacing + SheetOverlap))
                     }
                 }
             }
@@ -715,7 +715,7 @@ private fun PlaceVisitInfoSection(place: Place) {
     InfoSection(title = strings.placeCuration.visitInfoTitle, icon = Icons.Default.Schedule) {
         VisitInfoContent(visitInfo = visitInfo, onOpenHomepage = { url -> context.openWebPage(url) })
     }
-    Spacer(modifier = Modifier.height(14.dp))
+    Spacer(modifier = Modifier.height(SectionSpacing))
 }
 
 @Composable
@@ -850,145 +850,6 @@ private fun LocationMiniMap(place: Place) {
 
 // 즐겨찾기는 PlaceTitleSection에 이미 있어(HospitalDetailScreen과 같은 자리) 여기서는 중복으로
 // 넣지 않는다 — 화면 전체에서 유일한 길찾기 진입점인 이 버튼 하나에 폭 전체를 준다.
-/**
- * "주변 같은 종류의 장소" 가로 스크롤 섹션. 병원 상세(S-05)의 NearbyHospitalsSection과 같은 구성이다
- * — 목록이 아니라 곁들이는 추천이라 세로로 쌓지 않고 한 줄로 흘리고, 카드가 화면 오른쪽 끝을 넘어가
- * 잘려 보여야 "더 있다"가 전달되므로 흰 카드로 감싸지 않고 캔버스 위에 직접 얹는다.
- */
-@Composable
-private fun NearbyPlacesSection(
-    anchorType: PlaceType,
-    places: List<Place>,
-    onSelectPlace: (String) -> Unit
-) {
-    val strings = LocalAppStrings.current.nearby
-    // 제목은 "주변 관광지" / "Nearby: Cafe & dining"처럼 지금 보고 있는 장소의 종류를 그대로 넣는다.
-    val typeLabel = strings.placeTypeLabels[anchorType.name] ?: strings.allLabel
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.NearMe,
-                    contentDescription = null,
-                    tint = CoralPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = strings.nearbySameTypeTitleFormat.format(typeLabel),
-                    style = SectionTitleStyle,
-                    color = TextPrimary
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            // 이 목록이 무엇을 기준으로 뽑힌 건지 한 줄로 밝힌다 — 근거 없는 추천처럼 보이지 않게.
-            Text(
-                text = strings.nearbySameTypeSubtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(items = places, key = { it.id }) { nearby ->
-                NearbyPlaceCard(place = nearby, onClick = { onSelectPlace(nearby.id) })
-            }
-        }
-    }
-}
-
-/** 썸네일 + 거리 배지 + 이름 + 세부 분류 한 줄짜리 카드. */
-@Composable
-private fun NearbyPlaceCard(place: Place, onClick: () -> Unit) {
-    val language = LocalAppStrings.current.language
-    val visual = remember(place.type, place.category) { placeKindVisual(place.type, place.category) }
-    Column(
-        modifier = Modifier
-            .width(164.dp)
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.08f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(DividerColor)
-        ) {
-            // 사진이 없는 장소가 많다. 상세 히어로의 마스코트 일러스트가 아니라 목록·카드용 폴백
-            // 배너를 쓴다 — 같은 캐릭터를 카드마다 반복하면 카드가 전부 똑같아 보여 구분이 안 된다.
-            if (place.imageUrl != null) {
-                AsyncImageBox(
-                    model = place.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Image(
-                    painter = painterResource(id = fallbackBannerImageFor(place.id)),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 배지를 아예 안 단다.
-            place.distanceFromHospitalMeters?.let { meters ->
-                Text(
-                    text = meters.toDistanceLabel(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = CoralInk,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(Color.White.copy(alpha = 0.92f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-            }
-        }
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Text(
-                text = place.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                // 이름이 한 줄인 카드와 두 줄인 카드가 섞이면 아래 분류 줄의 높이가 어긋난다 —
-                // 두 줄 자리를 항상 잡아 카드들의 바닥선을 맞춘다.
-                minLines = 2
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = visual.icon,
-                    contentDescription = null,
-                    tint = visual.ink,
-                    modifier = Modifier.size(13.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = place.category.translatedLabel(language),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun BottomActionBar(
     onDirectionsClick: () -> Unit,
@@ -1126,6 +987,12 @@ private fun Context.sharePlace(place: Place) {
 private val HeroHeight = 300.dp
 
 // 콘텐츠 시트가 히어로 사진 위로 겹쳐 올라오는 양.
+/**
+ * 카드형 정보 섹션들 사이의 세로 여백. 병원 상세(feature/hospitaldetail)의 같은 이름 상수와 값을
+ * 맞춰 두 상세 화면의 리듬을 통일한다 — 예전엔 이 화면 안에서만도 14dp와 18dp가 섞여 있었다.
+ */
+private val SectionSpacing = 20.dp
+
 private val SheetOverlap = 28.dp
 
 /**

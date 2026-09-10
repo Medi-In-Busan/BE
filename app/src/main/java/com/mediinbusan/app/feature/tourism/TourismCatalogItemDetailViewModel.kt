@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediinbusan.app.core.common.PendingTourismCatalogItem
 import com.mediinbusan.app.core.common.Result
+import com.mediinbusan.app.core.datastore.UserPreferencesRepository
+import com.mediinbusan.app.data.place.PlaceRepository
+import com.mediinbusan.app.data.place.PlaceType
+import com.mediinbusan.app.data.place.toPlaceType
 import com.mediinbusan.app.data.recent.RecentItemType
 import com.mediinbusan.app.data.recent.RecentRepository
 import com.mediinbusan.app.data.tourism.TourismCatalogRepository
@@ -14,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,7 +34,9 @@ import javax.inject.Inject
 class TourismCatalogItemDetailViewModel @Inject constructor(
     pendingTourismCatalogItem: PendingTourismCatalogItem,
     private val repository: TourismCatalogRepository,
-    private val recentRepository: RecentRepository
+    private val recentRepository: RecentRepository,
+    private val placeRepository: PlaceRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TourismCatalogItemDetailUiState())
     val uiState: StateFlow<TourismCatalogItemDetailUiState> = _uiState
@@ -37,6 +44,7 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
     private val hotPlaceDistrict = selection?.item?.details?.get("hotPlaceDistrict")
         ?.let { name -> BusanDistrict.entries.find { it.name == name } }
     private var loadJob: Job? = null
+    private var nearbyJob: Job? = null
 
     init {
         if (selection != null) {
@@ -51,6 +59,7 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
                 retry()
             } else {
                 recordView(selection.item, selection.category, selection.district)
+                loadNearbySameType(selection.item)
             }
         } else {
             // 보여줄 게 아무것도 없는 진입(프로세스 재생성으로 PendingTourismCatalogItem이 비었거나
@@ -66,7 +75,8 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
     }
 
     fun retry() {
-        val original = selection?.item ?: return
+        val selected = selection ?: return
+        val original = selected.item
         val district = hotPlaceDistrict ?: return
         loadJob?.cancel()
         _uiState.update { it.copy(isLoading = true, matchNotFound = false, loadFailed = false) }
@@ -77,16 +87,28 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
                     val mergedItem = matched?.copy(details = matched.details + original.details.filterKeys { key ->
                         key in setOf("congestionRate", "signguNm", "baseYmd", "baseYm")
                     })
-                    val category = if (matched == null) null else TourismCatalogCategory.PLACES_KO
+                    // 매칭에 실패해도 화면을 비우지 않는다. 핫플레이스 목록의 1위(감만시장 등)처럼
+                    // 한국관광공사 관광지 DB에 아예 없는 곳이 실제로 있는데(전통시장·부두 등 빅데이터
+                    // 방문지 통계에만 잡히는 장소), 예전엔 이런 항목을 누르면 "찾지 못했습니다" 한 줄만
+                    // 남고 목록에서 이미 본 이름·혼잡도조차 못 봤다. 목록에서 넘어온 원본 항목을 그대로
+                    // 그리고, 화면에는 관광공사 상세가 붙지 않았다는 안내(matchNotFound)를 같이 띄운다.
+                    //
+                    // 소개문 폴백이 subtitle을 먼저 집는데 혼잡도 항목의 subtitle은 지수 숫자("83.5")라,
+                    // 그대로 두면 소개 카드에 숫자만 덩그러니 나온다 — 폴백 항목에서는 지운다(지수는
+                    // 아래 혼잡도 카드가 congestionRate로 제대로 보여준다).
+                    val category = if (matched == null) selected.category else TourismCatalogCategory.PLACES_KO
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             matchNotFound = matched == null,
                             category = category,
-                            item = mergedItem
+                            item = mergedItem ?: original.copy(subtitle = null)
                         )
                     }
-                    if (mergedItem != null) recordView(mergedItem, category, district)
+                    if (mergedItem != null) {
+                        recordView(mergedItem, category, district)
+                        loadNearbySameType(mergedItem)
+                    }
                 }
                 is Result.Error, Result.Loading -> _uiState.update { it.copy(isLoading = false, loadFailed = true) }
             }
@@ -130,6 +152,8 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
                 isLoading = district != null,
                 isSnapshot = true
             )
+            // 스냅샷 좌표로 먼저 걸어둔다 — 아래 재조회가 성공하면 최신 좌표로 다시 건다.
+            loadNearbySameType(snapshot)
             if (district == null) return@launch
 
             when (val result = repository.findMatchingPlace(snapshot.title, district)) {
@@ -140,11 +164,56 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
                             it.copy(isLoading = false, item = matched, category = TourismCatalogCategory.PLACES_KO, isSnapshot = false)
                         }
                         recordView(matched, TourismCatalogCategory.PLACES_KO, district)
+                        loadNearbySameType(matched)
                     } else {
                         _uiState.update { it.copy(isLoading = false) } // 스냅샷 유지, isSnapshot = true
                     }
                 }
                 is Result.Error, Result.Loading -> _uiState.update { it.copy(isLoading = false) } // 스냅샷 유지
+            }
+        }
+    }
+
+    /**
+     * 같은 종류(관광지/맛집 등)의 주변 장소를 이 항목 좌표 기준으로 불러온다. 장소
+     * 상세(feature/nearby/PlaceDetailViewModel.loadNearbySameType)와 같은 규칙이다 — 기기 GPS는
+     * 쓰지 않고 좌표는 방금 받은 항목의 것이며(CLAUDE.md §1), 백엔드 /api/wellness/places에 종류
+     * 파라미터가 없어서 반경 안을 받아온 뒤 앱에서 같은 PlaceType만 남긴다.
+     *
+     * 카탈로그 항목(TourAPI)과 주변 장소(웰니스 DB)는 출처가 달라 id가 겹치지 않는다 — 지금 보고
+     * 있는 곳이 결과에 섞여도 id로는 못 거르므로 이름으로도 한 번 더 뺀다.
+     *
+     * 실패하면 조용히 빈 목록으로 둔다. 곁들이는 추천이라 섹션만 사라지는 게 맞다.
+     */
+    private fun loadNearbySameType(item: TourismCatalogItem) {
+        val latitude = item.latitude
+        val longitude = item.longitude
+        // 좌표가 없으면 "주변"을 정의할 수 없다(관광사진·혼잡도처럼 장소가 아닌 항목이 여기 걸린다).
+        if (latitude == null || longitude == null) return
+        val placeType = item.categoryCode.toPlaceType()
+        // "기타"는 종류가 아니라 분류 실패에 가깝다 — 같은 기타끼리 묶어봐야 서로 상관없는 곳들이다.
+        if (placeType == PlaceType.OTHER) return
+
+        nearbyJob?.cancel()
+        nearbyJob = viewModelScope.launch {
+            val languageCode = userPreferencesRepository.userPreferences.first().languageCode
+            placeRepository.getPlacesNear(
+                latitude = latitude,
+                longitude = longitude,
+                radiusMeters = NEARBY_RADIUS_METERS,
+                languageCode = languageCode
+            ).collect { result ->
+                _uiState.update { state ->
+                    when (result) {
+                        is Result.Success -> state.copy(
+                            nearbySamePlaces = result.data
+                                .filter { it.type == placeType && it.name != item.title }
+                                .take(NEARBY_MAX_COUNT)
+                        )
+                        is Result.Error -> state.copy(nearbySamePlaces = emptyList())
+                        is Result.Loading -> state
+                    }
+                }
             }
         }
     }
@@ -164,5 +233,13 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
                 tourismDistrict = district?.name
             )
         }
+    }
+
+    companion object {
+        /** 장소 상세(PlaceDetailViewModel)와 같은 반경 — 같은 곳을 어느 화면으로 들어가든 같은 목록을 본다. */
+        private const val NEARBY_RADIUS_METERS = 2000.0
+
+        /** 가로 스크롤 한 줄에 담기는 만큼만. 목록 화면이 아니라 곁들이는 추천이다. */
+        private const val NEARBY_MAX_COUNT = 10
     }
 }

@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -119,6 +121,15 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
+/**
+ * 카드형 정보 섹션들 사이의 세로 여백. 옅은 분홍 배경 위에 카드가 하나씩 떠 있는 레이아웃이라
+ * 이 값이 좁으면 카드들이 한 덩어리처럼 붙어 보인다 — 섹션 경계가 눈으로 바로 잡힐 만큼만 둔다
+ * (28dp까지 벌려봤더니 한 화면에 카드가 하나꼴로만 들어와 오히려 스크롤이 길어졌다).
+ * 섹션 사이 여백은 전부 이 값 하나를 쓰고, 예외는 타이틀 블록 아래(이 값의 2배)뿐이다.
+ * 장소 상세(feature/nearby/PlaceDetailScreen)도 같은 값을 쓴다 — 두 상세 화면의 리듬을 맞춘다.
+ */
+private val SectionSpacing = 20.dp
+
 @Composable
 fun HospitalDetailScreen(
     hospitalId: String,
@@ -208,10 +219,11 @@ private fun HospitalDetailContent(
         }
         if (hospital.specialties.isNotEmpty()) add(HospitalDetailSection.SPECIALTIES)
         add(HospitalDetailSection.LOCATION)
+        add(HospitalDetailSection.OTHER_INFO)
         // 주변 병원은 조회 결과가 있을 때만. 좌표가 없거나 겹치는 과목이 없으면 ViewModel이 아예
         // 요청하지 않아 빈 목록으로 남고, 그러면 이 섹션도 탭도 함께 사라진다.
+        // 이 화면의 마지막 섹션이라 탭바에서도 맨 오른쪽에 온다(탭 순서 = 실제 배치 순서).
         if (nearbyHospitals.isNotEmpty()) add(HospitalDetailSection.NEARBY)
-        add(HospitalDetailSection.OTHER_INFO)
     }
 
     // 각 섹션의 스크롤 콘텐츠 내 세로 위치(px). onGloballyPositioned로 매 배치마다 갱신되므로
@@ -246,6 +258,7 @@ private fun HospitalDetailContent(
     // 보고 있어도 밑줄은 1번에 남아 있었다. 화면 위에서 조금 아래를 기준선 삼아, 그 선을 지난
     // 마지막 섹션을 활성으로 본다.
     val sectionActivateOffset = with(LocalDensity.current) { 140.dp.roundToPx() }
+    val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val activeSectionIndex by remember(visibleSections, sectionActivateOffset) {
         derivedStateOf {
             val scroll = scrollState.value
@@ -310,8 +323,8 @@ private fun HospitalDetailContent(
             // 느낌 대신, 옅은 분홍 배경(HomeBackgroundPink) 위에 카드가 하나씩 둥둥 떠 있는 스파
             // 앱 스타일 레이아웃으로 바꿨다. 각 InfoSection이 스스로 흰 카드+그림자를 두르므로
             // (아래 InfoSection 정의 참고) 여기서는 카드 사이 여백만 둔다. 사진-타이틀 간격도
-            // 다른 섹션 사이 여백(14dp)과 동일하게 맞춘다.
-            Spacer(modifier = Modifier.height(14.dp))
+            // 다른 섹션 사이 여백(SectionSpacing)과 동일하게 맞춘다.
+            Spacer(modifier = Modifier.height(SectionSpacing))
             // 카드 배경/그림자 없이 옅은 분홍 배경(HomeBackgroundPink)이 그대로 비치는 영역.
             // 타이틀 텍스트는 다른 배경 요소들과 같은 20dp 왼쪽 여백을 쓰지만, 즐겨찾기/공유
             // 아이콘 줄은 20dp 안쪽 패딩을 아예 안 주고 화면 진짜 오른쪽 끝까지 fillMaxWidth로
@@ -375,9 +388,9 @@ private fun HospitalDetailContent(
                 }
             }
 
-            // 위치 서브타이틀-병원소개 사이는 다른 섹션 간 여백(14dp)의 약 3배를 둬서 "타이틀
-            // 블록"과 "카드형 정보 섹션들" 사이를 시각적으로 크게 구분한다.
-            Spacer(modifier = Modifier.height(42.dp))
+            // 위치 서브타이틀-병원소개 사이는 다른 섹션 간 여백(SectionSpacing)의 약 2배를 둬서
+            // "타이틀 블록"과 "카드형 정보 섹션들" 사이를 시각적으로 크게 구분한다.
+            Spacer(modifier = Modifier.height(SectionSpacing * 2))
 
             // 소개가 없으면 "등록된 소개 정보가 없습니다" 카드를 남기지 않고 섹션째 뺀다 — 위
             // 기본정보와 같은 규칙이다. 위 visibleSections에서 탭도 같이 빠지므로 어긋나지 않는다.
@@ -395,7 +408,7 @@ private fun HospitalDetailContent(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
             }
 
             if (visibleSections.contains(HospitalDetailSection.BASIC_INFO)) {
@@ -440,7 +453,7 @@ private fun HospitalDetailContent(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
             }
 
             if (hospital.specialties.isNotEmpty()) {
@@ -468,7 +481,7 @@ private fun HospitalDetailContent(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(SectionSpacing))
             }
 
             Box(
@@ -483,25 +496,7 @@ private fun HospitalDetailContent(
                 }
             }
 
-            // 위치(지도) 바로 다음에 둔다 — "여기가 어디인지"를 본 직후라 "이 근처에 또 뭐가 있는지"가
-            // 자연스럽게 이어진다. 카드가 화면 끝까지 스크롤돼 나가야 가로로 더 있다는 게 보이므로,
-            // 흰 카드(InfoSection)로 감싸지 않고 배경 위에 직접 얹는다.
-            if (nearbyHospitals.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Box(
-                    modifier = Modifier.onGloballyPositioned {
-                        sectionTops[HospitalDetailSection.NEARBY] = it.positionInParent().y.roundToInt()
-                    }
-                ) {
-                    NearbyHospitalsSection(
-                        hospitals = nearbyHospitals,
-                        strings = strings,
-                        onSelectHospital = onSelectHospital
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(SectionSpacing))
             Box(
                 modifier = Modifier.onGloballyPositioned {
                     sectionTops[HospitalDetailSection.OTHER_INFO] = it.positionInParent().y.roundToInt()
@@ -528,7 +523,28 @@ private fun HospitalDetailContent(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(14.dp))
+
+            // 이 병원 정보를 다 읽은 뒤 "그럼 근처의 다른 선택지는?"으로 이어지도록 화면 제일 아래에
+            // 둔다. 카드가 화면 끝까지 스크롤돼 나가야 가로로 더 있다는 게 보이므로, 흰
+            // 카드(InfoSection)로 감싸지 않고 배경 위에 직접 얹는다.
+            if (nearbyHospitals.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(SectionSpacing))
+                Box(
+                    modifier = Modifier.onGloballyPositioned {
+                        sectionTops[HospitalDetailSection.NEARBY] = it.positionInParent().y.roundToInt()
+                    }
+                ) {
+                    NearbyHospitalsSection(
+                        hospitals = nearbyHospitals,
+                        strings = strings,
+                        onSelectHospital = onSelectHospital
+                    )
+                }
+            }
+            // 이 화면에는 하단 탭바가 없고 루트 Scaffold도 인셋을 소비하지 않으므로(MediInBusanApp의
+            // contentWindowInsets = WindowInsets(0.dp)), 이 여백이 없으면 마지막 섹션이 기기
+            // 제스처/내비게이션 바에 그대로 깔린다.
+            Spacer(modifier = Modifier.height(SectionSpacing + navigationBarInset))
         }
     }
 }
@@ -1083,15 +1099,15 @@ private fun Double.toDistanceLabel(): String =
     if (this < 1000) "${(this / 10).roundToInt() * 10}m" else String.format(Locale.US, "%.1fkm", this / 1000)
 
 /** 축약 탭바가 가리키는 본문 섹션. 실제로 그려지는 것만 탭에 올라간다. */
-private enum class HospitalDetailSection { INTRO, BASIC_INFO, SPECIALTIES, LOCATION, NEARBY, OTHER_INFO }
+private enum class HospitalDetailSection { INTRO, BASIC_INFO, SPECIALTIES, LOCATION, OTHER_INFO, NEARBY }
 
 private fun HospitalDetailSection.label(strings: HospitalDetailStrings): String = when (this) {
     HospitalDetailSection.INTRO -> strings.introSectionTitle
     HospitalDetailSection.BASIC_INFO -> strings.basicInfoSectionTitle
     HospitalDetailSection.SPECIALTIES -> strings.specialtiesSectionTitle
     HospitalDetailSection.LOCATION -> strings.locationSectionTitle
-    HospitalDetailSection.NEARBY -> strings.nearbySameSpecialtyTitle
     HospitalDetailSection.OTHER_INFO -> strings.otherInfoSectionTitle
+    HospitalDetailSection.NEARBY -> strings.nearbySameSpecialtyTitle
 }
 
 /**
