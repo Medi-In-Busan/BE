@@ -9,6 +9,7 @@ import com.mediinbusan.backend.wellness.dto.TourismCatalogItemResponse;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
 import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
 import com.mediinbusan.backend.wellness.repository.WellnessExternalSnapshotRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
@@ -21,6 +22,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
 
 @Service
@@ -56,21 +58,48 @@ public class TourismCatalogService {
     private static final String CROWDING_CACHE_SOURCE = "crowding-catalog";
     private static final String CROWDING_CACHE_SCOPE = "BUSAN";
     private static final int HOT_PLACE_LIMIT = 5;
+    /**
+     * 한 요청에서 사진을 새로 찾아볼 최대 개수.
+     *
+     * 예전엔 상위 {@link #HOT_PLACE_LIMIT}개만 찾아봐서, 추천 웰니스의 TOP5는 사진이 붙는데
+     * "전체보기"로 들어간 혼잡도 목록(오늘 기준 30여 개)은 나머지가 전부 사진 없이 남았다.
+     * 그렇다고 한 요청에서 전부 찾으면 그 요청 하나가 외부 API를 수십 번 때려 응답이 크게 느려진다.
+     * 그래서 요청마다 아직 안 찾아본 것 위주로 이만큼씩만 채우고, 결과는 그때그때 오늘치 스냅샷에
+     * 저장한다 — 몇 번 오가는 사이 목록 전체가 채워지고, 그 뒤로는 캐시라 공짜다.
+     */
+    private static final int IMAGE_LOOKUP_BATCH = 8;
     private static final String IMAGE_LOOKUP_ATTEMPTED = "imageLookupAttempted";
+    /**
+     * 사진 보강을 시도했다는 표시의 값(= 그때 쓴 매칭 로직의 세대).
+     *
+     * 표시가 있으면 같은 장소를 매 요청마다 다시 찾지 않는데, 예전엔 값이 "true" 하나뿐이라
+     * <b>매칭 로직을 개선해도 이미 실패로 표시된 장소는 영영 다시 시도하지 않았다</b> — 오늘치
+     * 스냅샷에 "true"로 남은 장소들이 사진 없이 그대로 굳었다. 로직을 고칠 때 이 값을 올리면
+     * 예전 세대로 표시된 장소만 딱 한 번 다시 시도한다(캐시를 손으로 지울 필요가 없다).
+     *
+     * v2: 간이 검색이 실패하면 상세 화면과 같은 매칭기(TourismPlaceMatchService)로 재시도.
+     */
+    private static final String IMAGE_LOOKUP_GENERATION = "2";
 
     private final WellnessTourismGatewayService gateway;
     private final WellnessExternalSnapshotRepository snapshotRepository;
     private final TourismCatalogTranslationService translationService;
+    private final ObjectProvider<TourismPlaceMatchService> placeMatchService;
     private final ObjectMapper objectMapper;
 
     public TourismCatalogService(
         WellnessTourismGatewayService gateway,
         WellnessExternalSnapshotRepository snapshotRepository,
-        TourismCatalogTranslationService translationService
+        TourismCatalogTranslationService translationService,
+        // ObjectProvider로 받는 이유: TourismPlaceMatchService가 이 서비스(normalizeItems)를 생성자로
+        // 주입받고 있어 서로 참조하면 빈 생성 단계에서 순환이 된다. 지연 조회로 끊는다 — 실제 호출은
+        // 아래 enrichCrowdingImages에서 하루 최대 몇 번뿐이다(결과는 혼잡도 스냅샷에 캐시된다).
+        ObjectProvider<TourismPlaceMatchService> placeMatchService
     ) {
         this.gateway = gateway;
         this.snapshotRepository = snapshotRepository;
         this.translationService = translationService;
+        this.placeMatchService = placeMatchService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -139,7 +168,7 @@ public class TourismCatalogService {
         var todaySnapshot = snapshotRepository.findBySnapshotKey(snapshotKey);
         if (todaySnapshot.isPresent()) {
             TourismCatalogResponse cached = cachedCrowdingResponse(todaySnapshot.get());
-            List<TourismCatalogItemResponse> enrichedItems = enrichHotPlaceImages(cached.items());
+            List<TourismCatalogItemResponse> enrichedItems = enrichCrowdingImages(cached.items());
             if (!enrichedItems.equals(cached.items())) {
                 todaySnapshot.get().refresh(
                     TourismCatalogCategory.CROWDING.title(),
@@ -170,7 +199,7 @@ public class TourismCatalogService {
         }
 
         if (firstFailure == null && !items.isEmpty()) {
-            items = enrichHotPlaceImages(todayCrowdingItems(items, today));
+            items = enrichCrowdingImages(todayCrowdingItems(items, today));
             TourismCatalogResponse response = new TourismCatalogResponse(
                 TourismCatalogCategory.CROWDING,
                 TourismCatalogCategory.CROWDING.title(),
@@ -267,8 +296,16 @@ public class TourismCatalogService {
         );
     }
 
-    private List<TourismCatalogItemResponse> enrichHotPlaceImages(List<TourismCatalogItemResponse> items) {
-        List<TourismCatalogItemResponse> candidates = items.stream()
+    /**
+     * 혼잡도 항목에 관광공사 사진을 붙인다. 혼잡도 응답 자체에는 관광지 이름과 지수밖에 없어서,
+     * 이걸 안 하면 목록 카드가 전부 사진 없는 회색 자리표시자가 된다.
+     *
+     * 혼잡도 높은 순으로 훑되 아직 안 찾아본 것만 한 번에 {@link #IMAGE_LOOKUP_BATCH}개까지만 찾는다
+     * (그 상수 주석 참고). 상위 {@link #HOT_PLACE_LIMIT}개는 추천 웰니스 첫 화면에 큰 카드로 걸리는
+     * 자리라, 간이 검색이 빗나가면 상세 화면과 같은 정밀 매칭까지 한 번 더 간다.
+     */
+    private List<TourismCatalogItemResponse> enrichCrowdingImages(List<TourismCatalogItemResponse> items) {
+        List<TourismCatalogItemResponse> ranked = items.stream()
             .collect(java.util.stream.Collectors.toMap(
                 item -> canonicalTitle(item.title()),
                 item -> item,
@@ -278,15 +315,21 @@ public class TourismCatalogService {
             .values()
             .stream()
             .sorted(Comparator.comparingDouble(TourismCatalogService::crowdingRate).reversed())
+            .toList();
+        // 정밀 매칭(외부 호출이 여러 번)까지 쓸 상위 항목들.
+        Set<String> hotPlaceKeys = ranked.stream()
             .limit(HOT_PLACE_LIMIT)
+            .map(item -> canonicalTitle(item.title()))
+            .collect(java.util.stream.Collectors.toSet());
+        List<TourismCatalogItemResponse> candidates = ranked.stream()
+            .filter(item -> item.imageUrl() == null &&
+                !IMAGE_LOOKUP_GENERATION.equals(item.details().get(IMAGE_LOOKUP_ATTEMPTED)))
+            .limit(IMAGE_LOOKUP_BATCH)
             .toList();
 
         Map<String, TourismCatalogItemResponse> matches = new HashMap<>();
         Map<String, Boolean> attemptedTitles = new HashMap<>();
         for (TourismCatalogItemResponse candidate : candidates) {
-            if (candidate.imageUrl() != null || "true".equals(candidate.details().get(IMAGE_LOOKUP_ATTEMPTED))) {
-                continue;
-            }
             String titleKey = canonicalTitle(candidate.title());
             attemptedTitles.put(titleKey, true);
             BusanTourismCodes.District district = districtForCrowdingItem(candidate);
@@ -303,6 +346,21 @@ public class TourismCatalogService {
                             canonicalTitle(keyword).contains(canonicalTitle(item.title())))
                         .findFirst()
                         .orElse(null));
+                // 위 한 페이지짜리 검색은 이름이 거의 그대로 걸릴 때만 맞는다. 못 찾으면 상세
+                // 화면이 쓰는 것과 같은 매칭(TourismPlaceMatchService — 키워드 변형·여러 페이지·
+                // 상세 재확인까지 한다)으로 한 번 더 시도한다. 이게 없으면 같은 장소인데 목록에는
+                // 썸네일이 없고 상세로 들어가면 사진이 나오는 어긋남이 생긴다.
+                // 간이 검색이 사진 있는 항목을 못 집었을 때(아예 못 찾았거나, 찾았어도 사진이 없는
+                // 항목일 때) 상세와 같은 매칭기로 한 번 더 간다 — 상세에는 사진이 나오는데 목록만
+                // 비어 있는 어긋남을 없애는 게 목적이라, 사진이 붙는 결과가 나오면 그쪽을 쓴다.
+                if ((match == null || match.imageUrl() == null) && hotPlaceKeys.contains(titleKey)) {
+                    // 상세 화면이 넘기는 것과 똑같이 원본 제목을 그대로 준다(간이 검색용으로 다듬은
+                    // keyword가 아니다) — 같은 입력·같은 매칭기여야 목록과 상세가 같은 결과를 본다.
+                    TourismCatalogItemResponse matched = matchPlaceForImage(candidate.title(), district);
+                    if (matched != null) {
+                        match = matched;
+                    }
+                }
                 if (match != null) {
                     matches.put(titleKey, match);
                 }
@@ -321,7 +379,7 @@ public class TourismCatalogService {
             }
             TourismCatalogItemResponse match = matches.get(titleKey);
             Map<String, String> details = new LinkedHashMap<>(item.details());
-            details.put(IMAGE_LOOKUP_ATTEMPTED, "true");
+            details.put(IMAGE_LOOKUP_ATTEMPTED, IMAGE_LOOKUP_GENERATION);
             if (match == null) {
                 return new TourismCatalogItemResponse(
                     item.id(), item.title(), item.subtitle(), item.address(), item.imageUrl(),
@@ -340,6 +398,25 @@ public class TourismCatalogService {
                 details
             );
         }).toList();
+    }
+
+    /**
+     * 상세 화면과 같은 매칭기로 관광공사 상세를 찾아 사진을 얻는다. 실패(매칭 없음/외부 API 오류)는
+     * null로 삼킨다 — 혼잡도 목록 자체는 사진 없이도 유효하다.
+     */
+    private TourismCatalogItemResponse matchPlaceForImage(String keyword, BusanTourismCodes.District district) {
+        try {
+            TourismPlaceMatchService matcher = placeMatchService.getIfAvailable();
+            if (matcher == null) {
+                return null;
+            }
+            var matched = matcher.find(keyword, district);
+            return matched.matched() && matched.item() != null && matched.item().imageUrl() != null
+                ? matched.item()
+                : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private static List<TourismCatalogItemResponse> todayCrowdingItems(
