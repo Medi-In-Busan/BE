@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -134,9 +135,18 @@ fun BottomNavBar(
                     )
             )
 
+            // 활성 탭이 하나도 없는 화면(탭에 대응하지 않는 push 화면 위에 탭바만 떠 있는 경우)에서
+            // 인덱스를 0으로 떨어뜨리면 캡슐이 첫 탭(홈)으로 미끄러져, 실제로는 다른 화면에 있는데
+            // 홈에 있는 것처럼 보인다 — 그럴 땐 마지막으로 활성이었던 자리에 그대로 둔다.
+            val selectedIndex = tabs.indexOfFirst { it.selected }
+            var lastSelectedIndex by remember { mutableIntStateOf(selectedIndex.coerceAtLeast(0)) }
+            LaunchedEffect(selectedIndex) {
+                if (selectedIndex >= 0) lastSelectedIndex = selectedIndex
+            }
+
             GlassSlidingIndicator(
                 tabCount = tabs.size,
-                selectedIndex = tabs.indexOfFirst { it.selected }.coerceAtLeast(0),
+                selectedIndex = lastSelectedIndex,
                 hazeState = hazeState
             )
 

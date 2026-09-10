@@ -153,8 +153,8 @@ private fun shouldShowBottomBar(backStackEntry: NavBackStackEntry?, mapSelection
         destination.hasRoute(Route.RecommendedTourismCourse::class) -> true
         // 무장애 관광·부산 관광지(언어별 PLACES_KO/EN/JA/ZH) 리스트업 화면만 병원 목록(S-04)과
         // 동일하게 하단 탭바를 노출한다 — 다른 관광 카테고리는 여전히 자체 뒤로가기 버튼이 있는
-        // 일반 push 화면(TourismCatalogScreen.kt 참고). 바텀탭 5개 중 이 화면들에 대응하는 탭은
-        // 없어 이 경우 어떤 탭도 활성 표시되지 않는다.
+        // 일반 push 화면(TourismCatalogScreen.kt 참고). 이 화면들은 추천 웰니스(S-07)에서만
+        // 들어오므로 웰니스 탭을 활성 표시로 유지한다(아래 bottomNavTabs 참고).
         destination.hasRoute(Route.TourismCatalog::class) -> {
             val category = runCatching {
                 TourismCatalogCategory.valueOf(backStackEntry.toRoute<Route.TourismCatalog>().category)
@@ -213,8 +213,12 @@ private fun bottomNavTabs(
             label = homeStrings.quickLinkWellness,
             icon = Icons.Outlined.Spa,
             selectedIcon = Icons.Filled.Spa,
+            // 웰니스에서 "전체보기"로 들어가는 리스트업(부산 관광지/무장애 관광)과 추천 코스도
+            // 이 탭의 하위 화면이다 — 여기서 빼면 활성 탭이 하나도 없게 되고, 그러면 캡슐
+            // 인디케이터가 첫 탭(홈)으로 미끄러져 "홈에 있는 것처럼" 보인다.
             selected = currentDestination.isRouteSelected<Route.Nearby>() ||
-                currentDestination.isRouteSelected<Route.RecommendedTourismCourse>(),
+                currentDestination.isRouteSelected<Route.RecommendedTourismCourse>() ||
+                currentDestination.isRouteSelected<Route.TourismCatalog>(),
             onClick = { navController.navigateToTab(Route.Nearby(hospitalId = "14")) }
         )
     )
