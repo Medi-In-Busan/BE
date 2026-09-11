@@ -4,6 +4,7 @@ import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
 import com.mediinbusan.backend.wellness.dto.TourismPlaceMatchResponse;
 import com.mediinbusan.backend.wellness.repository.WellnessExternalSnapshotRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -26,9 +27,17 @@ class TourismPlaceMatchServiceTest {
     private final WellnessTourismGatewayService gateway = mock(WellnessTourismGatewayService.class);
     private final WellnessExternalSnapshotRepository snapshotRepository = mock(WellnessExternalSnapshotRepository.class);
     private final TourismCatalogTranslationService translationService = passThroughTranslationService();
-    private final TourismCatalogService catalogService = new TourismCatalogService(gateway, snapshotRepository, translationService);
+    private final TourismCatalogService catalogService = new TourismCatalogService(gateway, snapshotRepository, translationService, noPlaceMatchService());
     private final TourismPlaceMatchService service = new TourismPlaceMatchService(gateway, catalogService);
 
+    /**
+     * 혼잡도 사진 보강의 마지막 폴백(TourismPlaceMatchService)은 이 테스트들의 관심사가 아니다 —
+     * 비어 있는 provider를 넣어 그 경로를 타지 않게 한다(getIfAvailable()이 null을 돌려준다).
+     */
+    @SuppressWarnings("unchecked")
+    private static ObjectProvider<TourismPlaceMatchService> noPlaceMatchService() {
+        return mock(ObjectProvider.class);
+    }
     private static TourismCatalogTranslationService passThroughTranslationService() {
         TourismCatalogTranslationService service = mock(TourismCatalogTranslationService.class);
         when(service.localize(any(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));

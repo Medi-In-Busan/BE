@@ -139,10 +139,26 @@ jobs:
             docker image prune -af
             docker builder prune -af
             docker network prune -f
+            # 도커 밖(시스템 로그·apt 캐시)도 같이 비운다 — 루트 볼륨이 8GB뿐이라 수백 MB가 아쉽다.
+            sudo journalctl --vacuum-size=100M || true
+            sudo apt-get clean || true
             echo "=== Disk usage after Docker cleanup ==="
             df -h /
 
-            docker compose -f docker-compose.prod.yml pull
+            # 매 배포에서 바뀌는 건 backend 이미지뿐이라 그것만 pull한다. compose 전체를 pull하면
+            # mysql:8.4 / certbot:latest처럼 위로 갱신되는 태그가 새 다이제스트를 받아오면서,
+            # 실행 중이라 지울 수도 없는 기존 이미지와 나란히 디스크를 차지한다 — 배포와 아무 상관
+            # 없는 이미지 때문에 루트 볼륨이 터졌던 실패가 정확히 이 경우다(mysql 재다운로드).
+            # 그 이미지들은 로컬에 없을 때만 아래 up -d가 알아서 받아온다.
+            if ! docker compose -f docker-compose.prod.yml pull backend; then
+              echo "backend pull 실패 — 디스크 부족일 수 있어 이전 백엔드 컨테이너/이미지를 정리하고 한 번만 다시 시도한다."
+              # 컨테이너가 남아 있으면(멈춰 있어도) 그 이미지는 prune 대상이 아니다. 여기서
+              # 컨테이너를 지우는 순간부터 아래 up -d까지 backend는 잠깐 내려간다.
+              docker compose -f docker-compose.prod.yml rm -sf backend || true
+              docker image prune -af || true
+              df -h /
+              docker compose -f docker-compose.prod.yml pull backend
+            fi
             # 인증서가 아직 없는 최초 배포에서만 실제로 발급을 수행한다(idempotent) —
             # nginx가 뜨기 전에 먼저 실행해야 standalone 모드로 80번 포트를 쓸 수 있다.
             chmod +x nginx/init-letsencrypt.sh

@@ -17,6 +17,7 @@ import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
 import com.mediinbusan.app.domain.tourism.TourismTagGroup
+import com.mediinbusan.app.domain.tourism.busanDistrictOrNull
 import com.mediinbusan.app.domain.tourism.toTourismTagGroup
 import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -210,19 +211,13 @@ class NearbyViewModel @Inject constructor(
             }
     }
 
+    // 판정 규칙은 domain/tourism의 공용 확장에 있다 — 혼잡도 항목을 상세로 넘길 때
+    // (PendingTourismCatalogItem) 같은 규칙으로 구·군을 정해야 핫플레이스 카드와 혼잡도 리스트가
+    // 같은 상세를 연다. 여기서 판정에 실패한 항목은 해운대구 묶음으로 보낸다(랭킹만 쓰는 값이라
+    // 틀려도 목록이 깨지지 않는다).
     private fun districtForItem(
         item: TourismCatalogItem
-    ): BusanDistrict {
-        val districtText = listOfNotNull(
-            item.details["signguNm"],
-            item.details["signguName"],
-            item.address
-        ).joinToString(" ")
-
-        return BusanDistrict.entries.firstOrNull {
-            districtText.contains(it.label)
-        } ?: BusanDistrict.HAEUNDAE
-    }
+    ): BusanDistrict = item.busanDistrictOrNull() ?: BusanDistrict.HAEUNDAE
 
     private fun loadCatalogPreviews(
         languageCode: String

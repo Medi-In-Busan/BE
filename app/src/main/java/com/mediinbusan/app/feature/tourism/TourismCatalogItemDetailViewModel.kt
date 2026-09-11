@@ -41,8 +41,13 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TourismCatalogItemDetailUiState())
     val uiState: StateFlow<TourismCatalogItemDetailUiState> = _uiState
     private val selection = pendingTourismCatalogItem.consume()
-    private val hotPlaceDistrict = selection?.item?.details?.get("hotPlaceDistrict")
-        ?.let { name -> BusanDistrict.entries.find { it.name == name } }
+    // 혼잡도(CROWDING) 항목만 관광공사 상세를 이름으로 다시 찾아 붙인다 — 혼잡도 응답엔 관광지
+    // 이름과 지수밖에 없어서 그대로 그리면 사진·주소·소개가 전부 빈 상세가 된다. 재조회에 쓰는
+    // 구·군은 어느 진입점에서 왔든(핫플레이스 카드 / 혼잡도 리스트) PendingTourismCatalogItem이
+    // 한 규칙으로 확정해 실어 보낸다 — 그래서 여기서는 카테고리만 보면 된다.
+    private val crowdingDistrict = selection
+        ?.takeIf { it.category == TourismCatalogCategory.CROWDING }
+        ?.district
     private var loadJob: Job? = null
     private var nearbyJob: Job? = null
 
@@ -50,12 +55,12 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
         if (selection != null) {
             _uiState.value = TourismCatalogItemDetailUiState(
                 category = selection.category,
-                item = if (hotPlaceDistrict == null) selection.item else null,
+                item = if (crowdingDistrict == null) selection.item else null,
                 selectedTitle = selection.item.title,
                 consumed = true,
-                isLoading = hotPlaceDistrict != null
+                isLoading = crowdingDistrict != null
             )
-            if (hotPlaceDistrict != null) {
+            if (crowdingDistrict != null) {
                 retry()
             } else {
                 recordView(selection.item, selection.category, selection.district)
@@ -77,7 +82,7 @@ class TourismCatalogItemDetailViewModel @Inject constructor(
     fun retry() {
         val selected = selection ?: return
         val original = selected.item
-        val district = hotPlaceDistrict ?: return
+        val district = crowdingDistrict ?: return
         loadJob?.cancel()
         _uiState.update { it.copy(isLoading = true, matchNotFound = false, loadFailed = false) }
         loadJob = viewModelScope.launch {
