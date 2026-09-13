@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.designsystem.CardTitleStyle
 import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
@@ -66,6 +65,7 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedDescription
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
@@ -253,23 +253,8 @@ private fun HotPlaceThumbnail(rank: Int, imageUrl: String?) {
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFFFFE2DA), Color(0xFFFFF5F0), Color(0xFFEAF7FF))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.BarChart,
-                    contentDescription = null,
-                    tint = CoralPrimary,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            // 사진이 없는 항목은 앱 공용 자리표시자로 통일한다(코랄 그라데이션 + 지도 마커).
+            MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 28.dp)
         }
         Surface(
             modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
@@ -329,20 +314,7 @@ private fun AccessiblePlaceCard(place: TourismCatalogItem, onClick: () -> Unit) 
                     modifier = Modifier.fillMaxWidth().height(128.dp)
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(128.dp)
-                        .background(SkyBlue.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Accessible,
-                        contentDescription = null,
-                        tint = SkyBlue,
-                        modifier = Modifier.size(38.dp)
-                    )
-                }
+                MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxWidth().height(128.dp), iconSize = 36.dp)
             }
             Column(
                 modifier = Modifier.padding(15.dp),

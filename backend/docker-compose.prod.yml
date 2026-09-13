@@ -7,6 +7,7 @@
 #   TOURISM_API_SERVICE_KEY, BUSAN_FOOD_API_SERVICE_KEY, KAKAO_REST_API_KEY
 #   CLOVA_OCR_API_URL, CLOVA_OCR_SECRET_KEY
 #   PAPAGO_TRANSLATION_CLIENT_ID, PAPAGO_TRANSLATION_CLIENT_SECRET
+#   GEMINI_API_KEY
 #   DOMAIN, CERTBOT_EMAIL (nginx/Let's Encrypt용 — 민감정보는 아니지만 다른 값들과 같이 .env로 관리)
 # DOCKERHUB_USERNAME과 IMAGE_TAG는 배포 스크립트(.github/workflows/backend-deploy.yml)가
 # 매 배포 시점에 셸 환경변수로 채워 넘긴다 — .env에 넣어둘 필요 없다(비워두면 latest로 동작).
@@ -56,6 +57,10 @@ services:
       CLOVA_OCR_SECRET_KEY: ${CLOVA_OCR_SECRET_KEY}
       PAPAGO_TRANSLATION_CLIENT_ID: ${PAPAGO_TRANSLATION_CLIENT_ID}
       PAPAGO_TRANSLATION_CLIENT_SECRET: ${PAPAGO_TRANSLATION_CLIENT_SECRET}
+      # 자가진단 채팅(diagnosischat)이 쓰는 Gemini 키. 없으면 자가진단 채팅만 실패한다.
+      # 모델명(GEMINI_MODEL)은 여기서 넘기지 않는다 — 넘기면 .env에 값이 없을 때 빈 문자열이
+      # 들어가 application.yml의 기본값(${GEMINI_MODEL:gemini-3.6-flash})을 덮어버린다.
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       TZ: Asia/Seoul
     networks: [mediinbusan]
 

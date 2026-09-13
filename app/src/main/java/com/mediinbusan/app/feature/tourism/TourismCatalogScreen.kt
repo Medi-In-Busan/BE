@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Close
@@ -107,6 +106,7 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedTourismItemCategoryLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
@@ -119,7 +119,6 @@ import com.mediinbusan.app.core.ui.FilterChipPill
 import com.mediinbusan.app.core.ui.CardRevealPace
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
-import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberFavoriteTogglePop
@@ -1209,17 +1208,21 @@ private fun rememberTourismItemDistanceLabel(item: TourismCatalogItem): String? 
 @Composable
 private fun TourismCardBody(item: TourismCatalogItem, distanceLabel: String?) {
     val strings = LocalAppStrings.current
-    item.imageUrl?.let { imageUrl ->
+    // 사진이 없으면 예전엔 이미지 자리를 통째로 접었다 — 사진 있는 카드와 나란히 놓이면 그 항목만
+    // 반쪽짜리로 보여서, 같은 높이의 공용 자리표시자(MapMarkerFallbackThumbnail)로 채운다.
+    if (item.imageUrl != null) {
         AsyncImageBox(
-            model = imageUrl,
+            model = item.imageUrl,
             contentDescription = item.title,
             modifier = Modifier.fillMaxWidth().height(176.dp)
         )
+    } else {
+        MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxWidth().height(176.dp), iconSize = 44.dp)
     }
     Column(
         modifier = Modifier.padding(
             start = 16.dp,
-            top = if (item.imageUrl == null) 16.dp else 0.dp,
+            top = 0.dp,
             end = 16.dp,
             bottom = 16.dp
         ),
@@ -1293,14 +1296,10 @@ private fun TourismGridPlaceCard(
                 AsyncImageBox(model = item.imageUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
             } else {
                 // TourAPI가 사진을 안 내려준 항목 — CoralPrimaryContainer(옅은 핑크) 배경만 남으면
-                // 흰 화면 위 그리드에서 "빈 카드처럼" 보여서(가운데만 흰 화면으로 보인다는 문의의
-                // 실제 원인 중 하나), 사진이 없다는 걸 분명히 보여주는 아이콘을 얹는다.
-                Icon(
-                    imageVector = Icons.Default.Place,
-                    contentDescription = null,
-                    tint = CoralPrimary.copy(alpha = 0.35f),
-                    modifier = Modifier.align(Alignment.Center).size(40.dp)
-                )
+                // 흰 화면 위 그리드에서 "빈 카드처럼" 보인다(가운데만 흰 화면으로 보인다는 문의의
+                // 실제 원인 중 하나). 예전엔 Place 아이콘 하나만 얹었는데, 다른 화면의 "사진 없음"과
+                // 같은 모양(코랄 그라데이션 + 지도 마커)으로 맞춘다.
+                MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 36.dp)
             }
             Box(
                 modifier = Modifier.fillMaxSize().background(

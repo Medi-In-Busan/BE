@@ -71,6 +71,7 @@ import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.fallbackBannerImageFor
@@ -339,15 +340,10 @@ private fun TourismCourseHero(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // 다른 화면(주변 관광지 카드·즐겨찾기)과 같은 공용 폴백 배너를 쓴다
-                        // (core/ui/FallbackBannerImage.kt) — 이름 텍스트를 다시 그리지 않는 건
-                        // 바로 아래 어두운 그라데이션 위에 이미 스톱 이름이 떠 있어서다.
-                        Image(
-                            painter = painterResource(id = fallbackBannerImageFor(item.id)),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        // 예전엔 이 자리에 항목 이름을 한 번 더 크게 찍었는데, 아래 오버레이에
+                        // "N. 이름"이 이미 있어 같은 글자가 두 번 보였다 — 다른 관광 카드와 같은
+                        // 공용 자리표시자로 바꾼다.
+                        MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 44.dp)
                     }
                 }
                 Box(
