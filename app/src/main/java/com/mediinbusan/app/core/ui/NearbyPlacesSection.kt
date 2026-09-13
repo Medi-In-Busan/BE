@@ -1,44 +1,30 @@
 package com.mediinbusan.app.core.ui
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
-import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
+import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import java.util.Locale
@@ -84,30 +70,21 @@ fun NearbyPlacesSection(
     }
 }
 
-/** 썸네일 + 이름 + 거리 한 줄짜리 가벼운 카드(guide_tourism_place_detail.png 기준 — 종류 배지는 뺐다). */
+/** 사진이 카드를 채우고, 거리 배지·이름·세부 분류가 그 위에 얹히는 카드(core/ui/NearbyPhotoCard.kt). */
 @Composable
 private fun NearbyPlaceCard(place: Place, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(164.dp)
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.08f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(DividerColor)
-        ) {
-            // 사진이 없는 장소가 많다. 상세 히어로의 마스코트 일러스트가 아니라 목록·카드용 폴백
-            // 배너를 쓴다 — 같은 캐릭터를 카드마다 반복하면 카드가 전부 똑같아 보여 구분이 안 된다.
+    val language = LocalAppStrings.current.language
+    val visual = remember(place.type, place.category) { placeKindVisual(place.type, place.category) }
+    NearbyPhotoCard(
+        title = place.name,
+        distanceLabel = place.distanceFromHospitalMeters?.toNearbyDistanceLabel(),
+        onClick = onClick,
+        image = {
+            // 웰니스 API 원문에 사진이 비어 있는 장소가 많다 — 예전엔 항목과 무관한 부산 풍경
+            // 배너(fallbackBannerImageFor)를 끌어다 썼는데, 사진이 카드를 통째로 채우게 바뀌면서
+            // "이 장소의 사진"으로 읽혀 오해를 준다. 목록에서 이 장소를 볼 때와 같은 자리표시자
+            // (PlaceFallbackThumbnail: 종류별 색 그라데이션 + 종류 아이콘)를 그대로 쓴다 — 지도
+            // 관광·음식 목록에서 보던 그림이 상세로 들어갔다고 달라지면 같은 곳으로 안 읽힌다.
             if (place.imageUrl != null) {
                 AsyncImageBox(
                     model = place.imageUrl,
@@ -115,51 +92,27 @@ private fun NearbyPlaceCard(place: Place, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Image(
-                    painter = painterResource(id = fallbackBannerImageFor(place.id)),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                PlaceFallbackThumbnail(visual = visual, modifier = Modifier.fillMaxSize(), iconSize = 44.dp)
             }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = place.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
+        },
+        meta = {
+            // 어두운 그라데이션 위라 분류 아이콘도 종류별 색(visual.ink) 대신 흰색으로 낸다 —
+            // 옅은 색 아이콘은 사진 위에서 사실상 안 보인다.
+            Icon(
+                imageVector = visual.icon,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.82f),
+                modifier = Modifier.size(13.dp)
             )
-            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 아예 안 보여준다.
-            place.distanceFromHospitalMeters?.let { meters ->
-                Spacer(modifier = Modifier.width(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = meters.toNearbyDistanceLabel(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary,
-                        maxLines = 1
-                    )
-                }
-            }
+            Text(
+                text = place.category.translatedLabel(language),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.82f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
-    }
+    )
 }
 
 private fun Double.toNearbyDistanceLabel(): String =
