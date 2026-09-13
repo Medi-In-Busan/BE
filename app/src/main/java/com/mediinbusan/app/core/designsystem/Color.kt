@@ -41,6 +41,17 @@ val CoralMuted = Color(0xFFF4707F)
 // 명암 없는 밝은 사진 위에서도 또렷하게 읽히도록 하되, 주텍스트(검정)보다는 확실히 옅게 둔다.
 val HeroBodyGray = Color(0xFF757580)
 
+// "부산 관광지" 계열 화면(관광 카탈로그 리스트업 TourismCatalogScreen, 상세
+// TourismCatalogItemDetailScreen) 전용 포인트 핑크. 원래 리스트업 화면이 이 값을 자기 파일에만
+// private로 갖고 있었는데, 상세 화면은 그걸 모른 채 앱 전역 CoralPrimary를 써서 같은 "부산 관광지"
+// 경험 안에서 핑크가 두 가지로 보였다 — 한 곳(여기)에 모아 두 화면이 항상 같은 값을 쓰게 한다.
+val TourismAccentPink = Color(0xFFFD3569)
+val TourismAccentPinkContainer = Color(0xFFFFE3EA)
+
+// TourismAccentPink의 "글자용" 짝 — CoralInk와 같은 이유(면 색을 작은 글자에 그대로 쓰면 옅은
+// 배경 위에서 흐리게 뜬다).
+val TourismAccentInk = Color(0xFFC10F44)
+
 // 로고 워드마크 "BUSAN" 포인트 컬러
 val SkyBlue = Color(0xFF0B84D2)
 

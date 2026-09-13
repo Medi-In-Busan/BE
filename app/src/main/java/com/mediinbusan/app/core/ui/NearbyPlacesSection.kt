@@ -19,12 +19,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,14 +34,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mediinbusan.app.core.designsystem.CoralInk
-import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
-import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import java.util.Locale
@@ -67,29 +63,15 @@ fun NearbyPlacesSection(
     // 제목은 "주변 관광지" / "Nearby: Cafe & dining"처럼 지금 보고 있는 장소의 종류를 그대로 넣는다.
     val typeLabel = strings.placeTypeLabels[anchorType.name] ?: strings.allLabel
     Column(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.NearMe,
-                    contentDescription = null,
-                    tint = CoralPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = strings.nearbySameTypeTitleFormat.format(typeLabel),
-                    style = SectionTitleStyle,
-                    color = TextPrimary
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            // 이 목록이 무엇을 기준으로 뽑힌 건지 한 줄로 밝힌다 — 근거 없는 추천처럼 보이지 않게.
-            Text(
-                text = strings.nearbySameTypeSubtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
-        }
+        // 아이콘·부제("이 목록이 무엇을 기준으로 뽑혔는지") 없이 굵은 제목 한 줄만 — 참고 디자인
+        // (guide_tourism_place_detail.png)이 이 자리를 가볍게 쓴다.
+        Text(
+            text = strings.nearbySameTypeTitleFormat.format(typeLabel),
+            style = SectionTitleStyle,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = 20.dp),
@@ -102,11 +84,9 @@ fun NearbyPlacesSection(
     }
 }
 
-/** 썸네일 + 거리 배지 + 이름 + 세부 분류 한 줄짜리 카드. */
+/** 썸네일 + 이름 + 거리 한 줄짜리 가벼운 카드(guide_tourism_place_detail.png 기준 — 종류 배지는 뺐다). */
 @Composable
 private fun NearbyPlaceCard(place: Place, onClick: () -> Unit) {
-    val language = LocalAppStrings.current.language
-    val visual = remember(place.type, place.category) { placeKindVisual(place.type, place.category) }
     Column(
         modifier = Modifier
             .width(164.dp)
@@ -142,50 +122,41 @@ private fun NearbyPlaceCard(place: Place, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 배지를 아예 안 단다.
-            place.distanceFromHospitalMeters?.let { meters ->
-                Text(
-                    text = meters.toNearbyDistanceLabel(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = CoralInk,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(Color.White.copy(alpha = 0.92f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-            }
         }
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = place.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                // 이름이 한 줄인 카드와 두 줄인 카드가 섞이면 아래 분류 줄의 높이가 어긋난다 —
-                // 두 줄 자리를 항상 잡아 카드들의 바닥선을 맞춘다.
-                minLines = 2
+                modifier = Modifier.weight(1f, fill = false)
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = visual.icon,
-                    contentDescription = null,
-                    tint = visual.ink,
-                    modifier = Modifier.size(13.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = place.category.translatedLabel(language),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 아예 안 보여준다.
+            place.distanceFromHospitalMeters?.let { meters ->
+                Spacer(modifier = Modifier.width(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Place,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = meters.toNearbyDistanceLabel(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
