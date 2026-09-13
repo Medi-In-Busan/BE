@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +55,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,6 +73,7 @@ import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.EmptyState
+import com.mediinbusan.app.core.ui.fallbackBannerImageFor
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
@@ -335,22 +339,15 @@ private fun TourismCourseHero(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(CoralPrimaryContainer, Color(0xFFEAF7FF))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = item.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextSecondary
-                            )
-                        }
+                        // 다른 화면(주변 관광지 카드·즐겨찾기)과 같은 공용 폴백 배너를 쓴다
+                        // (core/ui/FallbackBannerImage.kt) — 이름 텍스트를 다시 그리지 않는 건
+                        // 바로 아래 어두운 그라데이션 위에 이미 스톱 이름이 떠 있어서다.
+                        Image(
+                            painter = painterResource(id = fallbackBannerImageFor(item.id)),
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
                 Box(
@@ -653,10 +650,20 @@ private fun CourseStopRow(stop: RecommendedTourismStop, selected: Boolean, onCli
                     Text(detail, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
-            stop.item.imageUrl?.let { imageUrl ->
+            val imageUrl = stop.item.imageUrl
+            if (imageUrl != null) {
                 AsyncImageBox(
                     model = imageUrl,
                     contentDescription = stop.item.title,
+                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(14.dp))
+                )
+            } else {
+                // 예전엔 사진이 없으면 이 자리가 통째로 비었다 — 다른 화면과 같은 공용 폴백
+                // 배너를 쓴다(core/ui/FallbackBannerImage.kt).
+                Image(
+                    painter = painterResource(id = fallbackBannerImageFor(stop.item.id)),
+                    contentDescription = stop.item.title,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.size(72.dp).clip(RoundedCornerShape(14.dp))
                 )
             }

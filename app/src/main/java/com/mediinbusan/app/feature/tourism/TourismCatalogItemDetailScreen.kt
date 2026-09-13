@@ -3,102 +3,81 @@ package com.mediinbusan.app.feature.tourism
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.HealthAndSafety
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Route
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.SupportAgent
-import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mediinbusan.app.R
 import com.mediinbusan.app.core.common.careProfile
 import com.mediinbusan.app.core.common.resolveBusanHighlight
-import com.mediinbusan.app.core.designsystem.BadgeText
-import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
-import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.designsystem.TourismAccentPink
+import com.mediinbusan.app.core.designsystem.TourismAccentPinkContainer
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedCopy
 import com.mediinbusan.app.core.i18n.translatedLabel
-import com.mediinbusan.app.core.i18n.translatedRecoveryHint
 import com.mediinbusan.app.core.ui.AsyncImageBox
 import com.mediinbusan.app.core.ui.AtAGlanceRow
-import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.CautionList
+import com.mediinbusan.app.core.ui.CenteredTopAppBar
 import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
-import com.mediinbusan.app.core.ui.MediTipContent
 import com.mediinbusan.app.core.ui.NearbyPlacesSection
 import com.mediinbusan.app.core.ui.TravelerHelpContent
 import com.mediinbusan.app.core.ui.VisitInfo
@@ -110,11 +89,9 @@ import com.mediinbusan.app.data.place.toPlaceType
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TourismCatalogItemDetailScreen(
     onBack: () -> Unit,
-    onNavigateHome: () -> Unit,
     onSelectPlace: (String) -> Unit,
     recentItemId: String? = null,
     viewModel: TourismCatalogItemDetailViewModel = hiltViewModel()
@@ -122,7 +99,6 @@ fun TourismCatalogItemDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val context = LocalContext.current
-    var mapFocusRequestId by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(recentItemId) {
         if (recentItemId != null) viewModel.loadFromRecent(recentItemId)
@@ -142,61 +118,58 @@ fun TourismCatalogItemDetailScreen(
 
     val item = uiState.item
     val category = uiState.category
-    if (item != null && category != null) {
-        // 탑바(BackOnlyNavigationBar) 없이, 뒤로가기·지도·홈 아이콘을 히어로 사진 위에 흰색으로
-        // 바로 얹는다(TourismHero) — 사진이 화면 폭을 꽉 채우고 상태바 아래까지 올라간다.
-        TourismDetailLoaded(
-            item = item,
-            category = category,
-            // 관광공사 상세가 붙지 않은 채(목록에서 넘어온 원본만으로) 그리는 중이라는 표시.
-            showMatchNotice = uiState.matchNotFound,
-            nearbyPlaces = uiState.nearbySamePlaces,
-            onSelectPlace = onSelectPlace,
-            mapFocusRequestId = mapFocusRequestId,
-            modifier = Modifier.fillMaxSize().background(HomeBackgroundPink),
-            onOpenMap = {
-                context.launchExternalDirections(
-                    latitude = item.latitude,
-                    longitude = item.longitude,
-                    label = item.title,
-                    fallbackAddress = item.address.orEmpty()
-                )
-            },
-            onOpenLink = { url ->
-                context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-            },
-            onBack = onBack,
-            onNavigateHome = onNavigateHome,
-            onMapDetailsClick = if (
-                category != TourismCatalogCategory.CROWDING &&
-                item.latitude != null &&
-                item.longitude != null
-            ) {
-                { mapFocusRequestId++ }
-            } else {
-                null
-            }
-        )
-        return
-    }
 
+    // 탑바는 로딩·오류·완료 세 상태 모두 core/ui의 공용 CenteredTopAppBar를 쓴다 — 흰 배경,
+    // 검정 뒤로가기, 가운데 정렬된 굵은 제목뿐이고 오른쪽엔 아무 아이콘도 없다. 관광 카탈로그
+    // 리스트업(TourismCatalogScreen)·웰니스 장소 상세(PlaceDetailScreen)도 같은 걸 쓴다.
+    //
+    // 혼잡도(CROWDING) 항목은 진입 직후 "관광지 혼잡도"였다가 관광공사 상세 매칭에 성공하면
+    // "부산 관광지"로 바뀐다(TourismCatalogItemDetailViewModel.retry) — 실제로는 그 사이 카테고리가
+    // 정말 바뀌는 게 맞지만, 화면에서는 이 전환이 탑바가 다른 화면인 것처럼 깜빡이는 걸로만
+    // 보인다. 핫플레이스로 들어온 항목은 로딩 중에도 최종 상태와 같은 "부산 관광지"를 고정으로
+    // 보여줘 탑바 자체는 한 번도 바뀌지 않게 한다.
+    val topBarTitle = if (category == null || category == TourismCatalogCategory.CROWDING) {
+        strings.tourism.busanPlacesListTitle
+    } else {
+        category.translatedLabel(strings.language)
+    }
     Scaffold(
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         topBar = {
-            BackOnlyNavigationBar(
-                onBack = onBack,
-                background = HomeBackgroundPink,
-                onHomeClick = onNavigateHome
-            )
+            CenteredTopAppBar(title = topBarTitle, onBack = onBack)
         }
     ) { innerPadding ->
-        when {
-            uiState.isLoading -> LoadingState(Modifier.padding(innerPadding))
-            uiState.loadFailed -> ErrorState(
-                strings.tourism.placeMatchErrorMessage,
-                Modifier.padding(innerPadding),
-                viewModel::retry
+        if (item != null && category != null) {
+            TourismDetailLoaded(
+                item = item,
+                category = category,
+                // 관광공사 상세가 붙지 않은 채(목록에서 넘어온 원본만으로) 그리는 중이라는 표시.
+                showMatchNotice = uiState.matchNotFound,
+                nearbyPlaces = uiState.nearbySamePlaces,
+                onSelectPlace = onSelectPlace,
+                modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding()),
+                bottomContentPadding = innerPadding.calculateBottomPadding(),
+                onOpenMap = {
+                    context.launchExternalDirections(
+                        latitude = item.latitude,
+                        longitude = item.longitude,
+                        label = item.title,
+                        fallbackAddress = item.address.orEmpty()
+                    )
+                },
+                onOpenLink = { url ->
+                    context.launchIntentSafely(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
             )
+        } else {
+            when {
+                uiState.isLoading -> LoadingState(Modifier.padding(innerPadding))
+                uiState.loadFailed -> ErrorState(
+                    strings.tourism.placeMatchErrorMessage,
+                    Modifier.padding(innerPadding),
+                    viewModel::retry
+                )
+            }
         }
     }
 }
@@ -208,17 +181,13 @@ private fun TourismDetailLoaded(
     showMatchNotice: Boolean,
     nearbyPlaces: List<Place>,
     onSelectPlace: (String) -> Unit,
-    mapFocusRequestId: Int,
     onOpenMap: () -> Unit,
     onOpenLink: (String) -> Unit,
-    onBack: () -> Unit,
-    onNavigateHome: () -> Unit,
-    onMapDetailsClick: (() -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bottomContentPadding: Dp = 0.dp
 ) {
     val strings = LocalAppStrings.current
     val context = LocalContext.current
-    val listState = rememberLazyListState()
     val sectionLabels = strings.language.detailSectionLabels()
     // TourAPI contenttypeid를 웰니스 장소와 똑같은 규칙으로 PlaceType에 옮겨(data/place/PlaceMapper.kt),
     // 장소 상세와 같은 케어 프로필·명소 큐레이션을 그대로 재사용한다 — 같은 장소가 어느 화면으로
@@ -238,9 +207,6 @@ private fun TourismDetailLoaded(
     // 전용 카드로 뺀다 — 라벨+값 한 줄로 취급하기엔 값 길이가 제각각이고(한 줄 ~ 여러 문단),
     // 대표메뉴처럼 칩으로 흩어야 읽히는 값이 섞여 있다. 카드 내용은 웰니스 장소 상세와 공유한다.
     val visitInfo = remember(item.details) { VisitInfo.fromDetails(item.details) }
-    val labeledDetails = item.details.entries.mapNotNull { (key, value) ->
-        strings.tourism.detailFieldLabels[key]?.let { label -> DetailValue(key, label, value) }
-    }
     val mapPin = remember(item.id, item.latitude, item.longitude) {
         val latitude = item.latitude
         val longitude = item.longitude
@@ -251,172 +217,156 @@ private fun TourismDetailLoaded(
         }
     }
 
-    LaunchedEffect(mapFocusRequestId) {
-        if (mapFocusRequestId > 0 && mapPin != null) {
-            listState.animateScrollToItem(TOURISM_DETAIL_MAP_ITEM_INDEX)
-        }
-    }
-
-    // 이 화면에는 하단 바가 없고 루트 Scaffold도 인셋을 하나도 소비하지 않으므로(MediInBusanApp의
-    // contentWindowInsets = WindowInsets(0.dp)), 마지막 카드가 기기 제스처/내비게이션 바에 그대로
-    // 깔린다 — 그만큼을 콘텐츠 아래 여백에 더한다.
-    val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
     LazyColumn(
-        state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp + navigationBarInset),
+        // 화면을 감싼 Scaffold가 하단 인셋(기기 제스처/내비게이션 바)을 이미 계산해 넘겨준다
+        // (bottomContentPadding) — 그 위에 마지막 카드와 인셋 사이 여백만 더한다.
+        contentPadding = PaddingValues(bottom = 32.dp + bottomContentPadding),
         verticalArrangement = Arrangement.spacedBy(SectionSpacing)
     ) {
         item {
-            TourismHero(
-                item = item,
-                onBack = onBack,
-                onNavigateHome = onNavigateHome,
-                onMapDetailsClick = onMapDetailsClick
-            )
+            TourismHero(item = item)
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(SectionSpacing)) {
-                // 별도 item으로 빼지 않는다 — 아래 TOURISM_DETAIL_MAP_ITEM_INDEX가 가리키는 지도
-                // 카드 위치가 이 배너의 유무에 따라 달라지면 안 된다.
                 if (showMatchNotice) MatchNotFoundNotice()
                 TourismSummaryCard(item = item, category = category)
             }
         }
         item {
-            CurationSectionCard(title = strings.placeCuration.atAGlanceTitle) {
-                AtAGlanceRow(profile = careProfile)
-            }
+            // 참고 디자인(guide_tourism_place_detail.png)엔 이 pill 줄에 카드 배경도 "한눈에 보기"
+            // 제목도 없다 — 흰 카드로 감싸던 걸 걷어내고 캔버스 위에 바로 얹는다. AtAGlanceRow
+            // 자체(pill·출처 각주)는 웰니스 장소 상세와 공유하는 내용이라 그대로 둔다.
+            AtAGlanceRow(profile = careProfile, modifier = Modifier.padding(horizontal = 20.dp))
         }
-        mapPin?.let { pin ->
-            item {
-                KakaoMapView(
-                    pins = listOf(pin),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .height(260.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                )
-            }
-        }
-        // 운영시간·대표메뉴 같은 사실 정보를 소개문보다 먼저 둔다 — 웰니스 장소 상세도
-        // 기본정보 → 방문정보 → 소개 순서라, 같은 장소를 어느 화면으로 들어가든 읽는 순서가 같다.
-        if (!visitInfo.isEmpty) {
-            item {
-                CurationSectionCard(
-                    title = strings.placeCuration.visitInfoTitle,
-                    icon = Icons.Default.Schedule
-                ) {
-                    VisitInfoContent(
-                        visitInfo = visitInfo,
-                        onOpenHomepage = onOpenLink
-                    )
-                }
-            }
-        }
-        // 소개는 이제 사라지지 않는다 — TourAPI subtitle이 비면 부산 명소 큐레이션 한 줄로,
-        // 그것도 없으면 유형별 기본 소개문으로 내려간다(웰니스 장소 상세와 같은 폴백 체인).
-        val introText = item.subtitle?.takeIf { it.isNotBlank() }
-            ?: highlightCopy?.tagline
-            ?: strings.placeCuration.typeIntroFallbacks[placeType.name]
-        introText?.let { description ->
-            item { DescriptionCard(title = sectionLabels.introduction, description = description) }
-        }
-        highlightCopy?.let { copy ->
-            item {
-                CurationSectionCard(
-                    title = strings.placeCuration.mediTipTitle,
-                    icon = Icons.Default.TipsAndUpdates
-                ) {
-                    MediTipContent(copy = copy)
-                }
-            }
-        }
+        // 지도부터 주변 관광지까지는 전부 한 item(Column) 안에서 같은 간격(TightSectionGap)을
+        // 쓴다 — 예전엔 LazyColumn의 기본 간격(SectionSpacing=20dp) 위에 섹션마다 별도 Spacer를
+        // 더해서 구간마다 여백이 조금씩 달랐다(사용자가 "다 동일하게 보인다"고 지적한 지점).
+        // 한 Column으로 묶어 모든 구간이 정확히 같은 값을 쓰게 한다.
         item {
-            CurationSectionCard(
-                title = strings.nearby.recoveryCheckTitle,
-                icon = Icons.Default.HealthAndSafety
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        placeType.translatedRecoveryHint(strings.language),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(TightSectionGap)) {
+                // 길찾기 버튼을 지도 카드 안(우하단)에 겹쳐 넣는다 — 예전엔 화면 맨 아래
+                // "위치 및 이동" 카드에 따로 있어서, 지도를 보고 바로 길을 나서려면 다시 스크롤해
+                // 내려가야 했다. 지도와 길찾기가 한 시선 안에 있는 게 자연스럽다.
+                mapPin?.let { pin ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .height(260.dp)
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = RoundedCornerShape(24.dp),
+                                ambientColor = Color.Black.copy(alpha = 0.10f),
+                                spotColor = Color.Black.copy(alpha = 0.10f)
+                            )
+                            .clip(RoundedCornerShape(24.dp))
+                    ) {
+                        KakaoMapView(pins = listOf(pin), modifier = Modifier.fillMaxSize())
+                        // 텍스트 라벨 없이 아이콘만 있는 동그란 FAB — 지도 위의 "길찾기"는 구글맵·
+                        // 카카오맵·네이버맵 전부 이 모양(원형, 내비게이션 아이콘만)을 쓰는 국제적으로
+                        // 굳어진 관례라 문구 없이도 바로 읽힌다. 기본 크기(56dp)는 살짝 크다는 피드백
+                        // 이후 48dp로 소폭만 줄였다 — 40dp까지 줄였을 땐 눈에 안 띈다는 반대 피드백이
+                        // 있었어서, 그 사이 지점이다. 그림자·흰 테두리 링은 그대로 유지해 대비는 유지.
+                        // 아이콘은 병원 상세·웰니스 장소 상세의 길찾기 버튼과 같은 걸 쓴다
+                        // (R.drawable.hospital_detail_findmap).
+                        FloatingActionButton(
+                            onClick = onOpenMap,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(16.dp)
+                                .size(48.dp)
+                                .border(2.dp, Color.White, CircleShape),
+                            containerColor = TourismAccentPink,
+                            contentColor = Color.White,
+                            shape = CircleShape,
+                            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 10.dp, pressedElevation = 6.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.hospital_detail_findmap),
+                                contentDescription = strings.hospitalDetail.directionsButton,
+                                modifier = Modifier.size(19.dp),
+                                colorFilter = ColorFilter.tint(Color.White)
+                            )
+                        }
+                    }
+                }
+                // 운영시간·대표메뉴 같은 사실 정보를 소개문보다 먼저 둔다 — 웰니스 장소 상세도
+                // 기본정보 → 방문정보 → 소개 순서라, 같은 장소를 어느 화면으로 들어가든 읽는 순서가 같다.
+                // 흰 카드+아이콘(CurationSectionCard)이던 걸 다른 섹션들과 같은 톤(PlainSection —
+                // 카드 배경 없이 굵은 제목만)으로 맞췄다.
+                if (!visitInfo.isEmpty) {
+                    PlainSection(title = strings.placeCuration.visitInfoTitle) {
+                        VisitInfoContent(
+                            visitInfo = visitInfo,
+                            onOpenHomepage = onOpenLink
+                        )
+                    }
+                }
+                // 소개는 이제 사라지지 않는다 — TourAPI subtitle이 비면 부산 명소 큐레이션 한 줄로,
+                // 그것도 없으면 유형별 기본 소개문으로 내려간다(웰니스 장소 상세와 같은 폴백 체인).
+                val introText = item.subtitle?.takeIf { it.isNotBlank() }
+                    ?: highlightCopy?.tagline
+                    ?: strings.placeCuration.typeIntroFallbacks[placeType.name]
+                introText?.let { description ->
+                    PlainSection(title = sectionLabels.introduction) {
+                        Text(description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                    }
+                }
+                PlainSection(title = strings.nearby.recoveryCheckTitle) {
                     CautionList(cautions = careProfile.cautions)
                     // 면책 문구는 반드시 남긴다 — 위 안내는 의료 자문이 아니다.
                     Text(
                         strings.nearby.recoveryDisclaimer,
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+                item.details["congestionRate"]?.let { congestionRate ->
+                    CongestionCard(
+                        label = strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
+                        value = congestionRate,
+                        dateLabel = strings.tourism.detailFieldLabels["baseYmd"],
+                        date = item.details["baseYmd"]
+                    )
+                }
+                PlainSection(title = strings.placeCuration.travelerHelpTitle) {
+                    TravelerHelpContent(onDial = { context.dialPhone(it) })
+                }
+                // 좌표가 있는 항목은 위 지도 카드에 이미 길찾기 버튼이 붙어 있다 — 여기서 또 넣으면
+                // 같은 동작의 진입점이 화면에 둘이 된다. 좌표가 없어 지도 카드 자체가 안 그려진
+                // 항목(주소만 있는 경우)에서만 이 버튼이 유일한 길찾기 진입점이 된다.
+                val canOpenMapHere = mapPin == null && (item.latitude != null && item.longitude != null || item.address != null)
+                if (canOpenMapHere || externalLinkUrl != null) {
+                    DetailSurface {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(sectionLabels.directions, style = SectionTitleStyle, color = TextPrimary)
+                            ActionButtons(
+                                canOpenMap = canOpenMapHere,
+                                externalLinkUrl = externalLinkUrl,
+                                category = category,
+                                onOpenMap = onOpenMap,
+                                onOpenLink = onOpenLink
+                            )
+                        }
+                    }
+                }
+                // 병원 상세(S-05)·장소 상세와 같은 자리·같은 구성이다 — 이 항목을 다 읽은 뒤 "그럼
+                // 근처의 같은 종류는?"으로 이어지도록 본문 제일 아래에 둔다. 좌표가 없는 항목
+                // (관광사진·혼잡도 등)에서는 ViewModel이 조회 자체를 하지 않아 목록이 비고, 그러면
+                // 이 섹션도 통째로 빠진다.
+                if (nearbyPlaces.isNotEmpty()) {
+                    NearbyPlacesSection(
+                        anchorType = placeType,
+                        places = nearbyPlaces,
+                        onSelectPlace = onSelectPlace
                     )
                 }
             }
         }
-        item.details["congestionRate"]?.let { congestionRate ->
-            item {
-                CongestionCard(
-                    label = strings.tourism.detailFieldLabels["congestionRate"].orEmpty(),
-                    value = congestionRate,
-                    dateLabel = strings.tourism.detailFieldLabels["baseYmd"],
-                    date = item.details["baseYmd"]
-                )
-            }
-        }
-        // 방문 정보 카드로 빠진 키는 여기서 뺀다 — 같은 값이 두 카드에 겹쳐 나오면 안 된다.
-        val secondaryDetails = labeledDetails.filterNot {
-            it.key in setOf("congestionRate", "baseYmd") || it.key in VisitInfo.DetailKeys
-        }
-        if (secondaryDetails.isNotEmpty()) {
-            // 남는 건 지역·요일·난이도·거리처럼 성격이 제각각인 부수 항목이라 "방문 정보"가 아니라
-            // 병원 상세와 같은 "기타정보"로 부른다(CLAUDE.md §5 — 같은 뜻의 문구를 새로 만들지 않는다).
-            item { DetailInfoCard(title = strings.hospitalDetail.otherInfoSectionTitle, details = secondaryDetails) }
-        }
-        item {
-            CurationSectionCard(
-                title = strings.placeCuration.travelerHelpTitle,
-                icon = Icons.Default.SupportAgent
-            ) {
-                TravelerHelpContent(onDial = { context.dialPhone(it) })
-            }
-        }
-        // 좌표·주소·외부 링크가 하나도 없는 항목(관광공사 매칭에 실패한 핫플레이스 등)에서는
-        // 버튼이 한 개도 안 그려져 제목만 남은 빈 카드가 됐다 — 그럴 땐 섹션째 뺀다.
-        val canOpenMap = item.latitude != null && item.longitude != null || item.address != null
-        if (canOpenMap || externalLinkUrl != null) {
-            item {
-                DetailSurface {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(sectionLabels.directions, style = SectionTitleStyle, color = TextPrimary)
-                        ActionButtons(
-                            canOpenMap = canOpenMap,
-                            externalLinkUrl = externalLinkUrl,
-                            category = category,
-                            onOpenMap = onOpenMap,
-                            onOpenLink = onOpenLink
-                        )
-                    }
-                }
-            }
-        }
-        // 병원 상세(S-05)·장소 상세와 같은 자리·같은 구성이다 — 이 항목을 다 읽은 뒤 "그럼 근처의
-        // 같은 종류는?"으로 이어지도록 본문 제일 아래에 둔다(아래 출처 각주는 섹션이 아니라 푸터라
-        // 그대로 맨 끝에 남는다). 좌표가 없는 항목(관광사진·혼잡도 등)에서는 ViewModel이 조회 자체를
-        // 하지 않아 목록이 비고, 그러면 이 섹션도 통째로 빠진다.
-        if (nearbyPlaces.isNotEmpty()) {
-            item {
-                NearbyPlacesSection(
-                    anchorType = placeType,
-                    places = nearbyPlaces,
-                    onSelectPlace = onSelectPlace
-                )
-            }
-        }
         // 이 화면도 앱이 직접 쓴 안내(가이드·팁·진료 전후 체크)와 TourAPI 원문이 섞여 있어,
-        // 어디까지가 공식 데이터인지 밝힌다. 반드시 리스트 맨 끝이다 — 앞에 끼우면 아래
-        // TOURISM_DETAIL_MAP_ITEM_INDEX가 가리키는 지도 카드 위치가 어긋난다.
+        // 어디까지가 공식 데이터인지 밝힌다. 반드시 리스트 맨 끝이다.
         item {
             Text(
                 text = strings.placeCuration.officialDataCreditLabel,
@@ -439,7 +389,7 @@ private fun MatchNotFoundNotice() {
     val strings = LocalAppStrings.current.tourism
     DetailSurface {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Default.Info, null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Info, null, tint = TourismAccentPink, modifier = Modifier.size(18.dp))
             Text(
                 text = strings.placeMatchNotFoundMessage,
                 style = MaterialTheme.typography.bodySmall,
@@ -455,30 +405,18 @@ private fun MatchNotFoundNotice() {
  */
 private val SectionSpacing = 20.dp
 
-// 히어로 / 요약카드 / 한눈에 보기 다음이 지도다 — 앞에 item을 끼우거나 빼면 이 값도 같이 고쳐야
-// 지도 보기 버튼(mapFocusRequestId)이 엉뚱한 카드로 스크롤되지 않는다.
-private const val TOURISM_DETAIL_MAP_ITEM_INDEX = 3
+// 지도~주변 관광지 구간(TourismDetailLoaded의 merged Column) 전용 간격. 모든 구간(지도-소개,
+// 소개-진료전후체크, 진료전후체크-여행자편의, 여행자편의-주변관광지)이 이 값 하나로 통일된다.
+// 18dp로 맞췄더니 너무 붙어 보인다는 피드백으로 다시 조금 올렸다.
+private val TightSectionGap = 22.dp
 
-// 탑바(BackOnlyNavigationBar) 없이 뒤로가기·지도·홈 아이콘을 이 사진 위에 흰색으로 바로
-// 얹는다. 사진 자체는 예전처럼 좌우 여백을 두고 둥근 모서리로 자른다(풀블리드로 한번 바꿨다가
-// 요청으로 되돌림) — 상태바 아래 여백은 이 카드 바깥(statusBarsPadding)에서 준다. 위쪽 어두운
-// 그라데이션이 흰 아이콘의 대비를 만들어주고, 아이콘이 이 사진에만 붙어 있어 아래로 스크롤하면
-// 사진과 함께 같이 사라진다(탑바 자체가 없다).
 @Composable
-private fun TourismHero(
-    item: TourismCatalogItem,
-    onBack: () -> Unit,
-    onNavigateHome: () -> Unit,
-    onMapDetailsClick: (() -> Unit)?
-) {
+private fun TourismHero(item: TourismCatalogItem) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(start = 20.dp, top = 10.dp, end = 20.dp)
             .height(TourismHeroHeight)
-            .clip(RoundedCornerShape(28.dp))
-            .background(Brush.linearGradient(listOf(CoralPrimaryContainer, Color(0xFFEAF5FF))))
+            .background(Brush.linearGradient(listOf(TourismAccentPinkContainer, Color(0xFFEAF5FF))))
     ) {
         if (item.imageUrl != null) {
             AsyncImageBox(item.imageUrl, item.title, Modifier.fillMaxSize())
@@ -486,7 +424,7 @@ private fun TourismHero(
             Box(
                 modifier = Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
-                        listOf(CoralPrimaryContainer.copy(alpha = 0.6f), Color(0xFFEDEDF2))
+                        listOf(TourismAccentPinkContainer.copy(alpha = 0.6f), Color(0xFFEDEDF2))
                     )
                 ),
                 contentAlignment = Alignment.Center
@@ -495,92 +433,34 @@ private fun TourismHero(
                     modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.LocationOn, null, tint = CoralPrimary, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.LocationOn, null, tint = TourismAccentPink, modifier = Modifier.size(32.dp))
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Black.copy(alpha = if (item.imageUrl != null) 0.28f else 0.18f), Color.Transparent),
-                        endY = 260f
-                    )
-                )
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TourismHeroIconButton(
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = LocalAppStrings.current.common.backContentDescription,
-                onClick = onBack
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                onMapDetailsClick?.let { onClick ->
-                    TourismHeroIconButton(
-                        icon = Icons.Default.Map,
-                        contentDescription = LocalAppStrings.current.common.mapDetailsContentDescription,
-                        onClick = onClick,
-                        iconSize = 22.dp
-                    )
-                }
-                TourismHeroIconButton(
-                    icon = Icons.Default.Home,
-                    contentDescription = LocalAppStrings.current.common.bottomNavHomeLabel,
-                    onClick = onNavigateHome
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TourismHeroIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    iconSize: Dp = 24.dp
-) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = Color.White,
-            modifier = Modifier.size(iconSize)
-        )
     }
 }
 
 private val TourismHeroHeight = 260.dp
 
+// guide_tourism_place_detail.png 기준 — 카드 배경 없이 캔버스 위에 바로 얹는다(히어로 사진
+// 바로 아래, 지도 카드 사이 유일하게 흰 카드가 아닌 텍스트 블록).
 @Composable
 private fun TourismSummaryCard(item: TourismCatalogItem, category: TourismCatalogCategory) {
-    DetailSurface {
-        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text(
-                category.translatedLabel(LocalAppStrings.current.language),
-                style = MaterialTheme.typography.labelMedium,
-                color = CoralPrimary,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(item.title, style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
-            item.address?.let { address ->
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.LocationOn, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-                    Text(address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
-                }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Text(
+            category.translatedLabel(LocalAppStrings.current.language),
+            style = MaterialTheme.typography.labelMedium,
+            color = TourismAccentPink,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(item.title, style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+        item.address?.let { address ->
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Top) {
+                Icon(Icons.Default.LocationOn, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                Text(address, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -590,7 +470,8 @@ private fun TourismSummaryCard(item: TourismCatalogItem, category: TourismCatalo
 private fun CongestionCard(label: String, value: String, dateLabel: String?, date: String?) {
     Surface(
         shape = MaterialTheme.shapes.large,
-        color = CoralPrimaryContainer,
+        color = TourismAccentPinkContainer,
+        shadowElevation = 6.dp,
         border = BorderStroke(1.dp, Color.White),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
     ) {
@@ -603,10 +484,10 @@ private fun CongestionCard(label: String, value: String, dateLabel: String?, dat
                 modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = CoralPrimary)
+                Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = TourismAccentPink)
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(label, style = MaterialTheme.typography.labelMedium, color = CoralPrimary)
+                Text(label, style = MaterialTheme.typography.labelMedium, color = TourismAccentPink)
                 Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
                 if (dateLabel != null && date != null) {
                     Text("$dateLabel $date", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
@@ -631,7 +512,7 @@ private fun ActionButtons(
                 onClick = onOpenMap,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(containerColor = CoralPrimary, contentColor = Color.White)
+                colors = ButtonDefaults.buttonColors(containerColor = TourismAccentPink, contentColor = Color.White)
             ) {
                 Icon(Icons.Default.Map, null, modifier = Modifier.size(19.dp))
                 Spacer(Modifier.width(8.dp))
@@ -653,67 +534,27 @@ private fun ActionButtons(
                 onClick = { onOpenLink(externalLinkUrl) },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.large,
-                border = BorderStroke(1.dp, CoralPrimary)
+                border = BorderStroke(1.dp, TourismAccentPink)
             ) {
-                Icon(icon, null, modifier = Modifier.size(18.dp), tint = CoralPrimary)
+                Icon(icon, null, modifier = Modifier.size(18.dp), tint = TourismAccentPink)
                 Spacer(Modifier.width(8.dp))
-                Text(label, color = CoralPrimary)
+                Text(label, color = TourismAccentPink)
             }
         }
     }
 }
 
-/**
- * 큐레이션 섹션(한눈에 보기 / 메디인부산 팁 / 진료 전후 체크 / 여행자 편의)의 카드 껍데기.
- * 내용 자체는 core/ui/PlaceCurationSections.kt가 웰니스 장소 상세와 공유하고, 껍데기만 이 화면의
- * [DetailSurface] 톤으로 감싼다(CLAUDE.md §4 — feature끼리 직접 import하지 않는다).
- */
+// guide_tourism_place_detail.png 기준 — 흰 카드 없이 굵은 제목 한 줄 + 본문만 캔버스 위에 바로
+// 얹는 섹션 껍데기. "방문 정보"/"장소 소개"/"진료 전후 체크"/"여행자 편의"가 쓴다(카드 배경이
+// 필요한 나머지 섹션은 여전히 [DetailSurface] 기반 전용 카드를 쓴다).
 @Composable
-private fun CurationSectionCard(
-    title: String,
-    icon: ImageVector? = null,
-    content: @Composable () -> Unit
-) {
-    DetailSurface {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (icon != null) {
-                    Icon(icon, null, tint = CoralPrimary, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(title, style = SectionTitleStyle, color = TextPrimary)
-            }
-            content()
-        }
-    }
-}
-
-@Composable
-private fun DescriptionCard(title: String, description: String) {
-    DetailSurface {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = SectionTitleStyle, color = TextPrimary)
-            Text(description, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-        }
-    }
-}
-
-@Composable
-private fun DetailInfoCard(title: String, details: List<DetailValue>) {
-    DetailSurface {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(title, style = SectionTitleStyle, color = TextPrimary)
-            details.forEachIndexed { index, detail ->
-                if (index > 0) HorizontalDivider(color = DividerColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-                    Icon(detail.icon, null, tint = CoralPrimary, modifier = Modifier.size(20.dp))
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(detail.label, style = MaterialTheme.typography.labelSmall, color = BadgeText)
-                        Text(detail.value, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-                    }
-                }
-            }
-        }
+private fun PlainSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text(title, style = SectionTitleStyle, color = TextPrimary, fontWeight = FontWeight.Bold)
+        content()
     }
 }
 
@@ -724,10 +565,10 @@ private fun DetailSurface(content: @Composable () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .shadow(
-                elevation = 2.dp,
+                elevation = 6.dp,
                 shape = MaterialTheme.shapes.large,
-                ambientColor = Color.Black.copy(alpha = 0.05f),
-                spotColor = Color.Black.copy(alpha = 0.05f)
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f)
             )
             .clip(MaterialTheme.shapes.large)
             .background(Color.White)
@@ -749,18 +590,6 @@ private fun SupportedLanguage.detailSectionLabels(): DetailSectionLabels = when 
     SupportedLanguage.EN -> DetailSectionLabels("About this place", "Location and directions")
     SupportedLanguage.JA -> DetailSectionLabels("スポット紹介", "位置・アクセス")
     SupportedLanguage.ZH -> DetailSectionLabels("景点介绍", "位置与交通")
-}
-
-private data class DetailValue(val key: String, val label: String, val value: String) {
-    val icon: ImageVector
-        get() = when (key) {
-            "tel" -> Icons.Default.Phone
-            "distance", "crsDstnc" -> Icons.Default.Route
-            "requiredTime", "leadTime", "crsTotlRqrmHour" -> Icons.Default.AccessTime
-            "baseYmd", "baseYm", "daywkDivNm" -> Icons.Default.CalendarToday
-            // detailIntro2 방문 정보 키는 여기 오지 않는다 — 전용 카드(VisitInfoContent)가 가져간다.
-            else -> Icons.Default.Info
-        }
 }
 
 private fun android.content.Context.dialPhone(phoneNumber: String) {

@@ -101,6 +101,8 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.designsystem.TourismAccentPink
+import com.mediinbusan.app.core.designsystem.TourismAccentPinkContainer
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedTourismItemCategoryLabel
@@ -109,6 +111,7 @@ import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
+import com.mediinbusan.app.core.ui.CenteredTopAppBar
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -406,7 +409,7 @@ private fun AccessibleTourismCatalogContent(
         topBar = {
             // category.translatedLabel()을 그대로 쓰면 NearbyScreen 슬라이더·허브 화면 등 다른
             // 화면의 "무장애 관광" 표기까지 다 바뀌므로, 이 화면 전용 타이틀 문구를 따로 둔다.
-            PlacesGridTopAppBar(title = strings.tourism.accessibleListTitle, onBack = onBack)
+            CenteredTopAppBar(title = strings.tourism.accessibleListTitle, onBack = onBack)
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
@@ -522,7 +525,7 @@ private fun RecommendedPlacesCatalogContent(
             // category.translatedLabel()은 언어별 소스를 가리키는 내부 구분용 라벨이라(EN이면
             // "Busan in English") 화면 제목으로 쓰면 "부산 관광지"의 번역이 아니라 이상하게
             // 보인다 — 이 화면 전용 문구를 따로 둔다(무장애 관광의 accessibleListTitle과 동일 패턴).
-            PlacesGridTopAppBar(title = strings.tourism.busanPlacesListTitle, onBack = onBack)
+            CenteredTopAppBar(title = strings.tourism.busanPlacesListTitle, onBack = onBack)
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
@@ -776,11 +779,11 @@ private fun PlacesCategoryPill(
     onClick: () -> Unit,
     icon: @Composable (tint: Color) -> Unit
 ) {
-    val contentColor = if (selected) PlacesAccentPink else TextPrimary
+    val contentColor = if (selected) TourismAccentPink else TextPrimary
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) PlacesAccentPinkContainer else Color.White)
+            .background(if (selected) TourismAccentPinkContainer else Color.White)
             .border(
                 width = 1.dp,
                 color = if (selected) Color.Transparent else DividerColor,
@@ -823,7 +826,7 @@ private fun PlacesDistrictDropdownPill(
                 .background(Color.White)
                 .border(
                     width = if (expanded) 1.5.dp else 1.dp,
-                    color = if (expanded) PlacesAccentPink else DividerColor,
+                    color = if (expanded) TourismAccentPink else DividerColor,
                     shape = RoundedCornerShape(14.dp)
                 )
                 .clickable { expanded = true }
@@ -858,14 +861,14 @@ private fun PlacesDistrictDropdownPill(
                 label = strings.tourism.focusAll,
                 selected = selectedDistrict == null,
                 onClick = { onDistrictSelected(null); expanded = false },
-                accentColor = PlacesAccentPink
+                accentColor = TourismAccentPink
             )
             BusanDistrict.entries.forEach { district ->
                 BrandDropdownMenuItem(
                     label = district.translatedLabel(strings.language),
                     selected = selectedDistrict == district,
                     onClick = { onDistrictSelected(district); expanded = false },
-                    accentColor = PlacesAccentPink
+                    accentColor = TourismAccentPink
                 )
             }
         }
@@ -923,18 +926,12 @@ private fun PlacesGridSearchBar(query: String, onQueryChanged: (String) -> Unit,
 
 private val SearchBarFill = Color(0xFFF2F1F3)
 
-// wellness_tourism_recommendation_list.png의 메인 포인트 핑크 — 관광지 선택 상태, "추천 장소"
-// 강조 텍스트, 지역 드롭다운 체크 아이콘 등 이 화면(부산 관광지)의 주요 포인트 전용 색이다.
-// 앱 전체에서 쓰는 core/designsystem의 CoralPrimary(#FD6677)와는 다른 값이라 여기서만 따로 둔다.
-private val PlacesAccentPink = Color(0xFFFD3569)
-private val PlacesAccentPinkContainer = Color(0xFFFFE3EA)
-
 // 아이콘 라벨(FOR YOU/EASY TRIP) + 큰 제목(강조 부분만 코랄, 순서는 호출부가 AnnotatedString으로
 // 직접 조립) + 부제. "부산 관광지"·무장애 관광 리스트업 화면이 검색바 밑에서 공용으로 쓴다.
 @Composable
 private fun PlacesHeroHeader(eyebrowLabel: String, title: AnnotatedString, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = eyebrowLabel, style = MaterialTheme.typography.labelMedium, color = PlacesAccentPink, fontWeight = FontWeight.Bold)
+        Text(text = eyebrowLabel, style = MaterialTheme.typography.labelMedium, color = TourismAccentPink, fontWeight = FontWeight.Bold)
         Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
     }
@@ -947,7 +944,7 @@ private fun ForYouRecommendationHeader(forYouLabel: String, titlePrefix: String,
         eyebrowLabel = forYouLabel,
         title = buildAnnotatedString {
             withStyle(SpanStyle(color = TextPrimary)) { append(titlePrefix) }
-            withStyle(SpanStyle(color = PlacesAccentPink)) { append(titleHighlight) }
+            withStyle(SpanStyle(color = TourismAccentPink)) { append(titleHighlight) }
         },
         subtitle = subtitle
     )
@@ -959,32 +956,10 @@ private fun AccessibleHeroHeader(label: String, titleHighlight: String, titleSuf
     PlacesHeroHeader(
         eyebrowLabel = label,
         title = buildAnnotatedString {
-            withStyle(SpanStyle(color = PlacesAccentPink)) { append(titleHighlight) }
+            withStyle(SpanStyle(color = TourismAccentPink)) { append(titleHighlight) }
             withStyle(SpanStyle(color = TextPrimary)) { append(titleSuffix) }
         },
         subtitle = subtitle
-    )
-}
-
-// wellness_tourism_recommendation_list.png 기준 — 뒤로가기 + 완전히 가운데 정렬된 굵은 검정
-// 제목만 있는 가벼운 헤더(동백꽃 장식 없음). RecommendedPlacesCatalogContent 전용.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlacesGridTopAppBar(title: String, onBack: () -> Unit) {
-    CenterAlignedTopAppBar(
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = LocalAppStrings.current.common.backContentDescription,
-                    tint = TextPrimary
-                )
-            }
-        },
-        title = {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-        }
     )
 }
 
