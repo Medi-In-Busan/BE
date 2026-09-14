@@ -150,7 +150,10 @@ class RecommendedCourseViewModel @Inject constructor(
                 selectedStopId = course.stops.first().item.id,
                 travelMode = TravelMode.DRIVING,
                 isLoading = false,
-                errorMessage = if (route == null) {
+                // 코스는 이미 만들었으므로, 경로만 실패했다고 화면 전체를 ErrorState로 덮지 않는다
+                // — 그러면 방문 순서·장소 정보까지 같이 사라져서 도로 API 하나 때문에 화면이
+                // 통째로 막혔다. 지도 자리에만 폴백을 그리고 나머지는 그대로 보여준다.
+                routeErrorMessage = if (route == null) {
                     (routeResult as? Result.Error)?.message ?: appStringsFor(language).nearby.routeLoadError
                 } else {
                     null
@@ -190,6 +193,12 @@ class RecommendedCourseViewModel @Inject constructor(
             if (route == null) {
                 _uiState.update {
                     it.copy(
+                        // 실패해도 고른 모드로 바꾼다. 예전엔 이전 모드를 유지해서, 화면에는
+                        // "자동차"가 선택된 채 자동차 경로가 그대로 그려지고 오류 문구만 떠
+                        // 무엇이 실패한 건지 읽히지 않았다. 모드를 바꾸고 경로를 비우면 지도
+                        // 자리에 폴백이 뜨고 구간 시간도 같이 사라져 화면이 한 가지 뜻만 갖는다.
+                        travelMode = mode,
+                        route = null,
                         isRouteRefreshing = false,
                         routeErrorMessage = (result as? Result.Error)?.message ?: strings.routeChangeError
                     )
@@ -223,6 +232,34 @@ class RecommendedCourseViewModel @Inject constructor(
             stops = points.drop(1),
             mode = mode
         )
+    }
+
+    /**
+     * 지도 자리 폴백의 "다시 시도". 코스는 이미 손에 있으므로 [load]로 전체를 다시 만들지 않고
+     * 지금 고른 이동수단의 경로만 다시 받는다 — 관광 카탈로그 재조회는 느리고, 실패한 건
+     * 경로 하나뿐이다.
+     */
+    fun retryRoute() {
+        val course = recommendedCourse ?: return
+        val state = _uiState.value
+        if (state.isRouteRefreshing) return
+        viewModelScope.launch {
+            val strings = appStringsFor(state.language).nearby
+            _uiState.update { it.copy(isRouteRefreshing = true, routeErrorMessage = null) }
+            val result = getRoute(course, state.travelMode)
+            val route = (result as? Result.Success)?.data?.takeIf { course.isValidRoute(it) }
+            _uiState.update {
+                it.copy(
+                    route = route,
+                    isRouteRefreshing = false,
+                    routeErrorMessage = if (route == null) {
+                        (result as? Result.Error)?.message ?: strings.routeLoadError
+                    } else {
+                        null
+                    }
+                )
+            }
+        }
     }
 
     private fun RecommendedTourismCourse.isValidRoute(
