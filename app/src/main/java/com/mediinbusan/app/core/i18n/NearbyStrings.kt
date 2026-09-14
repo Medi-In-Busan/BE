@@ -86,7 +86,11 @@ data class NearbyStrings(
     val crowdingLoadError: String,
     val courseLoadError: String,
     val routeLoadError: String,
-    val routeChangeError: String
+    val routeChangeError: String,
+    // 코스는 받았는데 경로(도로/도보)만 못 받았을 때 지도 자리에 대신 그리는 폴백의 문구.
+    // routeLoadError("불러오지 못했습니다")는 실패 사실을 알리는 배너용이고, 이건 지도가 있어야
+    // 할 자리에 들어가므로 "이 칸이 왜 비었는지"를 말한다.
+    val routeUnavailableMessage: String
 ) {
     companion object {
         val Ko = NearbyStrings(
@@ -122,7 +126,7 @@ data class NearbyStrings(
             courseMapDescription = "병원 주변 추천 장소를 이동 부담이 적은 순서로 연결했어요.", drivingLabel = "자동차", walkingLabel = "도보", drivingSummaryLabel = "차량 이동", walkingSummaryLabel = "도보 이동",
             drivingDisclaimer = "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다.", walkingDisclaimer = "Kakao 도보 편안한 길 기준이며 현장 보행 환경에 따라 이동 시간이 달라질 수 있습니다.",
             heroTitle = "진료 전후,\n부산에서 편안하게", recommendedCountFormat = "추천 %d곳", personalizedCourseCountFormat = "맞춤 코스 %d개", departureFormat = "출발 · %s", transferFormat = "약 %d분 · %s",
-            genericErrorMessage = "오류가 발생했습니다.", crowdingLoadError = "혼잡도 데이터를 불러오지 못했습니다.", courseLoadError = "추천 코스를 불러오지 못했습니다.", routeLoadError = "실제 이동 경로를 불러오지 못했습니다.", routeChangeError = "이동 경로를 변경하지 못했습니다."
+            genericErrorMessage = "오류가 발생했습니다.", crowdingLoadError = "혼잡도 데이터를 불러오지 못했습니다.", courseLoadError = "추천 코스를 불러오지 못했습니다.", routeLoadError = "실제 이동 경로를 불러오지 못했습니다.", routeChangeError = "이동 경로를 변경하지 못했습니다.", routeUnavailableMessage = "경로를 표시할 수 없어요. 아래 방문 순서는 그대로 확인할 수 있어요."
         )
         val En = NearbyStrings(
             viewCourseRouteButtonLabel = "View route on map",
@@ -157,7 +161,7 @@ data class NearbyStrings(
             courseMapDescription = "Nearby places are connected in an order that reduces travel effort.", drivingLabel = "Driving", walkingLabel = "Walking", drivingSummaryLabel = "By car", walkingSummaryLabel = "On foot",
             drivingDisclaimer = "Routes are based on Kakao Mobility recommendations and may vary with traffic.", walkingDisclaimer = "Walking routes follow Kakao's comfortable route and may vary with local conditions.",
             heroTitle = "Before and after care,\nrelax in Busan", recommendedCountFormat = "%d recommendations", personalizedCourseCountFormat = "%d custom courses", departureFormat = "Start · %s", transferFormat = "About %d min · %s",
-            genericErrorMessage = "Something went wrong.", crowdingLoadError = "Unable to load crowding data.", courseLoadError = "Unable to load recommended courses.", routeLoadError = "Unable to load the actual route.", routeChangeError = "Unable to change the route."
+            genericErrorMessage = "Something went wrong.", crowdingLoadError = "Unable to load crowding data.", courseLoadError = "Unable to load recommended courses.", routeLoadError = "Unable to load the actual route.", routeChangeError = "Unable to change the route.", routeUnavailableMessage = "The route can't be shown. You can still check the visiting order below."
         )
         val Zh = NearbyStrings(
             viewCourseRouteButtonLabel = "在地图上查看路线",
@@ -192,7 +196,7 @@ data class NearbyStrings(
             courseMapDescription = "按移动负担较小的顺序连接医院周边推荐场所。", drivingLabel = "驾车", walkingLabel = "步行", drivingSummaryLabel = "驾车移动", walkingSummaryLabel = "步行移动",
             drivingDisclaimer = "路线基于Kakao Mobility推荐，所需时间可能因交通状况而变化。", walkingDisclaimer = "步行路线基于Kakao舒适路线，可能因现场步行环境而变化。",
             heroTitle = "诊疗前后，\n在釜山舒适休养", recommendedCountFormat = "推荐%d处", personalizedCourseCountFormat = "%d条定制路线", departureFormat = "出发 · %s", transferFormat = "约%d分钟 · %s",
-            genericErrorMessage = "发生错误。", crowdingLoadError = "无法加载拥挤度数据。", courseLoadError = "无法加载推荐路线。", routeLoadError = "无法加载实际移动路线。", routeChangeError = "无法更改移动路线。"
+            genericErrorMessage = "发生错误。", crowdingLoadError = "无法加载拥挤度数据。", courseLoadError = "无法加载推荐路线。", routeLoadError = "无法加载实际移动路线。", routeChangeError = "无法更改移动路线。", routeUnavailableMessage = "无法显示路线。您仍可查看下方的参观顺序。"
         )
         val Ja = NearbyStrings(
             viewCourseRouteButtonLabel = "このコースの経路を見る",
@@ -227,7 +231,7 @@ data class NearbyStrings(
             courseMapDescription = "病院周辺のおすすめスポットを移動負担の少ない順に結びました。", drivingLabel = "車", walkingLabel = "徒歩", drivingSummaryLabel = "車移動", walkingSummaryLabel = "徒歩移動",
             drivingDisclaimer = "Kakao Mobilityの推奨ルートに基づき、交通状況により所要時間が変わる場合があります。", walkingDisclaimer = "Kakaoの歩きやすいルートに基づき、現地の歩行環境により変わる場合があります。",
             heroTitle = "診療の前後も、\n釜山で快適に", recommendedCountFormat = "おすすめ%dか所", personalizedCourseCountFormat = "カスタムコース%d件", departureFormat = "出発 · %s", transferFormat = "約%d分 · %s",
-            genericErrorMessage = "エラーが発生しました。", crowdingLoadError = "混雑度データを読み込めませんでした。", courseLoadError = "おすすめコースを読み込めませんでした。", routeLoadError = "実際の移動経路を読み込めませんでした。", routeChangeError = "移動経路を変更できませんでした。"
+            genericErrorMessage = "エラーが発生しました。", crowdingLoadError = "混雑度データを読み込めませんでした。", courseLoadError = "おすすめコースを読み込めませんでした。", routeLoadError = "実際の移動経路を読み込めませんでした。", routeChangeError = "移動経路を変更できませんでした。", routeUnavailableMessage = "経路を表示できません。下の訪問順はそのまま確認できます。"
         )
     }
 }

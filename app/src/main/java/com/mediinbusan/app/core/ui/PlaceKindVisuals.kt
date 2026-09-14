@@ -175,3 +175,26 @@ fun PlaceFallbackThumbnail(
         )
     }
 }
+
+/**
+ * 관광 데이터 항목(TourismCatalogItem)의 `categoryCode`(TourAPI contenttypeid)로 [placeKindVisual]을
+ * 고른다 — 웰니스 장소(Place)와 달리 관광 항목에는 PlaceType이 없어서, 같은 "부산 내호냉면"이
+ * 장소 목록에서는 음식 아이콘, 추천 코스에서는 무관한 풍경 사진으로 나오던 걸 한쪽으로 맞춘다.
+ *
+ * 코드 체계는 [com.mediinbusan.app.domain.tourism.toTourismTagGroup]과 같다 — 국문 서비스
+ * (12/14/25/28/32/38/39)와 외국어 서비스(75/76/78/79/80/82/85)가 서로 다른 값을 쓰지만 값이
+ * 겹치지 않아 하나의 when으로 처리한다. 모르는 코드·null은 OTHER(지도 마커)로 떨어진다.
+ */
+fun tourismKindVisual(categoryCode: String?): PlaceKindVisual = placeKindVisual(
+    when (categoryCode) {
+        "12", "76" -> PlaceType.TOURIST_ATTRACTION // 관광지
+        "14", "78" -> PlaceType.TOURIST_ATTRACTION // 문화시설
+        "85" -> PlaceType.TOURIST_ATTRACTION // 축제·행사
+        "25" -> PlaceType.WALK // 여행코스
+        "28", "75" -> PlaceType.WALK // 레포츠
+        "32", "80" -> PlaceType.LODGING // 숙박
+        "38", "79" -> PlaceType.SHOPPING // 쇼핑
+        "39", "82" -> PlaceType.RESTAURANT // 음식점
+        else -> PlaceType.OTHER
+    }
+)
