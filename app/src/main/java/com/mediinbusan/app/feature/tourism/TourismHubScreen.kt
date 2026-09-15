@@ -65,11 +65,12 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedDescription
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
-import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
+import com.mediinbusan.app.core.ui.TourismFallbackThumbnail
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 import com.mediinbusan.app.domain.tourism.TourismHotPlace
+import com.mediinbusan.app.domain.tourism.tourismCategoryForLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,10 +116,17 @@ fun TourismHubScreen(
                 )
             }
             item {
+                // 배너가 가리키는 카테고리는 정의상 "현재 언어의 관광정보 변종"이다
+                // (TourismHubViewModel이 쓰던 tourismHubCategories(...).first()와 같은 값) — 순수하게
+                // 언어만으로 정해지므로 DataStore를 읽고 오는 uiState를 기다리지 않고 합성 시점의
+                // 언어로 바로 구한다. 예전엔 UiState에 따로 들고 있었는데 그 기본값이 PLACES_KO라,
+                // 영어 사용자에게 배너가 "한국어"로 한 번 떴고 그 사이에 누르면 국문 목록으로
+                // 들어가버렸다.
+                val featuredCategory = tourismCategoryForLanguage(strings.language.code)
                 FeaturedExploreBanner(
-                    languageName = uiState.language.displayName,
-                    category = uiState.featuredCategory,
-                    onClick = { onSelectCategory(uiState.featuredCategory) }
+                    languageName = strings.language.displayName,
+                    category = featuredCategory,
+                    onClick = { onSelectCategory(featuredCategory) }
                 )
             }
             item {
@@ -192,7 +200,11 @@ private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Un
             modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            HotPlaceThumbnail(rank = rank, imageUrl = hotPlace.item.imageUrl)
+            HotPlaceThumbnail(
+                rank = rank,
+                imageUrl = hotPlace.item.imageUrl,
+                categoryCode = hotPlace.item.categoryCode
+            )
             Column(
                 modifier = Modifier.weight(1f).height(112.dp),
                 verticalArrangement = Arrangement.SpaceBetween
@@ -240,7 +252,7 @@ private fun HotPlaceCard(rank: Int, hotPlace: TourismHotPlace, onClick: () -> Un
 }
 
 @Composable
-private fun HotPlaceThumbnail(rank: Int, imageUrl: String?) {
+private fun HotPlaceThumbnail(rank: Int, imageUrl: String?, categoryCode: String?) {
     Box(
         modifier = Modifier
             .size(width = 104.dp, height = 112.dp)
@@ -253,8 +265,12 @@ private fun HotPlaceThumbnail(rank: Int, imageUrl: String?) {
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            // 사진이 없는 항목은 앱 공용 자리표시자로 통일한다(코랄 그라데이션 + 지도 마커).
-            MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 28.dp)
+            // 사진이 없는 항목은 지도와 같은 자리표시자로 통일한다(종류별 색 + 종류 아이콘).
+            TourismFallbackThumbnail(
+                categoryCode = categoryCode,
+                modifier = Modifier.fillMaxSize(),
+                iconSize = 28.dp
+            )
         }
         Surface(
             modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
@@ -314,7 +330,11 @@ private fun AccessiblePlaceCard(place: TourismCatalogItem, onClick: () -> Unit) 
                     modifier = Modifier.fillMaxWidth().height(128.dp)
                 )
             } else {
-                MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxWidth().height(128.dp), iconSize = 36.dp)
+                TourismFallbackThumbnail(
+                    categoryCode = place.categoryCode,
+                    modifier = Modifier.fillMaxWidth().height(128.dp),
+                    iconSize = 36.dp
+                )
             }
             Column(
                 modifier = Modifier.padding(15.dp),

@@ -1,7 +1,9 @@
 package com.mediinbusan.app.core.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
@@ -31,8 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.data.place.PlaceCategory
 import com.mediinbusan.app.data.place.PlaceType
@@ -185,16 +190,92 @@ fun PlaceFallbackThumbnail(
  * (12/14/25/28/32/38/39)와 외국어 서비스(75/76/78/79/80/82/85)가 서로 다른 값을 쓰지만 값이
  * 겹치지 않아 하나의 when으로 처리한다. 모르는 코드·null은 OTHER(지도 마커)로 떨어진다.
  */
-fun tourismKindVisual(categoryCode: String?): PlaceKindVisual = placeKindVisual(
-    when (categoryCode) {
-        "12", "76" -> PlaceType.TOURIST_ATTRACTION // 관광지
-        "14", "78" -> PlaceType.TOURIST_ATTRACTION // 문화시설
-        "85" -> PlaceType.TOURIST_ATTRACTION // 축제·행사
-        "25" -> PlaceType.WALK // 여행코스
-        "28", "75" -> PlaceType.WALK // 레포츠
-        "32", "80" -> PlaceType.LODGING // 숙박
-        "38", "79" -> PlaceType.SHOPPING // 쇼핑
-        "39", "82" -> PlaceType.RESTAURANT // 음식점
-        else -> PlaceType.OTHER
+fun tourismKindVisual(categoryCode: String?): PlaceKindVisual = placeKindVisual(tourismPlaceType(categoryCode))
+
+/**
+ * [tourismKindVisual]이 쓰는 `categoryCode` → [PlaceType] 표. 색·아이콘 말고 **종류 자체**가
+ * 필요한 자리(상세 히어로의 마스코트 선택 — [PlaceFallbackCharacterHero])를 위해 따로 노출한다.
+ * 모르는 코드·null은 [PlaceType.OTHER]다.
+ */
+fun tourismPlaceType(categoryCode: String?): PlaceType = when (categoryCode) {
+    "12", "76" -> PlaceType.TOURIST_ATTRACTION // 관광지
+    "14", "78" -> PlaceType.TOURIST_ATTRACTION // 문화시설
+    "85" -> PlaceType.TOURIST_ATTRACTION // 축제·행사
+    "25" -> PlaceType.WALK // 여행코스
+    "28", "75" -> PlaceType.WALK // 레포츠
+    "32", "80" -> PlaceType.LODGING // 숙박
+    "38", "79" -> PlaceType.SHOPPING // 쇼핑
+    "39", "82" -> PlaceType.RESTAURANT // 음식점
+    else -> PlaceType.OTHER
+}
+
+/**
+ * 사진이 없는 **상세 화면 히어로**에 세우는 종류별 마스코트 — 종류 색 그라데이션 위에 캐릭터를
+ * 얹는다. 웰니스 장소 상세(`PlaceDetailScreen`)와 관광 항목 상세
+ * (`TourismCatalogItemDetailScreen`)가 같이 쓴다.
+ *
+ * 목록·지도 썸네일의 [PlaceFallbackThumbnail](색+아이콘)과 역할이 다르다 — 작은 썸네일에 캐릭터를
+ * 넣으면 뭉개져서 안 읽히고, 260dp 히어로에 26dp 아이콘만 얹으면 빈 화면처럼 보인다. 그래서
+ * **썸네일은 아이콘, 상세 히어로는 마스코트**로 나눈다.
+ *
+ * 마스코트는 두 장뿐이라 앱 전체가 쓰는 같은 기준으로 고른다: [PlaceType.RESTAURANT]만 "식사",
+ * 나머지(관광지·숙박·쇼핑·스파·산책·OTHER)는 전부 "관광"이다(`Place.toMapPin`,
+ * `MapUiState.visiblePlaces`, 지도 핀 2종과 동일한 기준).
+ */
+@Composable
+fun PlaceFallbackCharacterHero(
+    type: PlaceType,
+    kindColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.background(
+            ComposeBrush.verticalGradient(listOf(kindColor.copy(alpha = 0.22f), CharacterHeroGroundColor))
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(
+                id = if (type == PlaceType.RESTAURANT) {
+                    R.drawable.travel_character_food
+                } else {
+                    R.drawable.travel_character
+                }
+            ),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
     }
-)
+}
+
+/** 마스코트가 서는 바닥 — 종류 색에서 옅은 회색으로 떨어지는 그라데이션의 아래쪽 끝. */
+private val CharacterHeroGroundColor = Color(0xFFEDEDF2)
+
+/**
+ * 관광 데이터 항목(TourismCatalogItem)에 사진이 없을 때 그 자리에 그리는 자리표시자 —
+ * **지도(feature/map)의 장소 자리표시자와 같은 그림이다.** 무장애 관광·부산관광 핫플레이스의 목록
+ * 썸네일과 상세 히어로가 전부 이걸 쓰므로, 같은 장소를 지도에서 보든 목록에서 보든 상세에서 보든
+ * 사진 없음 표시가 같은 모양으로 나온다.
+ *
+ * [PlaceFallbackThumbnail]을 그대로 쓰지 않고 한 겹 감싸는 이유는 **불투명한 흰 밑색** 때문이다.
+ * 그 그라데이션은 반투명(0.20~0.06)이라 지도처럼 흰 카드 위에 놓일 때를 기준으로 색이 맞춰져 있는데,
+ * 관광 카드들은 밑에 옅은 핑크(CoralPrimaryContainer)나 카테고리 accent 그라데이션을 깔고 있어서
+ * 그냥 얹으면 숙박(보라)·음식(주황)이 전부 그 밑색으로 물든다. 흰 밑색을 같이 깔아 어느 카드에
+ * 놓이든 지도에서 보는 색 그대로 나오게 한다.
+ *
+ * `categoryCode`가 null이거나 표에 없으면(혼잡도 기반 핫플레이스가 그렇다 — TourAPI 혼잡도 응답에는
+ * contenttypeid가 없다) 지도와 똑같이 `OTHER`(파란 지도 마커)로 떨어진다.
+ */
+@Composable
+fun TourismFallbackThumbnail(
+    categoryCode: String?,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 26.dp
+) {
+    PlaceFallbackThumbnail(
+        visual = tourismKindVisual(categoryCode),
+        modifier = modifier.background(Color.White),
+        iconSize = iconSize
+    )
+}

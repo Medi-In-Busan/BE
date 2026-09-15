@@ -45,6 +45,8 @@ public class WellnessPlaceTranslation {
         this.translatedAt = Instant.now();
     }
 
+    // 여러 건을 한 번에 읽어 contentId로 묶을 때 쓴다(WellnessPlaceTranslationService.loadCache).
+    public String contentId() { return contentId; }
     public String sourceHash() { return sourceHash; }
     public String name() { return name; }
     public String address() { return address; }

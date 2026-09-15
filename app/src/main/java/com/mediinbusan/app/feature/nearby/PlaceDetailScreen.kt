@@ -47,12 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +79,7 @@ import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.PlaceFallbackCharacterHero
 import com.mediinbusan.app.core.ui.PlaceKindVisual
 import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.MediTipContent
@@ -380,22 +379,12 @@ private fun PlaceHero(place: Place, kindColor: Color) {
             // 실제 사진이 없는 장소가 많아(웰니스 API 원문에 이미지가 비어있는 경우) 이
             // 자리표시자가 사실상 기본 히어로가 된다 — 종류에 맞는 마스코트 일러스트를 세우고,
             // 배경은 장소 종류 색(kindColor)에 맞춘 옅은 그라데이션을 깔아 캐릭터가 얹힐 바닥을
-            // 만든다.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(listOf(kindColor.copy(alpha = 0.22f), Color(0xFFEDEDF2)))
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = place.type.fallbackCharacterImage()),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            // 만든다. 관광 항목 상세(TourismCatalogItemDetailScreen)도 같은 걸 쓴다.
+            PlaceFallbackCharacterHero(
+                type = place.type,
+                kindColor = kindColor,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -687,14 +676,8 @@ private val SectionSpacing = 20.dp
 // 와 같은 값이다.
 private val TightSectionGap = 22.dp
 
-/**
- * 사진이 없을 때 히어로에 세우는 마스코트.
- *
- * 앱 전체가 쓰는 분류 기준을 그대로 따른다: RESTAURANT만 "식사", 나머지(SHOPPING/LODGING/SPA/
- * WALK/OTHER 포함)는 전부 "관광"이다(Place.toMapPin, MapUiState.visiblePlaces와 동일한 기준).
- */
-private fun PlaceType.fallbackCharacterImage(): Int =
-    if (this == PlaceType.RESTAURANT) R.drawable.travel_character_food else R.drawable.travel_character
+// 사진 없는 히어로의 마스코트 선택은 core/ui의 PlaceFallbackCharacterHero가 들고 있다 — 관광 항목
+// 상세(feature/tourism)도 같은 캐릭터를 세워야 해서 그쪽으로 옮겼다.
 
 private fun PlaceType.toMapPinType(): MapPinType = if (this == PlaceType.RESTAURANT) MapPinType.FOOD else MapPinType.TOURIST
 
