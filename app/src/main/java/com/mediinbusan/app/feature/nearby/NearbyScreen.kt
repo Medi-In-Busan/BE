@@ -72,7 +72,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -111,8 +110,6 @@ import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
-import com.mediinbusan.app.core.ui.PlaceKindVisual
-import com.mediinbusan.app.core.ui.placeKindVisual
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
@@ -572,15 +569,10 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tag: Touri
         if (imageUrl != null) {
             AsyncImageBox(imageUrl, item.title, Modifier.fillMaxSize())
         } else {
-            // 사진이 없으면 태그 종류(관광지/숙박/음식)에 맞는 디폴트를 쓴다. Map의 PlaceFallbackThumbnail은
-            // 흰 배경 위 작은 인라인 썸네일 전용이라(6~20% 저채도 틴트) 이 카드 자체 배경(대각선
-            // 그라데이션) 위에 얹으면 반투명이 겹쳐 탁한 사각형처럼 보인다 — 그래서 여기 전용으로
-            // 카드 배경을 완전히 덮는 불투명 파스텔 그라데이션 버전을 따로 쓴다(Map 쪽은 그대로 둔다).
-            when (tag) {
-                TourismPlaceTag.LODGING -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.LODGING), Modifier.fillMaxSize())
-                TourismPlaceTag.FOOD -> TourismCardFallbackThumbnail(placeKindVisual(PlaceType.RESTAURANT), Modifier.fillMaxSize())
-                else -> MapMarkerFallbackThumbnail(Modifier.fillMaxSize(), iconSize = 32.dp)
-            }
+            // 사진이 없으면 핫플레이스 카드와 같은 공용 자리표시자를 쓴다. 예전엔 여기 전용
+            // 파스텔+종류 아이콘을 따로 그렸는데, 같은 화면 안에서도 섹션마다 다른 자리표시자가
+            // 나와 "사진 없음"이 여러 모양으로 보였다.
+            MapMarkerFallbackThumbnail(Modifier.fillMaxSize(), iconSize = 32.dp)
         }
         // 요청: 카드 전체를 덮던 그림자를 원래의 40% 수준으로 옅게 낮춘다.
         Box(
@@ -625,25 +617,6 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tag: Touri
                 )
             }
         }
-    }
-}
-
-// TourismPlaceCard(140x180 포토카드) 전용 폴백 — Map의 PlaceFallbackThumbnail(작은 인라인
-// 썸네일용, 6~20% 저채도 틴트)과 달리 카드 배경을 완전히 덮어야 해서, 종류 색을 흰색과
-// 섞어 만든 불투명 파스텔로 그라데이션을 건다(MapMarkerFallbackThumbnail과 같은 방식).
-@Composable
-private fun TourismCardFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifier) {
-    val pastel = visual.color.copy(alpha = 0.18f).compositeOver(Color.White)
-    Box(
-        modifier = modifier.background(Brush.linearGradient(listOf(pastel, Color.White))),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = visual.icon,
-            contentDescription = null,
-            tint = visual.color,
-            modifier = Modifier.size(32.dp)
-        )
     }
 }
 

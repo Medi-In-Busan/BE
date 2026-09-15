@@ -28,9 +28,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.WrongLocation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,6 +71,8 @@ import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.PlaceFallbackThumbnail
+import com.mediinbusan.app.core.ui.tourismKindVisual
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -113,7 +118,9 @@ fun RecommendedCourseScreen(
                 modifier = Modifier.padding(innerPadding),
                 onRetry = { viewModel.load(categoryName, districtName) }
             )
-            uiState.course == null || uiState.route == null -> EmptyState(
+            // 경로(route)가 null이어도 코스만 있으면 화면을 그린다 — 지도 자리에 폴백이 서고
+            // 나머지(히어로·방문 순서·장소 정보)는 그대로 쓸 수 있다.
+            uiState.course == null -> EmptyState(
                 message = strings.notEnoughPlaces,
                 modifier = Modifier.padding(innerPadding)
             )
@@ -121,7 +128,7 @@ fun RecommendedCourseScreen(
                 modifier = Modifier.padding(innerPadding),
                 onBack = onBack,
                 course = requireNotNull(uiState.course),
-                route = requireNotNull(uiState.route),
+                route = uiState.route,
                 courseTitle = recommendedCourseTitle(
                     course = requireNotNull(uiState.course),
                     districtLabel = uiState.district?.translatedLabel(uiState.language),
@@ -134,7 +141,8 @@ fun RecommendedCourseScreen(
                 routeErrorMessage = uiState.routeErrorMessage,
                 strings = strings,
                 onSelectStop = viewModel::selectStop,
-                onTravelModeSelect = viewModel::selectTravelMode
+                onTravelModeSelect = viewModel::selectTravelMode,
+                onRetryRoute = viewModel::retryRoute
             )
         }
     }
@@ -145,7 +153,7 @@ private fun CourseContent(
     modifier: Modifier,
     onBack: () -> Unit,
     course: RecommendedTourismCourse,
-    route: DrivingRoute,
+    route: DrivingRoute?,
     courseTitle: String,
     districtLabel: String?,
     selectedStopId: String?,
@@ -154,7 +162,8 @@ private fun CourseContent(
     routeErrorMessage: String?,
     strings: CourseStrings,
     onSelectStop: (String) -> Unit,
-    onTravelModeSelect: (TravelMode) -> Unit
+    onTravelModeSelect: (TravelMode) -> Unit,
+    onRetryRoute: () -> Unit
 ) {
     val listState = rememberLazyListState()
     var zoomInRequestId by remember { mutableIntStateOf(0) }
@@ -182,12 +191,17 @@ private fun CourseContent(
         }
     }
     val paths = remember(route) {
-        listOf(
-            MapRoutePath(
-                id = "recommended-course",
-                points = route.path.map { MapRoutePoint(it.latitude, it.longitude) }
+        val points = route?.path.orEmpty()
+        if (points.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(
+                MapRoutePath(
+                    id = "recommended-course",
+                    points = points.map { MapRoutePoint(it.latitude, it.longitude) }
+                )
             )
-        )
+        }
     }
 
     LazyColumn(
@@ -218,11 +232,11 @@ private fun CourseContent(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
             )
             routeErrorMessage?.let { message ->
-                Text(
-                    text = message,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                RouteErrorBanner(
+                    message = message,
+                    isRetrying = isRouteRefreshing,
+                    onRetry = onRetryRoute,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
             }
         }
@@ -240,20 +254,29 @@ private fun CourseContent(
                     )
                     .clip(RoundedCornerShape(20.dp))
             ) {
-                KakaoMapView(
-                    pins = pins,
-                    routePaths = paths,
-                    onPinClick = onSelectStop,
-                    zoomInRequestId = zoomInRequestId,
-                    zoomOutRequestId = zoomOutRequestId,
-                    onMapInteractionChange = { isMapInteractionActive = it },
-                    modifier = Modifier.fillMaxSize()
-                )
-                MapZoomControls(
-                    onZoomIn = { zoomInRequestId++ },
-                    onZoomOut = { zoomOutRequestId++ },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
-                )
+                if (route == null) {
+                    // 경로를 못 받은 채로 지도를 띄우면 마커만 흩어져 있고 선이 없어서 "코스가
+                    // 끊겼다"로 읽힌다 — 지도 자체를 걷어내고 왜 비었는지 말하는 폴백을 세운다.
+                    RouteUnavailableFallback(
+                        message = LocalAppStrings.current.nearby.routeUnavailableMessage,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    KakaoMapView(
+                        pins = pins,
+                        routePaths = paths,
+                        onPinClick = onSelectStop,
+                        zoomInRequestId = zoomInRequestId,
+                        zoomOutRequestId = zoomOutRequestId,
+                        onMapInteractionChange = { isMapInteractionActive = it },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    MapZoomControls(
+                        onZoomIn = { zoomInRequestId++ },
+                        onZoomOut = { zoomOutRequestId++ },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
+                    )
+                }
             }
         }
         item {
@@ -262,9 +285,11 @@ private fun CourseContent(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 course.stops.forEachIndexed { index, stop ->
-                    if (index > 0) {
+                    // 경로가 없으면 구간 시간·거리도 없다. 점선만 남겨 순서는 그대로 읽히게 한다.
+                    val section = route?.sections?.getOrNull(index - 1)
+                    if (index > 0 && section != null) {
                         TransferLeg(
-                            section = route.sections[index - 1],
+                            section = section,
                             travelMode = travelMode,
                             strings = strings
                         )
@@ -275,12 +300,15 @@ private fun CourseContent(
                         onClick = { onSelectStop(stop.item.id) }
                     )
                 }
-                Text(
-                    text = strings.routeDisclaimer(travelMode),
-                    modifier = Modifier.padding(top = 18.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+                if (route != null) {
+                    // 경로를 못 받았으면 "Kakao Mobility 추천 경로 기준" 같은 근거 문구도 거짓이 된다.
+                    Text(
+                        text = strings.routeDisclaimer(travelMode),
+                        modifier = Modifier.padding(top = 18.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
             }
         }
     }
@@ -289,7 +317,7 @@ private fun CourseContent(
 @Composable
 private fun TourismCourseHero(
     course: RecommendedTourismCourse,
-    route: DrivingRoute,
+    route: DrivingRoute?,
     courseTitle: String,
     districtLabel: String?,
     selectedStopId: String?,
@@ -335,22 +363,15 @@ private fun TourismCourseHero(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(CoralPrimaryContainer, Color(0xFFEAF7FF))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = item.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextSecondary
-                            )
-                        }
+                        // 예전엔 이 자리에 항목 이름을 한 번 더 크게 찍었는데, 아래 오버레이에
+                        // "N. 이름"이 이미 있어 같은 글자가 두 번 보였다 — 아래 정거장 목록과
+                        // 같은 종류별 자리표시자를 쓴다(같은 스톱이 두 자리에서 다른 그림이면
+                        // 같은 곳으로 안 읽힌다).
+                        PlaceFallbackThumbnail(
+                            visual = tourismKindVisual(item.categoryCode),
+                            modifier = Modifier.fillMaxSize(),
+                            iconSize = 44.dp
+                        )
                     }
                 }
                 Box(
@@ -427,7 +448,12 @@ private fun TourismCourseHero(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = strings.summary(course.stops.size, route, travelMode),
+                    // 경로가 없으면 "N곳"만 — 이동 시간·거리는 경로에서 나오는 값이라 지어낼 수 없다.
+                    text = if (route != null) {
+                        strings.summary(course.stops.size, route, travelMode)
+                    } else {
+                        strings.stopCountOnly(course.stops.size)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.SemiBold
@@ -604,6 +630,72 @@ private fun TransferLeg(section: DrivingRouteSection, travelMode: TravelMode, st
     }
 }
 
+/**
+ * 이동수단을 바꾸다 경로를 못 받았을 때 모드 선택 바 아래에 서는 배너.
+ *
+ * 예전엔 같은 자리에 빨간 글씨 한 줄만 있었다 — 무엇이 실패했는지는 알려주지만 할 수 있는 게
+ * 없어서, 사용자는 탭을 이리저리 눌러보는 것 말고 방법이 없었다. 여기서 바로 다시 받을 수 있게
+ * 재시도를 같이 둔다(코스 전체를 다시 만들지 않고 경로만 다시 받는다 — RecommendedCourseViewModel.retryRoute).
+ */
+@Composable
+private fun RouteErrorBanner(
+    message: String,
+    isRetrying: Boolean,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CoralPrimaryContainer)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.CloudOff,
+            contentDescription = null,
+            tint = CoralPrimary,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextPrimary,
+            modifier = Modifier.weight(1f)
+        )
+        // 재시도 중에는 버튼을 없애지 않고 비활성으로만 둔다 — 자리가 사라지면 배너 폭이 튄다.
+        TextButton(onClick = onRetry, enabled = !isRetrying) {
+            Text(
+                text = LocalAppStrings.current.common.retryButtonLabel,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (isRetrying) TextSecondary else CoralPrimary
+            )
+        }
+    }
+}
+
+/**
+ * 지도가 서야 할 자리에 경로가 없을 때 대신 그리는 폴백.
+ *
+ * 일러스트는 공용 오류 화면([com.mediinbusan.app.core.ui.ErrorState])과 같은 것을 쓴다 — 같은
+ * "못 불러왔다"를 화면마다 다른 그림으로 말하면 한 앱으로 안 읽힌다. 다만 여기는 화면 전체가
+ * 아니라 지도 박스 안이고 바로 위 배너에 이미 재시도가 있으므로, 버튼 없이 그림과 문구만 둔다.
+ */
+@Composable
+private fun RouteUnavailableFallback(message: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.background(
+            Brush.verticalGradient(listOf(CoralPrimaryContainer, Color.White))
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        ErrorState(message = message, icon = Icons.Default.WrongLocation)
+    }
+}
+
 // 정거장 사이 이동 구간을 잇는 세로선을 원형 점 5개로 표시한다. dash 패턴 대신 높이를 5등분해서
 // 각 구간 중앙에 점을 하나씩 찍어 개수를 정확히 고정한다.
 @Composable
@@ -653,11 +745,22 @@ private fun CourseStopRow(stop: RecommendedTourismStop, selected: Boolean, onCli
                     Text(detail, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
-            stop.item.imageUrl?.let { imageUrl ->
+            val imageUrl = stop.item.imageUrl
+            if (imageUrl != null) {
                 AsyncImageBox(
                     model = imageUrl,
                     contentDescription = stop.item.title,
                     modifier = Modifier.size(72.dp).clip(RoundedCornerShape(14.dp))
+                )
+            } else {
+                // 부산 내호냉면처럼 TourAPI가 사진을 안 내려준 항목이 많다. 예전엔 항목과 무관한
+                // 부산 풍경 배너(fallbackBannerImageFor)를 끌어다 썼는데, 냉면집 자리에 바다
+                // 사진이 붙어 "이 가게 사진"으로 읽혔다 — 목록·지도에서 쓰는 것과 같은 종류별
+                // 자리표시자(categoryCode → PlaceType → 색·아이콘)로 바꾼다.
+                PlaceFallbackThumbnail(
+                    visual = tourismKindVisual(stop.item.categoryCode),
+                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)),
+                    iconSize = 28.dp
                 )
             }
         }
@@ -668,6 +771,8 @@ private data class CourseStrings(
     val back: String,
     val notEnoughPlaces: String,
     val summary: (Int, DrivingRoute, TravelMode) -> String,
+    /** 경로를 못 받아 이동 시간·거리를 못 쓸 때의 축약형. */
+    val stopCountOnly: (Int) -> String,
     val transfer: (Int, Double) -> String,
     val modeLabel: (TravelMode) -> String,
     val routeDisclaimer: (TravelMode) -> String,
@@ -680,6 +785,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         back = "뒤로가기",
         notEnoughPlaces = "코스를 만들 수 있는 위치 정보가 충분하지 않습니다.",
         summary = { stops, route, mode -> "${stops}곳 · ${if (mode == TravelMode.DRIVING) "차량" else "도보"} 이동 약 ${durationKo(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
+        stopCountOnly = { "${it}곳" },
         transfer = { minutes, km -> "약 ${minutes}분 · ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "자동차" else "도보" },
         routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility 추천 경로 기준이며 교통 상황에 따라 이동 시간이 달라질 수 있습니다." else "Kakao 도보 편안한 길 기준이며 현장 보행 환경에 따라 이동 시간이 달라질 수 있습니다." },
@@ -689,6 +795,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         back = "Back",
         notEnoughPlaces = "There are not enough places with location data to build a course.",
         summary = { stops, route, mode -> "$stops stops · ${if (mode == TravelMode.DRIVING) "driving" else "walking"} about ${durationEn(route.durationMinutes())} · ${formatKm(route.distanceKm())}" },
+        stopCountOnly = { "$it stops" },
         transfer = { minutes, km -> "About $minutes min · ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "Car" else "Walk" },
         routeDisclaimer = { if (it == TravelMode.DRIVING) "Based on a Kakao Mobility recommended route; traffic may affect travel time." else "Based on Kakao's comfortable walking route; actual walking conditions may vary." },
@@ -698,6 +805,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         back = "戻る",
         notEnoughPlaces = "コース作成に必要な位置情報が不足しています。",
         summary = { stops, route, mode -> "$stops\u304b\u6240 \u00b7 ${if (mode == TravelMode.DRIVING) "\u8eca" else "\u5f92\u6b69"}\u3067\u7d04${durationJa(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
+        stopCountOnly = { "$it\u304b\u6240" },
         transfer = { minutes, km -> "\u7d04${minutes}\u5206 \u00b7 ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "\u81ea\u52d5\u8eca" else "\u5f92\u6b69" },
         routeDisclaimer = { if (it == TravelMode.DRIVING) "Kakao Mobility\u306e\u63a8\u5968\u30eb\u30fc\u30c8\u3067\u3001\u4ea4\u901a\u72b6\u6cc1\u306b\u3088\u308a\u6240\u8981\u6642\u9593\u304c\u5909\u308f\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" else "Kakao\u306e\u6b69\u884c\u30eb\u30fc\u30c8\u3067\u3001\u73fe\u5730\u306e\u6b69\u884c\u74b0\u5883\u306b\u3088\u308a\u7570\u306a\u308b\u5834\u5408\u304c\u3042\u308a\u307e\u3059\u3002" },
@@ -707,6 +815,7 @@ private fun SupportedLanguage.courseStrings(): CourseStrings = when (this) {
         back = "返回",
         notEnoughPlaces = "没有足够的地点位置信息来生成路线。",
         summary = { stops, route, mode -> "$stops\u5904 \u00b7 ${if (mode == TravelMode.DRIVING) "\u9a7e\u8f66" else "\u6b65\u884c"}\u7ea6${durationZh(route.durationMinutes())} \u00b7 ${formatKm(route.distanceKm())}" },
+        stopCountOnly = { "$it\u5904" },
         transfer = { minutes, km -> "\u7ea6${minutes}\u5206\u949f \u00b7 ${formatKm(km)}" },
         modeLabel = { if (it == TravelMode.DRIVING) "\u6c7d\u8f66" else "\u6b65\u884c" },
         routeDisclaimer = { if (it == TravelMode.DRIVING) "\u57fa\u4e8e Kakao Mobility \u63a8\u8350\u8def\u7ebf\uff0c\u4ea4\u901a\u72b6\u51b5\u53ef\u80fd\u5f71\u54cd\u65f6\u95f4\u3002" else "\u57fa\u4e8e Kakao \u8212\u9002\u6b65\u884c\u8def\u7ebf\uff0c\u5b9e\u9645\u6b65\u884c\u73af\u5883\u53ef\u80fd\u6709\u6240\u4e0d\u540c\u3002" },

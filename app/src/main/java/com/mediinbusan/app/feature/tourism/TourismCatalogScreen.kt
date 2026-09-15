@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Close
@@ -101,14 +100,18 @@ import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.designsystem.TourismAccentPink
+import com.mediinbusan.app.core.designsystem.TourismAccentPinkContainer
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.i18n.translatedTourismItemCategoryLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.BackOnlyNavigationBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.BrandDropdownMenu
 import com.mediinbusan.app.core.ui.BrandDropdownMenuItem
+import com.mediinbusan.app.core.ui.CenteredTopAppBar
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.EmptyState
 import com.mediinbusan.app.core.ui.ErrorState
@@ -116,7 +119,6 @@ import com.mediinbusan.app.core.ui.FilterChipPill
 import com.mediinbusan.app.core.ui.CardRevealPace
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
-import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberFavoriteTogglePop
@@ -406,7 +408,7 @@ private fun AccessibleTourismCatalogContent(
         topBar = {
             // category.translatedLabel()을 그대로 쓰면 NearbyScreen 슬라이더·허브 화면 등 다른
             // 화면의 "무장애 관광" 표기까지 다 바뀌므로, 이 화면 전용 타이틀 문구를 따로 둔다.
-            PlacesGridTopAppBar(title = strings.tourism.accessibleListTitle, onBack = onBack)
+            CenteredTopAppBar(title = strings.tourism.accessibleListTitle, onBack = onBack)
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
@@ -522,7 +524,7 @@ private fun RecommendedPlacesCatalogContent(
             // category.translatedLabel()은 언어별 소스를 가리키는 내부 구분용 라벨이라(EN이면
             // "Busan in English") 화면 제목으로 쓰면 "부산 관광지"의 번역이 아니라 이상하게
             // 보인다 — 이 화면 전용 문구를 따로 둔다(무장애 관광의 accessibleListTitle과 동일 패턴).
-            PlacesGridTopAppBar(title = strings.tourism.busanPlacesListTitle, onBack = onBack)
+            CenteredTopAppBar(title = strings.tourism.busanPlacesListTitle, onBack = onBack)
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
@@ -776,11 +778,11 @@ private fun PlacesCategoryPill(
     onClick: () -> Unit,
     icon: @Composable (tint: Color) -> Unit
 ) {
-    val contentColor = if (selected) PlacesAccentPink else TextPrimary
+    val contentColor = if (selected) TourismAccentPink else TextPrimary
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) PlacesAccentPinkContainer else Color.White)
+            .background(if (selected) TourismAccentPinkContainer else Color.White)
             .border(
                 width = 1.dp,
                 color = if (selected) Color.Transparent else DividerColor,
@@ -823,7 +825,7 @@ private fun PlacesDistrictDropdownPill(
                 .background(Color.White)
                 .border(
                     width = if (expanded) 1.5.dp else 1.dp,
-                    color = if (expanded) PlacesAccentPink else DividerColor,
+                    color = if (expanded) TourismAccentPink else DividerColor,
                     shape = RoundedCornerShape(14.dp)
                 )
                 .clickable { expanded = true }
@@ -858,14 +860,14 @@ private fun PlacesDistrictDropdownPill(
                 label = strings.tourism.focusAll,
                 selected = selectedDistrict == null,
                 onClick = { onDistrictSelected(null); expanded = false },
-                accentColor = PlacesAccentPink
+                accentColor = TourismAccentPink
             )
             BusanDistrict.entries.forEach { district ->
                 BrandDropdownMenuItem(
                     label = district.translatedLabel(strings.language),
                     selected = selectedDistrict == district,
                     onClick = { onDistrictSelected(district); expanded = false },
-                    accentColor = PlacesAccentPink
+                    accentColor = TourismAccentPink
                 )
             }
         }
@@ -923,18 +925,12 @@ private fun PlacesGridSearchBar(query: String, onQueryChanged: (String) -> Unit,
 
 private val SearchBarFill = Color(0xFFF2F1F3)
 
-// wellness_tourism_recommendation_list.png의 메인 포인트 핑크 — 관광지 선택 상태, "추천 장소"
-// 강조 텍스트, 지역 드롭다운 체크 아이콘 등 이 화면(부산 관광지)의 주요 포인트 전용 색이다.
-// 앱 전체에서 쓰는 core/designsystem의 CoralPrimary(#FD6677)와는 다른 값이라 여기서만 따로 둔다.
-private val PlacesAccentPink = Color(0xFFFD3569)
-private val PlacesAccentPinkContainer = Color(0xFFFFE3EA)
-
 // 아이콘 라벨(FOR YOU/EASY TRIP) + 큰 제목(강조 부분만 코랄, 순서는 호출부가 AnnotatedString으로
 // 직접 조립) + 부제. "부산 관광지"·무장애 관광 리스트업 화면이 검색바 밑에서 공용으로 쓴다.
 @Composable
 private fun PlacesHeroHeader(eyebrowLabel: String, title: AnnotatedString, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = eyebrowLabel, style = MaterialTheme.typography.labelMedium, color = PlacesAccentPink, fontWeight = FontWeight.Bold)
+        Text(text = eyebrowLabel, style = MaterialTheme.typography.labelMedium, color = TourismAccentPink, fontWeight = FontWeight.Bold)
         Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
     }
@@ -947,7 +943,7 @@ private fun ForYouRecommendationHeader(forYouLabel: String, titlePrefix: String,
         eyebrowLabel = forYouLabel,
         title = buildAnnotatedString {
             withStyle(SpanStyle(color = TextPrimary)) { append(titlePrefix) }
-            withStyle(SpanStyle(color = PlacesAccentPink)) { append(titleHighlight) }
+            withStyle(SpanStyle(color = TourismAccentPink)) { append(titleHighlight) }
         },
         subtitle = subtitle
     )
@@ -959,32 +955,10 @@ private fun AccessibleHeroHeader(label: String, titleHighlight: String, titleSuf
     PlacesHeroHeader(
         eyebrowLabel = label,
         title = buildAnnotatedString {
-            withStyle(SpanStyle(color = PlacesAccentPink)) { append(titleHighlight) }
+            withStyle(SpanStyle(color = TourismAccentPink)) { append(titleHighlight) }
             withStyle(SpanStyle(color = TextPrimary)) { append(titleSuffix) }
         },
         subtitle = subtitle
-    )
-}
-
-// wellness_tourism_recommendation_list.png 기준 — 뒤로가기 + 완전히 가운데 정렬된 굵은 검정
-// 제목만 있는 가벼운 헤더(동백꽃 장식 없음). RecommendedPlacesCatalogContent 전용.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlacesGridTopAppBar(title: String, onBack: () -> Unit) {
-    CenterAlignedTopAppBar(
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = LocalAppStrings.current.common.backContentDescription,
-                    tint = TextPrimary
-                )
-            }
-        },
-        title = {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-        }
     )
 }
 
@@ -1234,17 +1208,21 @@ private fun rememberTourismItemDistanceLabel(item: TourismCatalogItem): String? 
 @Composable
 private fun TourismCardBody(item: TourismCatalogItem, distanceLabel: String?) {
     val strings = LocalAppStrings.current
-    item.imageUrl?.let { imageUrl ->
+    // 사진이 없으면 예전엔 이미지 자리를 통째로 접었다 — 사진 있는 카드와 나란히 놓이면 그 항목만
+    // 반쪽짜리로 보여서, 같은 높이의 공용 자리표시자(MapMarkerFallbackThumbnail)로 채운다.
+    if (item.imageUrl != null) {
         AsyncImageBox(
-            model = imageUrl,
+            model = item.imageUrl,
             contentDescription = item.title,
             modifier = Modifier.fillMaxWidth().height(176.dp)
         )
+    } else {
+        MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxWidth().height(176.dp), iconSize = 44.dp)
     }
     Column(
         modifier = Modifier.padding(
             start = 16.dp,
-            top = if (item.imageUrl == null) 16.dp else 0.dp,
+            top = 0.dp,
             end = 16.dp,
             bottom = 16.dp
         ),
@@ -1318,14 +1296,10 @@ private fun TourismGridPlaceCard(
                 AsyncImageBox(model = item.imageUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
             } else {
                 // TourAPI가 사진을 안 내려준 항목 — CoralPrimaryContainer(옅은 핑크) 배경만 남으면
-                // 흰 화면 위 그리드에서 "빈 카드처럼" 보여서(가운데만 흰 화면으로 보인다는 문의의
-                // 실제 원인 중 하나), 사진이 없다는 걸 분명히 보여주는 아이콘을 얹는다.
-                Icon(
-                    imageVector = Icons.Default.Place,
-                    contentDescription = null,
-                    tint = CoralPrimary.copy(alpha = 0.35f),
-                    modifier = Modifier.align(Alignment.Center).size(40.dp)
-                )
+                // 흰 화면 위 그리드에서 "빈 카드처럼" 보인다(가운데만 흰 화면으로 보인다는 문의의
+                // 실제 원인 중 하나). 예전엔 Place 아이콘 하나만 얹었는데, 다른 화면의 "사진 없음"과
+                // 같은 모양(코랄 그라데이션 + 지도 마커)으로 맞춘다.
+                MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 36.dp)
             }
             Box(
                 modifier = Modifier.fillMaxSize().background(

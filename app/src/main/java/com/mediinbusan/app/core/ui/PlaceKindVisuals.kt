@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.data.place.PlaceCategory
@@ -148,8 +149,18 @@ private val WalkKindInk = Color(0xFF1B7A4B)
 
 // 사진이 없는 장소의 대체 썸네일 — 종류별 색 그라데이션 + 아이콘 배지. Map 화면(MapPlaceListRow)과
 // 부산관광 홈 슬라이더(NearbyScreen) 등 여러 feature가 같은 톤을 쓰도록 core/ui에 공유해 둔다.
+// 상세 하단 "주변 ○○" 카드(NearbyPlacesSection)도 같은 걸 쓴다 — 목록에서 보던 자리표시자가
+// 상세로 들어갔다고 다른 그림으로 바뀌면 같은 장소로 읽히지 않는다.
+//
+// @param iconSize 아이콘 지름. 목록 썸네일(77~104dp)과 카드를 통째로 채우는 자리(164dp)는 박스
+//   크기가 두 배 넘게 차이나서, 같은 26dp로 두면 큰 자리에서는 점처럼 보인다. 그림 자체(색·아이콘·
+//   그라데이션)는 그대로 두고 크기만 호출부가 맞춘다.
 @Composable
-fun PlaceFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifier) {
+fun PlaceFallbackThumbnail(
+    visual: PlaceKindVisual,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 26.dp
+) {
     Box(
         modifier = modifier.background(
             ComposeBrush.verticalGradient(listOf(visual.color.copy(alpha = 0.20f), visual.color.copy(alpha = 0.06f)))
@@ -160,7 +171,30 @@ fun PlaceFallbackThumbnail(visual: PlaceKindVisual, modifier: Modifier = Modifie
             imageVector = visual.icon,
             contentDescription = null,
             tint = visual.color,
-            modifier = Modifier.size(26.dp)
+            modifier = Modifier.size(iconSize)
         )
     }
 }
+
+/**
+ * 관광 데이터 항목(TourismCatalogItem)의 `categoryCode`(TourAPI contenttypeid)로 [placeKindVisual]을
+ * 고른다 — 웰니스 장소(Place)와 달리 관광 항목에는 PlaceType이 없어서, 같은 "부산 내호냉면"이
+ * 장소 목록에서는 음식 아이콘, 추천 코스에서는 무관한 풍경 사진으로 나오던 걸 한쪽으로 맞춘다.
+ *
+ * 코드 체계는 [com.mediinbusan.app.domain.tourism.toTourismTagGroup]과 같다 — 국문 서비스
+ * (12/14/25/28/32/38/39)와 외국어 서비스(75/76/78/79/80/82/85)가 서로 다른 값을 쓰지만 값이
+ * 겹치지 않아 하나의 when으로 처리한다. 모르는 코드·null은 OTHER(지도 마커)로 떨어진다.
+ */
+fun tourismKindVisual(categoryCode: String?): PlaceKindVisual = placeKindVisual(
+    when (categoryCode) {
+        "12", "76" -> PlaceType.TOURIST_ATTRACTION // 관광지
+        "14", "78" -> PlaceType.TOURIST_ATTRACTION // 문화시설
+        "85" -> PlaceType.TOURIST_ATTRACTION // 축제·행사
+        "25" -> PlaceType.WALK // 여행코스
+        "28", "75" -> PlaceType.WALK // 레포츠
+        "32", "80" -> PlaceType.LODGING // 숙박
+        "38", "79" -> PlaceType.SHOPPING // 쇼핑
+        "39", "82" -> PlaceType.RESTAURANT // 음식점
+        else -> PlaceType.OTHER
+    }
+)

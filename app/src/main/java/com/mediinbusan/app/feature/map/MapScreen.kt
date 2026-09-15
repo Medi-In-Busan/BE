@@ -105,6 +105,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -431,6 +433,8 @@ private fun BrowseMap(
 ) {
     val mapStrings = LocalAppStrings.current.map
     val language = LocalAppStrings.current.language
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     // "필터" 버튼을 누르면 진료과목 칩 줄을 펼쳤다 접었다 한다 — 예전엔 버튼만 있고 실제 필터
     // 기능이 없는 자리표시자였다.
     var showFilters by remember { mutableStateOf(false) }
@@ -464,8 +468,16 @@ private fun BrowseMap(
     // 갔다 뒤로 돌아와도 그 상태 그대로 복귀해야 하기 때문이다. 화면 로컬 상태로 두면 재진입 때
     // BrowseMap이 잠깐 사라지면서 같이 날아갔다.
     val isListExpanded = uiState.isListExpanded
+    // 검색어를 입력하는 도중(자판이 올라온 상태)에 지도의 마커를 누르면, 선택 카드가 화면 하단에
+    // 뜨는데 자판이 그 자리를 통째로 덮어 아무것도 안 보였다. 지도는 AndroidView(카카오맵)라
+    // 터치해도 Compose 포커스가 풀리지 않아 자판이 그대로 남는다 — 마커가 선택되는 순간
+    // 검색창 포커스를 직접 풀어 자판을 내린다(hide()는 포커스가 이미 없을 때를 위한 보완).
     LaunchedEffect(uiState.selectedMarkerId) {
-        if (uiState.selectedMarkerId != null) onListExpandedChange(false)
+        if (uiState.selectedMarkerId != null) {
+            onListExpandedChange(false)
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
     }
     // visibleHospitals/visiblePlaces/categoryHospitals는 MapUiState의 계산 프로퍼티라 읽을 때마다
     // 전체 목록을 다시 거른다 — 한 번의 recomposition에서 핀/목록/선택 조회로 네댓 번씩 반복됐고,

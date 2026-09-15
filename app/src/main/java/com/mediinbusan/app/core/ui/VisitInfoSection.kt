@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.Payments
@@ -40,12 +42,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.BadgeText
-import com.mediinbusan.app.core.designsystem.CoralInk
-import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.designsystem.TourismAccentPink
+import com.mediinbusan.app.core.designsystem.TourismAccentPinkContainer
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 
 /**
@@ -196,8 +198,8 @@ fun VisitInfoContent(
         }
 
         if (homepageUrl != null) {
-            // 유일하게 누를 수 있는 행이라, 값 글자색(CoralInk)과 꼬리 아이콘으로 그걸 드러낸다 —
-            // 장소 상세의 전화 행(BasicInfoRow)이 쓰는 것과 같은 규칙이다.
+            // 유일하게 누를 수 있는 행이라, 값 글자색(TourismAccentPink)과 꼬리 아이콘으로 그걸
+            // 드러낸다 — 장소 상세의 전화 행(BasicInfoRow)이 쓰는 것과 같은 규칙이다.
             VisitInfoRow(
                 icon = Icons.Default.Language,
                 label = strings.hospitalDetail.homepageLabel,
@@ -208,7 +210,7 @@ fun VisitInfoContent(
                     Text(
                         text = homepageUrl.stripUrlScheme(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CoralInk,
+                        color = TourismAccentPink,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -218,7 +220,7 @@ fun VisitInfoContent(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         contentDescription = null,
-                        tint = CoralPrimary,
+                        tint = TourismAccentPink,
                         modifier = Modifier.size(15.dp)
                     )
                 }
@@ -269,10 +271,10 @@ private fun VisitInfoRow(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(CoralPrimaryContainer),
+                .background(TourismAccentPinkContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = TourismAccentPink, modifier = Modifier.size(18.dp))
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -307,16 +309,27 @@ private fun ExpandableValue(text: String) {
     )
     if (overflowed || expanded) {
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = if (expanded) common.collapseLabel else common.expandLabel,
-            style = MaterialTheme.typography.labelMedium,
-            color = CoralInk,
-            fontWeight = FontWeight.SemiBold,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clip(MaterialTheme.shapes.small)
                 .clickable { expanded = !expanded }
                 .padding(vertical = 2.dp)
-        )
+        ) {
+            Text(
+                text = if (expanded) common.collapseLabel else common.expandLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = TourismAccentPink,
+                fontWeight = FontWeight.SemiBold
+            )
+            // 접혀있을 땐 아래 화살표("더 볼 게 있다"), 펼치면 위 화살표("접을 수 있다")로 뒤집는다.
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = TourismAccentPink,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 

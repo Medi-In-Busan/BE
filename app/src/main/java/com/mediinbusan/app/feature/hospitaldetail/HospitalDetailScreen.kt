@@ -110,6 +110,7 @@ import com.mediinbusan.app.core.ui.ErrorState
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.MapPin
 import com.mediinbusan.app.core.ui.MapPinType
+import com.mediinbusan.app.core.ui.NearbyPhotoCard
 import com.mediinbusan.app.core.ui.KakaoMapView
 import com.mediinbusan.app.core.ui.WrapRow
 import com.mediinbusan.app.core.ui.launchExternalDirections
@@ -1011,29 +1012,15 @@ private fun NearbyHospitalsSection(
     }
 }
 
-/** 썸네일 + 거리 배지 + 이름 + 대표 진료과목 한 줄짜리 카드. */
+/** 사진이 카드를 채우고, 거리 배지·이름·대표 진료과목이 그 위에 얹히는 카드(core/ui/NearbyPhotoCard.kt). */
 @Composable
 private fun NearbyHospitalCard(hospital: Hospital, onClick: () -> Unit) {
     val language = LocalAppStrings.current.language
-    Column(
-        modifier = Modifier
-            .width(164.dp)
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.08f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(DividerColor)
-        ) {
+    NearbyPhotoCard(
+        title = hospital.name,
+        distanceLabel = hospital.distanceMeters?.toDistanceLabel(),
+        onClick = onClick,
+        image = {
             // 병원마다 실제 사진이 없는 경우가 많아, 목록 화면과 같은 규칙(이름 키워드 → 태그 순)으로
             // 진료과목별 대표 사진을 고른다(core/common/MedicalCategory.kt의 resolveHospitalThumbnailRes).
             if (hospital.imageUrl != null) {
@@ -1052,46 +1039,19 @@ private fun NearbyHospitalCard(hospital: Hospital, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            // 거리는 서버가 기준 좌표로부터 계산해 내려준 값이라, 없으면 배지를 아예 안 단다.
-            hospital.distanceMeters?.let { meters ->
-                Text(
-                    text = meters.toDistanceLabel(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = CoralInk,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(Color.White.copy(alpha = 0.92f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-            }
-        }
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Text(
-                text = hospital.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                // 이름이 한 줄인 카드와 두 줄인 카드가 섞이면 아래 과목 줄의 높이가 어긋난다 —
-                // 두 줄 자리를 항상 잡아 카드들의 바닥선을 맞춘다.
-                minLines = 2
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+        },
+        meta = {
             Text(
                 text = hospital.specialties.firstOrNull()
                     ?.let { translatedSpecialtyLabel(it, language) }
                     .orEmpty(),
                 style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary,
+                color = Color.White.copy(alpha = 0.82f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-    }
+    )
 }
 
 /** 1km 미만은 10m 단위 미터로, 그 이상은 소수 한 자리 km로. */

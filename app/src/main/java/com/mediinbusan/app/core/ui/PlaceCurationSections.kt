@@ -5,8 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MeetingRoom
@@ -31,18 +34,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.core.common.ActivityLevel
 import com.mediinbusan.app.core.common.PlaceCareProfile
 import com.mediinbusan.app.core.common.PlaceCautionKey
 import com.mediinbusan.app.core.common.PlaceSetting
-import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.core.designsystem.CoralPrimary
+import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
+import com.mediinbusan.app.core.designsystem.TourismAccentPink
 import com.mediinbusan.app.core.i18n.BusanHighlightCopy
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 
@@ -72,10 +79,9 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
  * (PlaceCurationStrings.atAGlanceSourceNote)를 이 컴포저블이 직접 붙여, 이걸 쓰는 두 화면
  * (장소 상세·관광 카탈로그 상세) 어디서도 각주가 빠질 수 없게 한다.
  *
- * pill은 색을 쓰지 않는다 — 예전엔 장소 종류 색을 옅게 깔았는데, 네 개가 나란히 서면 화면에서
- * 색이 가장 튀는 덩어리가 되면서 정작 그 아래 진짜 내용보다 시선을 먼저 가져갔다.
- *
- * 줄바꿈은 [WrapRow]로 한다 — FlowRow는 이 프로젝트에서 실기기 크래시를 낸다(CLAUDE.md §6-6).
+ * 네 칸은 한 줄에 다 들어가는 하나의 회색 카드를 4등분한 것이다 — 예전엔 칸마다 독립된 pill이라
+ * 값이 조금만 길어도(예: "회복 2~3일 후") 4개가 한 줄에 안 맞고 다음 줄로 밀렸다. 폭을 4등분
+ * (weight(1f))으로 고정해 항상 한 줄을 유지하고, 칸 사이는 가는 세로선으로만 구분한다.
  */
 @Composable
 fun AtAGlanceRow(
@@ -89,26 +95,48 @@ fun AtAGlanceRow(
         strings.stayTimeRangeFormat.format(profile.stayMinutesMin, profile.stayMinutesMax)
     }
     Column(modifier = modifier.fillMaxWidth()) {
-        WrapRow(modifier = Modifier.fillMaxWidth(), horizontalSpacing = 8.dp, verticalSpacing = 8.dp) {
-            GlancePill(
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.08f),
+                    spotColor = Color.Black.copy(alpha = 0.08f)
+                )
+                .clip(RoundedCornerShape(16.dp))
+                .background(GlancePillSurface)
+        ) {
+            GlanceColumn(
                 icon = Icons.Default.EventAvailable,
                 label = strings.recoveryFitLabel,
-                value = strings.recoveryFitLabels[profile.recoveryFit.name].orEmpty()
+                value = strings.recoveryFitLabels[profile.recoveryFit.name].orEmpty(),
+                modifier = Modifier.weight(1f)
             )
-            GlancePill(
+            GlanceDivider()
+            GlanceColumn(
                 icon = Icons.AutoMirrored.Filled.DirectionsWalk,
                 label = strings.activityLevelLabel,
-                value = strings.activityLevelLabels[profile.activityLevel.name].orEmpty()
+                value = strings.activityLevelLabels[profile.activityLevel.name].orEmpty(),
+                modifier = Modifier.weight(1f)
             )
-            GlancePill(
+            GlanceDivider()
+            GlanceColumn(
                 icon = profile.setting.icon(),
                 label = strings.settingLabel,
-                value = strings.settingLabels[profile.setting.name].orEmpty()
+                value = strings.settingLabels[profile.setting.name].orEmpty(),
+                modifier = Modifier.weight(1f)
             )
-            GlancePill(
+            GlanceDivider()
+            // 마지막 칸은 오른쪽 끝에 붙여(alignEnd) 줄 전체가 좌우로 여백 없이 꽉 차 보이게 한다
+            // — "60~120분"처럼 짧은 값도 왼쪽 정렬로 두면 칸 가운데에 어정쩡하게 뜬다.
+            GlanceColumn(
                 icon = Icons.Default.Schedule,
                 label = strings.stayTimeLabel,
-                value = stayValue
+                value = stayValue,
+                modifier = Modifier.weight(1f),
+                alignEnd = true
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -120,36 +148,58 @@ fun AtAGlanceRow(
     }
 }
 
+// 아이콘+라벨 줄은 네 칸 모두 왼쪽 정렬로 같다 — 값 줄만 맨 오른쪽 칸([alignEnd])에서 오른쪽
+// 끝에 붙는다("60~120분"처럼 짧은 값이 칸 가운데 어중간하게 뜨는 대신, 칸 전체 폭을 한 줄
+// 확보하는 데 쓸 수 있다). 나머지 칸의 값은 라벨과 같은 시작선(아이콘 폭만큼 들여쓰기)에 맞춘다.
 @Composable
-private fun GlancePill(
+private fun GlanceColumn(
     icon: ImageVector,
     label: String,
-    value: String
+    value: String,
+    modifier: Modifier = Modifier,
+    alignEnd: Boolean = false
 ) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(GlancePillSurface)
-            .padding(horizontal = 12.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        // 라벨(무엇)을 값(얼마) 위 작은 글씨로 올린다 — 장소 상세의 BasicInfoRow와 같은 위계다.
-        Column {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+    Column(modifier = modifier.padding(horizontal = 6.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = null, tint = TourismAccentPink, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = value,
-                style = MaterialTheme.typography.labelLarge,
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelSmall,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            maxLines = if (alignEnd) 1 else 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = if (alignEnd) TextAlign.End else TextAlign.Start,
+            // 나머지 칸은 아이콘(14dp) + 간격(4dp)만큼 들여써 라벨의 시작선과 맞춘다. 오른쪽 정렬
+            // 칸은 대신 폭을 전부 차지해야 textAlign.End가 실제로 오른쪽 끝에 붙는다.
+            modifier = if (alignEnd) Modifier.fillMaxWidth() else Modifier.padding(start = 18.dp)
+        )
     }
 }
 
+@Composable
+private fun GlanceDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(1.dp)
+            .background(DividerColor)
+    )
+}
+
 // pill 바탕. 흰 카드 위에 살짝 눌러 앉은 중립 회색 — 색으로 강조하는 대신 면으로만 묶는다.
-private val GlancePillSurface = Color(0xFFF4F4F7)
+// 그림자를 진하게 올린 뒤로 원래 값(#F4F4F7)은 그림자와 맞물려 더 진해 보여서 한 톤 더 밝혔다.
+private val GlancePillSurface = Color(0xFFF7F7F9)
 
 private fun PlaceSetting.icon(): ImageVector = when (this) {
     PlaceSetting.INDOOR -> Icons.Default.MeetingRoom
@@ -197,8 +247,9 @@ fun MediTipContent(
 }
 
 /**
- * 유형별 주의 항목 목록. "진료 전후 체크" 카드 안에서 기존 안내 문구 아래에 붙는다.
- * 어떤 항목도 의료 자문이 아니며, 카드에는 항상 면책 문구가 함께 남는다.
+ * 유형별 주의 항목 목록. "진료 전후 체크" 섹션의 본문이다. 최대 3개(core/common/PlaceCareProfile
+ * 데이터가 항목마다 1~3개를 준다)라 가로로 나란히 두는 열이 항상 자연스럽게 채워진다 — 세로로
+ * 쌓던 예전 목록보다 한눈에 훑기 좋다. 어떤 항목도 의료 자문이 아니며, 호출부가 면책 문구를 붙인다.
  */
 @Composable
 fun CautionList(
@@ -207,35 +258,40 @@ fun CautionList(
 ) {
     if (cautions.isEmpty()) return
     val labels = LocalAppStrings.current.placeCuration.cautionLabels
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         cautions.forEach { caution ->
             val label = labels[caution.name] ?: return@forEach
-            Row(verticalAlignment = Alignment.Top) {
-                // 아이콘 대신 작은 점을 쓴다 — 항목이 3개까지 이어지는데 경고 아이콘을 반복하면
-                // 안내가 아니라 경고문 나열처럼 읽힌다.
+            Column(modifier = Modifier.weight(1f)) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 7.dp)
-                        .size(5.dp)
+                        .size(22.dp)
                         .clip(CircleShape)
-                        .background(CoralPrimary)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(text = label, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                        .background(TourismAccentPink),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = label, style = MaterialTheme.typography.bodySmall, color = TextPrimary)
             }
         }
     }
 }
 
 /**
- * "여행자 편의" 카드 내용 — 공공 안내 번호 두 줄과, 그 아래 결제·이동 각주 한 줄.
+ * "여행자 편의" 카드 내용 — 공공 안내 번호 두 개를 나란한 박스 두 개로 보여주고, 그 아래
+ * 결제·이동 각주 한 줄을 남긴다.
  *
  * 앱이 상담이나 통역사를 연결하는 게 아니라 **공개된 번호를 안내만** 한다(CLAUDE.md §1 MVP
- * 하드 제약: 실시간 상담/통역사 매칭 없음). 번호 행을 누르면 [onDial]로 기기 다이얼러만 연다.
+ * 하드 제약: 실시간 상담/통역사 매칭 없음). 박스를 누르면 [onDial]로 기기 다이얼러만 연다.
  *
- * 예전엔 1330·119와 "결제·이동"이 같은 모양의 세 줄이었다 — 앞의 둘만 눌리는데 생김새가 같아서
- * 셋 다 누를 수 있는 것처럼 보였다. 누르면 전화가 걸리는 두 줄만 번호를 드러낸 행으로 남기고,
- * 장소와 무관한 일반 안내인 결제·이동은 카드 맨 아래 각주로 위계를 낮췄다.
+ * 결제·이동은 두 박스와 생김새가 달라야 "이건 안 눌린다"가 바로 전달된다 — 카드 맨 아래 각주로
+ * 위계를 낮춘 채로 둔다.
  */
 @Composable
 fun TravelerHelpContent(
@@ -244,21 +300,24 @@ fun TravelerHelpContent(
 ) {
     val strings = LocalAppStrings.current.placeCuration
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        TravelerHelpCallRow(
-            icon = Icons.Default.SupportAgent,
-            title = strings.travelerHelpTourLineLabel,
-            number = strings.travelerHelpTourLineNumber,
-            description = strings.travelerHelpTourLineDescription,
-            onCall = { onDial(strings.travelerHelpTourLineNumber) }
-        )
-        TravelerHelpCallRow(
-            icon = Icons.Default.LocalHospital,
-            title = strings.travelerHelpEmergencyLabel,
-            number = strings.travelerHelpEmergencyNumber,
-            description = strings.travelerHelpEmergencyDescription,
-            onCall = { onDial(strings.travelerHelpEmergencyNumber) }
-        )
-        Spacer(modifier = Modifier.height(2.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            TravelerHelpCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.SupportAgent,
+                title = strings.travelerHelpTourLineLabel,
+                description = strings.travelerHelpTourLineDescription,
+                number = strings.travelerHelpTourLineNumber,
+                onCall = { onDial(strings.travelerHelpTourLineNumber) }
+            )
+            TravelerHelpCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.LocalHospital,
+                title = strings.travelerHelpEmergencyLabel,
+                description = strings.travelerHelpEmergencyDescription,
+                number = strings.travelerHelpEmergencyNumber,
+                onCall = { onDial(strings.travelerHelpEmergencyNumber) }
+            )
+        }
         Text(
             text = strings.travelerHelpPaymentNote,
             style = MaterialTheme.typography.labelSmall,
@@ -268,67 +327,72 @@ fun TravelerHelpContent(
 }
 
 /**
- * 안내 번호 한 줄. 오른쪽 끝에 번호와 수화기 아이콘을 담은 알약을 둬서, 이 행이 "읽는 정보"가
- * 아니라 "누르면 전화가 걸리는 것"임을 생김새만으로 알 수 있게 한다.
+ * 안내 번호 박스 하나 — 아이콘+제목 -> 설명 -> 번호를 세로로 쌓는다. 처음엔 번호를 오른쪽에
+ * 따로 두는 가로 배치였는데, 박스 폭 안에서 넷을 한 줄에 욱여넣으니 설명 문구가 잘렸다.
  */
 @Composable
-private fun TravelerHelpCallRow(
+private fun TravelerHelpCard(
     icon: ImageVector,
     title: String,
-    number: String,
     description: String,
-    onCall: () -> Unit
+    number: String,
+    onCall: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
+    Column(
+        modifier = modifier
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor = Color.Black.copy(alpha = 0.08f)
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(GlancePillSurface)
             .clickable(onClick = onCall)
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(CoralPrimary.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = CoralPrimary, modifier = Modifier.size(18.dp))
-        }
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = null, tint = TourismAccentPink, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = TextPrimary,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
-        Spacer(modifier = Modifier.width(10.dp))
+        // 설명·번호는 제목 글자 시작선(24dp)보다 살짝 왼쪽(14dp)으로 뺐다 — 정확히 맞추면 폭이
+        // 좁아져 설명이 말줄임(…)으로 잘렸다. 완전히 안 맞느니 살짝 어긋나더라도 안 잘리는 쪽.
+        Text(
+            text = description,
+            style = MaterialTheme.typography.labelSmall,
+            color = TextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 14.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(percent = 50))
-                .background(CoralPrimary.copy(alpha = 0.10f))
-                .padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier = Modifier.padding(start = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 옅은 코랄 알약 위에 얹히는 글자·아이콘이라 면 색(CoralPrimary)이 아니라 글자용
-            // 짝(CoralInk)을 쓴다 — 같은 색으로 두면 번호가 배경에 묻힌다.
             Icon(
                 imageVector = Icons.Default.Call,
                 contentDescription = null,
-                tint = CoralInk,
+                tint = TourismAccentPink,
                 modifier = Modifier.size(13.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = number,
                 style = MaterialTheme.typography.labelLarge,
-                color = CoralInk,
-                fontWeight = FontWeight.Bold
+                color = TourismAccentPink,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
         }
     }
