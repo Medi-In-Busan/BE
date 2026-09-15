@@ -81,7 +81,7 @@ public class WellnessService {
             ))
             .toList();
 
-        return translationService.localizeAll(
+        return translationService.localizeAllFromCache(
             places,
             language
         );
@@ -123,7 +123,7 @@ public class WellnessService {
                 )
                 .toList();
 
-            return translationService.localizeAll(
+            return translationService.localizeAllFromCache(
                 responses,
                 language
             );
@@ -166,7 +166,7 @@ public class WellnessService {
             ))
             .toList();
 
-        return translationService.localizeAll(
+        return translationService.localizeAllFromCache(
             responses,
             language
         );

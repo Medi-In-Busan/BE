@@ -85,16 +85,21 @@ public class WellnessController {
         summary = "웰니스 장소 목록 조회(병원 비종속)",
         description = "latitude/longitude를 넘기면 반경(radiusMeters, 기본 3000m) 내 장소를 거리순으로, "
             + "안 넘기면 전체 장소를 반환한다. 지도 '전체 브라우징' 화면처럼 특정 병원에 종속되지 않은 조회에 쓴다. "
-            + "lang(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환하고, 해당 언어 번역이 없으면 ko로 폴백한다."
+            + "language(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환하고, 해당 언어 번역이 없으면 ko로 폴백한다."
     )
     @GetMapping("/places")
     public List<WellnessPlaceResponse> getPlaces(
         @Parameter(description = "기준 위도(선택)") @RequestParam(required = false) Double latitude,
         @Parameter(description = "기준 경도(선택)") @RequestParam(required = false) Double longitude,
         @Parameter(description = "검색 반경(m). 기본값 3000m — latitude/longitude가 있을 때만 적용") @RequestParam(required = false) Double radiusMeters,
-        @RequestParam(defaultValue = "ko") String lang
+        // 파라미터 이름은 반드시 language다 — 형제 엔드포인트(/hospitals/{regNo}/places,
+        // /places/{contentId})와 Android TourismApi의 @Query 이름이 전부 language인데 여기만 lang이라,
+        // 앱이 ?language=en을 보내도 서버가 못 읽고 기본값 ko로 떨어졌다. 그 결과 지도 전체
+        // 브라우징의 장소 이름·주소가 영어/일어/중어에서도 한국어로 나오고, WellnessPlaceResponse의
+        // translated가 항상 true가 되어 지도 "번역된 장소만" 필터가 아무것도 걸러내지 못했다.
+        @RequestParam(defaultValue = "ko") String language
     ) {
-        return wellnessService.findPlaces(latitude, longitude, radiusMeters, lang);
+        return wellnessService.findPlaces(latitude, longitude, radiusMeters, language);
     }
 
     @Operation(

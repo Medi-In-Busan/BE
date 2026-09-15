@@ -27,6 +27,9 @@ public class WellnessPlaceTranslationService {
     private static final String LINE_SEPARATOR = "\n";
     private static final String EMPTY_FIELD = "__MIB_EMPTY_FIELD__";
     private static final int MAX_BATCH_CHARACTERS = 4_000;
+    // 번역 캐시를 읽을 때 IN 절에 한 번에 넣는 contentId 개수. 전체를 한 방에 넣으면 DB마다 다른
+    // 파라미터 개수 제한에 걸릴 수 있어 묶어서 나눈다.
+    private static final int CACHE_LOOKUP_CHUNK = 500;
     private final WellnessPlaceTranslationRepository repository;
     private final PapagoTranslationClient papago;
     private final PapagoDailyQuotaGuard quotaGuard;
@@ -43,6 +46,55 @@ public class WellnessPlaceTranslationService {
         return localizeAll(List.of(source), requestedLanguage).getFirst();
     }
 
+    /**
+     * 이미 캐시에 있는 번역만 입히고 **Papago는 부르지 않는다** — 장소 목록 응답용이다.
+     *
+     * 목록 엔드포인트(특히 좌표 없이 전체를 주는 `GET /api/wellness/places`, 현재 2,267건)에서
+     * {@link #localizeAll}을 쓰면 캐시에 없는 장소 전부를 요청 처리 중에 번역하려 든다. 4,000자
+     * 단위로 쪼개도 Papago 호출이 수백 번 직렬로 나가서 응답이 분 단위가 되고, 지도 한 번 여는
+     * 것으로 일일 번역 한도를 태운다. 대량 번역은 읽기 경로가 아니라 적재 배치가 할 일이다
+     * (`WellnessIngestionService.applyTourTranslationsByLocation`가 TourAPI 다국어 서비스에서
+     * 이름·주소를 받아 `wellness_place`의 name_en/ja/zh 컬럼에 채운다 — 목록의 주 번역 소스는 그쪽이다).
+     * 여기서 채우는 Papago 캐시는 상세 화면을 열 때 그 장소 하나씩 쌓인다({@link #localize}).
+     */
+    @Transactional(readOnly = true)
+    public List<WellnessPlaceResponse> localizeAllFromCache(
+        List<WellnessPlaceResponse> sources,
+        String requestedLanguage
+    ) {
+        String language = normalizeLanguage(requestedLanguage);
+        if (sources.isEmpty() || language.equals("ko")) return sources;
+
+        Map<String, WellnessPlaceTranslation> cachedByContentId = loadCache(sources, language);
+        return sources.stream()
+            .map(source -> {
+                WellnessPlaceTranslation cached = cachedByContentId.get(source.contentId());
+                return cached != null && cached.sourceHash().equals(sourceHash(source))
+                    ? translatedResponse(source, cached)
+                    : source;
+            })
+            .toList();
+    }
+
+    /**
+     * 요청에 실린 장소들의 번역 캐시를 한 번에(정확히는 IN 절 길이 제한을 피해 묶음 단위로) 읽는다.
+     * 장소마다 한 건씩 조회하면 목록 요청 한 번에 쿼리가 장소 수만큼 나간다.
+     */
+    private Map<String, WellnessPlaceTranslation> loadCache(List<WellnessPlaceResponse> sources, String language) {
+        List<String> contentIds = sources.stream()
+            .map(WellnessPlaceResponse::contentId)
+            .filter(contentId -> contentId != null && !contentId.isBlank())
+            .distinct()
+            .toList();
+        Map<String, WellnessPlaceTranslation> cachedByContentId = new LinkedHashMap<>();
+        for (int start = 0; start < contentIds.size(); start += CACHE_LOOKUP_CHUNK) {
+            List<String> chunk = contentIds.subList(start, Math.min(start + CACHE_LOOKUP_CHUNK, contentIds.size()));
+            repository.findByLanguageCodeAndContentIdIn(language, chunk)
+                .forEach(translation -> cachedByContentId.put(translation.contentId(), translation));
+        }
+        return cachedByContentId;
+    }
+
     // WellnessService는 readOnly=true 트랜잭션에서 이 메서드를 호출한다.
     // REQUIRED(기본값)로 두면 그 읽기전용 트랜잭션에 그대로 합류해 캐시 미스 시의
     // insert/update가 "Connection is read-only"로 실패한다(MySQL에서만 강제됨, H2는 무시함) —
@@ -57,13 +109,14 @@ public class WellnessPlaceTranslationService {
 
         Map<String, WellnessPlaceResponse> localizedById = new LinkedHashMap<>();
         List<PendingTranslation> pending = new ArrayList<>();
+        Map<String, WellnessPlaceTranslation> cachedByContentId = loadCache(sources, language);
         for (WellnessPlaceResponse source : sources) {
             String hash = sourceHash(source);
-            var cached = repository.findByContentIdAndLanguageCode(source.contentId(), language);
-            if (cached.isPresent() && cached.get().sourceHash().equals(hash)) {
-                localizedById.put(source.contentId(), translatedResponse(source, cached.get()));
+            WellnessPlaceTranslation cached = cachedByContentId.get(source.contentId());
+            if (cached != null && cached.sourceHash().equals(hash)) {
+                localizedById.put(source.contentId(), translatedResponse(source, cached));
             } else {
-                pending.add(new PendingTranslation(source, hash, cached.orElse(null)));
+                pending.add(new PendingTranslation(source, hash, cached));
             }
         }
 
