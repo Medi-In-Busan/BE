@@ -75,6 +75,28 @@ class WellnessControllerLanguageParamTest {
     }
 
     @Test
+    void 장소_목록은_레거시_별칭_lang으로도_조회된다() throws Exception {
+        when(wellnessService.findPlaces(any(), any(), any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/wellness/places").param("lang", "en"))
+            .andExpect(status().isOk());
+
+        // 이름을 바로잡기 전의 호출부가 남아 있어도 한국어로 조용히 떨어지지 않는다.
+        verify(wellnessService).findPlaces(isNull(), isNull(), isNull(), eq("en"));
+    }
+
+    @Test
+    void 장소_목록에_language와_lang이_같이_오면_language가_이긴다() throws Exception {
+        when(wellnessService.findPlaces(any(), any(), any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/wellness/places").param("language", "ko").param("lang", "en"))
+            .andExpect(status().isOk());
+
+        // 정식 이름이 우선이다 — language=ko를 명시했으면 그건 한국어를 원한다는 뜻이다.
+        verify(wellnessService).findPlaces(isNull(), isNull(), isNull(), eq("ko"));
+    }
+
+    @Test
     void 병원_주변_장소도_같은_language_이름을_쓴다() throws Exception {
         when(wellnessService.getNearbyPlaces(any(), any(), any())).thenReturn(List.of());
 
