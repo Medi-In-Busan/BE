@@ -70,6 +70,9 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.translatedCopy
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.ui.AsyncImageBox
+import com.mediinbusan.app.core.ui.PlaceFallbackCharacterHero
+import com.mediinbusan.app.core.ui.placeKindVisual
+import com.mediinbusan.app.core.ui.tourismPlaceType
 import com.mediinbusan.app.core.ui.AtAGlanceRow
 import com.mediinbusan.app.core.ui.CautionList
 import com.mediinbusan.app.core.ui.CenteredTopAppBar
@@ -421,21 +424,17 @@ private fun TourismHero(item: TourismCatalogItem) {
         if (item.imageUrl != null) {
             AsyncImageBox(item.imageUrl, item.title, Modifier.fillMaxSize())
         } else {
-            Box(
-                modifier = Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        listOf(TourismAccentPinkContainer.copy(alpha = 0.6f), Color(0xFFEDEDF2))
-                    )
-                ),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.LocationOn, null, tint = TourismAccentPink, modifier = Modifier.size(32.dp))
-                }
-            }
+            // 예전엔 이 자리만 전용 자리표시자(핑크→회색 그라데이션 + 흰 원 안 LocationOn)를 따로
+            // 그렸다 — 웰니스 장소 상세(PlaceDetailScreen)는 같은 자리에 종류별 마스코트를 세우는데
+            // 관광 항목 상세만 빠져 있어서, 같은 부산 관광지를 어디서 열었는지에 따라 히어로가
+            // 달라졌다. 이제 둘 다 같은 마스코트 히어로를 쓴다(음식점은 음식 캐릭터, 나머지는
+            // 관광 캐릭터).
+            val kind = tourismPlaceType(item.categoryCode)
+            PlaceFallbackCharacterHero(
+                type = kind,
+                kindColor = placeKindVisual(kind).color,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

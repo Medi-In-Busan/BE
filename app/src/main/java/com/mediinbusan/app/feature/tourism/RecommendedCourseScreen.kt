@@ -99,8 +99,13 @@ fun RecommendedCourseScreen(
     viewModel: RecommendedCourseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val strings = uiState.language.courseStrings()
     val currentLanguage = LocalAppStrings.current.language
+    // 화면 문구는 uiState.language가 아니라 합성 시점의 언어로 고른다. uiState.language는 화면마다
+    // 새로 만들어지는 ViewModel이 DataStore를 읽어 채우는 값이라 첫 프레임에는 항상 기본값(한국어)
+    // 이다 — 그래서 영어/일어/중어 사용자는 로딩·빈 상태 문구와 코스 제목이 한국어로 한 번 떴다가
+    // 바뀌었다. LocalAppStrings는 앱 루트에서 한 번 구독해 계속 살아있는 값이라 이 화면에 들어온
+    // 시점엔 이미 맞는 언어다(core/i18n/AppLanguageViewModel 참고).
+    val strings = currentLanguage.courseStrings()
     LaunchedEffect(categoryName, districtName, currentLanguage) {
         viewModel.load(categoryName, districtName)
     }
@@ -131,10 +136,10 @@ fun RecommendedCourseScreen(
                 route = uiState.route,
                 courseTitle = recommendedCourseTitle(
                     course = requireNotNull(uiState.course),
-                    districtLabel = uiState.district?.translatedLabel(uiState.language),
-                    language = uiState.language
+                    districtLabel = uiState.district?.translatedLabel(currentLanguage),
+                    language = currentLanguage
                 ),
-                districtLabel = uiState.district?.translatedLabel(uiState.language),
+                districtLabel = uiState.district?.translatedLabel(currentLanguage),
                 selectedStopId = uiState.selectedStopId,
                 travelMode = uiState.travelMode,
                 isRouteRefreshing = uiState.isRouteRefreshing,

@@ -61,8 +61,10 @@ class TourismHubViewModel @Inject constructor(
             ) { preferences, profile, favorites, recent ->
                 val language = SupportedLanguage.entries.find { it.code == preferences.languageCode }
                     ?: SupportedLanguage.DEFAULT
+                // categories.first()는 현재 언어의 관광정보 변종이다. 그건 언어만으로 정해지는 값이라
+                // UiState에 담지 않고 화면이 직접 구한다(TourismHubScreen의 FeaturedExploreBanner
+                // 참고) — 여기서는 나머지 카테고리 랭킹의 기준점으로만 쓰고 drop(1)으로 떼어낸다.
                 val categories = tourismHubCategories(language.code)
-                val languageCategory = categories.first()
                 val hasPlaceHistory = favorites.any { it.itemType == FavoriteItemType.PLACE } ||
                     recent.any { it.itemType == RecentItemType.PLACE }
                 val now = System.currentTimeMillis()
@@ -85,7 +87,6 @@ class TourismHubViewModel @Inject constructor(
                 }
                 TourismHubUiState(
                     language = language,
-                    featuredCategory = languageCategory,
                     recoveryCategories = ranked.filter {
                         it == TourismCatalogCategory.WALKING
                     },
