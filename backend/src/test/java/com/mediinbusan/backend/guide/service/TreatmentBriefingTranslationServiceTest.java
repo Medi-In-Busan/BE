@@ -82,10 +82,10 @@ class TreatmentBriefingTranslationServiceTest {
         ));
 
         assertThat(response.visitPurpose()).isEmpty();
-        assertThat(response.symptoms()).isNull();
+        assertThat(response.symptoms()).isEmpty();
         assertThat(response.allergy()).isEqualTo("  ");
         assertThat(response.medication()).isEqualTo("이부프로펜");
-        assertThat(response.memo()).isNull();
+        assertThat(response.memo()).isEmpty();
         verify(papago, times(1)).translate(any(), any(), any());
     }
 

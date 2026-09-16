@@ -11,7 +11,7 @@ material = "1.13.0"
 coreSplashscreen = "1.0.1"
 
 # Compose / Navigation / Lifecycle
-composeBom = "2025.02.00"
+composeBom = "2025.12.00"
 activityCompose = "1.10.1"
 navigationCompose = "2.9.0"
 lifecycleRuntimeKtx = "2.9.0"

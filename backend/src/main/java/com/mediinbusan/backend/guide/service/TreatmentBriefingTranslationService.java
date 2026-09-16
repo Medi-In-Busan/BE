@@ -42,7 +42,8 @@ public class TreatmentBriefingTranslationService {
         // 이미 한국어로 입력한 사용자는 번역할 필요가 없다 — Papago를 호출하지 않고 원문 그대로 반환한다.
         if (sourceLanguage.equals(TARGET_LANGUAGE)) {
             return new TreatmentBriefingTranslateResponse(
-                request.visitPurpose(), request.symptoms(), request.allergy(), request.medication(), request.memo()
+                nullToEmpty(request.visitPurpose()), nullToEmpty(request.symptoms()),
+                nullToEmpty(request.allergy()), nullToEmpty(request.medication()), nullToEmpty(request.memo())
             );
         }
 
@@ -60,10 +61,13 @@ public class TreatmentBriefingTranslationService {
      * 번역은 원문을 제3자(Papago, NAVER Cloud)로 내보내므로 고유식별번호를 가린 뒤 보낸다
      * (DocumentOcrService.translate와 동일 정책). 실패해도 전체 응답을 실패시키지 않고 해당
      * 필드만 원문으로 폴백한다 — 원문/번역문 자체는 로그에 남기지 않는다.
+     * null은 빈 문자열로 정규화한다 — Android TreatmentBriefingTranslateResponseDto의 대응 필드가
+     * non-null String이라, 선택 필드를 비운 요청이 null 응답을 만들면 Kotlinx Serialization이
+     * Retrofit 응답을 디코드하지 못한다.
      */
     private String translateField(String value, String papagoSourceLanguage) {
         if (value == null || value.isBlank()) {
-            return value;
+            return nullToEmpty(value);
         }
         try {
             return papago.translate(SensitiveTextMasker.mask(value), papagoSourceLanguage, TARGET_LANGUAGE);
@@ -89,5 +93,9 @@ public class TreatmentBriefingTranslationService {
 
     private static String papagoLanguage(String language) {
         return language.equals("zh") ? "zh-CN" : language;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

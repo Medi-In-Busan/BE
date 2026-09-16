@@ -1,11 +1,6 @@
 package com.mediinbusan.app.feature.guide
 
-import android.app.DatePickerDialog
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.DialogInterface
 import android.content.res.Configuration
-import android.content.res.Resources
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,9 +18,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,11 +32,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -77,6 +80,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 private data class BriefingField(
     val label: String,
@@ -243,6 +247,7 @@ fun TreatmentExaminationDetailScreen(
                                     editContentDescription = s.editContentDescription,
                                     confirmLabel = s.datePickerConfirmLabel,
                                     cancelLabel = s.datePickerCancelLabel,
+                                    titleLabel = s.datePickerTitle,
                                     onDateSelected = { isoDate -> viewModel.updateField(field.field, isoDate) }
                                 )
                             } else {
@@ -439,10 +444,6 @@ private fun TranslateToKoreanButton(
 }
 
 // BriefingInfoRow와 같은 라벨-위/값-아래 레이아웃을 쓰되, 편집 방식만 날짜 선택으로 바꾼다.
-// Compose Material3의 DatePicker는 쓰지 않는다 — 이 프로젝트 의존성 그래프에서 androidx.compose.material3
-// 버전이 뒤섞여 있어(§8.6 FlowRow와 동일한 원인) 컴파일은 통과해도 실기기에서
-// NoSuchMethodError로 즉시 크래시했다(실제로 확인함). camera-compose 대신 camera-view를 쓰는 것과
-// 같은 이유로, Compose 버전에 안 묶이는 플랫폼 기본 android.app.DatePickerDialog로 대체한다.
 // rawValue는 ISO(yyyy-MM-dd) 문자열로 저장되고, 화면에는 현재 앱 언어에 맞는 자연스러운 표기로 보여준다.
 @Composable
 private fun ReturnDateInfoRow(
@@ -453,15 +454,16 @@ private fun ReturnDateInfoRow(
     editContentDescription: String,
     confirmLabel: String,
     cancelLabel: String,
+    titleLabel: String,
     onDateSelected: (String) -> Unit
 ) {
-    val context = LocalContext.current
+    var showDatePicker by remember { mutableStateOf(false) }
     val displayValue = remember(rawValue, language) { formatReturnDateForDisplay(rawValue, language) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showReturnDatePicker(context, rawValue, language, confirmLabel, cancelLabel, onDateSelected) }
+            .clickable { showDatePicker = true }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -484,84 +486,149 @@ private fun ReturnDateInfoRow(
                 .size(16.dp)
         )
     }
+
+    if (showDatePicker) {
+        ReturnDatePickerDialog(
+            rawValue = rawValue,
+            language = language,
+            confirmLabel = confirmLabel,
+            cancelLabel = cancelLabel,
+            titleLabel = titleLabel,
+            onDismiss = { showDatePicker = false },
+            onDateSelected = { isoDate ->
+                onDateSelected(isoDate)
+                showDatePicker = false
+            }
+        )
+    }
 }
 
-// 플랫폼 기본 다이얼로그는 기본적으로 Context의 로케일(=기기 시스템 언어)을 따른다 — 이 앱은 시스템
-// 언어가 아니라 상단바 언어 드롭다운으로 언어를 관리하므로(core/i18n은 리소스 로케일이 아니라 수동 조회
-// 방식), 그 상태를 반영하려면 로케일을 덮어쓴 Context를 직접 만들어 넘겨야 한다. 이렇게 하면 달력
-// 헤더·요일·월 이름까지 앱이 선택한 언어를 따른다(확인/취소 버튼 문구는 원래도 앱 언어를 썼다).
+// Compose Material3 DatePicker(androidx.compose.material3 DatePicker.android.kt의 defaultLocale())는
+// 달력 헤더·요일·월 이름, 그리고 헤드라인에 쓰는 날짜 포맷팅의 로케일을 JVM 전역 Locale.getDefault()가
+// 아니라 LocalConfiguration.current의 첫 로케일에서 읽는다. 이 앱은 시스템 언어가 아니라 상단바 언어
+// 드롭다운으로 언어를 관리하므로(core/i18n은 리소스 로케일이 아니라 수동 조회 방식),
+// CompositionLocalProvider로 이 다이얼로그 서브트리에만 로케일이 반영된 Configuration을 얹는다 —
+// 전역 상태를 건드리지 않아 앱 전체나 다른 스레드에 영향을 주지 않고, Compose가 컴포지션을 정리하면
+// 자동으로 해제되어 별도 복원 경로도 필요 없다.
 //
-// context.createConfigurationContext(...)는 절대 쓰지 않는다 — Activity와 완전히 분리된 새
-// ContextImpl을 반환해서 윈도우 토큰이 없어지고, 그 Context로 Dialog.show()를 부르면
-// WindowManager.BadTokenException("token null is not valid")로 즉시 크래시한다(실기기에서 확인함).
-// LocaleContextWrapper는 getResources()만 오버라이드하고 나머지(getSystemService 등)는 전부
-// 원래 Activity Context에 위임하는 ContextWrapper라 윈도우 토큰이 그대로 살아있다.
-//
-// 이것만으로는 부족한 기기가 있다(예: 삼성 One UI, 실기기에서 확인함) — 코랄색 헤더 위에 뜨는
-// 큰 날짜 텍스트를 Context의 Resources 설정이 아니라 JVM 전역 Locale.getDefault()로 포맷하는
-// 제조사 커스텀 DatePicker 구현이 있다. 다이얼로그가 떠 있는 동안만 전역 기본 로케일을 앱 선택
-// 언어로 바꾸고 닫히면 원래대로 되돌린다 — 이 파일의 날짜 파싱/포맷은 전부 Locale.US를 명시해서
-// 쓰므로 이 전역 변경에 영향받지 않는다.
-private fun showReturnDatePicker(
-    context: Context,
+// title("Select date")처럼 고정 문구인 부분은 여기 맡기지 않는다 — material3 내장 문자열은
+// LocalContext.current.resources를 통해 안드로이드 리소스 시스템으로 해석되는데, 일부 제조사 롬
+// (실기기에서 확인함)에서는 Context를 로케일이 적용된 것으로 바꿔치기해도 이 조회가 기기 시스템
+// 언어를 그대로 따라가 버렸다. 이 앱은 애초에 리소스 로케일 전환에 기대지 않는 구조이므로(§6),
+// title은 core/i18n의 앱 자체 번역 문자열로 직접 그린다 — 기기·제조사와 무관하게 항상 정확하다.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReturnDatePickerDialog(
     rawValue: String,
     language: SupportedLanguage,
     confirmLabel: String,
     cancelLabel: String,
+    titleLabel: String,
+    onDismiss: () -> Unit,
     onDateSelected: (String) -> Unit
 ) {
-    val locale = localeFor(language)
-    val previousDefaultLocale = Locale.getDefault()
-    Locale.setDefault(locale)
+    val baseConfiguration = LocalConfiguration.current
+    val localizedConfiguration = remember(baseConfiguration, language) {
+        Configuration(baseConfiguration).apply { setLocale(localeFor(language)) }
+    }
 
-    val localizedContext = LocaleContextWrapper(context, locale)
-    val calendar = Calendar.getInstance()
-    isoDateToDate(rawValue)?.let { calendar.time = it }
-
-    val dialog = DatePickerDialog(
-        localizedContext,
-        R.style.ThemeOverlay_MediInBusan_DatePickerDialog,
-        { _, year, month, dayOfMonth ->
-            val selected = Calendar.getInstance().apply {
-                set(year, month, dayOfMonth, 0, 0, 0)
-                set(Calendar.MILLISECOND, 0)
+    CompositionLocalProvider(LocalConfiguration provides localizedConfiguration) {
+        // 귀국·체류 일정은 논리적으로 항상 오늘 이후여야 하므로 과거 날짜는 선택 자체를 막는다.
+        // DatePickerState는 시스템 시간대와 무관하게 항상 UTC 기준 millis로 동작한다.
+        val todayUtcMillis = remember { todayUtcMidnightMillis() }
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = isoDateToUtcMillis(rawValue) ?: todayUtcMillis,
+            selectableDates = remember(todayUtcMillis) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= todayUtcMillis
+                }
             }
-            onDateSelected(dateToIsoDate(selected.time))
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
-    // 귀국·체류 일정은 논리적으로 항상 오늘 이후여야 하므로 과거 날짜는 선택 자체를 막는다.
-    dialog.datePicker.minDate = todayMidnight().timeInMillis
-    dialog.setButton(DialogInterface.BUTTON_POSITIVE, confirmLabel, dialog)
-    dialog.setButton(DialogInterface.BUTTON_NEGATIVE, cancelLabel) { d, _ -> d.dismiss() }
-    // 확인/취소/뒤로가기/바깥 탭 등 어떤 경로로 닫히든 onDismiss는 항상 불린다 — 전역 기본 로케일을
-    // 앱 전체에 계속 남겨두면 이 화면과 무관한 곳까지 영향을 주므로 반드시 여기서 되돌린다.
-    dialog.setOnDismissListener { Locale.setDefault(previousDefaultLocale) }
-    dialog.show()
+        )
+        // 앱 전역 MaterialTheme.colorScheme.primary는 MediBlue40이라(core/designsystem/Theme.kt),
+        // 기본 DatePicker 색을 그대로 쓰면 이 화면의 다른 요소가 전부 쓰는 CoralPrimary와 어긋난다.
+        val coralDatePickerColors = DatePickerDefaults.colors(
+            selectedDayContainerColor = CoralPrimary,
+            todayDateBorderColor = CoralPrimary,
+            todayContentColor = CoralPrimary,
+            selectedYearContainerColor = CoralPrimary
+        )
+        val coralTextButtonColors = ButtonDefaults.textButtonColors(contentColor = CoralPrimary)
+
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { onDateSelected(utcMillisToIsoDate(it)) }
+                        onDismiss()
+                    },
+                    colors = coralTextButtonColors
+                ) {
+                    Text(confirmLabel)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss, colors = coralTextButtonColors) { Text(cancelLabel) }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                colors = coralDatePickerColors,
+                // 텍스트 입력 모드는 쓰지 않는다 — 달력 선택 하나로 충분하고, 입력↔달력 모드 전환
+                // 애니메이션이 레이아웃을 다시 그리며 UI가 늘어지는 렉을 유발했다(실기기에서 확인함).
+                showModeToggle = false,
+                title = {
+                    Text(
+                        text = titleLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp)
+                    )
+                },
+                // 기본 headline(선택된 날짜 큰 글씨)도 title과 같은 이유로 앱 자체 포맷터로 직접 그린다 —
+                // material3 기본 DatePickerDefaults.DatePickerHeadline의 날짜 포맷팅이 이 기기에서 앱 언어
+                // 드롭다운과 무관하게 기기 시스템 언어(한국어) 그대로 나왔다(실기기에서 확인함). 아래 행에서
+                // 값을 보여줄 때 쓰는 formatReturnDateForDisplay와 동일한 포맷터를 그대로 재사용해 일관된다.
+                headline = {
+                    val headlineText = datePickerState.selectedDateMillis
+                        ?.let { formatReturnDateForDisplay(utcMillisToIsoDate(it), language) }
+                        .orEmpty()
+                    Text(
+                        text = headlineText,
+                        style = MaterialTheme.typography.headlineLarge,
+                        modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp)
+                    )
+                }
+            )
+        }
+    }
 }
 
-private fun isoDateFormat(): SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+// 시:분:초가 없는 순수 날짜라 시간대에 따라 하루가 밀리지 않도록 파싱·포맷 전 구간에서 UTC로 고정한다
+// (Compose DatePicker의 selectedDateMillis도 UTC 기준). DatePicker 도입 전 자유 텍스트로 저장된 값 등
+// ISO 형식이 아닌 값은 파싱 실패 시 미설정으로 취급한다.
+private fun isoDateFormat(): SimpleDateFormat =
+    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
-// DatePicker 도입 전 자유 텍스트로 저장된 값 등 ISO 형식이 아닌 값은 파싱 실패 시 미설정으로 취급한다.
-private fun isoDateToDate(raw: String): Date? =
-    if (raw.isBlank()) null else runCatching { isoDateFormat().parse(raw) }.getOrNull()
+private fun isoDateToUtcMillis(raw: String): Long? =
+    if (raw.isBlank()) null else runCatching { isoDateFormat().parse(raw)?.time }.getOrNull()
 
-private fun dateToIsoDate(date: Date): String = isoDateFormat().format(date)
+private fun utcMillisToIsoDate(millis: Long): String = isoDateFormat().format(Date(millis))
 
-private fun todayMidnight(): Calendar = Calendar.getInstance().apply {
+private fun todayUtcMidnightMillis(): Long = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
     set(Calendar.HOUR_OF_DAY, 0)
     set(Calendar.MINUTE, 0)
     set(Calendar.SECOND, 0)
     set(Calendar.MILLISECOND, 0)
-}
+}.timeInMillis
 
 // java.time은 minSdk 24에서 core library desugaring 없이는 못 쓰므로(SelfDiagnosisScreen.localeFor와
 // 동일한 이유) java.text.DateFormat으로 언어별 자연스러운 날짜 표기를 만든다.
 private fun formatReturnDateForDisplay(raw: String, language: SupportedLanguage): String? {
-    val date = isoDateToDate(raw) ?: return null
-    return DateFormat.getDateInstance(DateFormat.LONG, localeFor(language)).format(date)
+    val millis = isoDateToUtcMillis(raw) ?: return null
+    val formatter = DateFormat.getDateInstance(DateFormat.LONG, localeFor(language)).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    return formatter.format(Date(millis))
 }
 
 private fun localeFor(language: SupportedLanguage): Locale = when (language) {
@@ -569,16 +636,4 @@ private fun localeFor(language: SupportedLanguage): Locale = when (language) {
     SupportedLanguage.EN -> Locale.ENGLISH
     SupportedLanguage.ZH -> Locale.CHINESE
     SupportedLanguage.JA -> Locale.JAPANESE
-}
-
-// getResources()만 로케일이 적용된 Resources로 바꿔치기하고 나머지는 base(원래 Activity Context)에
-// 그대로 위임한다 — context.createConfigurationContext()와 달리 윈도우 토큰을 잃지 않아 Dialog에 안전하게 쓸 수 있다.
-private class LocaleContextWrapper(base: Context, locale: Locale) : ContextWrapper(base) {
-    private val localizedResources: Resources = run {
-        val configuration = Configuration(base.resources.configuration).apply { setLocale(locale) }
-        @Suppress("DEPRECATION")
-        Resources(base.assets, base.resources.displayMetrics, configuration)
-    }
-
-    override fun getResources(): Resources = localizedResources
 }

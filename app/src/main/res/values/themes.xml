@@ -24,12 +24,4 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/favicon</item>
         <item name="postSplashScreenTheme">@style/Theme.MediInBusan</item>
     </style>
-
-    <!-- android.app.DatePickerDialog(플랫폼 위젯)에만 씌우는 오버레이. Compose 쪽은 core/designsystem의
-         CoralPrimary를 직접 쓰므로 이 스타일이 필요 없다 — STEP04 "귀국·체류 일정" 날짜 선택에서만 쓴다.
-         라이트/다크 공통(브랜드 컬러라 값이 같음)이라 values-night에 따로 두지 않는다. -->
-    <style name="ThemeOverlay.MediInBusan.DatePickerDialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
-        <item name="colorAccent">@color/coral_primary</item>
-        <item name="colorControlActivated">@color/coral_primary</item>
-    </style>
 </resources>
