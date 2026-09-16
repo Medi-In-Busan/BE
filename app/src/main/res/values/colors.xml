@@ -7,4 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- core/designsystem/Color.kt의 CoralPrimary(0xFFFD6677)와 값이 같아야 한다 —
+         Compose 밖(android.app.DatePickerDialog 등 플랫폼 위젯)에서 브랜드 컬러를 쓸 때만 참조한다. -->
+    <color name="coral_primary">#FFFD6677</color>
 </resources>
