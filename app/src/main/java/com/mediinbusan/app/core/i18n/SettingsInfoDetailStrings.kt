@@ -65,7 +65,7 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "문의처",
-                        "개인정보 관련 문의사항은 고객센터(support@medinbusan.kr)로 연락해 주시기 바랍니다."
+                        "개인정보 관련 문의사항은 고객센터(medinbusan@gmail.com)로 연락해 주시기 바랍니다."
                     )
                 )
             ),
@@ -147,7 +147,7 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "Contact",
-                        "For inquiries about personal information, please contact our support center (support@medinbusan.kr)."
+                        "For inquiries about personal information, please contact our support center (medinbusan@gmail.com)."
                     )
                 )
             ),
@@ -229,7 +229,7 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "咨询方式",
-                        "如有个人信息相关咨询事项，请联系客服中心（support@medinbusan.kr）。"
+                        "如有个人信息相关咨询事项，请联系客服中心（medinbusan@gmail.com）。"
                     )
                 )
             ),
@@ -311,7 +311,7 @@ data class SettingsInfoDetailStrings(
                     ),
                     InfoSectionText(
                         "お問い合わせ先",
-                        "個人情報に関するお問い合わせは、カスタマーセンター（support@medinbusan.kr）までご連絡ください。"
+                        "個人情報に関するお問い合わせは、カスタマーセンター（medinbusan@gmail.com）までご連絡ください。"
                     )
                 )
             ),

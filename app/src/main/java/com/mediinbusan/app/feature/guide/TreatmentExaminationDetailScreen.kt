@@ -53,7 +53,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SkyBlue
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -141,10 +140,10 @@ fun TreatmentExaminationDetailScreen(
     val inquiries = inquiryItems(s)
 
     Scaffold(
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = appStrings.common.backContentDescription)
