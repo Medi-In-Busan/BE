@@ -120,6 +120,7 @@ import com.mediinbusan.app.core.ui.CardRevealPace
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.LoadingState
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
+import com.mediinbusan.app.core.ui.TourismFallbackThumbnail
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
 import com.mediinbusan.app.core.ui.rememberFavoriteTogglePop
 import com.mediinbusan.app.core.ui.rememberRevealedCount
@@ -148,15 +149,23 @@ fun TourismCatalogScreen(
     LaunchedEffect(categoryName, language) { viewModel.load(categoryName, filterCategoryCode, searchQuery) }
 
     // viewModel.load()가 끝나기 전(DataStore 언어 설정을 읽는 동안)에는 uiState.category가 계속
-    // null이다 — 그 사이엔 아래 분기가 전부 안 맞아 TourismCatalogContent로 떨어지는데, 그 화면의
-    // topBar는 uiState.category만 보고 CROWDING 여부를 판단해서 "부산 핫플레이스" 진입 시 순간적으로
-    // 기본 상단바(뒤로가기+"관광 데이터"+지도 아이콘)가 반짝였다가 진짜 헤더로 바뀌는 깜빡임이
-    // 있었다. 네비게이션 인자로 이미 알고 있는 카테고리를 즉시 파싱해 그 공백을 메운다.
+    // null이다. 네비게이션 인자로 이미 알고 있는 카테고리를 즉시 파싱해 그 공백을 메운다.
     val initialCategory = remember(categoryName) {
         runCatching { TourismCatalogCategory.valueOf(categoryName) }.getOrNull()
     }
+    // 아래 분기를 uiState.category가 아니라 이 값으로 한다 — uiState.category만 보면 위 공백 동안
+    // 분기가 전부 안 맞아 레거시 TourismCatalogContent가 한두 프레임 그려졌다. 추천 웰니스에서
+    // "부산관광 전체보기"로 넘어갈 때 옛 헤더(연분홍 배경 + 뒤로가기 + "관광 데이터" 기본 제목 +
+    // 지도 아이콘)가 잠깐 스쳤다가 진짜 헤더로 바뀌던 원인이다. 예전엔 TourismCatalogContent
+    // 안에서 제목만 initialCategory로 메웠는데(CROWDING 판정), 그건 잘못 그려지는 화면의 제목만
+    // 고친 것이라 화면 자체가 바뀌는 이 전환에서는 여전히 옛 헤더가 보였다.
+    //
+    // 언어 변종은 load()가 앱 언어에 맞게 바꿔 달 수 있지만(PLACES_KO -> PLACES_EN) isLanguageVariant
+    // 여부는 같아서 어느 쪽으로 분기해도 같은 화면이다. 지원하지 않는 categoryName이면 둘 다 null로
+    // 남아 예전처럼 TourismCatalogContent의 ErrorState로 떨어진다.
+    val effectiveCategory = uiState.category ?: initialCategory
 
-    if (uiState.category == TourismCatalogCategory.ACCESSIBLE) {
+    if (effectiveCategory == TourismCatalogCategory.ACCESSIBLE) {
         // 무장애 관광 리스트업 화면만 병원 목록(S-04)과 비슷한 톤의 전용 헤더·검색 UX를 쓴다 — 다른
         // 관광 카테고리(부산 관광지/걷기코스/함께 둘러보기/혼잡도 등)는 기존 TourismCatalogContent를 그대로 쓴다.
         AccessibleTourismCatalogContent(
@@ -174,7 +183,7 @@ fun TourismCatalogScreen(
         return
     }
 
-    if (uiState.category?.isLanguageVariant == true) {
+    if (effectiveCategory?.isLanguageVariant == true) {
         // "부산 관광지"도 무장애 관광과 같은 헤더·카드·리빌 애니메이션을 쓰되, 카테고리·지역 필터는
         // 칩 대신 드롭다운 2개로, 목록은 개인화 추천 섹션 + 전체 목록 섹션 두 단으로 나눠 보여준다.
         RecommendedPlacesCatalogContent(
@@ -1289,17 +1298,22 @@ private fun TourismGridPlaceCard(
                     translationY = (1f - revealProgress) * 10.dp.toPx()
                 }
                 .clip(cardShape)
+                // 사진을 아직 받는 중일 때 비치는 밑색. 사진이 없는 카드는 아래
+                // TourismFallbackThumbnail이 자기 흰 밑색을 깔아 이 색을 덮는다.
                 .background(CoralPrimaryContainer)
                 .clickable(onClick = onClick)
         ) {
             if (item.imageUrl != null) {
                 AsyncImageBox(model = item.imageUrl, contentDescription = item.title, modifier = Modifier.fillMaxSize())
             } else {
-                // TourAPI가 사진을 안 내려준 항목 — CoralPrimaryContainer(옅은 핑크) 배경만 남으면
-                // 흰 화면 위 그리드에서 "빈 카드처럼" 보인다(가운데만 흰 화면으로 보인다는 문의의
-                // 실제 원인 중 하나). 예전엔 Place 아이콘 하나만 얹었는데, 다른 화면의 "사진 없음"과
-                // 같은 모양(코랄 그라데이션 + 지도 마커)으로 맞춘다.
-                MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 36.dp)
+                // TourAPI가 사진을 안 내려준 항목 — 배경만 남으면 흰 화면 위 그리드에서 "빈 카드처럼"
+                // 보인다(가운데만 흰 화면으로 보인다는 문의의 실제 원인 중 하나). 지도와 같은
+                // 종류별 자리표시자를 쓴다(숙박 보라 + 호텔, 음식점 주황 + 식기 …).
+                TourismFallbackThumbnail(
+                    categoryCode = item.categoryCode,
+                    modifier = Modifier.fillMaxSize(),
+                    iconSize = 36.dp
+                )
             }
             Box(
                 modifier = Modifier.fillMaxSize().background(
@@ -1417,7 +1431,13 @@ private fun CrowdingRankCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        MapMarkerFallbackThumbnail(modifier = Modifier.fillMaxSize(), iconSize = 25.dp)
+                        // 혼잡도 항목에는 contenttypeid가 없어 종류를 모른다 — 그래도 지도와 같은
+                        // 자리표시자를 쓴다(그쪽도 종류를 모르는 장소는 같은 지도 마커로 그린다).
+                        TourismFallbackThumbnail(
+                            categoryCode = item.categoryCode,
+                            modifier = Modifier.fillMaxSize(),
+                            iconSize = 25.dp
+                        )
                     }
                     Surface(
                         // 홈 화면 문서스캔/AI준비체크 유리 버튼(GlassCircleFab)과 같은 흰색 알파 톤.

@@ -109,7 +109,7 @@ import com.mediinbusan.app.core.ui.BrandTopAppBar
 import com.mediinbusan.app.core.ui.BottomNavBarHeight
 import com.mediinbusan.app.core.ui.CongestionLevelBadge
 import com.mediinbusan.app.core.ui.LoadingState
-import com.mediinbusan.app.core.ui.MapMarkerFallbackThumbnail
+import com.mediinbusan.app.core.ui.TourismFallbackThumbnail
 import com.mediinbusan.app.core.ui.InitialCardRevealCount
 import com.mediinbusan.app.core.ui.ShimmerSkeleton
 import com.mediinbusan.app.core.ui.rememberCardRevealProgress
@@ -569,10 +569,10 @@ private fun TourismPlaceCard(item: TourismCatalogItem, accent: Color, tag: Touri
         if (imageUrl != null) {
             AsyncImageBox(imageUrl, item.title, Modifier.fillMaxSize())
         } else {
-            // 사진이 없으면 핫플레이스 카드와 같은 공용 자리표시자를 쓴다. 예전엔 여기 전용
-            // 파스텔+종류 아이콘을 따로 그렸는데, 같은 화면 안에서도 섹션마다 다른 자리표시자가
-            // 나와 "사진 없음"이 여러 모양으로 보였다.
-            MapMarkerFallbackThumbnail(Modifier.fillMaxSize(), iconSize = 32.dp)
+            // 사진이 없으면 핫플레이스 카드와 같은 공용 자리표시자를 쓴다 — 같은 화면 안에서
+            // 섹션마다 다른 자리표시자가 나오면 "사진 없음"이 여러 모양으로 보인다. 지금은 그
+            // 공용 자리표시자가 지도와 같은 종류별(숙박/음식/관광지…) 그림이다.
+            TourismFallbackThumbnail(item.categoryCode, Modifier.fillMaxSize(), iconSize = 32.dp)
         }
         // 요청: 카드 전체를 덮던 그림자를 원래의 40% 수준으로 옅게 낮춘다.
         Box(
@@ -977,7 +977,9 @@ private fun HotPlaceThumbnailImage(hotPlace: TourismHotPlace, modifier: Modifier
     if (imageUrl != null) {
         AsyncImageBox(imageUrl, hotPlace.item.title, modifier)
     } else {
-        MapMarkerFallbackThumbnail(modifier, iconSize)
+        // 지도와 같은 자리표시자. 핫플레이스는 혼잡도 응답 기반이라 contenttypeid가 없어
+        // 대부분 종류를 모르는데, 그때도 지도가 쓰는 것과 같은 지도 마커로 떨어진다.
+        TourismFallbackThumbnail(hotPlace.item.categoryCode, modifier, iconSize)
     }
 }
 

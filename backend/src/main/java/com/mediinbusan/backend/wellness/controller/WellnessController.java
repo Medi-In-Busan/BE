@@ -85,16 +85,40 @@ public class WellnessController {
         summary = "웰니스 장소 목록 조회(병원 비종속)",
         description = "latitude/longitude를 넘기면 반경(radiusMeters, 기본 3000m) 내 장소를 거리순으로, "
             + "안 넘기면 전체 장소를 반환한다. 지도 '전체 브라우징' 화면처럼 특정 병원에 종속되지 않은 조회에 쓴다. "
-            + "lang(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환하고, 해당 언어 번역이 없으면 ko로 폴백한다."
+            + "language(ko/en/zh/ja, 기본값 ko)에 맞는 이름·주소·설명을 반환하고, 해당 언어 번역이 없으면 ko로 폴백한다. "
+            + "lang은 language의 레거시 별칭이다(deprecated) — 둘 다 오면 language가 이긴다."
     )
     @GetMapping("/places")
     public List<WellnessPlaceResponse> getPlaces(
         @Parameter(description = "기준 위도(선택)") @RequestParam(required = false) Double latitude,
         @Parameter(description = "기준 경도(선택)") @RequestParam(required = false) Double longitude,
         @Parameter(description = "검색 반경(m). 기본값 3000m — latitude/longitude가 있을 때만 적용") @RequestParam(required = false) Double radiusMeters,
-        @RequestParam(defaultValue = "ko") String lang
+        // 이 엔드포인트의 정식 이름은 language다 — 형제 엔드포인트(/hospitals/{regNo}/places,
+        // /places/{contentId})와 Android TourismApi의 @Query 이름이 전부 language인데 여기만 lang이라,
+        // 앱이 ?language=en을 보내도 서버가 못 읽고 기본값 ko로 떨어졌다. 그 결과 지도 전체
+        // 브라우징의 장소 이름·주소가 영어/일어/중어에서도 한국어로 나오고, WellnessPlaceResponse의
+        // translated가 항상 true가 되어 지도 "번역된 장소만" 필터가 아무것도 걸러내지 못했다.
+        @Parameter(description = "표시 언어(ko/en/zh/ja). 기본값 ko") @RequestParam(required = false) String language,
+        // lang은 이름을 바로잡기 전의 별칭으로 남겨둔다. 지금 이 백엔드를 쓰는 클라이언트는 Android
+        // 앱뿐이고 그 앱은 language만 보내지만, 이름이 안 맞을 때 Spring이 오류 없이 기본값으로
+        // 떨어뜨리는 게 애초에 이 버그를 오래 숨긴 원인이었다 — 같은 방식으로 조용히 깨지는 길을
+        // 남기지 않기 위해 받아만 준다. 새 호출부는 language를 쓸 것.
+        @Parameter(description = "language의 레거시 별칭(deprecated)") @RequestParam(required = false) String lang
     ) {
-        return wellnessService.findPlaces(latitude, longitude, radiusMeters, lang);
+        return wellnessService.findPlaces(latitude, longitude, radiusMeters, resolveLanguage(language, lang));
+    }
+
+    /**
+     * 정식 이름(language)을 우선하고, 없으면 레거시 별칭(lang), 그것도 없으면 ko.
+     *
+     * language를 `defaultValue = "ko"`로 두지 않는 이유: 그러면 "명시적으로 language=ko"와 "language를
+     * 아예 안 보냄"이 서버에서 똑같이 "ko"로 보여서, `?language=ko&lang=en`처럼 둘 다 실린 요청에서
+     * 어느 쪽이 사용자의 의도인지 구분할 수 없다. 둘 다 required=false로 받고 여기서 순서를 정한다.
+     */
+    private static String resolveLanguage(String language, String legacyLang) {
+        if (language != null && !language.isBlank()) return language;
+        if (legacyLang != null && !legacyLang.isBlank()) return legacyLang;
+        return "ko";
     }
 
     @Operation(

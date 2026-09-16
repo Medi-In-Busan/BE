@@ -7,7 +7,6 @@ import com.mediinbusan.app.domain.tourism.TourismHotPlace
 
 data class TourismHubUiState(
     val language: SupportedLanguage = SupportedLanguage.DEFAULT,
-    val featuredCategory: TourismCatalogCategory = TourismCatalogCategory.PLACES_KO,
     val recoveryCategories: List<TourismCatalogCategory> = emptyList(),
     val planningCategories: List<TourismCatalogCategory> = emptyList(),
     val hotPlaces: List<TourismHotPlace> = emptyList(),
