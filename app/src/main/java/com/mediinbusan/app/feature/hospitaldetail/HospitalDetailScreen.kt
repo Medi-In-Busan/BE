@@ -99,7 +99,6 @@ import com.mediinbusan.app.core.designsystem.CoralInk
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.SectionTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.designsystem.TextSecondary
@@ -123,7 +122,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * 카드형 정보 섹션들 사이의 세로 여백. 옅은 분홍 배경 위에 카드가 하나씩 떠 있는 레이아웃이라
+ * 카드형 정보 섹션들 사이의 세로 여백. 흰 배경 위에 카드가 하나씩 떠 있는 레이아웃이라
  * 이 값이 좁으면 카드들이 한 덩어리처럼 붙어 보인다 — 섹션 경계가 눈으로 바로 잡힐 만큼만 둔다
  * (28dp까지 벌려봤더니 한 화면에 카드가 하나꼴로만 들어와 오히려 스크롤이 길어졌다).
  * 섹션 사이 여백은 전부 이 값 하나를 쓰고, 예외는 타이틀 블록 아래(이 값의 2배)뿐이다.
@@ -149,15 +148,15 @@ fun HospitalDetailScreen(
         viewModel.load(hospitalId)
     }
 
-    // 홈(S-03)/의료기관 목록(S-04)이 Scaffold containerColor로 쓰는 HomeBackgroundPink를 그대로
-    // 깔아, 그 화면들에서 넘어왔을 때 배경색이 끊겨 보이지 않게 한다(root Surface의 M3 기본
-    // 배경색과 미세하게 달라 이음매가 보이던 문제).
+    // 의료기관 목록(S-04)이 Scaffold containerColor로 쓰는 흰색을 그대로 깔아, 그 화면에서
+    // 넘어왔을 때 배경색이 끊겨 보이지 않게 한다(root Surface의 M3 기본 배경색과 미세하게 달라
+    // 이음매가 보이던 문제).
     // 지도(S-08)에서 선택 카드를 위로 끌어올려 들어오는 화면이라, 반대로 본문을 맨 위에서 더
     // 아래로 끌면 그대로 되돌아간다 — 들어온 동작을 그 자리에서 되감는 짝이다. 다른 화면
     // (홈/목록/즐겨찾기)에서 들어왔을 때도 같은 제스처가 뒤로가기로 동작한다.
     DetailPullDismissBox(
         onDismiss = onBack,
-        modifier = Modifier.fillMaxSize().background(HomeBackgroundPink)
+        modifier = Modifier.fillMaxSize().background(Color.White)
     ) {
         when {
             uiState.isLoading -> LoadingState()
@@ -321,13 +320,13 @@ private fun HospitalDetailContent(
             )
 
             // 웰니스 프로그램다운 톤: 굵은 회색 구분선으로 정보를 뚝뚝 끊어내던 "행정 서류" 같은
-            // 느낌 대신, 옅은 분홍 배경(HomeBackgroundPink) 위에 카드가 하나씩 둥둥 떠 있는 스파
-            // 앱 스타일 레이아웃으로 바꿨다. 각 InfoSection이 스스로 흰 카드+그림자를 두르므로
-            // (아래 InfoSection 정의 참고) 여기서는 카드 사이 여백만 둔다. 사진-타이틀 간격도
-            // 다른 섹션 사이 여백(SectionSpacing)과 동일하게 맞춘다.
+            // 느낌 대신, 흰 배경 위에 카드가 하나씩 둥둥 떠 있는 스파 앱 스타일 레이아웃으로
+            // 바꿨다. 각 InfoSection이 스스로 흰 카드+그림자를 두르므로(아래 InfoSection 정의
+            // 참고) 여기서는 카드 사이 여백만 둔다. 사진-타이틀 간격도 다른 섹션 사이 여백
+            // (SectionSpacing)과 동일하게 맞춘다.
             Spacer(modifier = Modifier.height(SectionSpacing))
-            // 카드 배경/그림자 없이 옅은 분홍 배경(HomeBackgroundPink)이 그대로 비치는 영역.
-            // 타이틀 텍스트는 다른 배경 요소들과 같은 20dp 왼쪽 여백을 쓰지만, 즐겨찾기/공유
+            // 카드 배경/그림자 없이 흰 배경이 그대로 비치는 영역. 타이틀 텍스트는 다른 배경
+            // 요소들과 같은 20dp 왼쪽 여백을 쓰지만, 즐겨찾기/공유
             // 아이콘 줄은 20dp 안쪽 패딩을 아예 안 주고 화면 진짜 오른쪽 끝까지 fillMaxWidth로
             // 채운다 — HospitalDetailTopBar의 actions Row와 동일한 폭 기준(전체 화면 너비)이라야
             // 공유 아이콘의 오른쪽 끝이 탑바 findmap 아이콘의 오른쪽 끝과 정확히 같은 위치에 온다.
@@ -634,7 +633,7 @@ private fun HospitalDetailTopBar(
             }
         },
         windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink)
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
     )
 }
 
@@ -651,7 +650,7 @@ private fun HospitalDetailSectionTabsBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(HomeBackgroundPink)
+            .background(Color.White)
             .padding(horizontal = 8.dp, vertical = 10.dp)
     ) {
         labels.forEachIndexed { index, label ->
@@ -795,7 +794,7 @@ private fun ImageCarouselSection(
 private fun translatedSpecialtyLabel(specialty: String, language: SupportedLanguage): String =
     MedicalCategory.entries.find { it.label == specialty }?.translatedLabel(language) ?: specialty
 
-// 웰니스 프로그램의 스파 앱다운 톤을 위해 각 정보 구획을 옅은 분홍 배경 위에 뜬 흰 카드로
+// 웰니스 프로그램의 스파 앱다운 톤을 위해 각 정보 구획을 흰 배경 위에 뜬 흰 카드로
 // 감싼다(Soft UI: 은은한 그림자 + 넉넉한 라운드 코너). InfoSection은 제목+본문을 카드 안에
 // 배치하는 표준 형태이고, SectionCard는 제목 없이 카드만 필요한 곳(상단 정보 블록, 바로가기
 // 묶음)에 쓰는 더 낮은 레벨의 래퍼다.

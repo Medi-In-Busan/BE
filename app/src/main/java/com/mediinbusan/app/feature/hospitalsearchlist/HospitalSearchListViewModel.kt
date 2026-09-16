@@ -28,7 +28,6 @@ import javax.inject.Inject
  * 단일 소스라, medicalPurpose는 별도 변수로 안 들고 매번 filters에서 뽑아 쓴다.
  * 필터 칩은 누르는 즉시 재조회되지만, 키워드는 타이핑마다가 아니라 검색 버튼(돋보기 아이콘/키보드
  * 검색 액션)을 눌렀을 때만 onSearchSubmit()으로 재조회한다 — onQueryChanged는 텍스트 상태만 갱신.
- * "관광지" 칩은 백엔드에 대응 카테고리가 없어 선택해도 결과에 영향을 주지 않는다.
  * 정렬(sortedByOption)은 서버에서 받아온 results를 클라이언트에서 재배열할 뿐 재조회하지 않는다.
  * 서버 페이지네이션은 다음 이슈.
  */

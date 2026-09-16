@@ -63,7 +63,6 @@ import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.HeroTitleLargeStyle
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.InactiveIcon
 import com.mediinbusan.app.core.designsystem.SettingsTitleStyle
 import com.mediinbusan.app.core.designsystem.TextPrimary
@@ -100,12 +99,13 @@ private fun GuideContent(
     onStepClick: (GuideStep) -> Unit
 ) {
     Scaffold(
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         topBar = {
             BrandTopAppBar(
                 onSettingsClick = onMenuClick,
                 currentLanguageCode = uiState.languageCode,
-                onLanguageSelected = onLanguageSelected
+                onLanguageSelected = onLanguageSelected,
+                containerColor = Color.White
             )
         }
     ) { innerPadding ->

@@ -70,7 +70,6 @@ import com.mediinbusan.app.core.i18n.SettingsStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsBorder
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
@@ -137,7 +136,7 @@ private fun SettingsContent(
         // 탑바가 사라진 만큼 "설정" 타이틀이 상태바 바로 아래까지 올라와 윗여백을 채운다. 하단 탭바도
         // 안 보이므로(MediInBusanApp.kt shouldShowBottomBar에서 Settings 제거) BottomNavBarHeight
         // 보정도 더는 필요 없다.
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         snackbarHost = { BrandSnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
@@ -511,7 +510,7 @@ private fun AppInfoCard(strings: SettingsStrings, onClearCacheConfirmed: () -> U
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = strings.customerSupportTitle, style = SettingsItemTitleStyle, color = SettingsPrimaryText)
                 Spacer(modifier = Modifier.height(3.dp))
-                Text(text = "support@medinbusan.kr", style = SettingsDescriptionStyle, color = SkyBlue)
+                Text(text = "medinbusan@gmail.com", style = SettingsDescriptionStyle, color = SkyBlue)
             }
         }
         HorizontalDivider(color = SettingsDivider, modifier = Modifier.padding(horizontal = 20.dp))
