@@ -19,11 +19,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mediinbusan.app.R
 import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MedinTipCardBackground
 import com.mediinbusan.app.core.designsystem.TextPrimary
 import com.mediinbusan.app.core.i18n.LocalAppStrings
@@ -45,10 +45,10 @@ fun GuideStepDetailScreen(
     val content = phase.toStepPageContent(strings)
 
     Scaffold(
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = appStrings.common.backContentDescription)

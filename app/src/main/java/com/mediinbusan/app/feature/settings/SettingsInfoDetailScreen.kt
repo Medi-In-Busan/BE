@@ -36,7 +36,6 @@ import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.SettingsInfoDetailStrings
 import com.mediinbusan.app.core.i18n.SettingsStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
 import com.mediinbusan.app.core.designsystem.SettingsPrimaryText
@@ -72,9 +71,9 @@ fun SettingsInfoDetailScreen(infoId: String, onBack: () -> Unit) {
     val title = titleFor(type, appStrings.settings)
     val content = contentFor(type, appStrings.settingsInfoDetail)
 
-    // Settings와 동일한 톤: 공용 탑바 없이, 배경은 Home과 같은 HomeBackgroundPink, 뒤로가기는
-    // 원형 배경 없는 화살표 아이콘을 콘텐츠 맨 위에 직접 배치한다.
-    Scaffold(containerColor = HomeBackgroundPink) { innerPadding ->
+    // Settings와 동일한 톤: 공용 탑바 없이, 배경은 흰색, 뒤로가기는 원형 배경 없는 화살표
+    // 아이콘을 콘텐츠 맨 위에 직접 배치한다.
+    Scaffold(containerColor = Color.White) { innerPadding ->
         Column(
             modifier = Modifier
                 // 상태바 인셋을 원래의 절반만 먹여서 뒤로가기 아이콘을 원래 위치에서 절반 정도 위로 당긴다.

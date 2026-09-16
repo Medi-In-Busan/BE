@@ -37,7 +37,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mediinbusan.app.core.i18n.LocalAppStrings
 import com.mediinbusan.app.core.i18n.NotificationSettingsStrings
 import com.mediinbusan.app.core.designsystem.CoralPrimary
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -65,9 +64,9 @@ private fun NotificationSettingsContent(
     onToggle: (Boolean) -> Unit
 ) {
     val appStrings = LocalAppStrings.current
-    // Settings와 동일한 톤: 공용 탑바/하단 탭바 없이, 배경은 Home과 같은 HomeBackgroundPink,
-    // 뒤로가기는 원형 배경 없는 화살표 아이콘을 타이틀 위에 직접 배치한다.
-    Scaffold(containerColor = HomeBackgroundPink) { innerPadding ->
+    // Settings와 동일한 톤: 공용 탑바/하단 탭바 없이, 배경은 흰색, 뒤로가기는 원형 배경 없는
+    // 화살표 아이콘을 타이틀 위에 직접 배치한다.
+    Scaffold(containerColor = Color.White) { innerPadding ->
         Column(
             modifier = Modifier
                 // 상태바 인셋을 원래의 절반만 먹여서 뒤로가기 아이콘을 원래 위치에서 절반 정도 위로 당긴다.

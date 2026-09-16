@@ -13,7 +13,6 @@ data class SearchStrings(
     val resultCountWithQueryFormat: String,
     val resultCountGenericLabel: String,
     val resultCountSuffixFormat: String,
-    val tourismFilterLabel: String,
     val sortName: String,
     val sortDistance: String,
     val loadErrorFallback: String
@@ -31,7 +30,6 @@ data class SearchStrings(
             resultCountWithQueryFormat = "'%s' 검색결과 ",
             resultCountGenericLabel = "검색결과 ",
             resultCountSuffixFormat = "%d건",
-            tourismFilterLabel = "관광지",
             sortName = "이름순",
             sortDistance = "가까운순",
             loadErrorFallback = "검색 결과를 불러오지 못했습니다."
@@ -48,7 +46,6 @@ data class SearchStrings(
             resultCountWithQueryFormat = "Results for '%s' ",
             resultCountGenericLabel = "Results ",
             resultCountSuffixFormat = "%d",
-            tourismFilterLabel = "Tourist attractions",
             sortName = "Name",
             sortDistance = "Nearest",
             loadErrorFallback = "Couldn't load search results."
@@ -65,7 +62,6 @@ data class SearchStrings(
             resultCountWithQueryFormat = "“%s” 的搜索结果 ",
             resultCountGenericLabel = "搜索结果 ",
             resultCountSuffixFormat = "%d 条",
-            tourismFilterLabel = "旅游景点",
             sortName = "按名称排序",
             sortDistance = "按距离排序",
             loadErrorFallback = "无法加载搜索结果。"
@@ -82,7 +78,6 @@ data class SearchStrings(
             resultCountWithQueryFormat = "「%s」の検索結果 ",
             resultCountGenericLabel = "検索結果 ",
             resultCountSuffixFormat = "%d件",
-            tourismFilterLabel = "観光スポット",
             sortName = "名前順",
             sortDistance = "近い順",
             loadErrorFallback = "検索結果を読み込めませんでした。"

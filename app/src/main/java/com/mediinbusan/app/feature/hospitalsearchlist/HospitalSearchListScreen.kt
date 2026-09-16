@@ -94,7 +94,6 @@ import com.mediinbusan.app.core.i18n.SearchStrings
 import com.mediinbusan.app.core.i18n.translatedLabel
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.SettingsDescriptionStyle
 import com.mediinbusan.app.core.designsystem.SettingsItemTitleStyle
@@ -243,14 +242,13 @@ private fun HospitalSearchListContent(
     DisposableEffect(Unit) { onDispose { BottomBarScaleController.setScale(1f) } }
 
     Scaffold(
-        // Home과 같은 맨 뒤 배경(연분홍) — 기본값(테마 background)이 Home과 달라 화면 전환 시
-        // 배경색이 순간 바뀌어 보이던 것을 통일한다.
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         topBar = {
             BrandTopAppBar(
                 onSettingsClick = onNavigateToSettings,
                 currentLanguageCode = uiState.selectedLanguage,
-                onLanguageSelected = onLanguageSelected
+                onLanguageSelected = onLanguageSelected,
+                containerColor = Color.White
             )
         }
     ) { innerPadding ->
@@ -327,9 +325,8 @@ private fun HospitalSearchListContent(
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
-                    // 맨 뒤 배경(Home과 같은 HomeBackgroundPink)은 그대로 비쳐 보이게 두고, 흰색+그림자는
-                    // 개별 결과 카드(SearchResultCard)에만 준다 — Home의 SectionCardContainer 같은
-                    // 큰 흰 카드로 이 영역 전체를 감싸지 않는다.
+                    // 그림자는 개별 결과 카드(SearchResultCard)에만 준다 — Home의 SectionCardContainer
+                    // 같은 큰 흰 카드로 이 영역 전체를 감싸지 않는다.
                     Box(modifier = Modifier.weight(1f)) {
                         if (uiState.results.isEmpty()) {
                             EmptySearchBanner(
@@ -542,12 +539,11 @@ private fun AutocompleteSuggestionRow(name: String, onClick: () -> Unit) {
     }
 }
 
-// 전체 의료 태그 + 관광지를 한 줄에 모두 배치하고 가로로 슬라이드해서 볼 수 있게 한다.
+// 전체 의료 태그를 한 줄에 모두 배치하고 가로로 슬라이드해서 볼 수 있게 한다.
 // 칩의 selected 상태 토글/서버 specialties 파라미터는 전부 chip.label(한국어) 값을 키로 쓰고
 // 있어 그대로 두고(HospitalSearchListViewModel.kt 참고), 화면에 보여줄 때만 언어별 문구로 바꾼다.
-private fun displayLabelForFilterChip(chipLabel: String, language: SupportedLanguage, strings: SearchStrings): String =
-    MedicalCategory.entries.find { it.label == chipLabel }?.translatedLabel(language)
-        ?: strings.tourismFilterLabel
+private fun displayLabelForFilterChip(chipLabel: String, language: SupportedLanguage): String =
+    MedicalCategory.entries.first { it.label == chipLabel }.translatedLabel(language)
 
 private fun displayLabelForSortOption(option: SearchSortOption, strings: SearchStrings): String = when (option) {
     SearchSortOption.NAME -> strings.sortName
@@ -564,7 +560,7 @@ private fun FilterChipsRow(filters: List<SearchFilterChip>, onFilterToggled: (St
     ) {
         items(filters, key = { it.label }) { chip ->
             FilterChipPill(
-                label = displayLabelForFilterChip(chip.label, appStrings.language, appStrings.search),
+                label = displayLabelForFilterChip(chip.label, appStrings.language),
                 selected = chip.selected,
                 onClick = { onFilterToggled(chip.label) }
             )
@@ -707,8 +703,8 @@ private fun SearchResultCard(
                     alpha = revealProgress
                     translationY = (1f - revealProgress) * 10.dp.toPx()
                 }
-                // 옅은 분홍(HomeBackgroundPink) 배경 위라 기존 0.04 알파 그림자(다른 화면의 흰 배경
-                // 기준)로는 거의 안 보였다 — 카드가 배경과 확실히 분리돼 보이도록 더 진하게 준다.
+                // 흰 배경 위 흰 카드라 다른 화면의 옅은(0.04 알파) 그림자로는 거의 안 보였다 —
+                // 카드가 배경과 확실히 분리돼 보이도록 더 진하게 준다.
                 .shadow(
                     elevation = 6.dp,
                     shape = RoundedCornerShape(16.dp),

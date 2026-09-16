@@ -32,11 +32,10 @@ data class HospitalSearchListUiState(
     val shouldAutoFocusSearch: Boolean = false
 )
 
-/** MedicalCategory 10종 + 관광지(백엔드 필터 대상 아님, 선택해도 결과에 영향 없음) 스텁. */
+/** MedicalCategory 10종 필터칩. */
 data class SearchFilterChip(val label: String, val selected: Boolean = false) {
     companion object {
-        val DEFAULTS = (MedicalCategory.entries.map { it.label } + "관광지")
-            .map { SearchFilterChip(label = it) }
+        val DEFAULTS = MedicalCategory.entries.map { SearchFilterChip(label = it.label) }
     }
 }
 

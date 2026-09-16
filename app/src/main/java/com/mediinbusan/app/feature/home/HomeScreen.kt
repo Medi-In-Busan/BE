@@ -97,7 +97,6 @@ import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.CoralPrimaryContainer
 import com.mediinbusan.app.core.designsystem.DividerColor
 import com.mediinbusan.app.core.designsystem.HeroBodyGray
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.HeroCtaTextStyle
 import com.mediinbusan.app.core.designsystem.HeroSubtitleStyle
 import com.mediinbusan.app.core.designsystem.HeroTitleLargeStyle
@@ -226,9 +225,8 @@ private fun HomeContent(
     DisposableEffect(Unit) { onDispose { BottomBarScaleController.setScale(1f) } }
 
     Scaffold(
-        // 기본값(colorScheme.background, 거의 흰색)보다 살짝 더 연한 코랄핑크로 — Home 페이지
-        // 맨 뒤 배경 전용 톤. 아래 HomeTopAppBar에도 같은 색을 줘서 탑바-본문 경계가 안 보이게 한다.
-        containerColor = HomeBackgroundPink,
+        // 아래 HomeTopAppBar에도 같은 색을 줘서 탑바-본문 경계가 안 보이게 한다.
+        containerColor = Color.White,
         topBar = {
             // Home 진입 즉시 바가 나타나면 Splash(풀스크린) → Home(상단바 있음) 전환이 한
             // 프레임에 훅 줄어드는 느낌을 준다. 짧게 지연 후 페이드인해서 완화한다.
@@ -411,8 +409,8 @@ private fun HomeTopAppBar(
         // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백만 줄인다
         // (core/ui/BrandTopAppBar.kt의 BrandBackTopAppBar와 동일한 값으로 맞춤).
         windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
-        // Scaffold의 containerColor(HomeBackgroundPink)와 맞춰 탑바-본문 경계가 안 보이게 한다.
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = HomeBackgroundPink)
+        // Scaffold의 containerColor(흰색)와 맞춰 탑바-본문 경계가 안 보이게 한다.
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
     )
 }
 

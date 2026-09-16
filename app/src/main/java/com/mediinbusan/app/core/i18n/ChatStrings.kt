@@ -20,7 +20,7 @@ data class ChatStrings(
         val Ko = ChatStrings(
             chatBubbleLabel = "챗봇",
             aiDiagnosisLabel = "AI 준비체크",
-            greetingMessage = "안녕하세요! 준비 유형 안내까지만 도와드리는 챗봇이에요(그 외 문의는 support@medinbusan.kr로 부탁드려요). " +
+            greetingMessage = "안녕하세요! 준비 유형 안내까지만 도와드리는 챗봇이에요(그 외 문의는 medinbusan@gmail.com로 부탁드려요). " +
                 "먼저, 이번엔 어떤 목적으로 방문을 고려하고 계신가요?",
             inputPlaceholder = "방문 목적, 체류 기간 등을 입력해 주세요",
             sendButtonContentDescription = "전송",
@@ -31,7 +31,7 @@ data class ChatStrings(
         val En = ChatStrings(
             chatBubbleLabel = "Chat",
             aiDiagnosisLabel = "AI Prep Check",
-            greetingMessage = "Hi! I can only help you find your preparation type (for anything else, please email support@medinbusan.kr). " +
+            greetingMessage = "Hi! I can only help you find your preparation type (for anything else, please email medinbusan@gmail.com). " +
                 "First, what's the purpose of your visit this time?",
             inputPlaceholder = "e.g. purpose of visit, length of stay",
             sendButtonContentDescription = "Send",
@@ -42,7 +42,7 @@ data class ChatStrings(
         val Zh = ChatStrings(
             chatBubbleLabel = "聊天",
             aiDiagnosisLabel = "AI准备检查",
-            greetingMessage = "您好！本聊天机器人仅能帮您确认准备类型（其他咨询请发送邮件至support@medinbusan.kr）。" +
+            greetingMessage = "您好！本聊天机器人仅能帮您确认准备类型（其他咨询请发送邮件至medinbusan@gmail.com）。" +
                 "首先，您这次访问的目的是什么？",
             inputPlaceholder = "请输入访问目的、停留时间等",
             sendButtonContentDescription = "发送",
@@ -53,7 +53,7 @@ data class ChatStrings(
         val Ja = ChatStrings(
             chatBubbleLabel = "チャット",
             aiDiagnosisLabel = "AI準備チェック",
-            greetingMessage = "こんにちは！このチャットボットは準備タイプの確認のみお手伝いできます（それ以外のお問い合わせはsupport@medinbusan.krまで）。" +
+            greetingMessage = "こんにちは！このチャットボットは準備タイプの確認のみお手伝いできます（それ以外のお問い合わせはmedinbusan@gmail.comまで）。" +
                 "まず、今回はどのような目的で訪問を検討していますか？",
             inputPlaceholder = "訪問目的や滞在期間などを入力してください",
             sendButtonContentDescription = "送信",

@@ -85,7 +85,6 @@ import com.mediinbusan.app.core.datastore.SupportedLanguage
 import com.mediinbusan.app.core.designsystem.BorderColor
 import com.mediinbusan.app.core.designsystem.CoralPrimary
 import com.mediinbusan.app.core.designsystem.DividerColor
-import com.mediinbusan.app.core.designsystem.HomeBackgroundPink
 import com.mediinbusan.app.core.designsystem.MediInBusanTheme
 import com.mediinbusan.app.core.designsystem.StatusOpenGreen
 import com.mediinbusan.app.core.designsystem.TextPrimary
@@ -134,7 +133,7 @@ private fun SelfDiagnosisContent(
     val chatStrings = LocalAppStrings.current.chat
 
     Scaffold(
-        containerColor = HomeBackgroundPink,
+        containerColor = Color.White,
         topBar = {
             Column {
                 TopAppBar(
@@ -196,7 +195,6 @@ private fun SelfDiagnosisContent(
                     // 아이콘/텍스트 크기는 그대로 두고, 상태바 인셋만큼 생기는 탑바 위쪽 여백만
                     // 줄인다(core/ui/BrandTopAppBar.kt·HomeScreen.kt의 HomeTopAppBar와 동일한 값).
                     windowInsets = WindowInsets.statusBars.exclude(WindowInsets(top = 14.dp)),
-                    // 본문(HomeBackgroundPink)과 달리 탑바는 흰색 카드처럼 계속 도드라지게 둔다.
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
                 )
                 // 슬롯 4개(방문목적/체류기간/예약상태/통역필요) 중 채워진 개수만큼 자라나는
@@ -581,6 +579,10 @@ private fun ChatInputBar(
         // chatbot_answer 이미지를 원본 색 그대로 전송 버튼으로 쓴다. 평소(포커스 전)엔
         // 완전히 숨어 있다가(alpha 0, 살짝 작은 크기), 입력칸에 포커스가 잡히면 통통 튀듯
         // 커지면서 페이드인한다 — 단순 알파 변화보다 눈에 띄게 스프링으로 팝인시킨다.
+        // 스케일 애니메이션은 안쪽 Image에만 건다 — IconButton 자신에 걸면 스프링이 튀는
+        // 동안(1초 가까이 지속) 클릭 가능 영역의 히트테스트 변환 행렬이 프레임마다 바뀌어,
+        // 애니메이션 도중 누른 탭이 down/up 사이 좌표 불일치로 씹히는 문제가 있었다(눌러도
+        // 반응이 없던 원인) — alpha만 남겨두면 히트테스트 영역은 항상 48dp 그대로 안정적이다.
         val focusTransition by animateFloatAsState(
             targetValue = if (isFocused) 1f else 0f,
             animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
@@ -592,16 +594,17 @@ private fun ChatInputBar(
             modifier = Modifier
                 .padding(start = 4.dp)
                 .size(48.dp)
-                .graphicsLayer {
-                    alpha = focusTransition
-                    scaleX = focusTransition
-                    scaleY = focusTransition
-                }
+                .graphicsLayer { alpha = focusTransition }
         ) {
             Image(
                 painter = painterResource(id = R.drawable.chatbot_answer),
                 contentDescription = sendContentDescription,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier
+                    .size(36.dp)
+                    .graphicsLayer {
+                        scaleX = focusTransition
+                        scaleY = focusTransition
+                    }
             )
         }
     }
