@@ -290,6 +290,7 @@ private fun CourseContent(
     }
 }
 
+/** 추천 코스의 대표 이미지와 코스 제목, 이동 요약을 히어로 영역에 표시한다. */
 @Composable
 private fun TourismCourseHero(
     course: RecommendedTourismCourse,
@@ -616,6 +617,7 @@ private fun DottedTransferLine(modifier: Modifier = Modifier, dotCount: Int = 5)
     }
 }
 
+/** 추천 코스의 한 정거장을 선택 상태와 썸네일을 포함한 행으로 표시한다. */
 @Composable
 private fun CourseStopRow(stop: RecommendedTourismStop, selected: Boolean, onClick: () -> Unit) {
     Surface(

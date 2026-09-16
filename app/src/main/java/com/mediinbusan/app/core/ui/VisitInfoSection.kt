@@ -109,6 +109,10 @@ data class VisitInfo(
     }
 }
 
+/**
+ * 영업시간, 휴무일, 메뉴, 요금, 주차, 홈페이지 중 제공된 방문 정보만 순서대로 표시한다.
+ * 홈페이지 행은 [onOpenHomepage]로 외부 브라우저를 열 수 있게 한다.
+ */
 @Composable
 fun VisitInfoContent(
     visitInfo: VisitInfo,

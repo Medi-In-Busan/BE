@@ -95,6 +95,7 @@ import com.mediinbusan.app.data.place.Place
 import com.mediinbusan.app.data.place.PlaceType
 import java.util.Locale
 
+/** 장소 상세 상태를 수집하고 로딩, 오류, 빈 상태 또는 상세 콘텐츠를 표시한다. */
 @Composable
 fun PlaceDetailScreen(
     placeId: String,
@@ -141,6 +142,7 @@ fun PlaceDetailScreen(
     }
 }
 
+/** 선택한 장소의 사진, 요약, 방문 정보, 지도와 주변 장소를 상세 화면에 구성한다. */
 @Composable
 private fun PlaceDetailContent(
     place: Place,
@@ -360,9 +362,10 @@ private fun PlaceDetailContent(
     }
 }
 
-// 뒤로가기는 이제 화면 상단 탑바(CenteredTopAppBar)에 있다 — 이 히어로는 순수 사진이다. 좌우
-// 여백·둥근 모서리 없이 화면 폭을 꽉 채우는 풀블리드로, 관광 카탈로그 상세(TourismHero)와
-// 같은 톤이다.
+/**
+ * 장소 사진을 풀블리드 히어로로 표시하고, 사진이 없으면 장소 유형별 대체 이미지를 표시한다.
+ * 뒤로가기는 화면 상단의 공용 탑바가 담당한다.
+ */
 @Composable
 private fun PlaceHero(place: Place, kindColor: Color) {
     Box(
@@ -402,8 +405,9 @@ private fun PlaceHero(place: Place, kindColor: Color) {
 
 private val HeroHeight = 260.dp
 
-// guide_tourism_place_detail.png 기준 — 카드 배경 없이 캔버스 위에 바로 얹는다. 카테고리 배지 +
-// 이름 + 주소 + 즐겨찾기/공유/전화 액션 줄을 한데 묶는다(관광 상세엔 없는, 이 화면만의 액션들).
+/**
+ * 카테고리, 이름, 주소와 즐겨찾기·공유·전화 액션을 카드 배경 없이 한 영역에 표시한다.
+ */
 @Composable
 private fun PlaceSummarySection(
     place: Place,
@@ -499,6 +503,7 @@ private fun QuickActionRow(
     }
 }
 
+/** 원형 아이콘과 라벨로 장소 상세의 단일 빠른 액션을 표시한다. */
 @Composable
 private fun QuickAction(
     icon: ImageVector,
@@ -545,8 +550,10 @@ private fun QuickAction(
     }
 }
 
-// HospitalDetailScreen의 BasicInfoRow(운영시간/전화/홈페이지/언어)와 같은 구성 — 원 안의 아이콘 +
-// 고정폭 라벨 + 값. [onClick]이 있으면(전화번호가 있는 "전화" 행) 행 전체가 탭 가능해진다.
+/**
+ * 원형 아이콘, 라벨과 값으로 기본 정보 한 행을 표시한다.
+ * [onClick]이 있으면 행 전체를 탭할 수 있다.
+ */
 @Composable
 private fun BasicInfoRow(
     icon: ImageVector,
@@ -587,9 +594,9 @@ private fun BasicInfoRow(
     }
 }
 
-// 카드 상단에 카테고리를 아이콘+옅은 배경의 배지(pill)로 보여준다. 아이콘·색은 지도 목록의 종류
-// 칩과 같은 표에서 받는다(core/ui/PlaceKindVisuals.kt) — 이 자리는 장소 종류(관광/음식/쇼핑 등)를
-// 밝히는 자리라 관광 상세의 포인트 컬러가 아니라 종류별 색을 그대로 쓴다.
+/**
+ * 장소 카테고리를 유형별 아이콘과 색을 적용한 배지로 표시한다.
+ */
 @Composable
 private fun CategoryBadge(place: Place, visual: PlaceKindVisual, modifier: Modifier = Modifier) {
     val language = LocalAppStrings.current.language
@@ -637,8 +644,7 @@ private fun DirectionsButton(onClick: () -> Unit) {
     }
 }
 
-// guide_tourism_place_detail.png 기준 — 흰 카드 없이 굵은 제목 한 줄 + 본문만 캔버스 위에 바로
-// 얹는 섹션 껍데기. 관광 카탈로그 상세(TourismCatalogItemDetailScreen.PlainSection)와 같은 톤이다.
+/** 흰 카드 배경 없이 제목과 [content]를 상세 화면 캔버스에 직접 배치한다. */
 @Composable
 private fun PlainSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(
@@ -671,6 +677,7 @@ private fun Context.dialPhone(phoneNumber: String?) {
     launchIntentSafely(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber")))
 }
 
+/** 장소 이름과 주소를 시스템 공유 시트로 전달한다. */
 private fun Context.sharePlace(place: Place) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
@@ -698,6 +705,7 @@ private fun PlaceType.fallbackCharacterImage(): Int =
 
 private fun PlaceType.toMapPinType(): MapPinType = if (this == PlaceType.RESTAURANT) MapPinType.FOOD else MapPinType.TOURIST
 
+/** 미터 단위 거리를 1km 미만은 m, 그 이상은 소수점 한 자리 km 문자열로 변환한다. */
 private fun Double.toDistanceLabel(): String =
     if (this < 1000.0) "${toInt()}m" else String.format(Locale.US, "%.1fkm", this / 1000.0)
 

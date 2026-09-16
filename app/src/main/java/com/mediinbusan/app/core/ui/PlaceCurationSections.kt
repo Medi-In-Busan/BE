@@ -148,9 +148,10 @@ fun AtAGlanceRow(
     }
 }
 
-// 아이콘+라벨 줄은 네 칸 모두 왼쪽 정렬로 같다 — 값 줄만 맨 오른쪽 칸([alignEnd])에서 오른쪽
-// 끝에 붙는다("60~120분"처럼 짧은 값이 칸 가운데 어중간하게 뜨는 대신, 칸 전체 폭을 한 줄
-// 확보하는 데 쓸 수 있다). 나머지 칸의 값은 라벨과 같은 시작선(아이콘 폭만큼 들여쓰기)에 맞춘다.
+/**
+ * 한눈에 보기 카드의 아이콘, 라벨, 값을 한 열에 배치한다.
+ * [alignEnd]인 마지막 열의 값만 오른쪽 끝에 맞추고 나머지는 라벨 시작선에 맞춘다.
+ */
 @Composable
 private fun GlanceColumn(
     icon: ImageVector,
@@ -187,6 +188,7 @@ private fun GlanceColumn(
     }
 }
 
+/** 한눈에 보기 카드의 인접한 열을 구분하는 세로선. */
 @Composable
 private fun GlanceDivider() {
     Box(

@@ -89,6 +89,7 @@ import com.mediinbusan.app.data.place.toPlaceType
 import com.mediinbusan.app.domain.tourism.TourismCatalogCategory
 import com.mediinbusan.app.domain.tourism.TourismCatalogItem
 
+/** 관광 카탈로그 상세 상태를 수집하고 로딩, 오류 또는 완성된 상세 화면을 표시한다. */
 @Composable
 fun TourismCatalogItemDetailScreen(
     onBack: () -> Unit,
@@ -174,6 +175,7 @@ fun TourismCatalogItemDetailScreen(
     }
 }
 
+/** 관광 항목의 요약, 지도, 방문 정보, 큐레이션과 주변 장소를 상세 화면에 구성한다. */
 @Composable
 private fun TourismDetailLoaded(
     item: TourismCatalogItem,
@@ -410,6 +412,7 @@ private val SectionSpacing = 20.dp
 // 18dp로 맞췄더니 너무 붙어 보인다는 피드백으로 다시 조금 올렸다.
 private val TightSectionGap = 22.dp
 
+/** 관광 항목의 대표 이미지를 표시하고 이미지가 없으면 위치 아이콘 대체 화면을 표시한다. */
 @Composable
 private fun TourismHero(item: TourismCatalogItem) {
     Box(
@@ -442,8 +445,7 @@ private fun TourismHero(item: TourismCatalogItem) {
 
 private val TourismHeroHeight = 260.dp
 
-// guide_tourism_place_detail.png 기준 — 카드 배경 없이 캔버스 위에 바로 얹는다(히어로 사진
-// 바로 아래, 지도 카드 사이 유일하게 흰 카드가 아닌 텍스트 블록).
+/** 관광 항목의 카테고리, 제목과 주소를 카드 배경 없이 히어로 아래에 표시한다. */
 @Composable
 private fun TourismSummaryCard(item: TourismCatalogItem, category: TourismCatalogCategory) {
     Column(
@@ -466,6 +468,7 @@ private fun TourismSummaryCard(item: TourismCatalogItem, category: TourismCatalo
     }
 }
 
+/** 혼잡도 값과 기준 날짜를 강조 카드로 표시한다. */
 @Composable
 private fun CongestionCard(label: String, value: String, dateLabel: String?, date: String?) {
     Surface(
@@ -497,6 +500,7 @@ private fun CongestionCard(label: String, value: String, dateLabel: String?, dat
     }
 }
 
+/** 제공된 지도, 전화 또는 외부 링크 동작을 상세 화면의 액션 버튼으로 표시한다. */
 @Composable
 private fun ActionButtons(
     canOpenMap: Boolean,
@@ -544,9 +548,10 @@ private fun ActionButtons(
     }
 }
 
-// guide_tourism_place_detail.png 기준 — 흰 카드 없이 굵은 제목 한 줄 + 본문만 캔버스 위에 바로
-// 얹는 섹션 껍데기. "방문 정보"/"장소 소개"/"진료 전후 체크"/"여행자 편의"가 쓴다(카드 배경이
-// 필요한 나머지 섹션은 여전히 [DetailSurface] 기반 전용 카드를 쓴다).
+/**
+ * 흰 카드 배경 없이 제목과 [content]를 상세 화면 캔버스에 직접 배치한다.
+ * 카드가 필요한 강조 섹션은 [DetailSurface]를 사용한다.
+ */
 @Composable
 private fun PlainSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(
@@ -558,6 +563,7 @@ private fun PlainSection(title: String, content: @Composable ColumnScope.() -> U
     }
 }
 
+/** 상세 화면의 강조 콘텐츠를 그림자가 있는 흰색 카드에 배치한다. */
 @Composable
 private fun DetailSurface(content: @Composable () -> Unit) {
     Box(

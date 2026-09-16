@@ -387,11 +387,10 @@ private fun TourismCatalogContent(
     }
 }
 
-// 무장애 관광(ACCESSIBLE) 전용 리스트업 화면. "부산 관광지"(RecommendedPlacesCatalogContent)와
-// 같은 3열→2열 포토 그리드 디자인으로 맞췄다 — 다만 이 카테고리는 관광지/숙박/맛집 같은 하위
-// 구분이 없는 단일 카테고리라 카테고리 필터 행은 없고, 개인화 추천(FOR YOU) 섹션도 없다(항상
-// visibleItems 하나로만 렌더링). 정렬은 항상 거리순으로 고정하고, 검색은 이미 로드된 카탈로그를
-// 타이핑 즉시 클라이언트에서 필터링한다.
+/**
+ * 무장애 관광 항목을 검색 가능한 2열 사진 그리드로 표시한다.
+ * 하위 카테고리와 개인화 추천이 없으므로 거리순 [TourismCatalogUiState.visibleItems]만 렌더링한다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AccessibleTourismCatalogContent(
@@ -499,11 +498,10 @@ private fun AccessibleTourismCatalogContent(
     }
 }
 
-// "부산 관광지"(언어별 PLACES_KO/EN/JA/ZH) 전용 리스트업 화면. wellness_tourism_recommendation_list.png
-// 디자인 기준으로 3열 포토 그리드 + 카테고리 3종(관광지/숙박/맛집) 고정 필터 + 지역 드롭다운으로
-// 개편했다. 카테고리 필터는 클라이언트 필터, 지역은 서버 재조회이며, 목록은 "추천" 섹션(개인화
-// 점수 상위, FOR YOU 헤더)과 "전체" 섹션(TourAPI 원본 목록에서 추천에 뽑히지 않은 나머지) 두
-// 단으로 나뉜다. 정렬 선택지는 없다 — 추천 섹션은 개인화 점수순, 전체 섹션은 서버 원본 순서.
+/**
+ * 부산 관광지를 추천 및 전체 항목의 2열 사진 그리드로 표시한다.
+ * 카테고리는 클라이언트에서 필터링하고 지역 변경과 추가 페이지 로드는 콜백으로 요청한다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecommendedPlacesCatalogContent(
@@ -770,8 +768,7 @@ private fun PlacesCategoryAndDistrictFilterRow(
     }
 }
 
-// 선택 시 코랄 배경 채움, 미선택 시 흰 배경 + 옅은 회색 보더. 아이콘+라벨 순서, 코너 14dp로
-// 지역 드롭다운 알약과 톤을 맞춘다.
+/** 선택 여부에 따라 포인트 배경 또는 중립 테두리를 적용한 카테고리 필터를 표시한다. */
 @Composable
 private fun PlacesCategoryPill(
     label: String,
@@ -805,10 +802,9 @@ private fun PlacesCategoryPill(
     }
 }
 
-// 나머지 3개 카테고리 알약과 같은 코너·패딩. 보더는 평소엔 다른 알약과 같은 옅은 회색이고,
-// 펼쳐졌을 때만(png의 "전체" 팝업이 뜬 스크린샷과 같은 상태) 코랄로 강조한다. 드롭다운 목록
-// 너비를 이 알약 실측 너비에 맞춰(anchorWidth) DropdownMenu 기본 콘텐츠-핏 동작을 덮어쓴다 —
-// 그렇지 않으면 목록 폭이 알약보다 좁거나 넓게 떠서 어긋나 보인다.
+/**
+ * 선택 지역을 표시하고 부산 지역 목록을 앵커 너비에 맞춘 드롭다운으로 제공한다.
+ */
 @Composable
 private fun PlacesDistrictDropdownPill(
     selectedDistrict: BusanDistrict?,
@@ -926,8 +922,7 @@ private fun PlacesGridSearchBar(query: String, onQueryChanged: (String) -> Unit,
 
 private val SearchBarFill = Color(0xFFF2F1F3)
 
-// 아이콘 라벨(FOR YOU/EASY TRIP) + 큰 제목(강조 부분만 코랄, 순서는 호출부가 AnnotatedString으로
-// 직접 조립) + 부제. "부산 관광지"·무장애 관광 리스트업 화면이 검색바 밑에서 공용으로 쓴다.
+/** 아이브로 라벨, 부분 강조 제목과 부제로 관광 목록의 히어로 머리글을 표시한다. */
 @Composable
 private fun PlacesHeroHeader(eyebrowLabel: String, title: AnnotatedString, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -937,7 +932,7 @@ private fun PlacesHeroHeader(eyebrowLabel: String, title: AnnotatedString, subti
     }
 }
 
-// "부산 관광지"(FOR YOU) — 검정 접두사 + 코랄 강조 접미사 순서.
+/** 부산 관광지 추천 머리글에서 접미사를 포인트 색으로 강조한다. */
 @Composable
 private fun ForYouRecommendationHeader(forYouLabel: String, titlePrefix: String, titleHighlight: String, subtitle: String) {
     PlacesHeroHeader(
@@ -950,7 +945,7 @@ private fun ForYouRecommendationHeader(forYouLabel: String, titlePrefix: String,
     )
 }
 
-// 무장애 관광(EASY TRIP) — 코랄 강조 접두사 + 검정 접미사 순서(부산 관광지와 반대).
+/** 무장애 관광 머리글에서 접두사를 포인트 색으로 강조한다. */
 @Composable
 private fun AccessibleHeroHeader(label: String, titleHighlight: String, titleSuffix: String, subtitle: String) {
     PlacesHeroHeader(
