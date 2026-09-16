@@ -108,6 +108,32 @@ class PapagoTranslationClientTest {
     }
 
     @Test
+    void source_언어를_지정하면_해당_언어로_요청한다() {
+        server.expect(requestTo(API_URL))
+            .andExpect(method(org.springframework.http.HttpMethod.POST))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("source=en")))
+            .andRespond(withSuccess(bodyWithTranslatedText("어제부터 두통이 있습니다."), MediaType.APPLICATION_JSON));
+
+        String result = client.translate("I have had a headache since yesterday.", "en", "ko");
+
+        assertThat(result).isEqualTo("어제부터 두통이 있습니다.");
+        server.verify();
+    }
+
+    @Test
+    void source_언어_생략시_기존과_동일하게_한국어로_고정된다() {
+        server.expect(requestTo(API_URL))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("source=ko")))
+            .andRespond(withSuccess(successBody(), MediaType.APPLICATION_JSON));
+
+        client.translate("환자명 홍길동", "en");
+
+        server.verify();
+    }
+
+    @Test
     void 최대_길이를_넘는_텍스트는_여러_번_호출해_순서대로_결합한다() {
         String text = "A".repeat(3000) + " " + "B".repeat(3000);
 

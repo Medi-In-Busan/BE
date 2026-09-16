@@ -16,13 +16,18 @@ import java.util.List;
 /**
  * Naver Papago 번역 API와의 통신만 담당한다. Client ID/Secret은 여기서만 다루고,
  * 원문/번역문은 로그에 남기지 않는다(로그에는 대상 언어 등만 남긴다).
- * 원본 문서(진단서/처방전)는 한국어로 작성되어 있다고 가정해 출발 언어는 항상 한국어로 고정한다.
+ *
+ * <p>기존 문서 OCR(진단서/처방전)은 원본이 한국어로 작성되어 있다고 가정해 출발 언어를 항상
+ * 한국어로 고정한 {@link #translate(String, String)}만 썼다. STEP04 진료 브리핑 카드처럼
+ * 반대 방향(외국어 → 한국어)이 필요한 호출부를 위해 source 언어를 받는
+ * {@link #translate(String, String, String)} 오버로드를 추가했다 — 기존 메서드는 그대로 두고
+ * 내부적으로 이 오버로드에 {@code source="ko"}를 고정해 위임하므로 기존 호출부 동작은 변하지 않는다.
  */
 @Component
 public class PapagoTranslationClient {
 
     private static final Logger log = LoggerFactory.getLogger(PapagoTranslationClient.class);
-    private static final String SOURCE_LANGUAGE = "ko";
+    private static final String DEFAULT_SOURCE_LANGUAGE = "ko";
     // Papago Text Translation은 요청당 최대 5000자까지만 허용한다(초과 시 N2MT08).
     private static final int MAX_CHUNK_LENGTH = 5000;
 
@@ -34,7 +39,12 @@ public class PapagoTranslationClient {
         this.properties = properties;
     }
 
+    /** 원본이 한국어라고 가정하는 기존 호출부(OCR/웰니스/관광지 번역) 전용. source는 항상 "ko"로 고정된다. */
     public String translate(String text, String targetLanguage) {
+        return translate(text, DEFAULT_SOURCE_LANGUAGE, targetLanguage);
+    }
+
+    public String translate(String text, String sourceLanguage, String targetLanguage) {
         if (!properties.hasCredentials()) {
             throw new PapagoTranslationApiException(
                 "PAPAGO_TRANSLATION_API_URL/CLIENT_ID/CLIENT_SECRET 환경변수가 설정되지 않았습니다.");
@@ -47,7 +57,7 @@ public class PapagoTranslationClient {
         // 청크는 원문 부분 문자열 그대로라 단순 이어붙이기만으로 원문 공백 구조가 복원된다.
         StringBuilder translated = new StringBuilder();
         for (String chunk : splitIntoChunks(text)) {
-            translated.append(translateChunk(chunk, targetLanguage));
+            translated.append(translateChunk(chunk, sourceLanguage, targetLanguage));
         }
         return translated.toString();
     }
@@ -83,9 +93,9 @@ public class PapagoTranslationClient {
         return hardLimit;
     }
 
-    private String translateChunk(String text, String targetLanguage) {
+    private String translateChunk(String text, String sourceLanguage, String targetLanguage) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("source", SOURCE_LANGUAGE);
+        body.add("source", sourceLanguage);
         body.add("target", targetLanguage);
         body.add("text", text);
 

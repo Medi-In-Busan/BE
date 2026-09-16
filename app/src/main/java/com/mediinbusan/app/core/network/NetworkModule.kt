@@ -4,6 +4,7 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import com.mediinbusan.app.BuildConfig
 import com.mediinbusan.app.data.diagnosischat.DiagnosisChatApi
 import com.mediinbusan.app.data.document.DocumentOcrApi
+import com.mediinbusan.app.data.guide.TreatmentBriefingTranslateApi
 import com.mediinbusan.app.data.hospital.HospitalApi
 import com.mediinbusan.app.data.place.TourismApi
 import com.mediinbusan.app.data.tourism.TourismCatalogApi
@@ -37,7 +38,7 @@ object NetworkModule {
 
     // 응답/요청 본문에 의료 문서 원문·건강 상태가 실리는 엔드포인트. 이 경로들만 BODY 로깅에서
     // 제외한다(SensitivePathLoggingInterceptor 참고).
-    private val SENSITIVE_LOG_PATHS = listOf("/documents/ocr", "/diagnosis-chat")
+    private val SENSITIVE_LOG_PATHS = listOf("/documents/ocr", "/diagnosis-chat", "/guide/treatment-briefing/translate")
 
     @Provides
     @Singleton
@@ -130,6 +131,17 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(DocumentOcrApi::class.java)
+
+    // TreatmentBriefingTranslateApi도 자체 백엔드(backend/guide)를 바라본다.
+    @Provides
+    @Singleton
+    fun provideTreatmentBriefingTranslateApi(okHttpClient: OkHttpClient, json: Json): TreatmentBriefingTranslateApi =
+        Retrofit.Builder()
+            .baseUrl(BuildConfig.MEDIINBUSAN_API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(TreatmentBriefingTranslateApi::class.java)
 
     // DiagnosisChatApi도 자체 백엔드(backend/diagnosischat, Gemini 프록시)를 바라본다.
     @Provides

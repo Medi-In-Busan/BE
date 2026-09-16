@@ -8,6 +8,8 @@ import com.mediinbusan.app.data.favorite.FavoriteRepository
 import com.mediinbusan.app.data.favorite.FavoriteRepositoryImpl
 import com.mediinbusan.app.data.guide.GuideRepository
 import com.mediinbusan.app.data.guide.GuideRepositoryImpl
+import com.mediinbusan.app.data.guide.TreatmentBriefingTranslationRepository
+import com.mediinbusan.app.data.guide.TreatmentBriefingTranslationRepositoryImpl
 import com.mediinbusan.app.data.hospital.HospitalRepository
 import com.mediinbusan.app.data.hospital.HospitalRepositoryImpl
 import com.mediinbusan.app.data.place.PlaceRepository
@@ -58,6 +60,11 @@ interface RepositoryModule {
 
     @Binds
     fun bindGuideRepository(impl: GuideRepositoryImpl): GuideRepository
+
+    @Binds
+    fun bindTreatmentBriefingTranslationRepository(
+        impl: TreatmentBriefingTranslationRepositoryImpl
+    ): TreatmentBriefingTranslationRepository
 
     @Binds
     fun bindFavoriteRepository(impl: FavoriteRepositoryImpl): FavoriteRepository
