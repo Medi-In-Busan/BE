@@ -6,11 +6,20 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import java.time.Instant;
 
 @Entity
-@Table(name = "wellness_place_translation")
+// Flyway V10과 같은 제약을 엔티티에도 선언한다 — 테스트(ddl-auto=create-drop, Flyway 꺼짐) 스키마에도 생기게 하려는 것.
+// 동시 번역의 중복 저장을 이 제약이 막는다(WellnessPlaceTranslationService.localizeAll 참고).
+@Table(
+    name = "wellness_place_translation",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_wellness_translation_place_language",
+        columnNames = {"content_id", "language_code"}
+    )
+)
 public class WellnessPlaceTranslation {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

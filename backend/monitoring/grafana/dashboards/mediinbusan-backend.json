@@ -149,7 +149,7 @@
     {
       "id": 4,
       "type": "row",
-      "title": "#1·#4 전역 락 — 번역(wellness-translation) / 혼잡도(crowding-catalog)",
+      "title": "#4 전역 락 — 혼잡도(crowding-catalog) (번역 락 #1은 제거됨)",
       "collapsed": false,
       "gridPos": {
         "h": 1,

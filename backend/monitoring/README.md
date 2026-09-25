@@ -52,7 +52,7 @@ $env:WELLNESS_INGESTION_CROWDINGBASEURL='http://localhost:9999/crowding'
 
 | 병목 | 패널 | 문제 신호 |
 | --- | --- | --- |
-| #1 번역 전역 락 | 락 대기열 / 락 대기 시간 | `wellness-translation` 대기열 > 0, 대기 시간이 Papago 지연의 배수로 증가 |
+| #1 번역 전역 락 | (해결됨 — 락 제거) | 이제 `wellness-translation` 락 지표는 나오지 않는다 |
 | #2 커넥션 2개 점유 | 커넥션 active / pending, 점유 시간 max | active = max(10), pending > 0, 무관한 `/api/hospitals` p95·5xx 동반 상승 |
 | #3 타임아웃 부재 | 진행 중인 호출 수, 가장 오래 진행 중인 호출 | `papago`/`clova-ocr`의 경과 시간이 끝없이 증가(Timer엔 안 찍힘) |
 | #4 혼잡도 전역 락 | 락 대기열(`crowding-catalog`), 스냅샷 생성 시간 | 대기열 > 0, 생성 시간 ≈ TourAPI 타임아웃(40s) |

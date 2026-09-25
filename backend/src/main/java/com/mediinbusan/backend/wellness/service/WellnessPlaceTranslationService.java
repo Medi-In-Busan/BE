@@ -3,13 +3,13 @@ package com.mediinbusan.backend.wellness.service;
 import com.mediinbusan.backend.document.client.PapagoTranslationApiException;
 import com.mediinbusan.backend.document.client.PapagoTranslationAuthenticationException;
 import com.mediinbusan.backend.document.client.PapagoTranslationClient;
-import com.mediinbusan.backend.monitoring.InstrumentedLock;
 import com.mediinbusan.backend.wellness.domain.WellnessPlaceTranslation;
 import com.mediinbusan.backend.wellness.dto.WellnessPlaceResponse;
 import com.mediinbusan.backend.wellness.repository.WellnessPlaceTranslationRepository;
 import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,9 +34,6 @@ public class WellnessPlaceTranslationService {
     private final WellnessPlaceTranslationRepository repository;
     private final PapagoTranslationClient papago;
     private final PapagoDailyQuotaGuard quotaGuard;
-    // 예전 메서드 레벨 synchronized와 같은 의미(JVM 전역 1개, 재진입, 비공정)다 — 대기/점유 시간을
-    // 지표(mediinbusan.lock.*{lock="wellness-translation"})로 보려고 명시적 락으로만 바꿨다.
-    private final InstrumentedLock translationLock = new InstrumentedLock("wellness-translation");
 
     public WellnessPlaceTranslationService(WellnessPlaceTranslationRepository repository, PapagoTranslationClient papago,
                                            PapagoDailyQuotaGuard quotaGuard) {
@@ -106,19 +103,12 @@ public class WellnessPlaceTranslationService {
     // 캐시 읽기(loadCache)와 저장(repository.save)은 각자 리포지토리 호출 단위의 짧은 트랜잭션으로 돈다.
     // 예전엔 REQUIRES_NEW였는데, 호출부(WellnessService)의 readOnly 트랜잭션을 피하려던 것이 요청당 커넥션
     // 2개 점유와 풀 교착의 원인이 됐다(WellnessService.getPlaceDetail 주석 참고). 호출부도 이제 트랜잭션 밖이다.
+    //
+    // 락도 걸지 않는다. 예전엔 JVM 전역 synchronized였는데, 서로 다른 장소를 보는 요청까지 Papago 응답을
+    // 한 줄로 기다려 응답이 30→60→90→120초로 직렬화됐다. 락이 막던 "같은 장소·언어 동시 번역"은 드물고
+    // 손해도 번역 1건이며, 중복 저장은 UNIQUE(content_id, language_code)가 막는다(아래 save 참고).
+    // 서버를 여러 대로 늘려도 DB 제약은 그대로 통한다(JVM 락은 한 프로세스 안에서만 통한다).
     public List<WellnessPlaceResponse> localizeAll(
-        List<WellnessPlaceResponse> sources,
-        String requestedLanguage
-    ) {
-        translationLock.lock();
-        try {
-            return localizeAllLocked(sources, requestedLanguage);
-        } finally {
-            translationLock.unlock();
-        }
-    }
-
-    private List<WellnessPlaceResponse> localizeAllLocked(
         List<WellnessPlaceResponse> sources,
         String requestedLanguage
     ) {
@@ -170,7 +160,12 @@ public class WellnessPlaceTranslationService {
                             source.contentId(), language, item.sourceHash(), name, address, description
                         );
                     translation.refresh(source.contentId(), language, item.sourceHash(), name, address, description);
-                    repository.save(translation);
+                    try {
+                        repository.save(translation);
+                    } catch (DataIntegrityViolationException alreadyCached) {
+                        // 같은 장소·언어를 다른 요청이 먼저 저장했다 — 원문이 같으니 번역도 같다. 이번 번역을 그대로 응답에 쓴다.
+                        log.debug("웰니스 번역 캐시가 동시에 저장되어 기존 행을 유지합니다: contentId={}", source.contentId());
+                    }
                     localizedById.put(source.contentId(), translatedResponse(source, translation));
                 }
             } catch (PapagoTranslationAuthenticationException | PapagoTranslationApiException exception) {

@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,11 +62,20 @@ class WellnessDetailConnectionPoolTest {
     @MockitoBean
     private PapagoTranslationClient papago;
 
+    // 동시에 진행 중인 Papago 호출 수와 그 최댓값 — 번역이 전역 락으로 한 줄로 서는지 본다.
+    private final AtomicInteger papagoInFlight = new AtomicInteger();
+    private final AtomicInteger papagoMaxInFlight = new AtomicInteger();
+
     @BeforeEach
     void setUp() {
         // 느린 Papago: 줄마다 "EN:"을 붙여 돌려준다(필드 수가 원문과 같아야 번역으로 인정된다).
         when(papago.translate(anyString(), eq("en"))).thenAnswer(invocation -> {
-            Thread.sleep(PAPAGO_DELAY_MILLIS);
+            papagoMaxInFlight.accumulateAndGet(papagoInFlight.incrementAndGet(), Math::max);
+            try {
+                Thread.sleep(PAPAGO_DELAY_MILLIS);
+            } finally {
+                papagoInFlight.decrementAndGet();
+            }
             String text = invocation.getArgument(0);
             return Stream.of(text.split("\n", -1)).map(line -> "EN:" + line).collect(Collectors.joining("\n"));
         });
@@ -94,6 +104,21 @@ class WellnessDetailConnectionPoolTest {
             assertThat(result.translated()).isTrue();
             assertThat(result.name()).startsWith("EN:");
         });
+    }
+
+    @Test
+    void 서로_다른_장소의_번역은_Papago를_한_줄로_세우지_않는다() throws Exception {
+        List<String> contentIds = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            String contentId = PREFIX + "parallel-" + i;
+            placeRepository.save(place(contentId, "병렬 장소 " + i));
+            contentIds.add(contentId);
+        }
+
+        runConcurrently(contentIds);
+
+        // 예전 JVM 전역 락에서는 항상 1이었다(응답이 300ms × 요청 수로 직렬화).
+        assertThat(papagoMaxInFlight.get()).isGreaterThan(1);
     }
 
     @Test
