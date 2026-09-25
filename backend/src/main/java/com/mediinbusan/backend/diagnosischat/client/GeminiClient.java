@@ -1,5 +1,6 @@
 package com.mediinbusan.backend.diagnosischat.client;
 
+import com.mediinbusan.backend.monitoring.ExternalApiMetrics;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +53,10 @@ public class GeminiClient {
     }
 
     public GeminiStructuredOutput extractSlots(String systemInstructionText, String userMessage) {
+        return ExternalApiMetrics.record("gemini", "generateContent", () -> callGemini(systemInstructionText, userMessage));
+    }
+
+    private GeminiStructuredOutput callGemini(String systemInstructionText, String userMessage) {
         if (!properties.hasCredentials()) {
             throw new GeminiApiException("GEMINI_API_KEY 또는 GEMINI_MODEL 환경변수가 설정되지 않았습니다.");
         }

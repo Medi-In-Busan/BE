@@ -31,6 +31,11 @@ dependencies {
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
 
+	// 성능 지표(Prometheus 스크레이프용). 엔드포인트는 관리 포트(8081)에만 열린다 — application.yml의
+	// management 섹션과 monitoring/ 참고. 버전은 Spring Boot BOM이 관리한다.
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
 	// TourismPlacesCache(관광 데이터 인메모리 캐시)가 쓴다 — origin/main에 이 클래스가 추가될 때
 	// 의존성 선언이 누락돼 있어서 여기서 보충한다.
 	implementation 'com.github.ben-manes.caffeine:caffeine:3.2.4'

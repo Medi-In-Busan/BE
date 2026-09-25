@@ -32,6 +32,34 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+# 성능 지표. 관리 엔드포인트는 앱 포트(8080)가 아니라 별도 포트(8081)에만 연다 — prod의 nginx는
+# backend:8080만 프록시하므로 /actuator가 외부(https://ownrefrigerator.site/actuator)로 새지 않는다.
+# 8081은 도커 네트워크 내부에서 Prometheus만 긁어간다(monitoring/ 참고).
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    tags:
+      application: mediinbusan-backend
+    distribution:
+      # p95/p99를 Prometheus에서 histogram_quantile로 계산하려면 버킷이 필요하다.
+      percentiles-histogram:
+        http.server.requests: true
+        mediinbusan.external.api: true
+        mediinbusan.lock.wait: true
+        mediinbusan.lock.held: true
+        mediinbusan.crowding.snapshot.build: true
+
+server:
+  tomcat:
+    # tomcat_threads_busy_threads / tomcat_threads_config_max_threads 지표에 필요하다.
+    mbeanregistry:
+      enabled: true
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

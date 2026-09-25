@@ -1,5 +1,6 @@
 package com.mediinbusan.backend.wellness.service;
 
+import com.mediinbusan.backend.monitoring.ExternalApiMetrics;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -49,6 +50,17 @@ public class TourismExternalClient {
     }
 
     public Object get(String baseUrl, String operation, Map<String, ?> queryParameters) {
+        return ExternalApiMetrics.record("tourapi", serviceName(baseUrl) + "/" + operation,
+            () -> fetch(baseUrl, operation, queryParameters));
+    }
+
+    /** 지표 태그용 서비스 이름(KorService2, EngService2, Durunubi …) — baseUrl의 마지막 경로 조각. */
+    private static String serviceName(String baseUrl) {
+        String trimmed = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        return trimmed.substring(trimmed.lastIndexOf('/') + 1);
+    }
+
+    private Object fetch(String baseUrl, String operation, Map<String, ?> queryParameters) {
         if (!properties.hasTourApiKey()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TOURISM_API_SERVICE_KEY 환경변수가 필요합니다.");
         }

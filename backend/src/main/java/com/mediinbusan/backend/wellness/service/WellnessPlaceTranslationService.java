@@ -3,9 +3,11 @@ package com.mediinbusan.backend.wellness.service;
 import com.mediinbusan.backend.document.client.PapagoTranslationApiException;
 import com.mediinbusan.backend.document.client.PapagoTranslationAuthenticationException;
 import com.mediinbusan.backend.document.client.PapagoTranslationClient;
+import com.mediinbusan.backend.monitoring.InstrumentedLock;
 import com.mediinbusan.backend.wellness.domain.WellnessPlaceTranslation;
 import com.mediinbusan.backend.wellness.dto.WellnessPlaceResponse;
 import com.mediinbusan.backend.wellness.repository.WellnessPlaceTranslationRepository;
+import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,9 @@ public class WellnessPlaceTranslationService {
     private final WellnessPlaceTranslationRepository repository;
     private final PapagoTranslationClient papago;
     private final PapagoDailyQuotaGuard quotaGuard;
+    // 예전 메서드 레벨 synchronized와 같은 의미(JVM 전역 1개, 재진입, 비공정)다 — 대기/점유 시간을
+    // 지표(mediinbusan.lock.*{lock="wellness-translation"})로 보려고 명시적 락으로만 바꿨다.
+    private final InstrumentedLock translationLock = new InstrumentedLock("wellness-translation");
 
     public WellnessPlaceTranslationService(WellnessPlaceTranslationRepository repository, PapagoTranslationClient papago,
                                            PapagoDailyQuotaGuard quotaGuard) {
@@ -48,7 +53,6 @@ public class WellnessPlaceTranslationService {
 
     /**
      * 이미 캐시에 있는 번역만 입히고 **Papago는 부르지 않는다** — 장소 목록 응답용이다.
-     *
      * 목록 엔드포인트(특히 좌표 없이 전체를 주는 `GET /api/wellness/places`, 현재 2,267건)에서
      * {@link #localizeAll}을 쓰면 캐시에 없는 장소 전부를 요청 처리 중에 번역하려 든다. 4,000자
      * 단위로 쪼개도 Papago 호출이 수백 번 직렬로 나가서 응답이 분 단위가 되고, 지도 한 번 여는
@@ -66,14 +70,19 @@ public class WellnessPlaceTranslationService {
         if (sources.isEmpty() || language.equals("ko")) return sources;
 
         Map<String, WellnessPlaceTranslation> cachedByContentId = loadCache(sources, language);
-        return sources.stream()
+        int[] hits = {0};
+        List<WellnessPlaceResponse> localized = sources.stream()
             .map(source -> {
                 WellnessPlaceTranslation cached = cachedByContentId.get(source.contentId());
-                return cached != null && cached.sourceHash().equals(sourceHash(source))
-                    ? translatedResponse(source, cached)
-                    : source;
+                if (cached != null && cached.sourceHash().equals(sourceHash(source))) {
+                    hits[0]++;
+                    return translatedResponse(source, cached);
+                }
+                return source;
             })
             .toList();
+        recordCacheLookups("list", hits[0], localized.size() - hits[0]);
+        return localized;
     }
 
     /**
@@ -99,8 +108,23 @@ public class WellnessPlaceTranslationService {
     // REQUIRED(기본값)로 두면 그 읽기전용 트랜잭션에 그대로 합류해 캐시 미스 시의
     // insert/update가 "Connection is read-only"로 실패한다(MySQL에서만 강제됨, H2는 무시함) —
     // 항상 새로운 쓰기 가능한 트랜잭션을 열도록 REQUIRES_NEW로 분리한다.
+    //
+    // 주의(성능): 트랜잭션 프록시가 커넥션을 먼저 잡은 뒤 이 메서드 안에서 락을 기다린다 — 락 대기 중인
+    // 요청도 커넥션을 쥐고 있다. hikaricp_connections_* 와 mediinbusan_lock_* 지표를 같이 볼 것.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public synchronized List<WellnessPlaceResponse> localizeAll(
+    public List<WellnessPlaceResponse> localizeAll(
+        List<WellnessPlaceResponse> sources,
+        String requestedLanguage
+    ) {
+        translationLock.lock();
+        try {
+            return localizeAllLocked(sources, requestedLanguage);
+        } finally {
+            translationLock.unlock();
+        }
+    }
+
+    private List<WellnessPlaceResponse> localizeAllLocked(
         List<WellnessPlaceResponse> sources,
         String requestedLanguage
     ) {
@@ -119,6 +143,7 @@ public class WellnessPlaceTranslationService {
                 pending.add(new PendingTranslation(source, hash, cached));
             }
         }
+        recordCacheLookups("detail", localizedById.size(), pending.size());
 
         for (List<PendingTranslation> batch : batches(pending)) {
             if (quotaGuard.isBlockedToday()) break;
@@ -163,6 +188,12 @@ public class WellnessPlaceTranslationService {
             .map(source -> localizedById.getOrDefault(source.contentId(), source))
             .toList();
     }
+
+    /** path: detail(캐시 미스면 Papago 호출) / list(캐시만 읽음). 미스 비율이 높으면 상세 요청이 Papago 대기로 락을 오래 쥔다. */
+    private static void recordCacheLookups(String path, int hits, int misses) {
+        Metrics.counter("mediinbusan.translation.cache", "domain", "wellness", "path", path, "result", "hit").increment(hits);
+            Metrics.counter("mediinbusan.translation.cache", "domain", "wellness", "path", path, "result", "miss").increment(misses);
+        }
 
     private void handleTranslationFailure(RuntimeException exception) {
         if (exception.getMessage() != null && exception.getMessage().contains("429")) {

@@ -10,6 +10,7 @@ import com.mediinbusan.backend.wellness.domain.TourismCatalogTranslation;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogItemResponse;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
 import com.mediinbusan.backend.wellness.repository.TourismCatalogTranslationRepository;
+import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -67,6 +68,12 @@ public class TourismCatalogTranslationService {
                 pending.add(new PendingTranslation(item, hash, cached.orElse(null), detailKeys));
             }
         }
+
+        // 항목마다 캐시 조회 쿼리가 1번씩 나간다(N+1) — 조회 수 = hit + miss.
+        Metrics.counter("mediinbusan.translation.cache", "domain", "tourism", "path", "catalog", "result", "hit")
+            .increment(localizedById.size());
+        Metrics.counter("mediinbusan.translation.cache", "domain", "tourism", "path", "catalog", "result", "miss")
+            .increment(pending.size());
 
         for (List<PendingTranslation> batch : batches(pending)) {
             if (quotaGuard.isBlockedToday()) break;

@@ -2,6 +2,8 @@ package com.mediinbusan.backend.wellness.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +33,13 @@ class TourismPlacesCache {
     private final Cache<String, TourismExternalResponse> store = Caffeine.newBuilder()
         .expireAfterWrite(TTL)
         .maximumSize(MAX_ENTRIES)
+        .recordStats()
         .build();
+
+    TourismPlacesCache() {
+        // cache_gets_total{cache="tourismPlaces",result="hit|miss"} 등 — hit ratio 확인용.
+        CaffeineCacheMetrics.monitor(Metrics.globalRegistry, store, "tourismPlaces");
+    }
 
     /**
      * cacheKey 하나당 단 하나의 로더만 실행되는 single-flight getOrLoad. Caffeine의

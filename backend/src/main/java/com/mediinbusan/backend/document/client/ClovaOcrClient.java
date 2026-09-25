@@ -1,5 +1,6 @@
 package com.mediinbusan.backend.document.client;
 
+import com.mediinbusan.backend.monitoring.ExternalApiMetrics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -40,6 +41,10 @@ public class ClovaOcrClient {
     }
 
     public ClovaOcrResponse recognizeText(byte[] imageBytes, String imageFormat) {
+        return ExternalApiMetrics.record("clova-ocr", "general", () -> callClova(imageBytes, imageFormat));
+    }
+
+    private ClovaOcrResponse callClova(byte[] imageBytes, String imageFormat) {
         if (!properties.hasCredentials()) {
             throw new ClovaOcrApiException("CLOVA_OCR_API_URL 또는 CLOVA_OCR_SECRET_KEY 환경변수가 설정되지 않았습니다.");
         }

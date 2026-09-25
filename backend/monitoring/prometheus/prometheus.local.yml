@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 5s      # 로컬 부하 테스트에서 짧은 스파이크(락 대기열 등)를 놓치지 않도록 짧게 잡는다.
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: mediinbusan-backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8081"]
