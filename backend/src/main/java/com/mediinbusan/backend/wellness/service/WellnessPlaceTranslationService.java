@@ -6,10 +6,11 @@ import com.mediinbusan.backend.document.client.PapagoTranslationClient;
 import com.mediinbusan.backend.wellness.domain.WellnessPlaceTranslation;
 import com.mediinbusan.backend.wellness.dto.WellnessPlaceResponse;
 import com.mediinbusan.backend.wellness.repository.WellnessPlaceTranslationRepository;
+import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -41,14 +42,12 @@ public class WellnessPlaceTranslationService {
         this.quotaGuard = quotaGuard;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public WellnessPlaceResponse localize(WellnessPlaceResponse source, String requestedLanguage) {
         return localizeAll(List.of(source), requestedLanguage).getFirst();
     }
 
     /**
      * 이미 캐시에 있는 번역만 입히고 **Papago는 부르지 않는다** — 장소 목록 응답용이다.
-     *
      * 목록 엔드포인트(특히 좌표 없이 전체를 주는 `GET /api/wellness/places`, 현재 2,267건)에서
      * {@link #localizeAll}을 쓰면 캐시에 없는 장소 전부를 요청 처리 중에 번역하려 든다. 4,000자
      * 단위로 쪼개도 Papago 호출이 수백 번 직렬로 나가서 응답이 분 단위가 되고, 지도 한 번 여는
@@ -66,14 +65,19 @@ public class WellnessPlaceTranslationService {
         if (sources.isEmpty() || language.equals("ko")) return sources;
 
         Map<String, WellnessPlaceTranslation> cachedByContentId = loadCache(sources, language);
-        return sources.stream()
+        int[] hits = {0};
+        List<WellnessPlaceResponse> localized = sources.stream()
             .map(source -> {
                 WellnessPlaceTranslation cached = cachedByContentId.get(source.contentId());
-                return cached != null && cached.sourceHash().equals(sourceHash(source))
-                    ? translatedResponse(source, cached)
-                    : source;
+                if (cached != null && cached.sourceHash().equals(sourceHash(source))) {
+                    hits[0]++;
+                    return translatedResponse(source, cached);
+                }
+                return source;
             })
             .toList();
+        recordCacheLookups("list", hits[0], localized.size() - hits[0]);
+        return localized;
     }
 
     /**
@@ -95,12 +99,16 @@ public class WellnessPlaceTranslationService {
         return cachedByContentId;
     }
 
-    // WellnessService는 readOnly=true 트랜잭션에서 이 메서드를 호출한다.
-    // REQUIRED(기본값)로 두면 그 읽기전용 트랜잭션에 그대로 합류해 캐시 미스 시의
-    // insert/update가 "Connection is read-only"로 실패한다(MySQL에서만 강제됨, H2는 무시함) —
-    // 항상 새로운 쓰기 가능한 트랜잭션을 열도록 REQUIRES_NEW로 분리한다.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public synchronized List<WellnessPlaceResponse> localizeAll(
+    // 트랜잭션을 걸지 않는다 — Papago(외부 HTTP)를 기다리는 동안 DB 커넥션을 쥐지 않기 위해서다.
+    // 캐시 읽기(loadCache)와 저장(repository.save)은 각자 리포지토리 호출 단위의 짧은 트랜잭션으로 돈다.
+    // 예전엔 REQUIRES_NEW였는데, 호출부(WellnessService)의 readOnly 트랜잭션을 피하려던 것이 요청당 커넥션
+    // 2개 점유와 풀 교착의 원인이 됐다(WellnessService.getPlaceDetail 주석 참고). 호출부도 이제 트랜잭션 밖이다.
+    //
+    // 락도 걸지 않는다. 예전엔 JVM 전역 synchronized였는데, 서로 다른 장소를 보는 요청까지 Papago 응답을
+    // 한 줄로 기다려 응답이 30→60→90→120초로 직렬화됐다. 락이 막던 "같은 장소·언어 동시 번역"은 드물고
+    // 손해도 번역 1건이며, 중복 저장은 UNIQUE(content_id, language_code)가 막는다(아래 save 참고).
+    // 서버를 여러 대로 늘려도 DB 제약은 그대로 통한다(JVM 락은 한 프로세스 안에서만 통한다).
+    public List<WellnessPlaceResponse> localizeAll(
         List<WellnessPlaceResponse> sources,
         String requestedLanguage
     ) {
@@ -119,6 +127,7 @@ public class WellnessPlaceTranslationService {
                 pending.add(new PendingTranslation(source, hash, cached));
             }
         }
+        recordCacheLookups("detail", localizedById.size(), pending.size());
 
         for (List<PendingTranslation> batch : batches(pending)) {
             if (quotaGuard.isBlockedToday()) break;
@@ -151,7 +160,12 @@ public class WellnessPlaceTranslationService {
                             source.contentId(), language, item.sourceHash(), name, address, description
                         );
                     translation.refresh(source.contentId(), language, item.sourceHash(), name, address, description);
-                    repository.save(translation);
+                    try {
+                        repository.save(translation);
+                    } catch (DataIntegrityViolationException alreadyCached) {
+                        // 같은 장소·언어를 다른 요청이 먼저 저장했다 — 원문이 같으니 번역도 같다. 이번 번역을 그대로 응답에 쓴다.
+                        log.debug("웰니스 번역 캐시가 동시에 저장되어 기존 행을 유지합니다: contentId={}", source.contentId());
+                    }
                     localizedById.put(source.contentId(), translatedResponse(source, translation));
                 }
             } catch (PapagoTranslationAuthenticationException | PapagoTranslationApiException exception) {
@@ -163,6 +177,12 @@ public class WellnessPlaceTranslationService {
             .map(source -> localizedById.getOrDefault(source.contentId(), source))
             .toList();
     }
+
+    /** path: detail(캐시 미스면 Papago 호출) / list(캐시만 읽음). 미스 비율이 높으면 상세 요청이 Papago 대기로 락을 오래 쥔다. */
+    private static void recordCacheLookups(String path, int hits, int misses) {
+        Metrics.counter("mediinbusan.translation.cache", "domain", "wellness", "path", path, "result", "hit").increment(hits);
+            Metrics.counter("mediinbusan.translation.cache", "domain", "wellness", "path", path, "result", "miss").increment(misses);
+        }
 
     private void handleTranslationFailure(RuntimeException exception) {
         if (exception.getMessage() != null && exception.getMessage().contains("429")) {

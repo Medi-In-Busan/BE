@@ -1,5 +1,6 @@
 package com.mediinbusan.backend.document.client;
 
+import com.mediinbusan.backend.monitoring.ExternalApiMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatusCode;
@@ -57,7 +58,8 @@ public class PapagoTranslationClient {
         // 청크는 원문 부분 문자열 그대로라 단순 이어붙이기만으로 원문 공백 구조가 복원된다.
         StringBuilder translated = new StringBuilder();
         for (String chunk : splitIntoChunks(text)) {
-            translated.append(translateChunk(chunk, sourceLanguage, targetLanguage));
+            translated.append(ExternalApiMetrics.record(
+                "papago", "translation", () -> translateChunk(chunk, sourceLanguage, targetLanguage)));
         }
         return translated.toString();
     }

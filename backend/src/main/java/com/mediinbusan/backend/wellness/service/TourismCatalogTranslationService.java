@@ -10,10 +10,10 @@ import com.mediinbusan.backend.wellness.domain.TourismCatalogTranslation;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogItemResponse;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
 import com.mediinbusan.backend.wellness.repository.TourismCatalogTranslationRepository;
+import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,7 +44,8 @@ public class TourismCatalogTranslationService {
         this.objectMapper = new ObjectMapper();
     }
 
-    @Transactional
+    // 트랜잭션을 걸지 않는다 — 안에서 Papago(외부 HTTP)를 부르므로, 걸면 번역이 끝날 때까지 DB 커넥션을
+    // 쥐고 있게 된다. 캐시 조회·저장은 각자 리포지토리 호출 단위의 짧은 트랜잭션으로 돈다.
     public TourismCatalogResponse localize(TourismCatalogResponse source, String requestedLanguage) {
         String language = normalizeLanguage(requestedLanguage);
         if (language.equals("ko") || isOfficialLanguageCatalog(source.category()) || quotaGuard.isBlockedToday()) {
@@ -67,6 +68,12 @@ public class TourismCatalogTranslationService {
                 pending.add(new PendingTranslation(item, hash, cached.orElse(null), detailKeys));
             }
         }
+
+        // 항목마다 캐시 조회 쿼리가 1번씩 나간다(N+1) — 조회 수 = hit + miss.
+        Metrics.counter("mediinbusan.translation.cache", "domain", "tourism", "path", "catalog", "result", "hit")
+            .increment(localizedById.size());
+        Metrics.counter("mediinbusan.translation.cache", "domain", "tourism", "path", "catalog", "result", "miss")
+            .increment(pending.size());
 
         for (List<PendingTranslation> batch : batches(pending)) {
             if (quotaGuard.isBlockedToday()) break;

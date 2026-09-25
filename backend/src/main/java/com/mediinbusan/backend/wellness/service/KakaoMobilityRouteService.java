@@ -1,5 +1,6 @@
 package com.mediinbusan.backend.wellness.service;
 
+import com.mediinbusan.backend.monitoring.ExternalApiMetrics;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mediinbusan.backend.wellness.dto.WellnessRouteCoordinateResponse;
@@ -105,6 +106,15 @@ public class KakaoMobilityRouteService {
     }
 
     private WellnessRouteResponse send(
+        URI uri,
+        String apiName,
+        java.util.function.Function<JsonNode, WellnessRouteResponse> normalizer
+    ) {
+        // 태그에는 경로만 싣는다(좌표가 담긴 쿼리스트링은 제외).
+        return ExternalApiMetrics.record("kakao-mobility", uri.getPath(), () -> callKakao(uri, apiName, normalizer));
+    }
+
+    private WellnessRouteResponse callKakao(
         URI uri,
         String apiName,
         java.util.function.Function<JsonNode, WellnessRouteResponse> normalizer

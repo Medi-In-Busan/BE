@@ -3,12 +3,15 @@ package com.mediinbusan.backend.wellness.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.mediinbusan.backend.monitoring.InstrumentedLock;
 import com.mediinbusan.backend.wellness.domain.WellnessExternalSnapshot;
 import com.mediinbusan.backend.wellness.domain.TourismCatalogCategory;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogItemResponse;
 import com.mediinbusan.backend.wellness.dto.TourismCatalogResponse;
 import com.mediinbusan.backend.wellness.dto.TourismExternalResponse;
 import com.mediinbusan.backend.wellness.repository.WellnessExternalSnapshotRepository;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -97,6 +100,9 @@ public class TourismCatalogService {
     private final TourismCatalogTranslationService translationService;
     private final ObjectProvider<TourismPlaceMatchService> placeMatchService;
     private final ObjectMapper objectMapper;
+    // 예전 메서드 레벨 synchronized와 같은 의미(JVM 전역 1개)다 — 혼잡도 요청이 서로를 얼마나
+    // 기다리는지 지표(mediinbusan.lock.*{lock="crowding-catalog"})로 보려고 명시적 락으로만 바꿨다.
+    private final InstrumentedLock crowdingLock = new InstrumentedLock("crowding-catalog");
 
     public TourismCatalogService(
         WellnessTourismGatewayService gateway,
@@ -173,7 +179,16 @@ public class TourismCatalogService {
         ), language);
     }
 
-    private synchronized TourismCatalogResponse getBusanCrowdingCatalog() {
+    private TourismCatalogResponse getBusanCrowdingCatalog() {
+        crowdingLock.lock();
+        try {
+            return getBusanCrowdingCatalogLocked();
+        } finally {
+            crowdingLock.unlock();
+        }
+    }
+
+    private TourismCatalogResponse getBusanCrowdingCatalogLocked() {
         LocalDate today = LocalDate.now();
         String snapshotKey = crowdingSnapshotKey(today);
         var todaySnapshot = snapshotRepository.findBySnapshotKey(snapshotKey);
@@ -193,6 +208,29 @@ public class TourismCatalogService {
             return cached;
         }
 
+        return recordSnapshotBuild(() -> buildTodayCrowdingCatalog(today, snapshotKey));
+    }
+
+    /**
+     * 오늘치 스냅샷 생성 소요 시간(mediinbusan.crowding.snapshot.build). 16개 구를 순차 호출하고 사진까지
+     * 찾는 동안 crowding-catalog 락을 쥐고 있으므로, 이 값이 곧 그날 첫 혼잡도 요청들의 대기 시간이다.
+     */
+    private TourismCatalogResponse recordSnapshotBuild(java.util.function.Supplier<TourismCatalogResponse> build) {
+        Timer.Sample sample = Timer.start(Metrics.globalRegistry);
+        String outcome = "error";
+        try {
+            TourismCatalogResponse response = build.get();
+            outcome = "success";
+            return response;
+        } finally {
+            sample.stop(Timer.builder("mediinbusan.crowding.snapshot.build")
+                .description("오늘치 혼잡도 스냅샷 생성 소요 시간")
+                .tag("outcome", outcome)
+                .register(Metrics.globalRegistry));
+        }
+    }
+
+    private TourismCatalogResponse buildTodayCrowdingCatalog(LocalDate today, String snapshotKey) {
         List<TourismCatalogItemResponse> items = new ArrayList<>();
         RuntimeException firstFailure = null;
         Instant retrievedAt = null;
