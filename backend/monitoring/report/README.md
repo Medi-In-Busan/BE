@@ -14,4 +14,6 @@ FROM=2026-09-25T16:27:30+09:00 TO=2026-09-25T16:32:00+09:00 \
 
 # 요약 그림(matplotlib, Malgun Gothic) — ④ 핵심 수치 표는 스크립트 안에서 그 실행의 값으로 고친다
 python summary_figure.py 2026-09-25T16:28:00 2026-09-25T16:31:15 "C:\path\to\images\summary.png"
+# 전후 비교 그림 — 개선 전 시작, 개선 후 시작, 길이(초), 출력
+python compare_figure.py 2026-09-25T16:28:00 2026-09-25T17:45:05 180 "C:\path\to\images\compare.png"
 ```
