@@ -11,7 +11,6 @@ import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -46,7 +45,6 @@ public class WellnessPlaceTranslationService {
         this.quotaGuard = quotaGuard;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public WellnessPlaceResponse localize(WellnessPlaceResponse source, String requestedLanguage) {
         return localizeAll(List.of(source), requestedLanguage).getFirst();
     }
@@ -104,14 +102,10 @@ public class WellnessPlaceTranslationService {
         return cachedByContentId;
     }
 
-    // WellnessService는 readOnly=true 트랜잭션에서 이 메서드를 호출한다.
-    // REQUIRED(기본값)로 두면 그 읽기전용 트랜잭션에 그대로 합류해 캐시 미스 시의
-    // insert/update가 "Connection is read-only"로 실패한다(MySQL에서만 강제됨, H2는 무시함) —
-    // 항상 새로운 쓰기 가능한 트랜잭션을 열도록 REQUIRES_NEW로 분리한다.
-    //
-    // 주의(성능): 트랜잭션 프록시가 커넥션을 먼저 잡은 뒤 이 메서드 안에서 락을 기다린다 — 락 대기 중인
-    // 요청도 커넥션을 쥐고 있다. hikaricp_connections_* 와 mediinbusan_lock_* 지표를 같이 볼 것.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // 트랜잭션을 걸지 않는다 — Papago(외부 HTTP)를 기다리는 동안 DB 커넥션을 쥐지 않기 위해서다.
+    // 캐시 읽기(loadCache)와 저장(repository.save)은 각자 리포지토리 호출 단위의 짧은 트랜잭션으로 돈다.
+    // 예전엔 REQUIRES_NEW였는데, 호출부(WellnessService)의 readOnly 트랜잭션을 피하려던 것이 요청당 커넥션
+    // 2개 점유와 풀 교착의 원인이 됐다(WellnessService.getPlaceDetail 주석 참고). 호출부도 이제 트랜잭션 밖이다.
     public List<WellnessPlaceResponse> localizeAll(
         List<WellnessPlaceResponse> sources,
         String requestedLanguage
